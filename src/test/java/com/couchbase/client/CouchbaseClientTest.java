@@ -25,6 +25,17 @@ package com.couchbase.client;
 
 import com.couchbase.client.BucketTool.FunctionCallback;
 import com.couchbase.client.clustermanager.BucketType;
+
+import java.net.SocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import net.spy.memcached.BinaryClientTest;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -37,19 +48,10 @@ import net.spy.memcached.TestConfig;
 import net.spy.memcached.internal.OperationCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
-import org.junit.Ignore;
-import org.junit.Test;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
+import org.junit.Ignore;
 import static org.junit.Assume.assumeTrue;
+import org.junit.Test;
 
 /**
  * A CouchbaseClientTest.
@@ -469,11 +471,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
 
     OperationFuture<Boolean> setFuture = client.set(key, "value",
       PersistTo.MASTER);
-    assertFalse(setFuture.isDone());
     assertTrue(setFuture.get());
-    assertTrue(setFuture.isDone());
-    assertTrue(setFuture.getStatus().isSuccess());
-
 
     final CountDownLatch latch = new CountDownLatch(1);
     client.asyncCas(key, setFuture.getCas(), "value2", PersistTo.MASTER)

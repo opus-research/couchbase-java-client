@@ -23,7 +23,6 @@
 package com.couchbase.client.internal;
 
 import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.ops.OperationStatus;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -65,11 +64,5 @@ public class ObserveFuture<T> extends OperationFuture<T> {
   @Override
   public boolean isDone() {
     return done;
-  }
-
-  @Override
-  public void set(T o, OperationStatus s) {
-    super.set(o, s);
-    done = true;
   }
 }
