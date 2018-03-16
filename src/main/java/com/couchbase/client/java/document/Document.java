@@ -36,32 +36,32 @@ import com.couchbase.client.java.AsyncBucket;
 @InterfaceAudience.Public
 public interface Document<T> {
 
-    /**
-     * The per-bucket unique ID of the {@link Document}.
-     *
-     * @return the document id.
-     */
+   /**
+    * The per-bucket unique ID of the {@link Document}.
+    *
+    * @return the document id.
+    */
     String id();
 
-    /**
-     * The content of the {@link Document}.
-     *
-     * @return the content.
-     */
+   /**
+    * The content of the {@link Document}.
+    *
+    * @return the content.
+    */
     T content();
 
-    /**
-     * The last-known CAS value for the {@link Document} (0 if not set).
-     *
-     * @return the CAS value if set.
-     */
+   /**
+    * The last-known CAS value for the {@link Document} (0 if not set).
+    *
+    * @return the CAS value if set.
+    */
     long cas();
 
-    /**
-     * The optional expiration time for the {@link Document} (0 if not set).
-     *
-     * @return the expiration time.
-     */
+   /**
+    * The optional expiration time for the {@link Document} (0 if not set).
+    *
+    * @return the expiration time.
+    */
     int expiry();
 
     /**
