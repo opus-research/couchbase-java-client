@@ -81,7 +81,7 @@ public class ViewTest {
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
 
   @Rule
-  public ExpectedException exception = ExpectedException.none();
+  private ExpectedException exception = ExpectedException.none();
 
   static {
     ITEMS = new HashMap<String, Object>();
@@ -122,7 +122,8 @@ public class ViewTest {
         + DESIGN_DOC_W_REDUCE;
     String view = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_W_REDUCE + "\":{\"map\":\"function (doc) { "
-        + "if(doc.type != \\\"dated\\\") {emit(doc.type, 1)}}\",\"reduce\":\"_sum\" }}}";
+        + "if(doc.type != \\\"dated\\\") {emit(doc.type, 1)}}\","
+        + "\"reduce\":\"_sum\" }}}";
     c.asyncHttpPut(docUri, view);
 
     docUri = "/default/_design/" + TestingClient.MODE_PREFIX
