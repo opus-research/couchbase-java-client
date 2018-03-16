@@ -39,7 +39,7 @@ import com.couchbase.client.vbucket.config.Bucket;
  */
 public class ConfigurationProviderHTTPDownNodeTest extends TestCase {
   private static final String REST_USER = "Administrator";
-  private static final String REST_PASSWORD = "changeit";
+  private static final String REST_PASSWORD = "password";
   private ConfigurationProviderHTTP configProvider;
   private static final String DEFAULT_BUCKET_NAME = "default";
 

@@ -31,14 +31,13 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import net.spy.memcached.TestConfig;
-import com.couchbase.client.vbucket.config.Bucket;
 
 /**
  * A ConfigurationHTTPTest.
  */
 public class ConfigurationProviderHTTPTest extends TestCase {
   private static final String REST_USER = "Administrator";
-  private static final String REST_PWD = "changeit";
+  private static final String REST_PWD = "password";
   private static final String DEFAULT_BUCKET_NAME = "default";
   private ConfigurationProviderHTTP configProvider;
   private ReconfigurableMock reconfigurable = new ReconfigurableMock();
