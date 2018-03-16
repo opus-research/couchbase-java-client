@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.query.dsl.element;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.query.dsl.path.index.IndexType;
 
@@ -32,7 +31,6 @@ import com.couchbase.client.java.query.dsl.path.index.IndexType;
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
 public class UsingElement implements Element {
     private final IndexType type;
 
