@@ -333,7 +333,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     if (monitor == null) {
       URI streamingURI = bucket.getStreamingURI();
       monitor = new BucketMonitor(this.loadedBaseUri.resolve(streamingURI),
-        bucketName, this.restUsr, this.restPwd, configurationParser, this);
+        bucketName, this.restUsr, this.restPwd, configurationParser);
       this.monitors.put(bucketName, monitor);
       monitor.addObserver(obs);
       monitor.startMonitor();
