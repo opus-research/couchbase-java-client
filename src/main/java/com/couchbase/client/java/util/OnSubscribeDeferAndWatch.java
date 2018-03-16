@@ -22,7 +22,6 @@ import rx.Subscription;
 import rx.exceptions.Exceptions;
 import rx.functions.Action1;
 import rx.functions.Func0;
-import rx.functions.Func1;
 import rx.observers.Subscribers;
 import rx.subjects.AsyncSubject;
 
@@ -63,13 +62,13 @@ public class OnSubscribeDeferAndWatch<T> implements Observable.OnSubscribe<T> {
      * @param observableFactory the factory of the hot observable.
      * @return a deferred observable which handles cleanup of resources on early unsubscribe.
      */
-    public static <T> Observable<T> deferAndWatch(Func1<Subscriber,? extends Observable<? extends T>> observableFactory) {
+    public static <T> Observable<T> deferAndWatch(Func0<? extends Observable<? extends T>> observableFactory) {
         return Observable.create(new OnSubscribeDeferAndWatch<T>(observableFactory));
     }
 
-    private final Func1<Subscriber,? extends Observable<? extends T>> observableFactory;
+    private final Func0<? extends Observable<? extends T>> observableFactory;
 
-    private OnSubscribeDeferAndWatch(Func1<Subscriber,? extends Observable<? extends T>> observableFactory) {
+    private OnSubscribeDeferAndWatch(Func0<? extends Observable<? extends T>> observableFactory) {
         this.observableFactory = observableFactory;
     }
 
@@ -79,7 +78,7 @@ public class OnSubscribeDeferAndWatch<T> implements Observable.OnSubscribe<T> {
         // Defer execution of the hot observable.
         Observable<? extends T> o;
         try {
-            o = observableFactory.call(s);
+            o = observableFactory.call();
         } catch (Throwable t) {
             Exceptions.throwOrReport(t, s);
             return;
@@ -88,8 +87,8 @@ public class OnSubscribeDeferAndWatch<T> implements Observable.OnSubscribe<T> {
         // For now, make sure we only support AsyncSubjects to make issues explicit down the road.
         if (!(o instanceof AsyncSubject)) {
             Exceptions.throwOrReport(
-                    new IllegalStateException("Only AsyncSubject is allowed with deferAndWatch (is "
-                            + o.getClass().getSimpleName() + ")"), s);
+                new IllegalStateException("Only AsyncSubject is allowed with deferAndWatch (is "
+                    + o.getClass().getSimpleName() + ")"), s);
             return;
         }
 
