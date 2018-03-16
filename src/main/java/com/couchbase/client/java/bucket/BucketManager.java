@@ -10,8 +10,6 @@ import rx.Observable;
  */
 public interface BucketManager {
 
-    Observable<BucketInfo> info();
-
     Observable<Boolean> flush();
 
     Observable<DesignDocument> getDesignDocuments();
