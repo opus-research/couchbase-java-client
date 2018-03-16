@@ -18,8 +18,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.CredentialContext;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -110,16 +108,6 @@ public interface AsyncCluster {
     Observable<AsyncClusterManager> clusterManager(String username, String password);
 
     /**
-     * Provides access to the {@link AsyncClusterManager} to perform cluster-wide operations, using the
-     * credentials set through the configured {@link CouchbaseEnvironment#authenticator()}, for the
-     * {@link CredentialContext#CLUSTER_MANAGEMENT} context.
-     *
-     * @return the {@link AsyncClusterManager} if successful.
-     */
-    Observable<AsyncClusterManager> clusterManager();
-
-
-    /**
      * Disconnects form all open buckets and shuts down the {@link CouchbaseEnvironment} if it is the exclusive owner.
      *
      * @return true once done and everything succeeded, false otherwise.
@@ -135,14 +123,5 @@ public interface AsyncCluster {
      * @return the underlying {@link ClusterFacade} from the "core-io" package.
      */
     Observable<ClusterFacade> core();
-
-    /**
-     * Sets the {@link Authenticator} to use when credentials are needed for an operation
-     * but no explicit credentials are provided. Shortcut to setting it on the
-     * {@link CouchbaseEnvironment#authenticator(Authenticator) environment}.
-     *
-     * @param auth the new {@link Authenticator} to use.
-     */
-    void authenticate(Authenticator auth);
 
 }

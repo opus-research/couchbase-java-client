@@ -17,15 +17,11 @@ package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.PasswordAuthenticator;
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -107,23 +103,5 @@ public class DefaultCouchbaseEnvironmentTest {
         assertEquals(coreEnv.coreBuild(), env.coreBuild());
         assertNotEquals(coreEnv.coreVersion(), env.clientVersion());
         assertNotEquals(coreEnv.coreBuild(), env.clientBuild());
-    }
-
-    @Test
-    public void shouldAllowToResetAuthenticator() {
-        Authenticator auth1 = new PasswordAuthenticator();
-        Authenticator auth2 = new PasswordAuthenticator();
-
-        CouchbaseEnvironment env = DefaultCouchbaseEnvironment.builder()
-                .authenticator(auth1)
-                .build();
-
-        Assertions.assertThat(env.authenticator()).isSameAs(auth1);
-
-        env.authenticator(auth2);
-
-        Assertions.assertThat(env.authenticator())
-                .isNotSameAs(auth1)
-                .isSameAs(auth2);
     }
 }

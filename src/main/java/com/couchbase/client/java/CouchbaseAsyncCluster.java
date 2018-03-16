@@ -28,9 +28,6 @@ import com.couchbase.client.core.message.cluster.DisconnectResponse;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.OpenBucketResponse;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.Credential;
-import com.couchbase.client.java.auth.CredentialContext;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultAsyncClusterManager;
 import com.couchbase.client.java.document.Document;
@@ -345,12 +342,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
 
     @Override
     public Observable<AsyncBucket> openBucket(final String name) {
-        try {
-            Credential cred = getCredential(CredentialContext.BUCKET_KV, name);
-            return openBucket(cred.getLogin(), cred.getPassword());
-        } catch (IllegalArgumentException e) {
-            return Observable.error(e);
-        }
+        return openBucket(name, null);
     }
 
     @Override
@@ -450,38 +442,10 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             )
         );
     }
-    
-    protected Credential getCredential(CredentialContext context, String specific) {
-        if (environment.authenticator() == null) {
-            throw new IllegalStateException("Calling clusterManager without credentials nor an Authenticator");
-        }
-        List<Credential> creds = environment.authenticator().getCredentials(context, specific);
-        if (creds == null || creds.size() != 1) {
-            throw new IllegalStateException("Expected exactly 1 credential in Authenticator for clusterManager");
-        }
-        
-        Credential cred = creds.get(0);
-        return cred;
-    }
-    
-    @Override
-    public Observable<AsyncClusterManager> clusterManager() {
-        try {
-            Credential cred = getCredential(CredentialContext.CLUSTER_MANAGEMENT, null);
-            return clusterManager(cred.getLogin(), cred.getPassword());
-        } catch (IllegalArgumentException e) {
-            return Observable.error(e);
-        }
-    }
 
     @Override
     public Observable<ClusterFacade> core() {
         return Observable.just(core);
-    }
-
-    @Override
-    public void authenticate(Authenticator auth) {
-        this.environment.authenticator(auth);
     }
 
     /**
