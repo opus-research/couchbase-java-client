@@ -123,7 +123,7 @@ public class SelectDslSmokeTest {
     public void test11() {
         Statement statement = select("fname", "children")
             .from("tutorial")
-            .where(x("children").is(NULL()));
+            .where(x("children").isNull());
         assertEquals("SELECT fname, children FROM tutorial WHERE children IS NULL", statement.toString());
     }
 
@@ -149,8 +149,8 @@ public class SelectDslSmokeTest {
     public void test14() {
         Statement statement = select("fname", "email")
             .from("tutorial")
-            .keys(x(JsonArray.from("dave", "ian")));
-        assertEquals("SELECT fname, email FROM tutorial KEYS [\"dave\",\"ian\"]", statement.toString());
+            .useKeys("dave", "ian");
+        assertEquals("SELECT fname, email FROM tutorial USE KEYS [\"dave\",\"ian\"]", statement.toString());
     }
 
     @Test
