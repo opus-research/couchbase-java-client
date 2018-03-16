@@ -24,7 +24,10 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.message.CouchbaseResponse;
-import com.couchbase.client.core.message.cluster.*;
+import com.couchbase.client.core.message.cluster.DisconnectRequest;
+import com.couchbase.client.core.message.cluster.DisconnectResponse;
+import com.couchbase.client.core.message.cluster.OpenBucketRequest;
+import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.CouchbaseClusterManager;
 import com.couchbase.client.java.document.Document;
@@ -44,11 +47,11 @@ public class CouchbaseCluster implements Cluster {
     private static final String DEFAULT_BUCKET = "default";
     private static final String DEFAULT_HOST = "127.0.0.1";
 
-    private ClusterFacade core;
-    private CouchbaseEnvironment environment;
-    private ConnectionString connectionString;
+    private final ClusterFacade core;
+    private final CouchbaseEnvironment environment;
+    private final ConnectionString connectionString;
 
-    private boolean sharedEnvironment;
+    private final boolean sharedEnvironment;
 
     public static CouchbaseCluster create() {
         return create(DEFAULT_HOST);
@@ -82,17 +85,8 @@ public class CouchbaseCluster implements Cluster {
         return new CouchbaseCluster(environment, ConnectionString.create(connectionString), true);
     }
 
-    CouchbaseCluster() { }
-
     CouchbaseCluster(final CouchbaseEnvironment environment, final ConnectionString connectionString, final boolean sharedEnvironment) {
-        this();
-        connect(environment, connectionString, sharedEnvironment).toBlocking().single();
-    }
-
-    Observable<Boolean> connect(final CouchbaseEnvironment environment, final ConnectionString connectionString, final boolean sharedEnvironment) {
         this.sharedEnvironment = sharedEnvironment;
-        this.environment = environment;
-        this.connectionString = connectionString;
         core = new CouchbaseCore(environment);
         List<String> seedNodes = new ArrayList<String>();
         for (InetSocketAddress node : connectionString.hosts()) {
@@ -101,14 +95,10 @@ public class CouchbaseCluster implements Cluster {
         if (seedNodes.isEmpty()) {
             seedNodes.add(DEFAULT_HOST);
         }
-        return core
-                .<SeedNodesResponse>send(new SeedNodesRequest(seedNodes))
-                .flatMap(new Func1<SeedNodesResponse, Observable<Boolean>>() {
-                    @Override
-                    public Observable<Boolean> call(SeedNodesResponse seedNodesResponse) {
-                        return Observable.just(seedNodesResponse.status().isSuccess());
-                    }
-                });
+        SeedNodesRequest request = new SeedNodesRequest(seedNodes);
+        core.send(request).toBlocking().single();
+        this.environment = environment;
+        this.connectionString = connectionString;
     }
 
     @Override
