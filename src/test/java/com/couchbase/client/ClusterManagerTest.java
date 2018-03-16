@@ -22,7 +22,6 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.clustermanager.AuthType;
 import com.couchbase.client.clustermanager.BucketType;
 import java.net.URI;
 import java.util.LinkedList;
@@ -39,8 +38,7 @@ import org.apache.http.HttpException;
  */
 public class ClusterManagerTest extends TestCase {
 
-private static final String BUCKET = "bucket1";
-private ClusterManager manager;
+  private ClusterManager manager;
 
   /**
    * This method is used to do the initial setUp of the cluster manager.
@@ -166,14 +164,14 @@ private ClusterManager manager;
    */
   public void testGetBuckets() throws Exception {
     assertEquals(manager.listBuckets().size(), 0);
-    manager.createNamedBucket(BucketType.COUCHBASE, BUCKET, 100, 0,
+    manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, 0,
         "password", false);
     manager.createNamedBucket(BucketType.COUCHBASE, "bucket2", 100, 0,
         "password", false);
     manager.createNamedBucket(BucketType.COUCHBASE, "bucket3", 100, 0,
         "password", false);
     List<String> buckets = manager.listBuckets();
-    assertTrue(buckets.contains(BUCKET));
+    assertTrue(buckets.contains("bucket1"));
     assertTrue(buckets.contains("bucket2"));
     assertTrue(buckets.contains("bucket3"));
     assertEquals(manager.listBuckets().size(), 3);
@@ -189,7 +187,7 @@ private ClusterManager manager;
    */
   public void testCreateBucketQuotaTooSmall() {
     try {
-      manager.createNamedBucket(BucketType.COUCHBASE, BUCKET, 25, 0,
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 25, 0,
           "password", false);
       fail("Bucket quota too small, but bucket was still created");
     } catch (RuntimeException e) {
@@ -209,7 +207,7 @@ private ClusterManager manager;
    */
   public void testCreateBucketQuotaTooBig() {
     try {
-      manager.createNamedBucket(BucketType.COUCHBASE, BUCKET, 100000, 0,
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100000, 0,
           "password", false);
       fail("Bucket quota too large, but bucket was still created");
     } catch (RuntimeException e) {
@@ -231,7 +229,7 @@ private ClusterManager manager;
    */
   public void testCreateBucketTooManyReplicas() {
     try {
-      manager.createNamedBucket(BucketType.COUCHBASE, BUCKET, 100, 4,
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, 4,
           "password", false);
       fail("Replica number too large, but bucket was still created");
     } catch (RuntimeException e) {
@@ -254,7 +252,7 @@ private ClusterManager manager;
    */
   public void testCreateBucketTooFewReplicas() {
     try {
-      manager.createNamedBucket(BucketType.COUCHBASE, BUCKET, 100, -1,
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, -1,
           "password", false);
       fail("Replica number too small, but bucket was still created");
     } catch (RuntimeException e) {
@@ -313,6 +311,59 @@ private ClusterManager manager;
   }
 
   /**
+   * This test is performed by having the client connect to a host
+   * which is up, but using a bad port (i.e. not the default 8091)
+   *
+   * @pre  First the running client is shut down and a new instance
+   * is created using URIs of invalid addresses. Next an attempt is
+   * made to create the default bucket for this new instance.
+   * @post  The connection should not succeed, after which the
+   * previous cluster manager instance is restored.
+   * @throws InterruptedException the interrupted exception
+   */
+  public void testConnectionRefused() throws InterruptedException {
+    List<URI> uris = new LinkedList<URI>();
+    uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":3454/pools"));
+    manager.shutdown();
+    manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
+      CbTestConfig.CLUSTER_PASS);
+    String message = "";
+    try {
+      manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
+    } catch (RuntimeException e) {
+      message = e.getMessage();
+    }
+    assertEquals("Unable to connect to cluster", message);
+    manager = getClusterManager();
+  }
+
+  /**
+   * This test is performed by having the client connect
+   * to an IP for which no valid host is assigned.
+   *
+   * @pre  First the running client is shut down and a new instance
+   * is created using URIs of invalid addresses. Next an attempt is
+   * made to create the default bucket for this new instance.
+   * @post  The connection should not succeed, after which the
+   * previous cluster manager instance is restored.
+   * @throws InterruptedException the interrupted exception
+   */
+  public void testNetworkUnreachable() throws InterruptedException {
+    List<URI> uris = new LinkedList<URI>();
+    uris.add(URI.create("http://123.123.123.123:8091/pools"));
+    manager.shutdown();
+    manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
+      CbTestConfig.CLUSTER_PASS);
+    String message = "";
+    try {
+      manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
+    } catch (RuntimeException e) {
+      message = e.getMessage();
+    }
+    assertEquals("Unable to connect to cluster", message);
+    manager = getClusterManager();
+  }
+  /**
    * Create and delete the default buckets with some bad server addresses.
    *
    * @pre  It first creates a list of URIs and shuts down the cluster manager.
@@ -334,72 +385,5 @@ private ClusterManager manager;
     manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
     Thread.sleep(1000);
     manager.deleteBucket("default");
-  }
-
-  /**
-   * Update parameters of an existing bucket.
-   *
-   * @pre SASL bucket is created.
-   * @post The bucket is updated with new password.
-   * @throws Exception
-   */
-  public void testUpdateBucketPswd() throws Exception {
-	manager.createNamedBucket(BucketType.COUCHBASE,BUCKET, 100, 0, "", true);
-	Thread.sleep(1000);
-    manager.updateBucket(BUCKET, 100, AuthType.SASL, 0, 11212, "password", true);
-  }
-
-  /**
-   * Update parameters of an existing bucket.
-   *
-   * @pre SASL bucket is created.
-   * @post The bucket is updated with new ram size.
-   * @throws Exception
-   */
-  public void testUpdateBucketRam() throws Exception {
-	manager.createNamedBucket(BucketType.COUCHBASE,BUCKET, 100, 0, "", true);
-	Thread.sleep(1000);
-    manager.updateBucket(BUCKET, 200, AuthType.SASL, 0, 11212, "", true);
-  }
-
-  /**
-   * Update parameters of an existing bucket.
-   *
-   * @pre SASL bucket is created.
-   * @post The bucket is updated with new auth type.
-   * @throws Exception
-   */
-  public void testUpdateBucketAuth() throws Exception {
-	manager.createNamedBucket(BucketType.COUCHBASE,BUCKET, 100, 0, "", true);
-	Thread.sleep(1000);
-    manager.updateBucket(BUCKET, 100, AuthType.NONE, 0, 11212, "", true);
-  }
-
-  /**
-   * Update parameters of an existing bucket.
-   *
-   * @pre Port bucket is created.
-   * @post The bucket is updated to SASL auth type.
-   * @throws Exception
-   */
-  public void testUpdateBucketPort() throws Exception {
-	manager.createPortBucket(BucketType.COUCHBASE,BUCKET, 100, 0, 8090, true);
-	Thread.sleep(1000);
-    manager.updateBucket(BUCKET, 100, AuthType.SASL, 0, 11212, "", true);
-  }
-
-  /**
-   * Update parameters of an existing bucket.
-   *
-   * @pre Default bucket is created.
-   * @post The bucket is updated using BucketTool.
-   * The auth type does not get updated as it is a
-   * default bucket. But the RAM gets updated.
-   * @throws Exception
-   */
-  public void testUpdateBucket() throws Exception {
-    BucketTool bucketTool = new BucketTool();
-    bucketTool.createDefaultBucket(BucketType.COUCHBASE, 256, 0, true);
-    bucketTool.updateBucket("default", AuthType.SASL, 456, 1, 11212, "", true);
   }
 }
