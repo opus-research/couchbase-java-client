@@ -55,8 +55,8 @@ public class RawQueryExecutor {
         this.async = async;
     }
 
-    public RawQueryExecutor(String bucket, String password, ClusterFacade core, CouchbaseEnvironment env) {
-        this(new AsyncRawQueryExecutor(bucket, password, core), env);
+    public RawQueryExecutor(String bucket, String username, String password, ClusterFacade core, CouchbaseEnvironment env) {
+        this(new AsyncRawQueryExecutor(bucket, username, password, core), env);
     }
 
 
