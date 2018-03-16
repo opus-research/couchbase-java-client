@@ -12,75 +12,79 @@ import java.util.concurrent.TimeUnit;
 
 public class DefaultQueryResult implements QueryResult {
 
-    private boolean finalSuccess;
-    private boolean parseSuccess;
-    private List<QueryRow> allRows;
-    private JsonObject info;
-    private List<JsonObject> errors;
+    private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
+    private final DefaultAsyncQueryResult asyncQueryResult;
+    private final long timeout;
 
-
-    /**
-     * Create a default blocking representation of a query result.
-     *
-     * @param rows the async view of rows.
-     * @param info the async view of metrics.
-     * @param errors the async view of errors and warnings.
-     * @param finalSuccess the definitive (but potentially delayed) result of the query.
-     * @param parseSuccess the intermediate result of the query
-     * @param timeout the maximum time allowed for all components of the result to be retrieved (global timeout).
-     * @param timeUnit the unit for timeout.
-     */
-    public DefaultQueryResult(Observable<AsyncQueryRow> rows,
+    public DefaultQueryResult(CouchbaseEnvironment environment, Observable<AsyncQueryRow> rows,
             Observable<JsonObject> info, Observable<JsonObject> errors,
-            Observable<Boolean> finalSuccess, boolean parseSuccess,
-            long timeout, TimeUnit timeUnit) {
-
-        this.parseSuccess = parseSuccess;
-        //block on the finalSuccess item, ensuring streamed section of the result is finished
-        this.finalSuccess = Blocking.blockForSingle(finalSuccess, timeout, timeUnit);
-
-        //since we have the final status, other streams should be instantaneous
-        this.allRows = Blocking.blockForSingle(rows
-                .map(new Func1<AsyncQueryRow, QueryRow>() {
-                    @Override
-                    public QueryRow call(AsyncQueryRow asyncQueryRow) {
-                        return new DefaultQueryRow(asyncQueryRow.value());
-                    }
-                })
-                .toList(), 1, TimeUnit.SECONDS);
-
-        this.errors = Blocking.blockForSingle(errors.toList(), 1, TimeUnit.SECONDS);
-        this.info = Blocking.blockForSingle(info.singleOrDefault(JsonObject.empty()), 1, TimeUnit.SECONDS);
+            Observable<Boolean> finalSuccess, boolean parseSuccess) {
+        this.asyncQueryResult = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess);
+        this.timeout = environment.managementTimeout();
     }
 
     @Override
     public List<QueryRow> allRows() {
-        return this.allRows;
+        return allRows(timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public List<QueryRow> allRows(long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncQueryResult
+            .rows()
+            .map(new Func1<AsyncQueryRow, QueryRow>() {
+                @Override
+                public QueryRow call(AsyncQueryRow asyncQueryRow) {
+                    return new DefaultQueryRow(asyncQueryRow.value());
+                }
+            })
+            .toList(), timeout, timeUnit);
     }
 
     @Override
     public Iterator<QueryRow> rows() {
-        return this.allRows.iterator();
+        return rows(timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public Iterator<QueryRow> rows(long timeout, TimeUnit timeUnit) {
+        return asyncQueryResult
+            .rows()
+            .map(new Func1<AsyncQueryRow, QueryRow>() {
+                @Override
+                public QueryRow call(AsyncQueryRow asyncQueryRow) {
+                    return new DefaultQueryRow(asyncQueryRow.value());
+                }
+            })
+            .timeout(timeout, timeUnit)
+            .toBlocking()
+            .getIterator();
     }
 
     @Override
     public JsonObject info() {
-        return this.info;
+        return info(timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public JsonObject info(long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncQueryResult.info().single(), timeout, timeUnit);
     }
 
     @Override
     public boolean parseSuccess() {
-        return this.parseSuccess;
+        return asyncQueryResult.parseSuccess();
     }
 
     @Override
     public List<JsonObject> errors() {
-        return this.errors;
+        return Blocking.blockForSingle(
+                asyncQueryResult.errors().toList(), timeout, TIMEOUT_UNIT);
     }
 
     @Override
     public boolean finalSuccess() {
-        return this.finalSuccess;
+        return Blocking.blockForSingle(asyncQueryResult.finalSuccess().single(), timeout, TIMEOUT_UNIT);
     }
 
     @Override
