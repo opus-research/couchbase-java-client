@@ -214,6 +214,7 @@ public class SubDocumentTest {
         assertNotNull(result);
         assertEquals(false, result.content(0));
         assertEquals(false, result.content("badPath"));
+        assertEquals(false, result.exists("badPath"));
     }
 
     @Test(expected = PathMismatchException.class)
@@ -1515,8 +1516,8 @@ public class SubDocumentTest {
         assertEquals(true, results.exists(0));
         assertEquals(true, results.exists(1));
         assertEquals(true, results.exists(2));
-        assertEquals(true, results.exists(3));
-        assertEquals(true, results.exists(4));
+        assertEquals(false, results.exists(3));
+        assertEquals(false, results.exists(4));
         assertEquals(false, results.exists(5));
         assertEquals(false, results.exists(6));
 
@@ -1558,10 +1559,10 @@ public class SubDocumentTest {
         verifyException(results, PathMismatchException.class).content(path1);
 
         //except path not found gives a content, false
-        assertTrue(results.exists(1)); //means that content() won't throw
+        assertFalse(results.exists(1)); //means that content() won't throw
         assertEquals(ResponseStatus.SUBDOC_PATH_NOT_FOUND, results.status(1));
         assertEquals(false, results.content(1));
-        assertTrue(results.exists(path2)); //means that content() won't throw
+        assertFalse(results.exists(path2)); //means that content() won't throw
         assertEquals(ResponseStatus.SUBDOC_PATH_NOT_FOUND, results.status(path2));
         assertEquals(false, results.content(path2));
 
@@ -1595,7 +1596,7 @@ public class SubDocumentTest {
         assertEquals(ResponseStatus.SUBDOC_PATH_MISMATCH, results.status(1));
         verifyException(results, PathMismatchException.class).content(1);
 
-        assertTrue(results.exists(2));
+        assertFalse(results.exists(2));
         assertEquals(ResponseStatus.SUBDOC_PATH_NOT_FOUND, results.status(2));
         assertEquals(null, results.content(2));
     }
