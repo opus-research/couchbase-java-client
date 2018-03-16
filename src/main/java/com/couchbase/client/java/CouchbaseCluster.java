@@ -20,16 +20,18 @@ public class CouchbaseCluster implements Cluster {
 
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
 
+    private static final String DEFAULT_BUCKET = "default";
+    private static final String DEFAULT_HOST = "127.0.0.1";
     private final CouchbaseAsyncCluster couchbaseAsyncCluster;
     private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
 
     public static CouchbaseCluster create() {
-        return create(CouchbaseAsyncCluster.DEFAULT_HOST);
+        return create(DEFAULT_HOST);
     }
 
     public static CouchbaseCluster create(final CouchbaseEnvironment environment) {
-        return create(environment, CouchbaseAsyncCluster.DEFAULT_HOST);
+        return create(environment, DEFAULT_HOST);
     }
 
     public static CouchbaseCluster create(final String... nodes) {
@@ -64,12 +66,12 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public Bucket openBucket() {
-        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET);
+        return openBucket(DEFAULT_BUCKET);
     }
 
     @Override
     public Bucket openBucket(long timeout, TimeUnit timeUnit) {
-        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET, timeout, timeUnit);
+        return openBucket(DEFAULT_BUCKET, timeout, timeUnit);
     }
 
     @Override

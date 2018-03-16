@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
@@ -71,15 +69,11 @@ public class ViewQuery implements Serializable {
     private final String view;
 
     private boolean development;
-    private boolean includeDocs;
-    private Class<? extends Document<?>> includeDocsTarget;
 
     private ViewQuery(String design, String view) {
         this.design = design;
         this.view = view;
         params = new String[NUM_PARAMS * 2];
-        includeDocs = false;
-        includeDocsTarget = null;
     }
 
     /**
@@ -99,52 +93,6 @@ public class ViewQuery implements Serializable {
 
     public ViewQuery development(boolean development) {
         this.development = development;
-        return this;
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs() {
-        return includeDocs(true, JsonDocument.class);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param target the custom document type target.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(Class<? extends Document<?>> target) {
-        return includeDocs(true, target);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param includeDocs if it should be enabled or not.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(boolean includeDocs) {
-        return includeDocs(includeDocs, JsonDocument.class);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param includeDocs if it should be enabled or not.
-     * @param target the custom document type target.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(boolean includeDocs, Class<? extends Document<?>> target) {
-        this.includeDocs = includeDocs;
-        this.includeDocsTarget = target;
         return this;
     }
 
@@ -499,23 +447,15 @@ public class ViewQuery implements Serializable {
     }
 
     public String getDesign() {
-        return design;
+    return design;
     }
 
     public String getView() {
-        return view;
+    return view;
     }
 
     public boolean isDevelopment() {
-        return development;
-    }
-
-    public boolean isIncludeDocs() {
-        return includeDocs;
-    }
-
-    public Class<? extends Document<?>> includeDocsTarget() {
-        return includeDocsTarget;
+    return development;
     }
 
     @Override
