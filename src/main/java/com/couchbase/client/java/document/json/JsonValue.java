@@ -30,11 +30,6 @@ package com.couchbase.client.java.document.json;
 public abstract class JsonValue {
 
     /**
-     * Represents a Json "null".
-     */
-    public static JsonNull NULL = JsonNull.INSTANCE;
-
-    /**
      * Static factory method to create an empty {@link JsonObject}.
      *
      * @return an empty {@link JsonObject}.

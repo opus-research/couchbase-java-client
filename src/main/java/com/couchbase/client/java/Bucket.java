@@ -24,7 +24,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.JsonLongDocument;
+import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.DurabilityException;
@@ -582,9 +582,9 @@ public interface Bucket {
     Observable<Boolean> touch(String id, int expiry);
     <D extends Document<?>> Observable<Boolean> touch(D document);
 
-    Observable<JsonLongDocument> counter(String id, long delta);
-    Observable<JsonLongDocument> counter(String id, long delta, long initial);
-    Observable<JsonLongDocument> counter(String id, long delta, long initial, int expiry);
+    Observable<LongDocument> counter(String id, long delta);
+    Observable<LongDocument> counter(String id, long delta, long initial);
+    Observable<LongDocument> counter(String id, long delta, long initial, int expiry);
 
     Observable<BucketManager> bucketManager();
 
