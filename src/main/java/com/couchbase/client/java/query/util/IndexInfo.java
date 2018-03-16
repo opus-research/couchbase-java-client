@@ -1,17 +1,23 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2015 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java.query.util;
 
@@ -42,6 +48,7 @@ public class IndexInfo {
     private final String keyspace;
     private final String namespace;
     private final JsonArray indexKey;
+    private final String condition;
 
     private final JsonObject raw;
 
@@ -53,6 +60,9 @@ public class IndexInfo {
         this.keyspace = raw.getString("keyspace_id");
         this.namespace = raw.getString("namespace_id");
         this.indexKey = raw.getArray("index_key");
+
+        String rawCondition = raw.getString("condition");
+        this.condition = rawCondition == null ? "" : rawCondition;
 
         this.rawType = raw.getString("using");
         if (rawType == null) {
@@ -128,6 +138,20 @@ public class IndexInfo {
     }
 
     /**
+     * Return the {@link String} representation of the index's condition (the WHERE clause of the index), or an empty
+     * String if no condition was set.
+     *
+     * Note that the query service can present the condition in a slightly different manner from when you declared the index:
+     * for instance it will wrap expressions with parentheses and show the fields in an escaped format (surrounded by
+     * backticks).
+     *
+     * @return the condition/WHERE clause of the index or empty string if none.
+     */
+    public String condition() {
+        return this.condition;
+    }
+
+    /**
      * @return the raw JSON representation of the index information, as returned by the query service.
      */
     public JsonObject raw() {
@@ -163,6 +187,9 @@ public class IndexInfo {
         if (!namespace.equals(indexInfo.namespace)) {
             return false;
         }
+        if (!condition.equals(indexInfo.condition)) {
+            return false;
+        }
         return indexKey.equals(indexInfo.indexKey);
 
     }
@@ -176,6 +203,7 @@ public class IndexInfo {
         result = 31 * result + keyspace.hashCode();
         result = 31 * result + namespace.hashCode();
         result = 31 * result + indexKey.hashCode();
+        result = 31 * result + condition.hashCode();
         return result;
     }
 

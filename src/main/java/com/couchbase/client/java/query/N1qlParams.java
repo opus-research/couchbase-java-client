@@ -1,22 +1,29 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2015 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.kv.MutationToken;
+import com.couchbase.client.java.MutationState;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -50,7 +57,7 @@ public class N1qlParams implements Serializable {
     private String clientContextId;
     private Integer maxParallelism;
 
-    private List<MutationToken> mutationTokens;
+    private MutationState mutationState;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -83,26 +90,13 @@ public class N1qlParams implements Serializable {
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
         }
-        if (this.mutationTokens != null) {
+
+        if (this.mutationState != null) {
             if (this.consistency != null) {
                 throw new IllegalArgumentException("`consistency(...)` cannot be used "
                     + "together with `consistentWith(...)`");
             }
-            JsonObject vectors = JsonObject.create();
-            for (MutationToken token : mutationTokens) {
-                JsonObject bucket = vectors.getObject(token.bucket());
-                if (bucket == null) {
-                    bucket = JsonObject.create();
-                    vectors.put(token.bucket(), bucket);
-                }
-
-                bucket.put(String.valueOf(token.vbucketID()), JsonArray.from(
-                    token.sequenceNumber(),
-                    String.valueOf(token.vbucketUUID())
-                ));
-            }
-
-            queryJson.put("scan_vectors", vectors);
+            queryJson.put("scan_vectors", mutationState.export());
             queryJson.put("scan_consistency", "at_plus");
         }
     }
@@ -179,69 +173,34 @@ public class N1qlParams implements Serializable {
      * Sets the {@link Document}s resulting of a mutation this query should be consistent with.
      *
      * @param documents the documents returned from a mutation.
-     *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
     public N1qlParams consistentWith(Document... documents) {
-        if (documents == null || documents.length == 0) {
-            throw new IllegalArgumentException("At least one Document needs to be provided.");
-        }
-
-        for (Document doc : documents) {
-            storeToken(doc.mutationToken());
-        }
-
-        return this;
+        return consistentWith(MutationState.from(documents));
     }
 
     /**
      * Sets the {@link DocumentFragment}s resulting of a mutation this query should be consistent with.
      *
      * @param fragments the fragments returned from a mutation.
-     *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
     public N1qlParams consistentWith(DocumentFragment... fragments) {
-        if (fragments == null || fragments.length == 0) {
-            throw new IllegalArgumentException("At least one DocumentFragment needs to be provided.");
-        }
-
-        for (DocumentFragment doc : fragments) {
-            storeToken(doc.mutationToken());
-        }
-
-        return this;
+        return consistentWith(MutationState.from(fragments));
     }
 
     /**
-     * Helper method to build up the token array and store it for later processing.
+     * Sets the {@link MutationState} this query should be consistent with.
+     *
+     * @param mutationState the mutation state which accumulates tokens from one or more mutation results.
+     * @return this {@link N1qlParams} for chaining.
      */
-    private void storeToken(MutationToken token) {
-        if (token == null) {
-            throw new IllegalArgumentException("No MutationToken provided (must be enabled on the Environment).");
-        }
-
-        if (mutationTokens == null) {
-            mutationTokens = new ArrayList<MutationToken>();
-            mutationTokens.add(token);
-            return;
-        }
-
-        Iterator<MutationToken> tokenIterator = mutationTokens.iterator();
-        while(tokenIterator.hasNext()) {
-            MutationToken t = tokenIterator.next();
-            if (t.vbucketID() == token.vbucketID() && t.bucket().equals(token.bucket())) {
-                if (token.sequenceNumber() > t.sequenceNumber()) {
-                    tokenIterator.remove();
-                    mutationTokens.add(token);
-                }
-                return;
-            }
-        }
-
-        mutationTokens.add(token);
+    @InterfaceStability.Experimental
+    public N1qlParams consistentWith(MutationState mutationState) {
+        this.mutationState = mutationState;
+        return this;
     }
 
     /**

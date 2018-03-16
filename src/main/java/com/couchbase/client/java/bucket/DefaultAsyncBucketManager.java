@@ -1,17 +1,23 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2014 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java.bucket;
 
@@ -22,6 +28,7 @@ import static com.couchbase.client.java.query.dsl.Expression.x;
 import static com.couchbase.client.java.util.retry.RetryBuilder.anyOf;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -346,7 +353,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         };
 
     @Override
-    public Observable<IndexInfo> listIndexes() {
+    public Observable<IndexInfo> listN1qlIndexes() {
         Expression whereClause = x("keyspace_id").eq(s(bucket))
                 .and(i("using").eq(s("gsi")));
 
@@ -377,7 +384,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createPrimaryIndex(final boolean ignoreIfExist, boolean defer) {
+    public Observable<Boolean> createN1qlPrimaryIndex(final boolean ignoreIfExist, boolean defer) {
         Statement createIndex;
         UsingWithPath usingWithPath = Index.createPrimaryIndex().on(bucket);
         if (defer) {
@@ -391,7 +398,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createPrimaryIndex(final String customName, final boolean ignoreIfExist, boolean defer) {
+    public Observable<Boolean> createN1qlPrimaryIndex(final String customName, final boolean ignoreIfExist, boolean defer) {
         Statement createIndex;
         UsingWithPath usingWithPath = Index.createNamedPrimaryIndex(customName).on(bucket);
         if (defer) {
@@ -415,19 +422,39 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createIndex(final String indexName, final boolean ignoreIfExist, boolean defer, Object... fields) {
+    public Observable<Boolean> createN1qlIndex(final String indexName, final boolean ignoreIfExist, boolean defer, Object... fields) {
         if (fields == null || fields.length < 1) {
             throw new IllegalArgumentException("At least one field is required for secondary index");
         }
 
-        Expression firstExpression = expressionOrIdentifier(fields[0]);
-        Expression[] otherExpressions = new Expression[fields.length - 1];
-        for (int i = 1; i < fields.length; i++) {
-            otherExpressions[i - 1] = expressionOrIdentifier(fields[i]);
+        return createN1qlIndex(indexName,  Arrays.asList(fields), null, ignoreIfExist, defer);
+    }
+
+    @Override
+    public Observable<Boolean> createN1qlIndex(final String indexName, List<Object> fields, Expression whereClause,
+            final boolean ignoreIfExist, boolean defer) {
+        if (fields == null || fields.isEmpty()) {
+            throw new IllegalArgumentException("At least one field is required for secondary index");
+        }
+
+        int i = -1;
+        Expression firstExpression = expressionOrIdentifier(fields.get(0));
+        Expression[] otherExpressions = new Expression[fields.size() - 1];
+        for (Object field : fields) {
+            if (i > -1) {
+                otherExpressions[i] = expressionOrIdentifier(field);
+            } //otherwise skip first expression, already processed
+            i++;
         }
 
         Statement createIndex;
-        UsingWithPath usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions);
+        UsingWithPath usingWithPath;
+        if (whereClause != null) {
+            usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions).where(whereClause);
+        } else {
+            usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions);
+        }
+
         if (defer) {
             createIndex = usingWithPath.withDefer();
         } else {
@@ -440,18 +467,18 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
 
     @Override
-    public Observable<Boolean> dropPrimaryIndex(final boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropN1qlPrimaryIndex(final boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropPrimaryIndex(bucket).using(IndexType.GSI), "Error dropping primary index");
     }
 
     @Override
-    public Observable<Boolean> dropPrimaryIndex(String customName, boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropNamedPrimaryIndex(bucket, customName).using(IndexType.GSI),
                 "Error dropping custom primary index \"" + customName + "\"");
     }
 
     @Override
-    public Observable<Boolean> dropIndex(String name, boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropN1qlIndex(String name, boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropIndex(bucket, name).using(IndexType.GSI), "Error dropping index \"" + name + "\"");
     }
 
@@ -491,12 +518,12 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
 
     @Override
-    public Observable<List<String>> buildDeferredIndexes() {
+    public Observable<List<String>> buildN1qlDeferredIndexes() {
 
         final Func1<List<JsonObject>, Observable<List<String>>> errorHandler = errorsToThrowable(
                 "Error while triggering index build: ");
 
-        return listIndexes()
+        return listN1qlIndexes()
                 .filter(new Func1<IndexInfo, Boolean>() {
                     @Override
                     public Boolean call(IndexInfo indexInfo) {
@@ -545,14 +572,11 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, final long watchTimeout,
+    public Observable<IndexInfo> watchN1qlIndexes(List<String> watchList, final long watchTimeout,
             final TimeUnit watchTimeUnit) {
         final Set<String> watchSet = new HashSet<String>(watchList);
-        if (watchPrimary) {
-            watchSet.add(Index.PRIMARY_NAME);
-        }
 
-        return listIndexes()
+        return listN1qlIndexes()
                 .flatMap(new Func1<IndexInfo, Observable<IndexInfo>>() {
                     @Override
                     public Observable<IndexInfo> call(IndexInfo i) {

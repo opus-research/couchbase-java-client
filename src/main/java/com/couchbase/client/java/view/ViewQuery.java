@@ -1,17 +1,23 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2014 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java.view;
 
@@ -533,8 +539,11 @@ public class ViewQuery implements Serializable {
         }
     }
 
-    @Override
-    public String toString() {
+    /**
+     * Returns the query string for this ViewQuery, containing all the key/value pairs
+     * for parameters that will be part of this ViewQuery's execution URL for the view service.
+     */
+    public String toQueryString() {
         StringBuilder sb = new StringBuilder();
         boolean firstParam = true;
         for (int i = 0; i < params.length; i++) {
@@ -555,6 +564,38 @@ public class ViewQuery implements Serializable {
                 sb.append('=');
             }
         }
+        return sb.toString();
+    }
+
+    /**
+     * A string representation of this ViewQuery, suitable for logging and other human consumption.
+     * If the {@link #keys(JsonArray)} parameter is too large, it is truncated in this dump.
+     *
+     * @see this#toQueryString() for the parameter representation of the ViewQuery execution URL.
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ViewQuery(").append(design).append('/').append(view).append("){");
+        sb.append("params=\"").append(toQueryString()).append('"');
+        if (isDevelopment()) {
+            sb.append(", dev");
+        }
+        if (isIncludeDocs()) {
+            sb.append(", includeDocs");
+        }
+        if (keysJson != null) {
+            sb.append(", keys=\"");
+            if (keysJson.length() < 140) {
+                sb.append(keysJson).append('"');
+            } else {
+                sb.append(keysJson, 0, 140)
+                    .append("...\"(")
+                    .append(keysJson.length())
+                    .append(" chars total)");
+            }
+        }
+        sb.append('}');
         return sb.toString();
     }
 

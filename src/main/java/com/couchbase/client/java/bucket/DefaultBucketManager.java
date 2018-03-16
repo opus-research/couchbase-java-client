@@ -1,17 +1,23 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2014 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java.bucket;
 
@@ -20,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.DesignDocument;
@@ -215,99 +222,100 @@ public class DefaultBucketManager implements BucketManager {
     }
 
     @Override
-    public List<IndexInfo> listIndexes() {
-        return listIndexes(timeout, TIMEOUT_UNIT);
+    public List<IndexInfo> listN1qlIndexes() {
+        return listN1qlIndexes(timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public List<IndexInfo> listIndexes(long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.listIndexes().toList(), timeout, timeUnit);
+    public List<IndexInfo> listN1qlIndexes(long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.listN1qlIndexes().toList(), timeout, timeUnit);
     }
 
     @Override
-    public boolean createPrimaryIndex(boolean ignoreIfExist, boolean defer) {
-        return createPrimaryIndex(ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
+    public boolean createN1qlPrimaryIndex(boolean ignoreIfExist, boolean defer) {
+        return createN1qlPrimaryIndex(ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean createPrimaryIndex(boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.createPrimaryIndex(ignoreIfExist, defer), timeout, timeUnit);
+    public boolean createN1qlPrimaryIndex(boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.createN1qlPrimaryIndex(ignoreIfExist, defer), timeout, timeUnit);
     }
 
     @Override
-    public boolean createPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer) {
-        return createPrimaryIndex(customName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
+    public boolean createN1qlPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer) {
+        return createN1qlPrimaryIndex(customName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean createPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.createPrimaryIndex(customName, ignoreIfExist, defer), timeout, timeUnit);
+    public boolean createN1qlPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.createN1qlPrimaryIndex(customName, ignoreIfExist, defer), timeout, timeUnit);
     }
 
-    private boolean createIndex(String indexName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit, Object... fields) {
-        return Blocking.blockForSingle(asyncBucketManager.createIndex(indexName, ignoreIfExist, defer, fields),
+    private boolean createN1qlIndex(String indexName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit, Object... fields) {
+        return Blocking.blockForSingle(asyncBucketManager.createN1qlIndex(indexName, ignoreIfExist, defer, fields),
                 timeout, timeUnit);
     }
 
     @Override
-    public boolean createIndex(String indexName, boolean ignoreIfExist, boolean defer, Object... fields) {
-        return createIndex(indexName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT, fields);
+    public boolean createN1qlIndex(String indexName, boolean ignoreIfExist, boolean defer, Object... fields) {
+        return createN1qlIndex(indexName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT, fields);
     }
 
     @Override
-    public boolean createIndex(String indexName, List<Object> fields, boolean ignoreIfExist, boolean defer) {
-        return createIndex(indexName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT, fields.toArray());
+    public boolean createN1qlIndex(String indexName, List<Object> fields, Expression whereClause, boolean ignoreIfExist, boolean defer) {
+        return createN1qlIndex(indexName, fields, whereClause, ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean createIndex(String indexName, List<Object> fields, boolean ignoreIfExist, boolean defer,
+    public boolean createN1qlIndex(String indexName, List<Object> fields, Expression whereClause, boolean ignoreIfExist, boolean defer,
             long timeout, TimeUnit timeUnit) {
-        return createIndex(indexName, ignoreIfExist, defer, timeout, timeUnit, fields.toArray());
+        return Blocking.blockForSingle(asyncBucketManager.createN1qlIndex(indexName, fields, whereClause, ignoreIfExist, defer),
+                timeout, timeUnit);
     }
 
     @Override
-    public boolean dropPrimaryIndex(boolean ignoreIfNotExist) {
-        return dropPrimaryIndex(ignoreIfNotExist, timeout, TIMEOUT_UNIT);
+    public boolean dropN1qlPrimaryIndex(boolean ignoreIfNotExist) {
+        return dropN1qlPrimaryIndex(ignoreIfNotExist, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean dropPrimaryIndex(boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.dropPrimaryIndex(ignoreIfNotExist), timeout, timeUnit);
+    public boolean dropN1qlPrimaryIndex(boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.dropN1qlPrimaryIndex(ignoreIfNotExist), timeout, timeUnit);
     }
 
     @Override
-    public boolean dropPrimaryIndex(String customName, boolean ignoreIfNotExist) {
-        return dropPrimaryIndex(customName, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
+    public boolean dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist) {
+        return dropN1qlPrimaryIndex(customName, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean dropPrimaryIndex(String customName, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.dropPrimaryIndex(customName, ignoreIfNotExist), timeout, timeUnit);
+    public boolean dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.dropN1qlPrimaryIndex(customName, ignoreIfNotExist), timeout, timeUnit);
     }
 
     @Override
-    public boolean dropIndex(String name, boolean ignoreIfNotExist) {
-        return dropIndex(name, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
+    public boolean dropN1qlIndex(String name, boolean ignoreIfNotExist) {
+        return dropN1qlIndex(name, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public boolean dropIndex(String name, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.dropIndex(name, ignoreIfNotExist), timeout, timeUnit);
+    public boolean dropN1qlIndex(String name, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.dropN1qlIndex(name, ignoreIfNotExist), timeout, timeUnit);
     }
 
     @Override
-    public List<String> buildDeferredIndexes() {
-        return buildDeferredIndexes(timeout, TIMEOUT_UNIT);
+    public List<String> buildN1qlDeferredIndexes() {
+        return buildN1qlDeferredIndexes(timeout, TIMEOUT_UNIT);
     }
 
     @Override
-    public List<String> buildDeferredIndexes(long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.buildDeferredIndexes(), timeout, timeUnit);
+    public List<String> buildN1qlDeferredIndexes(long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucketManager.buildN1qlDeferredIndexes(), timeout, timeUnit);
     }
 
     @Override
-    public List<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, long watchTimeout, TimeUnit watchTimeUnit) {
-        return asyncBucketManager.watchIndexes(watchList, watchPrimary, watchTimeout, watchTimeUnit)
+    public List<IndexInfo> watchN1qlIndexes(List<String> watchList, long watchTimeout, TimeUnit watchTimeUnit) {
+        return asyncBucketManager.watchN1qlIndexes(watchList, watchTimeout, watchTimeUnit)
                 .toList()
                 .toBlocking()
                 .single();
