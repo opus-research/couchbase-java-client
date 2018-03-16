@@ -51,6 +51,14 @@
     <dependency org="commons-codec" name="commons-codec" rev="commons-codec.version}" conf="default" />
     <dependency org="org.apache.httpcomponents" name="httpcore" rev="${httpcore.version}" conf="default" />
     <dependency org="org.apache.httpcomponents" name="httpcore-nio" rev="${httpcore-nio.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-asm" rev="${spring-asm.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-beans" rev="${spring-beans.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-core" rev="${spring-core.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-context" rev="${spring-context.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-context-support" rev="${spring-context-support.version}" conf="default"/>
+    <dependency org="org.springframework" name="spring-expression" rev="${spring-expression.version}" conf="default"/>
+    <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="default"/>
+
     <dependency org="org.easymock" name="easymock" rev="${easymock.version}" conf="default" />
     <dependency org="org.easymock" name="easymockclassextension" rev="${easymock-entension.version}" conf="default" />
     <dependency org="junit-addons" name="junit-addons" rev="${junit-addons.version}" conf="default" />
