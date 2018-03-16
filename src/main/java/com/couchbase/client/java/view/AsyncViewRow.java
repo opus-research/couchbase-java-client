@@ -21,14 +21,12 @@
  */
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.TranscodingException;
 import rx.Observable;
 
 /**
@@ -74,9 +72,9 @@ public interface AsyncViewRow {
      *
      * The {@link Observable} can error under the following conditions:
      *
-     *  - {@link BackpressureException}: If the incoming request rate is too high to be processed.
-     *  - {@link IllegalStateException}: If the view is reduced and the ID is null.
-     *  - {@link TranscodingException}: If the response document could not be decoded.
+     *  - com.couchbase.client.core.BackpressureException: If the incoming request rate is too high to be processed.
+     *  - java.lang.IllegalStateException: If the view is reduced and the ID is null.
+     *  - com.couchbase.client.java.error.TranscodingException: If the response document could not be decoded.
      *
      * @return a {@link Observable} containing the document once loaded.
      */
@@ -87,9 +85,9 @@ public interface AsyncViewRow {
      *
      * The {@link Observable} can error under the following conditions:
      *
-     *  - {@link BackpressureException}: If the incoming request rate is too high to be processed.
-     *  - {@link IllegalStateException}: If the view is reduced and the ID is null.
-     *  - {@link TranscodingException}: If the response document could not be decoded.
+     *  - com.couchbase.client.core.BackpressureException: If the incoming request rate is too high to be processed.
+     *  - java.lang.IllegalStateException: If the view is reduced and the ID is null.
+     *  - com.couchbase.client.java.error.TranscodingException: If the response document could not be decoded.
      *
      * @param target the target class to decode into.
      * @return a {@link Observable} containing the document once loaded.

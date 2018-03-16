@@ -33,7 +33,6 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -232,87 +231,6 @@ public class JsonArrayTest {
 
         assertNotNull(arr.getArray(2));
         assertNull(arr.getArray(2).get(0));
-    }
-
-    @Test
-    public void shouldAddMapAsAJsonObject() {
-        Map<String, Object> map = new HashMap<String, Object>(2);
-        map.put("item1", "value1");
-        map.put("item2", true);
-        JsonArray arr = JsonArray.create().add(map);
-
-        assertEquals(1, arr.size());
-        assertNotNull(arr.get(0));
-        assertTrue(arr.get(0) instanceof JsonObject);
-        assertTrue(arr.getObject(0).containsKey("item1"));
-        assertTrue(arr.getObject(0).containsKey("item2"));
-    }
-
-    @Test
-    public void shouldAddListAsAJsonArray() {
-        List<Object> list = new ArrayList<Object>(2);
-        list.add("value1");
-        list.add(true);
-        JsonArray arr = JsonArray.create().add(list);
-
-        assertEquals(1, arr.size());
-        assertNotNull(arr.get(0));
-        assertTrue(arr.get(0) instanceof JsonArray);
-        assertEquals(2, arr.getArray(0).size());
-        assertEquals("value1", arr.getArray(0).get(0));
-        assertEquals(Boolean.TRUE, arr.getArray(0).get(1));
-    }
-
-    @Test
-    public void shouldExportEscapedJsonValue() {
-        JsonArray arr = JsonArray.create().add("\"\b\r\n\f\t\\/");
-        String escaped = "\\\"\\b\\r\\n\\f\\t\\\\/";
-        assertEquals("[\"" + escaped + "\"]", arr.toString());
-    }
-
-    @Test
-    public void shouldExportEscapedControlCharInValue() {
-        JsonArray arr = JsonArray.create().add("\u001F");
-        String escaped = "\\u001F";
-        assertEquals("[\"" + escaped + "\"]", arr.toString());
-    }
-
-    @Test
-    public void shouldConvertSubJsonValuesToCollections() {
-        JsonObject sub1 = JsonObject.create().put("sub1.1", "test");
-        JsonArray sub2 = JsonArray.create().add("sub2.1");
-        JsonArray arr = JsonArray.create()
-                                   .add(sub1)
-                                   .add(sub2);
-
-        List<Object> asList = arr.toList();
-        Object mSub1 = asList.get(0);
-        Object mSub2 = asList.get(1);
-
-        assertNotNull(mSub1);
-        assertTrue(mSub1 instanceof Map);
-        assertEquals("test", ((Map) mSub1).get("sub1.1"));
-
-        assertNotNull(mSub2);
-        assertTrue(mSub2 instanceof List);
-        assertEquals("sub2.1", ((List) mSub2).get(0));
-    }
-
-    @Test
-    public void shouldThrowIfAddingToSelf() {
-        JsonArray arr = JsonArray.create();
-        try {
-            arr.add(arr);
-            fail();
-        } catch (IllegalArgumentException e) {
-            //success
-        }
-        try {
-            arr.add((Object) arr);
-            fail();
-        } catch (IllegalArgumentException e) {
-            //success
-        }
     }
 
 }

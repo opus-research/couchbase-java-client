@@ -72,34 +72,6 @@ public class JsonObjectTest {
     }
 
     @Test
-    public void shouldExportEscapedJsonValue() {
-        JsonObject obj = JsonObject.create().put("escapeSimple", "\"\b\r\n\f\t\\/");
-        String escaped = "\\\"\\b\\r\\n\\f\\t\\\\/";
-        assertEquals("{\"escapeSimple\":\"" + escaped + "\"}", obj.toString());
-    }
-
-    @Test
-    public void shouldExportEscapedJsonAttribute() {
-        JsonObject obj = JsonObject.create().put("\"\b\r\n\f\t\\/", "escapeSimpleValue");
-        String escaped = "\\\"\\b\\r\\n\\f\\t\\\\/";
-        assertEquals("{\"" + escaped + "\":\"escapeSimpleValue\"}", obj.toString());
-    }
-
-    @Test
-    public void shouldExportEscapedControlCharInValue() {
-        JsonObject obj = JsonObject.create().put("controlChar", "\u001F");
-        String escaped = "\\u001F";
-        assertEquals("{\"controlChar\":\"" + escaped + "\"}", obj.toString());
-    }
-
-    @Test
-    public void shouldExportEscapedControlCharInAttribute() {
-        JsonObject obj = JsonObject.create().put("\u001F", "controlCharValue");
-        String escaped = "\\u001F";
-        assertEquals("{\"" + escaped + "\":\"controlCharValue\"}", obj.toString());
-    }
-
-    @Test
     public void shouldReturnNullWhenNotFound() {
         JsonObject obj = JsonObject.empty();
         assertNull(obj.getInt("notfound"));
@@ -323,72 +295,5 @@ public class JsonObjectTest {
 
         assertNotNull(obj.getArray("subArrayWithNull"));
         assertNull(obj.getArray("subArrayWithNull").get(0));
-    }
-
-    @Test
-    public void shouldPutMapAsAJsonObject() {
-        Map<String, Object> map = new HashMap<String, Object>(2);
-        map.put("item1", "value1");
-        map.put("item2", true);
-        JsonObject obj = JsonObject.create().put("sub", map);
-
-        assertTrue(obj.containsKey("sub"));
-        assertNotNull(obj.get("sub"));
-        assertTrue(obj.get("sub") instanceof JsonObject);
-        assertTrue(obj.getObject("sub").containsKey("item1"));
-        assertTrue(obj.getObject("sub").containsKey("item2"));
-    }
-
-    @Test
-    public void shouldPutListAsAJsonArray() {
-        List<Object> list = new ArrayList<Object>(2);
-        list.add("value1");
-        list.add(true);
-        JsonObject obj = JsonObject.create().put("sub", list);
-
-        assertTrue(obj.containsKey("sub"));
-        assertNotNull(obj.get("sub"));
-        assertTrue(obj.get("sub") instanceof JsonArray);
-        assertEquals(2, obj.getArray("sub").size());
-        assertEquals("value1", obj.getArray("sub").get(0));
-        assertEquals(Boolean.TRUE, obj.getArray("sub").get(1));
-    }
-
-    @Test
-    public void shouldConvertSubJsonValuesToCollections() {
-        JsonObject sub1 = JsonObject.create().put("sub1.1", "test");
-        JsonArray sub2 = JsonArray.create().add("sub2.1");
-        JsonObject obj = JsonObject.create()
-                .put("sub1", sub1)
-                .put("sub2", sub2);
-
-        Map<String, Object> asMap = obj.toMap();
-        Object mSub1 = asMap.get("sub1");
-        Object mSub2 = asMap.get("sub2");
-
-        assertNotNull(mSub1);
-        assertTrue(mSub1 instanceof Map);
-        assertEquals("test", ((Map) mSub1).get("sub1.1"));
-
-        assertNotNull(mSub2);
-        assertTrue(mSub2 instanceof List);
-        assertEquals("sub2.1", ((List) mSub2).get(0));
-    }
-
-    @Test
-    public void shouldThrowIfAddingToSelf() {
-        JsonObject obj = JsonObject.create();
-        try {
-            obj.put("test", obj);
-            fail();
-        } catch (IllegalArgumentException e) {
-            //success
-        }
-        try {
-            obj.put("test", (Object) obj);
-            fail();
-        } catch (IllegalArgumentException e) {
-            //success
-        }
     }
 }

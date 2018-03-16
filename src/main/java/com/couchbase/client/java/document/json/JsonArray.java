@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import com.couchbase.client.java.transcoder.JacksonTransformers;
-
 /**
  * Represents a JSON array that can be stored and loaded from Couchbase Server.
  *
@@ -178,9 +176,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * @return the {@link JsonArray}.
      */
     public JsonArray add(Object value) {
-        if (value == this) {
-            throw new IllegalArgumentException("Cannot add self");
-        } else if (value == JsonValue.NULL) {
+        if (value == JsonValue.NULL) {
             addNull();
         } else if (checkType(value)) {
             content.add(value);
@@ -351,17 +347,6 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
     }
 
     /**
-     * Append an {@link JsonObject} element, converted from a {@link List}, to the {@link JsonArray}.
-     *
-     * @param value the value to append.
-     * @return the {@link JsonArray}.
-     * @see JsonObject#from(Map)
-     */
-    public JsonArray add(Map<String, ?> value) {
-        return add(JsonObject.from(value));
-    }
-
-    /**
      * Retrieves the value by the position in the {@link JsonArray} and casts it to {@link JsonObject}.
      *
      * @param index the index of the value.
@@ -379,22 +364,8 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * @return the {@link JsonArray}.
      */
     public JsonArray add(JsonArray value) {
-        if (value == this) {
-            throw new IllegalArgumentException("Cannot add self");
-        }
         content.add(value);
         return this;
-    }
-
-    /**
-     * Append an {@link JsonArray} element, converted from a {@link List}, to the {@link JsonArray}.
-     *
-     * @param value the value to append.
-     * @return the {@link JsonArray}.
-     * @see #from(List)
-     */
-    public JsonArray add(List<?> value) {
-        return add(JsonArray.from(value));
     }
 
     /**
@@ -409,24 +380,12 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
     }
 
     /**
-     * Copies the content of the {@link JsonArray} into a new {@link List} and returns it.
-     * Note that if the array contains sub-{@link JsonObject} or {@link JsonArray}, they
-     * will recursively be converted to {@link Map} and {@link List}, respectively.
+     * Copies the content of the {@link JsonArray} into a new {@link List} and return it.
      *
      * @return the content of the {@link JsonArray} in a new {@link List}.
      */
     public List<Object> toList() {
-        List<Object> copy = new ArrayList<Object>(content.size());
-        for (Object o : content) {
-            if (o instanceof JsonObject) {
-                copy.add(((JsonObject) o).toMap());
-            } else if (o instanceof JsonArray) {
-                copy.add(((JsonArray) o).toList());
-            } else {
-                copy.add(o);
-            }
-        }
-        return copy;
+        return new ArrayList<Object>(content);
     }
 
     /**
@@ -459,11 +418,31 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      */
     @Override
     public String toString() {
-        try {
-            return JacksonTransformers.MAPPER.writeValueAsString(this);
-        } catch (Exception e) {
-            throw new IllegalStateException("Cannot convert JsonArray to Json String", e);
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < content.size(); i++) {
+            Object item = content.get(i);
+            boolean isString = item instanceof String;
+
+            if (isString) {
+                sb.append("\"");
+            }
+
+            if (item == null) {
+                sb.append("null");
+            } else {
+                sb.append(item.toString());
+            }
+
+            if (isString) {
+                sb.append("\"");
+            }
+            if (i < content.size()-1) {
+                sb.append(",");
+            }
         }
+        sb.append("]");
+        return sb.toString();
     }
 
     @Override
