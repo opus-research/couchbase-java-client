@@ -324,8 +324,4 @@ public class ViewQueryTest extends ClusterDependentTest {
         row.document();
     }
 
-    @Test
-    public void shouldSucceedWithLargeKeysArray() {
-    }
-
 }
