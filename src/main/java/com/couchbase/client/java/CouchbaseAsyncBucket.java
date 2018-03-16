@@ -24,9 +24,7 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.ResponseStatusDetails;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.kv.AppendRequest;
@@ -276,11 +274,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             return false;
                         case TEMPORARY_FAILURE:
                         case SERVER_BUSY:
-                            throw addDetails(new TemporaryFailureException(), response);
+                            throw new TemporaryFailureException();
                         case OUT_OF_MEMORY:
-                            throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                            throw new CouchbaseOutOfMemoryException();
                         default:
-                            throw addDetails(new CouchbaseException(response.status().toString()), response);
+                            throw new CouchbaseException(response.status().toString());
                     }
                 }
             })
@@ -365,13 +363,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         case NOT_EXISTS:
                             return false;
                         case TEMPORARY_FAILURE:
-                            throw addDetails(new TemporaryLockFailureException(), response);
+                            throw new TemporaryLockFailureException();
                         case SERVER_BUSY:
-                            throw addDetails(new TemporaryFailureException(), response);
+                            throw new TemporaryFailureException();
                         case OUT_OF_MEMORY:
-                            throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                            throw new CouchbaseOutOfMemoryException();
                         default:
-                            throw addDetails(new CouchbaseException(response.status().toString()), response);
+                            throw new CouchbaseException(response.status().toString());
                     }
                 }
             })
@@ -423,11 +421,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             return false;
                         case TEMPORARY_FAILURE:
                         case SERVER_BUSY:
-                            throw addDetails(new TemporaryFailureException(), response);
+                            throw new TemporaryFailureException();
                         case OUT_OF_MEMORY:
-                            throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                            throw new CouchbaseOutOfMemoryException();
                         default:
-                            throw addDetails(new CouchbaseException(response.status().toString()), response);
+                            throw new CouchbaseException(response.status().toString());
                     }
                 }
             })
@@ -496,16 +494,16 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case TOO_BIG:
-                        throw addDetails(new RequestTooBigException(), response);
+                        throw new RequestTooBigException();
                     case EXISTS:
-                        throw addDetails(new DocumentAlreadyExistsException(), response);
+                        throw new DocumentAlreadyExistsException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -570,16 +568,16 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case TOO_BIG:
-                        throw addDetails(new RequestTooBigException(), response);
+                        throw new RequestTooBigException();
                     case EXISTS:
-                        throw addDetails(new CASMismatchException(), response);
+                        throw new CASMismatchException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -645,18 +643,18 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case TOO_BIG:
-                        throw addDetails(new RequestTooBigException(), response);
+                        throw new RequestTooBigException();
                     case NOT_EXISTS:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case EXISTS:
-                        throw addDetails(new CASMismatchException(), response);
+                        throw new CASMismatchException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -718,16 +716,16 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case NOT_EXISTS:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case EXISTS:
-                        throw addDetails(new CASMismatchException(), response);
+                        throw new CASMismatchException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -937,14 +935,14 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case NOT_EXISTS:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -972,15 +970,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case NOT_EXISTS:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
-                        throw addDetails(new TemporaryLockFailureException(), response);
+                        throw new TemporaryLockFailureException();
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -1013,14 +1011,14 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case NOT_EXISTS:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -1057,18 +1055,18 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case TOO_BIG:
-                        throw addDetails(new RequestTooBigException(), response);
+                        throw new RequestTooBigException();
                     case NOT_STORED:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     case EXISTS:
-                        throw addDetails(new CASMismatchException(), response);
+                        throw new CASMismatchException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -1099,18 +1097,18 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 switch (response.status()) {
                     case TOO_BIG:
-                        throw addDetails(new RequestTooBigException(), response);
+                        throw new RequestTooBigException();
                     case NOT_STORED:
-                        throw addDetails(new DocumentDoesNotExistException(), response);
+                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                        throw addDetails(new TemporaryFailureException(), response);
+                        throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
-                        throw addDetails(new CouchbaseOutOfMemoryException(), response);
+                        throw new CouchbaseOutOfMemoryException();
                     case EXISTS:
-                        throw addDetails(new CASMismatchException(), response);
+                        throw new CASMismatchException();
                     default:
-                        throw addDetails(new CouchbaseException(response.status().toString()), response);
+                        throw new CouchbaseException(response.status().toString());
                 }
             }
         });
@@ -2090,18 +2088,5 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<Integer> invalidateQueryCache() {
         return Observable.just(n1qlQueryExecutor.invalidateQueryCache());
-    }
-
-    /**
-     * Helper method to encapsulate the logic of enriching the exception with detailed status info.
-     */
-    private static <X extends CouchbaseException, R extends CouchbaseResponse> X addDetails(X ex, R r) {
-        if (r.statusDetails() != null) {
-            ex.details(r.statusDetails());
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("{} returned with enhanced error details {}", r, ex);
-            }
-        }
-        return ex;
     }
 }
