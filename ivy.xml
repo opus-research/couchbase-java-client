@@ -72,20 +72,6 @@ SOFTWARE.
         rev="${httpcore.version}" conf="common->master"/>
     <dependency org="org.apache.httpcomponents" name="httpcore-nio"
         rev="${httpcore-nio.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-asm"
-        rev="${spring-asm.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-beans"
-        rev="${spring-beans.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-core"
-        rev="${spring-core.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-context"
-        rev="${spring-context.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-context-support"
-        rev="${spring-context-support.version}" conf="common->master"/>
-    <dependency org="org.springframework" name="spring-expression"
-        rev="${spring-expression.version}" conf="common->master"/>
-    <dependency org="commons-logging" name="commons-logging"
-        rev="${commons-logging.version}" conf="common->master"/>
     <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}"
         conf="checkstyle->default" />
     <dependency org="com.google.code.findbugs" name="findbugs"
