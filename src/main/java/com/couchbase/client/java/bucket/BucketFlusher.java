@@ -23,10 +23,8 @@ package com.couchbase.client.java.bucket;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.RequestFactory;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.config.FlushRequest;
 import com.couchbase.client.core.message.config.FlushResponse;
@@ -110,13 +108,8 @@ public class BucketFlusher {
             .from(FLUSH_MARKERS)
             .flatMap(new Func1<String, Observable<UpsertResponse>>() {
                 @Override
-                public Observable<UpsertResponse> call(final String id) {
-                    return core.send(new RequestFactory() {
-                        @Override
-                        public CouchbaseRequest call() {
-                            return new UpsertRequest(id, Unpooled.copiedBuffer(id, CharsetUtil.UTF_8), bucket);
-                        }
-                    });
+                public Observable<UpsertResponse> call(String id) {
+                    return core.send(new UpsertRequest(id, Unpooled.copiedBuffer(id, CharsetUtil.UTF_8), bucket));
                 }
             })
             .doOnNext(new Action1<UpsertResponse>() {
@@ -149,12 +142,7 @@ public class BucketFlusher {
      */
     private static Observable<Boolean> initiateFlush(final ClusterFacade core, final String bucket, final String password) {
         return core
-            .<FlushResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new FlushRequest(bucket, password);
-                }
-            })
+            .<FlushResponse>send(new FlushRequest(bucket, password))
             .map(new Func1<FlushResponse, Boolean>() {
                 @Override
                 public Boolean call(FlushResponse flushResponse) {
@@ -182,13 +170,8 @@ public class BucketFlusher {
             .from(FLUSH_MARKERS)
             .flatMap(new Func1<String, Observable<GetResponse>>() {
                 @Override
-                public Observable<GetResponse> call(final String id) {
-                    return core.send(new RequestFactory() {
-                        @Override
-                        public CouchbaseRequest call() {
-                            return new GetRequest(id, bucket);
-                        }
-                    });
+                public Observable<GetResponse> call(String id) {
+                    return core.send(new GetRequest(id, bucket));
                 }
             })
             .reduce(0, new Func2<Integer, GetResponse, Integer>() {

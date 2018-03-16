@@ -25,10 +25,8 @@ import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
-import com.couchbase.client.core.RequestFactory;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.lang.Tuple2;
-import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
@@ -111,6 +109,7 @@ import com.couchbase.client.java.view.ViewQueryResponseMapper;
 import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.exceptions.CompositeException;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
 
@@ -199,12 +198,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
         return core
-            .<GetResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new GetRequest(id, bucket);
-                }
-            })
+            .<GetResponse>send(new GetRequest(id, bucket))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -240,14 +234,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<Boolean> exists(final String id) {
+    public Observable<Boolean> exists(String id) {
         return core
-            .<ObserveResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new ObserveRequest(id, 0, true, (short) 0, bucket);
-                }
-            })
+            .<ObserveResponse>send(new ObserveRequest(id, 0, true, (short) 0, bucket))
             .map(new Func1<ObserveResponse, Boolean>() {
                 @Override
                 public Boolean call(ObserveResponse response) {
@@ -257,8 +246,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     }
 
                     ObserveResponse.ObserveStatus foundStatus = response.observeStatus();
-                    return foundStatus == ObserveResponse.ObserveStatus.FOUND_PERSISTED
-                        || foundStatus == ObserveResponse.ObserveStatus.FOUND_NOT_PERSISTED;
+                    if (foundStatus == ObserveResponse.ObserveStatus.FOUND_PERSISTED
+                        || foundStatus == ObserveResponse.ObserveStatus.FOUND_NOT_PERSISTED) {
+                        return true;
+                    }
+
+                    return false;
                 }
             });
     }
@@ -282,12 +275,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
-        return core.<GetResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new GetRequest(id, bucket, true, false, lockTime);
-                }
-            })
+        return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -337,12 +325,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
-        return core.<GetResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new GetRequest(id, bucket, false, true, expiry);
-                }
-            })
+        return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -396,12 +379,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         Observable<GetResponse> incoming;
         if (type == ReplicaMode.ALL) {
             incoming = core
-                .<GetClusterConfigResponse>send(new RequestFactory() {
-                    @Override
-                    public CouchbaseRequest call() {
-                        return new GetClusterConfigRequest();
-                    }
-                })
+                .<GetClusterConfigResponse>send(new GetClusterConfigRequest())
                 .map(new Func1<GetClusterConfigResponse, Integer>() {
                     @Override
                     public Integer call(GetClusterConfigResponse response) {
@@ -421,25 +399,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     }
                 }).flatMap(new Func1<BinaryRequest, Observable<GetResponse>>() {
                     @Override
-                    public Observable<GetResponse> call(final BinaryRequest req) {
-                        return core.send(new RequestFactory() {
-                            @Override
-                            public CouchbaseRequest call() {
-                                // even that this is not creating a new request on each invocation
-                                // it is fine, since the whole sequence is cold and will be
-                                // recomputed if needed.
-                                return req;
-                            }
-                        });
+                    public Observable<GetResponse> call(BinaryRequest req) {
+                        return core.send(req);
                     }
                 });
         } else {
-            incoming = core.send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new ReplicaGetRequest(id, bucket, (short) type.ordinal());
-                }
-            });
+            incoming = core.send(new ReplicaGetRequest(id, bucket, (short) type.ordinal()));
         }
 
         return incoming
@@ -480,16 +445,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> insert(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
-            .<InsertResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-                    return new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket);
-                }
-            })
+            .<InsertResponse>send(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
             .map(new Func1<InsertResponse, D>() {
                 @Override
                 public D call(InsertResponse response) {
@@ -499,7 +458,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                     if (response.status().isSuccess()) {
                         return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas());
+                                document.content(), response.cas());
                     }
 
                     switch (response.status()) {
@@ -554,16 +513,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> upsert(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
-            .<UpsertResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-                    return new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket);
-                }
-            })
+            .<UpsertResponse>send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
             .map(new Func1<UpsertResponse, D>() {
                 @Override
                 public D call(UpsertResponse response) {
@@ -573,7 +526,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                     if (response.status().isSuccess()) {
                         return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas());
+                                document.content(), response.cas());
                     }
 
                     switch (response.status()) {
@@ -629,16 +582,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> replace(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        return core.<ReplaceResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-                    return new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(),
-                        encoded.value2(), bucket);
-                }
-            })
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+
+        return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(),
+            encoded.value2(), bucket))
             .map(new Func1<ReplaceResponse, D>() {
                 @Override
                 public D call(ReplaceResponse response) {
@@ -648,7 +596,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                     if (response.status().isSuccess()) {
                         return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(),
-                            response.cas());
+                                response.cas());
                     }
 
                     switch (response.status()) {
@@ -708,12 +656,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         final  Transcoder<Document<Object>, Object> transcoder =
             (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         return core
-            .<RemoveResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new RemoveRequest(document.id(), document.cas(), bucket);
-                }
-            })
+            .<RemoveResponse>send(new RemoveRequest(document.id(), document.cas(), bucket))
             .map(new Func1<RemoveResponse, D>() {
                 @Override
                 public D call(final RemoveResponse response) {
@@ -725,7 +668,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                     }
 
-                    switch (response.status()) {
+                    switch(response.status()) {
                         case NOT_EXISTS:
                             throw new DocumentDoesNotExistException();
                         case EXISTS:
@@ -799,11 +742,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncViewResult> query(final ViewQuery query) {
-        Observable<ViewQueryResponse> source = core.send(new RequestFactory() {
+        Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
             @Override
-            public CouchbaseRequest call() {
-                return new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
-                    query.toString(), query.getKeys(), bucket, password);
+            public Observable<ViewQueryResponse> call() {
+                final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
+                    query.isDevelopment(), query.toString(), query.getKeys(), bucket, password);
+                return core.send(request);
             }
         });
 
@@ -819,11 +763,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncSpatialViewResult> query(final SpatialViewQuery query) {
-        Observable<ViewQueryResponse> source = core.send(new RequestFactory() {
+        Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
             @Override
-            public CouchbaseRequest call() {
-                return new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
-                    true, query.toString(), null, bucket, password);
+            public Observable<ViewQueryResponse> call() {
+                final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
+                    query.isDevelopment(), true, query.toString(), null, bucket, password);
+                return core.send(request);
             }
         });
 
@@ -862,13 +807,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
      * @return a result containing all found rows and additional information.
      */
     /* package */ Observable<AsyncQueryResult> queryRaw(final String query) {
+        GenericQueryRequest request = GenericQueryRequest.jsonQuery(query, bucket, password);
         return core
-            .<GenericQueryResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return GenericQueryRequest.jsonQuery(query, bucket, password);
-                }
-            })
+            .<GenericQueryResponse>send(request)
             .flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {
                 @Override
                 public Observable<AsyncQueryResult> call(final GenericQueryResponse response) {
@@ -944,18 +885,14 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Observable<QueryPlan> prepare(Statement statement) {
         Statement prepared = statement instanceof PrepareStatement ? statement : PrepareStatement.prepare(statement);
-        final SimpleQuery query = Query.simple(prepared);
+        SimpleQuery query = Query.simple(prepared);
 
+        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
+            bucket, password);
         return core
-            .<GenericQueryResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return GenericQueryRequest.jsonQuery(query.n1ql().toString(), bucket, password);
-                }
-            })
+            .<GenericQueryResponse>send(prepareRequest)
             .flatMap(new Func1<GenericQueryResponse, Observable<QueryPlan>>() {
                 @Override
                 public Observable<QueryPlan> call(GenericQueryResponse r) {
@@ -1030,12 +967,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<JsonLongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
         return core
-            .<CounterResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new CounterRequest(id, initial, delta, expiry, bucket);
-                }
-            })
+            .<CounterResponse>send(new CounterRequest(id, initial, delta, expiry, bucket))
             .map(new Func1<CounterResponse, JsonLongDocument>() {
                 @Override
                 public JsonLongDocument call(CounterResponse response) {
@@ -1047,7 +979,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         return JsonLongDocument.create(id, expiry, response.value(), response.cas());
                     }
 
-                    switch (response.status()) {
+                    switch(response.status()) {
                         case TEMPORARY_FAILURE:
                         case SERVER_BUSY:
                             throw new TemporaryFailureException();
@@ -1061,14 +993,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<Boolean> unlock(final String id, final long cas) {
+    public Observable<Boolean> unlock(String id, final long cas) {
         return core
-            .<UnlockResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new UnlockRequest(id, cas, bucket);
-                }
-            })
+            .<UnlockResponse>send(new UnlockRequest(id, cas, bucket))
             .map(new Func1<UnlockResponse, Boolean>() {
                 @Override
                 public Boolean call(UnlockResponse response) {
@@ -1080,7 +1007,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         return true;
                     }
 
-                    switch (response.status()) {
+                    switch(response.status()) {
                         case NOT_EXISTS:
                             throw new DocumentDoesNotExistException();
                         case TEMPORARY_FAILURE:
@@ -1102,13 +1029,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<Boolean> touch(final String id, final int expiry) {
-        return core.<TouchResponse>send(new RequestFactory() {
-            @Override
-            public CouchbaseRequest call() {
-                return new TouchRequest(id, expiry, bucket);
-            }
-        }).map(new Func1<TouchResponse, Boolean>() {
+    public Observable<Boolean> touch(String id, int expiry) {
+        return core.<TouchResponse>send(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
             @Override
             public Boolean call(TouchResponse response) {
                 if (response.content() != null && response.content().refCnt() > 0) {
@@ -1119,7 +1041,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     return true;
                 }
 
-                switch (response.status()) {
+                switch(response.status()) {
                     case NOT_EXISTS:
                         throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
@@ -1142,16 +1064,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> append(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
-            .<AppendResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-                    return new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket);
-                }
-            })
+            .<AppendResponse>send(new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket))
             .map(new Func1<AppendResponse, D>() {
                 @Override
                 public D call(final AppendResponse response) {
@@ -1163,7 +1079,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                     }
 
-                    switch (response.status()) {
+                    switch(response.status()) {
                         case TOO_BIG:
                             throw new RequestTooBigException();
                         case NOT_STORED:
@@ -1183,16 +1099,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> prepend(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
-            .<PrependResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-                    return new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket);
-                }
-            })
+            .<PrependResponse>send(new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket))
             .map(new Func1<PrependResponse, D>() {
                 @Override
                 public D call(final PrependResponse response) {
@@ -1204,7 +1114,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                     }
 
-                    switch (response.status()) {
+                    switch(response.status()) {
                         case TOO_BIG:
                             throw new RequestTooBigException();
                         case NOT_STORED:
@@ -1288,12 +1198,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> close() {
-        return core.<CloseBucketResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new CloseBucketRequest(bucket);
-                }
-            })
+        return core.<CloseBucketResponse>send(new CloseBucketRequest(bucket))
             .map(new Func1<CloseBucketResponse, Boolean>() {
                 @Override
                 public Boolean call(CloseBucketResponse response) {
