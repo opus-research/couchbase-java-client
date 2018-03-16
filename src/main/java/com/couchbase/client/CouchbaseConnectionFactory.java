@@ -113,23 +113,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public static final int DEFAULT_VIEW_CONNS_PER_NODE = 10;
 
   /**
-   * Default Timeout when persistence/replication constraints are used (in ms).
-   */
-  public static final long DEFAULT_OBS_TIMEOUT = 5000;
-
-  /**
    * Default Observe poll interval in ms.
    */
   public static final long DEFAULT_OBS_POLL_INTERVAL = 10;
 
   /**
    * Default maximum amount of poll cycles before failure.
-   *
-   * See {@link #DEFAULT_OBS_TIMEOUT} for correct use. The number of polls is
-   * now calculated automatically based on the {@link #DEFAULT_OBS_TIMEOUT} and
-   * {@link #DEFAULT_OBS_POLL_INTERVAL}.
    */
-  @Deprecated
   public static final int DEFAULT_OBS_POLL_MAX = 500;
 
   /**
@@ -416,44 +406,20 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   /**
-   * The minimum reconnect interval in milliseconds.
+   * Will return the minimum reconnect interval in milliseconds.
    *
    * @return the minReconnectInterval
    */
-  public long getMinReconnectInterval() {
+  long getMinReconnectInterval() {
     return minReconnectInterval;
   }
 
-  /**
-   * The observe poll interval in milliseconds.
-   *
-   * @return the observe poll interval.
-   */
-  public long getObsPollInterval() {
+  long getObsPollInterval() {
     return DEFAULT_OBS_POLL_INTERVAL;
   }
 
-  /**
-   * The observe timeout in milliseconds.
-   *
-   * @return the observe timeout.
-   */
-  public long getObsTimeout() {
-    return DEFAULT_OBS_TIMEOUT;
-  }
-
-  /**
-   * The number of observe polls to execute before giving up.
-   *
-   * It is calculated out of the observe timeout and the observe interval,
-   * rounded to the next largest integer value.
-   *
-   * @return the number of polls.
-   */
-  public int getObsPollMax() {
-    return new Double(
-      Math.ceil((double) getObsTimeout() / getObsPollInterval())
-    ).intValue();
+  int getObsPollMax() {
+    return DEFAULT_OBS_POLL_MAX;
   }
 
   /**
@@ -593,26 +559,4 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return false;
   }
 
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder("CouchbaseConnectionFactory{");
-    sb.append(", bucket='").append(getBucketName()).append('\'');
-    sb.append(", nodes=").append(getStoredBaseList());
-    sb.append(", order=").append(getStreamingNodeOrder());
-    sb.append(", opTimeout=").append(getOperationTimeout());
-    sb.append(", opQueue=").append(getOpQueueLen());
-    sb.append(", opQueueBlockTime=").append(getOpQueueMaxBlockTime());
-    sb.append(", obsPollInt=").append(getObsPollInterval());
-    sb.append(", obsPollMax=").append(getObsPollMax());
-    sb.append(", obsTimeout=").append(getObsTimeout());
-    sb.append(", viewConns=").append(getViewConnsPerNode());
-    sb.append(", viewTimeout=").append(getViewTimeout());
-    sb.append(", viewWorkers=").append(getViewWorkerSize());
-    sb.append(", configCheck=").append(getMaxConfigCheck());
-    sb.append(", reconnectInt=").append(getMinReconnectInterval());
-    sb.append(", failureMode=").append(getFailureMode());
-    sb.append(", hashAlgo=").append(getHashAlg());
-    sb.append('}');
-    return sb.toString();
-  }
 }
