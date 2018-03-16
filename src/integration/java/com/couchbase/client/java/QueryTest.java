@@ -21,6 +21,24 @@
  */
 package com.couchbase.client.java;
 
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonArray;
+import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.PreparedQuery;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryParams;
+import com.couchbase.client.java.query.QueryPlan;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryRow;
+import com.couchbase.client.java.util.ClusterDependentTest;
+import com.couchbase.client.java.util.features.CouchbaseFeature;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.List;
+
 import static com.couchbase.client.java.query.Index.createPrimaryIndex;
 import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.i;
@@ -29,31 +47,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-
-import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.NamedPreparedStatementException;
-import com.couchbase.client.java.query.PrepareStatement;
-import com.couchbase.client.java.query.PreparedPayload;
-import com.couchbase.client.java.query.PreparedQuery;
-import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryParams;
-import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.QueryRow;
-import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.consistency.ScanConsistency;
-import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.util.features.CouchbaseFeature;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  * Integration tests of the N1QL Query features.
@@ -63,25 +56,24 @@ import org.junit.Test;
  */
 public class QueryTest extends ClusterDependentTest {
 
-    private static final ScanConsistency CONSISTENCY = ScanConsistency.REQUEST_PLUS;
-    private static final QueryParams WITH_CONSISTENCY = QueryParams.build().consistency(CONSISTENCY);
-
     @BeforeClass
     public static void init() throws InterruptedException {
         Assume.assumeTrue( //skip tests unless...
                 clusterManager().info().checkAvailable(CouchbaseFeature.N1QL) //...version >= 3.5.0 (packaged)
-                        || env().queryEnabled()); //... or forced in environment by user
+                || env().queryEnabled()); //... or forced in environment by user
 
-        Thread.sleep(1500);//attempt to avoid GSI "indexer rollback" error after flush
         bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
         bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
 
         bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
+
+        //temp fix for N1QL not implementing consistency parameters yet on current DP4 builds
+        bucket().query(Query.simple("SELECT * FROM `" + bucketName() + "`"));
     }
 
     @Test
     public void shouldAlreadyHaveCreatedIndex() {
-        QueryResult indexResult = bucket().query(Query.simple(createPrimaryIndex().on(bucketName()), WITH_CONSISTENCY));
+        QueryResult indexResult = bucket().query(Query.simple(createPrimaryIndex().on(bucketName())));
         assertFalse(indexResult.finalSuccess());
         assertEquals(0, indexResult.allRows().size());
         assertNotNull(indexResult.info());
@@ -89,13 +81,13 @@ public class QueryTest extends ClusterDependentTest {
         //each time the method is called.
         assertEquals(1, indexResult.errors().size());
         assertEquals("GSI CreatePrimaryIndex() - cause: Index #primary already exist.",
-                indexResult.errors().get(0).getString("msg"));
+            indexResult.errors().get(0).getString("msg"));
     }
 
     @Test
     public void shouldHaveRequestId() {
         QueryResult result = bucket().query(Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId(null).consistency(CONSISTENCY)));
+                QueryParams.build().withContextId(null)));
         assertNotNull(result);
         assertTrue(result.parseSuccess());
         assertTrue(result.finalSuccess());
@@ -113,7 +105,7 @@ public class QueryTest extends ClusterDependentTest {
     @Test
     public void shouldHaveRequestIdAndContextId() {
         Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
+                QueryParams.build().withContextId("TEST"));
 
         QueryResult result = bucket().query(query);
         assertNotNull(result);
@@ -122,8 +114,8 @@ public class QueryTest extends ClusterDependentTest {
         assertNotNull(result.info());
         assertNotNull(result.allRows());
         assertNotNull(result.errors());
-        assertTrue(result.errors().toString(), result.errors().isEmpty());
         assertFalse(result.allRows().isEmpty());
+        assertTrue(result.errors().isEmpty());
 
         assertEquals("TEST", result.clientContextId());
         assertNotNull(result.requestId());
@@ -136,7 +128,7 @@ public class QueryTest extends ClusterDependentTest {
         String contextIdTruncatedExpected = new String(Arrays.copyOf(contextIdMoreThan64Bytes.getBytes(), 64));
 
         Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId(contextIdMoreThan64Bytes).consistency(CONSISTENCY));
+                QueryParams.build().withContextId(contextIdMoreThan64Bytes));
         QueryResult result = bucket().query(query);
         JsonObject params = JsonObject.create();
         query.params().injectParams(params);
@@ -158,7 +150,7 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldHaveSignature() {
-        Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3", WITH_CONSISTENCY);
+        Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3");
         QueryResult result = bucket().query(query);
 
         assertNotNull(result);
@@ -176,47 +168,22 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldProduceAndExecutePlan() {
-        String preparedName = "testPreparedNamed";
+        QueryPlan plan = bucket().prepare(select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1"))));
+        bucket().get("test1");
 
-        Statement statement = select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1")));
-        PrepareStatement prepareStatement = PrepareStatement.prepare(statement, preparedName);
-        PreparedPayload payload = bucket().prepare(prepareStatement);
-        assertNotNull(bucket().get("test2"));
+        assertNotNull(plan);
+        assertTrue(plan.plan().containsKey("signature"));
+        assertTrue(plan.plan().containsKey("operator"));
+        assertFalse(plan.plan().getObject("operator").isEmpty());
 
-        assertNotNull(payload);
-        assertNotNull(payload.originalStatement());
-        assertNotNull(payload.preparedName());
-        assertEquals(statement.toString(), payload.originalStatement().toString());
-        assertEquals(preparedName, payload.preparedName());
-
-        PreparedQuery preparedQuery = Query.prepared(payload,
+        PreparedQuery preparedQuery = Query.prepared(plan,
                 JsonArray.from(123),
-                QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
+                QueryParams.build().withContextId("TEST"));
         QueryResult response = bucket().query(preparedQuery);
-        assertTrue(response.errors().toString(), response.finalSuccess());
+        assertTrue(response.finalSuccess());
         List<QueryRow> rows = response.allRows();
         assertEquals("TEST", response.clientContextId());
         assertEquals(1, rows.size());
         assertTrue(rows.get(0).value().toString().contains("123"));
-    }
-
-    @Test
-    public void shouldFailToExecuteUnknownNamedPreparedStatement() {
-        SimpleDateFormat sdf = new SimpleDateFormat("YYYYMMddHHmmss");
-        String preparedName = "testPreparedNamed" + sdf.format(new Date());
-
-        Statement statement = select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1")));
-        PrepareStatement prepareStatement = PrepareStatement.prepare(statement, preparedName);
-        PreparedPayload payload = new PreparedPayload(prepareStatement, preparedName);
-        PreparedQuery preparedQuery = Query.prepared(payload,
-                JsonArray.from(123),
-                QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
-        try {
-            QueryResult response = bucket().query(preparedQuery);
-            fail("Expected NamedPreparedStatementException, got: " + response.allRows().toString() + ", errors: "
-                + response.errors().toString());
-        } catch (NamedPreparedStatementException e) {
-            //success
-        }
     }
 }
