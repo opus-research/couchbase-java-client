@@ -479,13 +479,39 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   }
 
     @Override
-    public Observable<AsyncQueryResult> query(final Query query) {
-        return query(query.toString());
+    public Observable<AsyncSpatialViewResult> query(final SpatialViewQuery query) {
+        Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
+            @Override
+            public Observable<ViewQueryResponse> call() {
+                final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
+                    query.isDevelopment(), true, query.toString(), bucket, password);
+                return core.send(request);
+            }
+        });
+
+        return ViewRetryHandler
+            .retryOnCondition(source)
+            .flatMap(new Func1<ViewQueryResponse, Observable<AsyncSpatialViewResult>>() {
+                @Override
+                public Observable<AsyncSpatialViewResult> call(final ViewQueryResponse response) {
+                    return ViewQueryResponseMapper.mapToSpatialViewResult(CouchbaseAsyncBucket.this, query, response);
+                }
+            });
     }
 
     @Override
-    public Observable<AsyncQueryResult> query(final String query) {
-        GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
+    public Observable<AsyncQueryResult> query(final Statement statement) {
+        return query(new SimpleQuery(statement));
+    }
+
+    @Override
+    public Observable<AsyncQueryResult> query(final Query query) {
+        return queryRaw(query.toN1QL());
+    }
+
+    @Override
+    public Observable<AsyncQueryResult> queryRaw(final String query) {
+        GenericQueryRequest request = GenericQueryRequest.jsonQuery(query, bucket, password);
         return core
             .<GenericQueryResponse>send(request)
             .flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {

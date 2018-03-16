@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2014 Couchbase, Inc.
+/*
+ * Copyright (c) 2014 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,29 +19,37 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.util.features;
 
 /**
- * Interface to describe N1QL queries. Queries are formed of a mandatory {@link Statement}
- * and optionally can have other components, as described in each implementation of this.
+ * Enumeration of all Couchbase Features supported by this SDK.
  *
  * @author Simon Baslé
- * @since 2.1
+ * @since 2.1.0
  */
-public interface Query {
+public enum CouchbaseFeature {
+
+    KV(1, 8, 0),
+    VIEW(2, 0, 0),
+    CCCP(2, 5, 0),
+    SSL(3, 0, 0),
+    DCP(3, 0, 0),
+    N1QL(3, 5, 0),
+    SPATIAL_VIEW(3, 5, 0);
+
+    private final Version availableFrom;
+
+    CouchbaseFeature(int major, int minor, int patch) {
+        this.availableFrom = new Version(major, minor, patch);
+    }
 
     /**
-     * Returns the {@link Statement} from this query. Note that this is the only mandatory
-     * part of a N1QL query.
+     * Checks if this feature is available on the provided server version.
      *
-     * @return the statement that forms the base of this query
+     * @param serverVersion the server side version to check against
+     * @return true if this feature is available on the given version, false otherwise.
      */
-    public Statement statement();
-
-    /**
-     * Convert this query to a full N1QL query in Json form.
-     *
-     * @return the json representation of this query (including all relevant parameters)
-     */
-    public String toN1QL();
+    public boolean isAvailableOn(Version serverVersion) {
+        return serverVersion.compareTo(availableFrom) >= 0;
+    }
 }

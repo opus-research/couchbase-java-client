@@ -19,29 +19,48 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.view;
+
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.document.json.JsonObject;
+import rx.Observable;
 
 /**
- * Interface to describe N1QL queries. Queries are formed of a mandatory {@link Statement}
- * and optionally can have other components, as described in each implementation of this.
+ * Contains the result of a {@link SpatialViewQuery}.
  *
- * @author Simon Baslé
- * @since 2.1
+ * @author Michael Nitschinger
+ * @since 2.1.0
  */
-public interface Query {
+@InterfaceStability.Committed
+@InterfaceAudience.Public
+public interface AsyncSpatialViewResult {
 
     /**
-     * Returns the {@link Statement} from this query. Note that this is the only mandatory
-     * part of a N1QL query.
+     * Emits one {@link AsyncViewRow} for each row received from the view.
      *
-     * @return the statement that forms the base of this query
+     * @return a (potentially empty) {@link Observable} containing view rows.
      */
-    public Statement statement();
+    Observable<AsyncSpatialViewRow> rows();
 
     /**
-     * Convert this query to a full N1QL query in Json form.
+     * If the query was successful.
      *
-     * @return the json representation of this query (including all relevant parameters)
+     * @return true if it was, false otherwise.
      */
-    public String toN1QL();
+    boolean success();
+
+    /**
+     * If it was not successful, an error is contained here.
+     *
+     * @return the potential error.
+     */
+    JsonObject error();
+
+    /**
+     * If debug was enabled on the query, it is contained here.
+     *
+     * @return the debug info.
+     */
+    JsonObject debug();
 }

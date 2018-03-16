@@ -19,29 +19,48 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.view;
+
+import com.couchbase.client.java.document.json.JsonObject;
+import rx.Observable;
 
 /**
- * Interface to describe N1QL queries. Queries are formed of a mandatory {@link Statement}
- * and optionally can have other components, as described in each implementation of this.
+ * Default implementation of a {@link AsyncSpatialViewResult}.
  *
- * @author Simon Baslé
- * @since 2.1
+ * @author Michael Nitschinger
+ * @since 2.1.0
  */
-public interface Query {
+public class DefaultAsyncSpatialViewResult implements AsyncSpatialViewResult {
 
-    /**
-     * Returns the {@link Statement} from this query. Note that this is the only mandatory
-     * part of a N1QL query.
-     *
-     * @return the statement that forms the base of this query
-     */
-    public Statement statement();
+    private final Observable<AsyncSpatialViewRow> rows;
+    private final boolean success;
+    private final JsonObject error;
+    private final JsonObject debug;
 
-    /**
-     * Convert this query to a full N1QL query in Json form.
-     *
-     * @return the json representation of this query (including all relevant parameters)
-     */
-    public String toN1QL();
+    public DefaultAsyncSpatialViewResult(Observable<AsyncSpatialViewRow> rows, boolean success, JsonObject error, JsonObject debug) {
+        this.rows = rows;
+        this.success = success;
+        this.error = error;
+        this.debug = debug;
+    }
+
+    @Override
+    public Observable<AsyncSpatialViewRow> rows() {
+        return rows;
+    }
+
+    @Override
+    public boolean success() {
+        return success;
+    }
+
+    @Override
+    public JsonObject error() {
+        return error;
+    }
+
+    @Override
+    public JsonObject debug() {
+        return debug;
+    }
 }

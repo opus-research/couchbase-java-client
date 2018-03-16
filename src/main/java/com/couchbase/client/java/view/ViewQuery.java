@@ -23,7 +23,6 @@ package com.couchbase.client.java.view;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.Query;
 
 import java.net.URLEncoder;
 
@@ -97,7 +96,7 @@ public class ViewQuery {
      * Explicitly enable/disable the reduce function on the query.
      *
      * @param reduce if reduce should be enabled or not.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery reduce(final boolean reduce) {
         params[PARAM_REDUCE_OFFSET] = "reduce";
@@ -114,9 +113,12 @@ public class ViewQuery {
      * Limit the number of the returned documents to the specified number.
      *
      * @param limit the number of documents to return.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery limit(final int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("Limit must be >= 0.");
+        }
         params[PARAM_LIMIT_OFFSET] = "limit";
         params[PARAM_LIMIT_OFFSET+1] = Integer.toString(limit);
         return this;
@@ -126,11 +128,11 @@ public class ViewQuery {
      * Group the results using the reduce function to a group or single row.
      *
      * Important: this setter and {@link #groupLevel(int)} should not be used
-     * together in the same {@link Query}. It is sufficient to only set the
+     * together in the same {@link ViewQuery}. It is sufficient to only set the
      * grouping level only and use this setter in cases where you always want the
      * highest group level implictly.
      *
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery group() {
         return group(true);
@@ -146,12 +148,12 @@ public class ViewQuery {
      * Specify the group level to be used.
      *
      * Important: {@link #group()} and this setter should not be used
-     * together in the same {@link Query}. It is sufficient to only use this
+     * together in the same {@link ViewQuery}. It is sufficient to only use this
      * setter and use {@link #group()} in cases where you always want
      * the highest group level implictly.
      *
      * @param grouplevel How deep the grouping level should be.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery groupLevel(final int grouplevel) {
         params[PARAM_GROUPLEVEL_OFFSET] = "group_level";
@@ -163,7 +165,7 @@ public class ViewQuery {
     /**
      * Specifies whether the specified end key should be included in the result.
      *
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery inclusiveEnd() {
         return inclusiveEnd(true);
@@ -180,9 +182,12 @@ public class ViewQuery {
      * Skip this number of records before starting to return the results.
      *
      * @param skip The number of records to skip.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery skip(final int skip) {
+        if (skip < 0) {
+            throw new IllegalArgumentException("Skip must be >= 0.");
+        }
         params[PARAM_SKIP_OFFSET] = "skip";
         params[PARAM_SKIP_OFFSET+1] = Integer.toString(skip);
         return this;
@@ -195,7 +200,7 @@ public class ViewQuery {
      * default setting is "update_after"!
      *
      * @param stale Which stale mode should be used.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery stale(final Stale stale) {
         params[PARAM_STALE_OFFSET] = "stale";
@@ -209,7 +214,7 @@ public class ViewQuery {
      * See the "OnError" enum for more details on the available options.
      *
      * @param onError The appropriate error handling type.
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery onError(final OnError onError) {
         params[PARAM_ONERROR_OFFSET] = "on_error";
@@ -220,7 +225,7 @@ public class ViewQuery {
     /**
      * Enabled debugging on view queries.
      *
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery debug() {
         return debug(true);
@@ -235,7 +240,7 @@ public class ViewQuery {
     /**
      * Return the documents in descending by key order.
      *
-     * @return the {@link Query} object for proper chaining.
+     * @return the {@link ViewQuery} object for proper chaining.
      */
     public ViewQuery descending() {
         return descending(true);
