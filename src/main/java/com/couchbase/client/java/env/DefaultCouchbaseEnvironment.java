@@ -471,7 +471,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder dcpConnectionBufferAckThreshold(double dcpConnectionBufferAckThreshold) {
+        public Builder dcpConnectionBufferAckThreshold(int dcpConnectionBufferAckThreshold) {
             super.dcpConnectionBufferAckThreshold(dcpConnectionBufferAckThreshold);
             return this;
         }
