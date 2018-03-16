@@ -30,7 +30,6 @@ import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.core.message.kv.subdoc.multi.MultiLookupResponse;
 import com.couchbase.client.core.message.kv.subdoc.multi.MultiResult;
-import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiLookupDocOptionsBuilder;
 import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiLookupRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SimpleSubdocResponse;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubExistRequest;
@@ -81,7 +80,6 @@ public class AsyncLookupInBuilder {
 
     private final List<LookupSpec> specs;
     private boolean includeRaw = false;
-    private boolean accessDeleted;
 
     /**
      * Instances of this builder should be obtained through {@link AsyncBucket#lookupIn(String)} rather than directly
@@ -104,18 +102,6 @@ public class AsyncLookupInBuilder {
         this.docId = docId;
         this.specs = new ArrayList<LookupSpec>();
     }
-
-    /**
-     * Set accessDeleted to true, if the document has been deleted to access xattrs
-     *
-     * @param accessDeleted true to access deleted document xattrs
-     */
-    @InterfaceStability.Experimental
-    public AsyncLookupInBuilder accessDeleted(boolean accessDeleted) {
-        this.accessDeleted = accessDeleted;
-        return this;
-    }
-
 
     /**
      * Perform several {@link Lookup lookup} operations inside a single existing {@link JsonDocument JSON document}.
@@ -467,7 +453,7 @@ public class AsyncLookupInBuilder {
         return deferAndWatch(new Func1<Subscriber, Observable<MultiLookupResponse>>() {
             @Override
             public Observable<MultiLookupResponse> call(Subscriber s) {
-                SubMultiLookupRequest request = new SubMultiLookupRequest(docId, bucketName, SubMultiLookupDocOptionsBuilder.builder().accessDeleted(accessDeleted), lookupSpecs);
+                SubMultiLookupRequest request = new SubMultiLookupRequest(docId, bucketName, lookupSpecs);
                 request.subscriber(s);
                 return core.send(request);
             }
@@ -508,7 +494,6 @@ public class AsyncLookupInBuilder {
                 SubGetRequest request = new SubGetRequest(id, spec.path(), bucketName);
                 request.subscriber(s);
                 request.xattr(spec.xattr());
-                request.accessDeleted(accessDeleted);
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -556,7 +541,6 @@ public class AsyncLookupInBuilder {
                 SubExistRequest request = new SubExistRequest(id, spec.path(), bucketName);
                 request.subscriber(s);
                 request.xattr(spec.xattr());
-                request.accessDeleted(accessDeleted);
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -588,7 +572,6 @@ public class AsyncLookupInBuilder {
                 SubGetCountRequest request = new SubGetCountRequest(id, spec.path(), bucketName);
                 request.subscriber(s);
                 request.xattr(spec.xattr());
-                request.accessDeleted(accessDeleted);
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
