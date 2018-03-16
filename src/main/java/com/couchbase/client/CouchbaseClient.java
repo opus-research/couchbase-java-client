@@ -935,7 +935,7 @@ public class CouchbaseClient extends MemcachedClient
       int exp, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<CASValue<T>> rv =
-        new OperationFuture<CASValue<T>>(key, latch, operationTimeout, executorService);
+        new OperationFuture<CASValue<T>>(key, latch, operationTimeout);
 
     Operation op = opFact.getl(key, exp, new GetlOperation.Callback() {
       private CASValue<T> val = null;
@@ -1070,8 +1070,7 @@ public class CouchbaseClient extends MemcachedClient
     List<GetFuture<T>> futures = new ArrayList<GetFuture<T>>();
     for(int index=0; index < replicaCount; index++) {
       final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> rv =
-        new GetFuture<T>(latch, operationTimeout, key, executorService);
+      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
       Operation op = opFact.replicaGet(key, index,
         new ReplicaGetOperation.Callback() {
           private Future<T> val = null;
@@ -1160,7 +1159,7 @@ public class CouchbaseClient extends MemcachedClient
           long casId, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(key,
-            latch, operationTimeout, executorService);
+            latch, operationTimeout);
     Operation op = opFact.unlock(key, casId, new OperationCallback() {
 
       @Override
@@ -2381,7 +2380,7 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Map<String, String>> getKeyStats(String key) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Map<String, String>> rv =
-        new OperationFuture<Map<String, String>>(key, latch, operationTimeout, executorService);
+        new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
       private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
@@ -2431,8 +2430,7 @@ public class CouchbaseClient extends MemcachedClient
     final FlushRunner flushRunner = new FlushRunner(latch);
 
     final OperationFuture<Boolean> rv =
-      new OperationFuture<Boolean>("", latch, operationTimeout,
-        executorService) {
+      new OperationFuture<Boolean>("", latch, operationTimeout) {
         private CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
 
