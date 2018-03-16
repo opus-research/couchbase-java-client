@@ -242,9 +242,6 @@ public class TapClient extends net.spy.memcached.TapClient {
             public void receivedStatus(OperationStatus status) {
             }
             public void gotData(ResponseMessage tapMessage) {
-              if (!conn.isPrimaryForKey(n, tapMessage.getKey())) {
-                return;
-              }
               rqueue.add(tapMessage);
               messagesRead++;
             }
