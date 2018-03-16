@@ -159,12 +159,12 @@ public class BucketTool extends SpyObject {
         Map<String, String> serverStats = server.getValue();
         if (!serverStats.containsKey("ep_degraded_mode")) {
           warmup = true;
-          Thread.sleep(1000);
+          Thread.sleep(SLEEP_TIME);
           break;
         }
         if (!serverStats.get("ep_degraded_mode").equals("0")) {
           warmup = true;
-          Thread.sleep(1000);
+          Thread.sleep(SLEEP_TIME);
           break;
         }
       }
