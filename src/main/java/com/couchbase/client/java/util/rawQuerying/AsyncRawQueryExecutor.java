@@ -68,17 +68,11 @@ public class AsyncRawQueryExecutor {
     private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(AsyncRawQueryExecutor.class);
 
     private final String bucket;
-    private final String username;
     private final String password;
     private final ClusterFacade core;
 
     public AsyncRawQueryExecutor(String bucket, String password, ClusterFacade core) {
-        this(bucket, bucket, password, core);
-    }
-
-    public AsyncRawQueryExecutor(String bucket, String username, String password, ClusterFacade core) {
         this.bucket = bucket;
-        this.username = username;
         this.password = password;
         this.core = core;
     }
@@ -143,7 +137,7 @@ public class AsyncRawQueryExecutor {
         return deferAndWatch(new Func0<Observable<RawQueryResponse>>() {
             @Override
             public Observable<RawQueryResponse> call() {
-                RawQueryRequest request = RawQueryRequest.jsonQuery(query.n1ql().toString(), bucket, username, password);
+                RawQueryRequest request = RawQueryRequest.jsonQuery(query.n1ql().toString(), bucket, password);
                 return core.<RawQueryResponse>send(request);
             }
         }).map(new Func1<RawQueryResponse, T>() {
