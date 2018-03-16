@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,27 +23,6 @@
 package com.couchbase.client.vbucket.provider;
 
 public enum BootstrapProviderType {
-
-    /**
-     * No bootstrap provider has been specified
-     */
-    NONE,
-
-    /**
-     * Configuration Carrier Publication Protocol (CCCP)
-     */
     CARRIER,
-
-    /**
-     * HTTP-based protocol
-     */
-    HTTP;
-
-    public boolean isCarrier() {
-        return this.ordinal() == CARRIER.ordinal();
-    }
-
-    public boolean isHttp() {
-        return this.ordinal() == HTTP.ordinal();
-    }
+    NONE, HTTP
 }
