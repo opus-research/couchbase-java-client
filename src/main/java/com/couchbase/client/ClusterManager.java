@@ -68,7 +68,6 @@ public class ClusterManager extends SpyObject {
 
   private DefaultHttpClientConnection conn;
   private HttpContext context;
-  private HttpHost host;
   private HttpRequestExecutor httpexecutor;
   private HttpProcessor httpproc;
 
@@ -105,7 +104,7 @@ public class ClusterManager extends SpyObject {
    * @return
    */
   private boolean connect(URI uri) {
-    host = new HttpHost(uri.getHost(), uri.getPort());
+    HttpHost host = new HttpHost(uri.getHost(), uri.getPort());
     context.setAttribute(ExecutionContext.HTTP_CONNECTION, conn);
     context.setAttribute(ExecutionContext.HTTP_TARGET_HOST, host);
     try {
