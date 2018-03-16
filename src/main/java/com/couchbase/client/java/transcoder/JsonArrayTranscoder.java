@@ -60,6 +60,7 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
         }
 
         JsonArray converted = stringToJsonArray(content.toString(CharsetUtil.UTF_8));
+        content.release();
         return newDocument(id, expiry, converted, cas);
     }
 
