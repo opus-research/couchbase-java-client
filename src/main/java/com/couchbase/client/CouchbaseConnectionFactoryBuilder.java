@@ -40,7 +40,7 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
 
 /**
- * MembaseConnectionFactoryBuilder.
+ * CouchbaseConnectionFactoryBuilder.
  *
  */
 
@@ -57,8 +57,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
   }
 
   /**
-   * Get the MembaseConnectionFactory set up with the provided parameters. Note
-   * that a MembaseConnectionFactory requires the failure mode is set to retry,
+   * Get the CouchbaseConnectionFactory set up with the provided parameters. Note
+   * that a CouchbaseConnectionFactory requires the failure mode is set to retry,
    * and the locator type is discovered dynamically based on the cluster you are
    * connecting to. As a result, these values will be overridden upon calling
    * this function.
