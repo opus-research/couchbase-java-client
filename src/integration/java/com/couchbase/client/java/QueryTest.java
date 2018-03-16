@@ -21,24 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.PreparedQuery;
-import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryParams;
-import com.couchbase.client.java.query.QueryPlan;
-import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.QueryRow;
-import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.util.features.CouchbaseFeature;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
-
 import static com.couchbase.client.java.query.Index.createPrimaryIndex;
 import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.i;
@@ -47,6 +29,25 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import java.util.Arrays;
+import java.util.List;
+
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonArray;
+import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.PreparedPayload;
+import com.couchbase.client.java.query.PreparedQuery;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryParams;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryRow;
+import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.util.ClusterDependentTest;
+import com.couchbase.client.java.util.features.CouchbaseFeature;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Integration tests of the N1QL Query features.
@@ -168,19 +169,20 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldProduceAndExecutePlan() {
-        QueryPlan plan = bucket().prepare(select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1"))));
-        bucket().get("test1");
+        Statement statement = select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1")));
+        PreparedPayload payload = bucket().prepare(statement);
+        assertNotNull(bucket().get("test2"));
 
-        assertNotNull(plan);
-        assertTrue(plan.plan().containsKey("signature"));
-        assertTrue(plan.plan().containsKey("operator"));
-        assertFalse(plan.plan().getObject("operator").isEmpty());
+        assertNotNull(payload);
+        assertNotNull(payload.originalStatement());
+        assertNotNull(payload.preparedName());
+        assertEquals(statement.toString(), payload.originalStatement().toString());
 
-        PreparedQuery preparedQuery = Query.prepared(plan,
+        PreparedQuery preparedQuery = Query.prepared(payload,
                 JsonArray.from(123),
                 QueryParams.build().withContextId("TEST"));
         QueryResult response = bucket().query(preparedQuery);
-        assertTrue(response.finalSuccess());
+        assertTrue(response.errors().toString(), response.finalSuccess());
         List<QueryRow> rows = response.allRows();
         assertEquals("TEST", response.clientContextId());
         assertEquals(1, rows.size());
