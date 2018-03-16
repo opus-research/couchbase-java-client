@@ -240,11 +240,7 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        LegacyDocument stored = bucket().append(LegacyDocument.create(id, "bar"));
-        assertEquals(id, stored.id());
-        assertNull(stored.content());
-        assertTrue(stored.cas() != 0);
-        assertTrue(stored.expiry() == 0);
+        bucket().append(LegacyDocument.create(id, "bar"));
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -258,11 +254,7 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        LegacyDocument stored = bucket().prepend(LegacyDocument.create(id, "foo"));
-        assertEquals(id, stored.id());
-        assertNull(stored.content());
-        assertTrue(stored.cas() != 0);
-        assertTrue(stored.expiry() == 0);
+        bucket().prepend(LegacyDocument.create(id, "foo"));
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -272,12 +264,6 @@ public class BinaryTest extends ClusterDependentTest {
     public void shouldFailOnNonExistingAppend() {
         LegacyDocument doc = LegacyDocument.create("appendfail", "fail");
         bucket().append(doc);
-    }
-
-    @Test(expected = DocumentDoesNotExistException.class)
-    public void shouldFailOnNonExistingPrepend() {
-        LegacyDocument doc = LegacyDocument.create("prependfail", "fail");
-        bucket().prepend(doc);
     }
 
     @Test
