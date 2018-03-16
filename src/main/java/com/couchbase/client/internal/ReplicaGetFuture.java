@@ -77,14 +77,13 @@ public class ReplicaGetFuture<T extends Object>
    * all other registered futures.
    *
    * @param future the future to mark as completed.
-   * @return true if this future is the one that will be used.
    */
-  public boolean setCompletedFuture(GetFuture<T> future) {
+  public void setCompletedFuture(GetFuture<T> future) {
     boolean firstComplete = completedFuture.compareAndSet(null, future);
     if (firstComplete) {
       cancelOtherFutures(completedFuture.get());
+      notifyListeners();
     }
-    return firstComplete;
   }
 
   @Override
@@ -158,7 +157,6 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> addListener(
     ReplicaGetCompletionListener listener) {
     super.addToListeners((GenericCompletionListener) listener);
@@ -166,18 +164,10 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> removeListener(
     ReplicaGetCompletionListener listener) {
     super.removeFromListeners((GenericCompletionListener) listener);
     return this;
-  }
-
-  /**
-   * Signals that this future is complete.
-   */
-  public void signalComplete() {
-    notifyListeners();
   }
 
 

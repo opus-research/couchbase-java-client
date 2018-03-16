@@ -30,6 +30,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.spy.memcached.HashAlgorithm;
@@ -143,20 +144,19 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
       throw new ConfigParsingException("Empty nodes list.");
     }
 
-    final List<String> populatedRestEndpoints = populateRestEndpoints(nodes);
-    MemcacheConfig config = new MemcacheConfig(amountOfNodes, populatedRestEndpoints);
+    CacheConfig config = new CacheConfig(amountOfNodes);
     populateServersForMemcacheBucket(config, nodes);
     return config;
   }
 
   /**
-   * Helper method to populate the servers into the {@link MemcacheConfig}.
+   * Helper method to populate the servers into the {@link CacheConfig}.
    *
-   * @param config the {@link MemcacheConfig} to use.
+   * @param config the {@link CacheConfig} to use.
    * @param nodes the original list of nodes.
    * @throws JSONException if parsing the JSON was not successful.
    */
-  private void populateServersForMemcacheBucket(MemcacheConfig config,
+  private void populateServersForMemcacheBucket(CacheConfig config,
     JSONArray nodes) throws JSONException {
     List<String> serverNames = new ArrayList<String>(nodes.length());
     for (int i = 0; i < nodes.length(); i++) {
@@ -221,31 +221,10 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
       populateServersForCouchbaseBucket(servers);
     final List<VBucket> populatedVBuckets = populateVBuckets(vBuckets, oldConfig);
     final List<URL> populatedViewServers = populateViewServers(viewServers);
-    final List<String> populatedRestEndpoints =
-      populateRestEndpoints(viewServers);
 
-    return new CouchbaseConfig(hashAlgorithm, serversCount, replicasCount,
+    return new DefaultConfig(hashAlgorithm, serversCount, replicasCount,
       vBucketsCount, populatedServers, populatedVBuckets,
-      populatedViewServers, populatedRestEndpoints);
-  }
-
-  /**
-   * Creates a list of REST Endpoints to use.
-   *
-   * @param nodes the list of nodes in the cluster.
-   * @return a list of pouplates endpoints.
-   */
-  private List<String> populateRestEndpoints(final JSONArray nodes)
-    throws JSONException {
-    int nodeSize = nodes.length();
-    List<String> endpoints = new ArrayList<String>(nodeSize);
-    for (int i = 0; i < nodeSize; i++) {
-      JSONObject node = nodes.getJSONObject(i);
-      if (node.has("hostname")) {
-        endpoints.add("http://" + node.getString("hostname") + "/pools");
-      }
-    }
-    return endpoints;
+      populatedViewServers);
   }
 
   /**

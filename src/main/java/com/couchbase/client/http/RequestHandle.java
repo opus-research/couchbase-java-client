@@ -20,49 +20,61 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.internal;
+package com.couchbase.client.http;
 
-import net.spy.memcached.internal.OperationFuture;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * A future that allows to chain operations with observe calls.
+ * A connection request.
  */
-public class ObserveFuture<T> extends OperationFuture<T> {
+public class RequestHandle {
 
-  private volatile boolean cancelled;
-  private volatile boolean done;
+  private final AsyncConnectionManager connMgr;
+  private final NHttpClientConnection conn;
 
-  public ObserveFuture(final String k, final CountDownLatch l,
-    final long opTimeout, final ExecutorService service) {
-    super(k, l, opTimeout, service);
+  private volatile boolean completed;
 
-    cancelled = false;
-    done = false;
+  public RequestHandle(AsyncConnectionManager connMgr,
+      NHttpClientConnection conn) {
+    super();
+    this.connMgr = connMgr;
+    this.conn = conn;
   }
 
-  @Override
-  public boolean cancel() {
-    cancelled = true;
-    done = true;
-    notifyListeners();
-    return true;
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  public boolean cancel(boolean ign) {
-    return cancel();
+  public void completed() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
   }
 
-  @Override
-  public boolean isCancelled() {
-    return cancelled;
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
   }
 
-  @Override
-  public boolean isDone() {
-    return done;
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait();
+      }
+    }
   }
 }

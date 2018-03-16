@@ -24,7 +24,6 @@ package com.couchbase.client;
 
 import com.couchbase.client.internal.AdaptiveThrottler;
 import com.couchbase.client.internal.ThrottleManager;
-import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -163,7 +162,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       // schedule shutdown for the oddNodes
       for(MemcachedNode shutDownNode : oddNodes) {
         getLogger().info("Scheduling Node "
-          + shutDownNode.getSocketAddress() + " for shutdown.");
+          + shutDownNode.getSocketAddress() + "for shutdown.");
       }
       nodesToShutdown.addAll(oddNodes);
     } catch (IOException e) {
@@ -253,15 +252,9 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     }
   }
 
-  @Override
   public void addOperations(final Map<MemcachedNode, Operation> ops) {
     for (Map.Entry<MemcachedNode, Operation> me : ops.entrySet()) {
       final MemcachedNode node = me.getKey();
-
-      if (!node.isActive()) {
-        cf.checkConfigUpdate();
-      }
-
       Operation o = me.getValue();
       // add the vbucketIndex to the operation
       if (locator instanceof VBucketNodeLocator) {
@@ -309,42 +302,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     getLogger().info("Shut down Couchbase client");
   }
 
-  @Override
-  protected void handleRetryInformation(byte[] retryMessage) {
-    String message = new String(retryMessage).trim();
-    if (message.startsWith("{")) {
-      cf.getConfigurationProvider().setConfig(
-        replaceConfigWildcards(message)
-      );
-    }
-  }
-
-  /**
-   * Helper method to parse config wildcards into their actual representations.
-   *
-   * Currently, this method parses the $HOST wildcard and finds the first node
-   * in the locator to replace it with.
-   *
-   * @param original the raw new config string.
-   * @return the potentially changed config string.
-   */
-  public String replaceConfigWildcards(String original) {
-    if (original.contains("$HOST")) {
-      ArrayList<MemcachedNode> nodes =
-        new ArrayList<MemcachedNode>(getLocator().getAll());
-      if (nodes.size() > 0) {
-        InetSocketAddress addr = (InetSocketAddress) nodes.get(0)
-          .getSocketAddress();
-        return original.replaceAll("\\$HOST", addr.getHostName());
-      } else {
-        throw new IllegalStateException("Locator has no nodes attached, "
-          + "this is not allowed.");
-      }
-    }
-
-    return original;
-  }
-
   private void logRunException(Exception e) {
     if (shutDown) {
       // There are a couple types of errors that occur during the
@@ -354,5 +311,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       getLogger().warn("Problem handling Couchbase IO", e);
     }
   }
+
+  boolean isShutDown() {
+    return shutDown;
+  }
+
 
 }

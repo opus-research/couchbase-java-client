@@ -28,11 +28,11 @@ import java.util.List;
 import net.spy.memcached.HashAlgorithm;
 
 /**
- * The MemcacheConfig class represents a configuration object for memcached-type
+ * The CacheConfig class represents a configuration object for memcached-type
  * buckets. Unlike couchbase-type buckets, they don't support vbuckets and
  * replicas, so some of the interface methods are not supported.
  */
-public class MemcacheConfig implements Config {
+public class CacheConfig implements Config {
 
   private int vbucketsCount;
 
@@ -42,15 +42,8 @@ public class MemcacheConfig implements Config {
 
   private List<VBucket> vbuckets;
 
-  private final List<String> restEndpoints;
-
-  public MemcacheConfig(int serversCount, List<String> restEndpoints) {
+  public CacheConfig(int serversCount) {
     this.serversCount = serversCount;
-    this.restEndpoints = restEndpoints;
-  }
-
-  public List<String> getRestEndpoints() {
-    return restEndpoints;
   }
 
   public int getReplicasCount() {
@@ -155,16 +148,5 @@ public class MemcacheConfig implements Config {
   @Override
   public List<URL> getCouchServers() {
     throw new UnsupportedOperationException("No couch port for cache buckets");
-  }
-
-  @Override
-  public String toString() {
-    return "CacheConfig{" +
-      "vbucketsCount=" + vbucketsCount +
-      ", serversCount=" + serversCount +
-      ", servers=" + servers +
-      ", vbuckets=" + vbuckets +
-      ", restEndpoints=" + restEndpoints +
-      '}';
   }
 }
