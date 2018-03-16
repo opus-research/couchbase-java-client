@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.convert.Converter;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
@@ -405,6 +404,8 @@ public interface Bucket {
     Observable<QueryResult> query(Query query);
     Observable<QueryResult> query(String query);
 
+    Observable<Boolean> flush();
+
     Observable<Boolean> unlock(String id, long cas);
     <D extends Document<?>> Observable<Boolean> unlock(D document);
 
@@ -412,7 +413,5 @@ public interface Bucket {
     <D extends Document<?>> Observable<Boolean> touch(D document);
 
     Observable<LongDocument> counter(String id, long delta, long initial, int expiry);
-
-    Observable<BucketManager> bucketManager();
 
 }
