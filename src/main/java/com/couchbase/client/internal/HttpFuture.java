@@ -127,6 +127,7 @@ public class HttpFuture<T>
   public void set(T oper, OperationStatus s) {
     objRef.set(oper);
     status = s;
+    notifyListeners();
   }
 
   @Override
@@ -146,24 +147,15 @@ public class HttpFuture<T>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public HttpFuture<T> addListener(HttpCompletionListener listener) {
     super.addToListeners((GenericCompletionListener) listener);
     return this;
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public HttpFuture<T> removeListener(HttpCompletionListener listener) {
     super.removeFromListeners((GenericCompletionListener) listener);
     return this;
-  }
-
-  /**
-   * Signals that this future is complete.
-   */
-  public void signalComplete() {
-    notifyListeners();
   }
 
 }

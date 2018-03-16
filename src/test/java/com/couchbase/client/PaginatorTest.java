@@ -174,17 +174,15 @@ public class PaginatorTest {
       + "{\\n  if(doc.type == \\\"city\\\" && doc.population) "
       + "{\\n    emit(doc.population, null);\\n  }\\n}\"}}}";
 
-    client.asyncHttpPut(docUri, view).get();
+    client.asyncHttpPut(docUri, view);
 
     for(City city : CITY_DOCS) {
-      client.set(city.getKey(), 0, city.toJson(), PersistTo.MASTER)
-        .get(10, TimeUnit.SECONDS);
+      client.set(city.getKey(), 0, city.toJson(), PersistTo.MASTER);
     }
 
-    client.shutdown(10, TimeUnit.SECONDS);
     System.out.println("Setup of design docs complete, "
             + "sleeping until they propogate.");
-    Thread.sleep(5000);
+    client.shutdown(10, TimeUnit.SECONDS);
   }
 
   /**

@@ -100,11 +100,4 @@ public interface ConfigurationProvider {
    */
   void updateBaseListFromConfig(List<URI> baseList);
 
-  /**
-   * Updates the current bucket with a new JSON config string
-   *
-   * @param config the raw JSON config to transform and store.
-   */
-  void updateBucket(String config);
-
 }

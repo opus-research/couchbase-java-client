@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import net.spy.memcached.internal.AbstractListenableFuture;
 import net.spy.memcached.internal.GenericCompletionListener;
+import net.spy.memcached.internal.GetCompletionListener;
 import net.spy.memcached.internal.GetFuture;
 
 /**
@@ -45,17 +46,17 @@ public class ReplicaGetFuture<T extends Object>
   implements Future<T> {
 
   private final long timeout;
-  private AtomicReference<Future<T>> completedFuture;
-  private final List<Future<T>> monitoredFutures;
+  private AtomicReference<GetFuture<T>> completedFuture;
+  private final List<GetFuture<T>> monitoredFutures;
   private volatile boolean cancelled = false;
 
   public ReplicaGetFuture(long timeout, ExecutorService service) {
     super(service);
     this.timeout = timeout;
-    monitoredFutures = Collections.synchronizedList(
-      new ArrayList<Future<T>>()
+    this.monitoredFutures = Collections.synchronizedList(
+      new ArrayList<GetFuture<T>>()
     );
-    completedFuture = new AtomicReference<Future<T>>();
+    this.completedFuture = new AtomicReference<GetFuture<T>>();
   }
 
   /**
@@ -65,8 +66,8 @@ public class ReplicaGetFuture<T extends Object>
    *
    * @param future the future to monitor.
    */
-  public void addFutureToMonitor(Future<T> future) {
-    monitoredFutures.add(future);
+  public void addFutureToMonitor(GetFuture<T> future) {
+    this.monitoredFutures.add(future);
   }
 
   /**
@@ -76,14 +77,13 @@ public class ReplicaGetFuture<T extends Object>
    * all other registered futures.
    *
    * @param future the future to mark as completed.
-   * @return true if this future is the one that will be used.
    */
-  public boolean setCompletedFuture(Future<T> future) {
+  public void setCompletedFuture(GetFuture<T> future) {
     boolean firstComplete = completedFuture.compareAndSet(null, future);
     if (firstComplete) {
       cancelOtherFutures(completedFuture.get());
+      notifyListeners();
     }
-    return firstComplete;
   }
 
   @Override
@@ -117,11 +117,11 @@ public class ReplicaGetFuture<T extends Object>
    *
    * @param successFuture
    */
-  private void cancelOtherFutures(Future successFuture) {
+  private void cancelOtherFutures(GetFuture successFuture) {
     synchronized (monitoredFutures) {
       Iterator it = monitoredFutures.iterator();
       while (it.hasNext()) {
-        Future future = (Future) it.next();
+        GetFuture future = (GetFuture) it.next();
         if (!future.equals(successFuture)) {
           future.cancel(true);
         }
@@ -136,7 +136,7 @@ public class ReplicaGetFuture<T extends Object>
     synchronized (monitoredFutures) {
       Iterator it = monitoredFutures.iterator();
       while (it.hasNext()) {
-        Future future = (Future) it.next();
+        GetFuture future = (GetFuture) it.next();
         if (!future.cancel(ign)) {
           allCancelled = false;
         }
@@ -157,26 +157,17 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> addListener(
     ReplicaGetCompletionListener listener) {
-    addToListeners((GenericCompletionListener) listener);
+    super.addToListeners((GenericCompletionListener) listener);
     return this;
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> removeListener(
     ReplicaGetCompletionListener listener) {
-    removeFromListeners((GenericCompletionListener) listener);
+    super.removeFromListeners((GenericCompletionListener) listener);
     return this;
-  }
-
-  /**
-   * Signals that this future is complete.
-   */
-  public void signalComplete() {
-    notifyListeners();
   }
 
 
