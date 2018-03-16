@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,42 +20,23 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client;
+package com.couchbase.client.http;
 
-import java.util.concurrent.Future;
-
-import net.spy.memcached.CASValue;
-import net.spy.memcached.MemcachedClientIF;
-import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.transcoders.Transcoder;
-
+import com.couchbase.client.ViewConnection;
+import com.couchbase.client.protocol.views.HttpOperation;
 
 /**
- * This interface is provided as a helper for testing clients of the
- * CouchbaseClient.
+ * A callack to requeue a http operation.
  */
-public interface CouchbaseClientIF extends MemcachedClientIF {
+public class RequeueOpCallback {
 
-  Future<CASValue<Object>> asyncGetAndLock(final String key, int exp);
+  private final ViewConnection conn;
 
-  <T> Future<CASValue<T>> asyncGetAndLock(final String key, int exp,
-      final Transcoder<T> tc);
+  public RequeueOpCallback(ViewConnection vc) {
+    conn = vc;
+  }
 
-  <T> CASValue<T> getAndLock(String key, int exp, Transcoder<T> tc);
-
-  CASValue<Object> getAndLock(String key, int exp);
-  <T> OperationFuture<Boolean> asyncUnlock(final String key,
-          long casId, final Transcoder<T> tc);
-
-  OperationFuture<Boolean> asyncUnlock(final String key,
-          long casId);
-
-  <T> Boolean unlock(final String key,
-          long casId, final Transcoder<T> tc);
-
-  Boolean unlock(final String key,
-          long casId);
-
-
-  int getNumVBuckets();
+  public void invoke(HttpOperation op) {
+    conn.addOp(op);
+  }
 }
