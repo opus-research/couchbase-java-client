@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.bucket;
+package com.couchbase.client.java.search.sort;
 
 /**
- * The type of the bucket.
+ * Sort by the hit score.
  *
  * @author Michael Nitschinger
- * @since 2.0
+ * @since 2.4.5
  */
-public enum BucketType {
+public class SearchSortScore extends SearchSort {
 
-    /**
-     * The couchbase bucket type.
-     */
-    COUCHBASE,
+    @Override
+    protected String identifier() {
+        return "score";
+    }
 
-    /**
-     * The memcached bucket type.
-     */
-    MEMCACHED,
-
-    /**
-     * The ephemeral bucket type.
-     */
-    EPHEMERAL
+    @Override
+    public SearchSortScore descending(boolean descending) {
+        super.descending(descending);
+        return this;
+    }
 
 }

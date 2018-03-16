@@ -45,6 +45,7 @@ import com.couchbase.client.java.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Func0;
 import rx.functions.Func1;
 
@@ -184,6 +185,16 @@ public class AsyncLookupInBuilder {
         return this;
     }
 
+    /**
+     * Get the full JSON document.
+     *
+     * @return this builder for chaining.
+     */
+    @InterfaceStability.Experimental
+    public AsyncLookupInBuilder get() {
+        this.specs.add(new LookupSpec(Lookup.GETDOC, ""));
+        return this;
+    }
 
     /**
      * Get a value inside the JSON document.
@@ -353,10 +364,12 @@ public class AsyncLookupInBuilder {
         }
         final LookupSpec[] lookupSpecs = specs.toArray(new LookupSpec[specs.size()]);
 
-        return deferAndWatch(new Func0<Observable<MultiLookupResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<MultiLookupResponse>>() {
             @Override
-            public Observable<MultiLookupResponse> call() {
-                return core.send(new SubMultiLookupRequest(docId, bucketName, lookupSpecs));
+            public Observable<MultiLookupResponse> call(Subscriber s) {
+                SubMultiLookupRequest request = new SubMultiLookupRequest(docId, bucketName, lookupSpecs);
+                request.subscriber(s);
+                return core.send(request);
             }
         }).filter(new Func1<MultiLookupResponse, Boolean>() {
             @Override
@@ -389,11 +402,12 @@ public class AsyncLookupInBuilder {
 
 
     private <T> Observable<DocumentFragment<Lookup>> getIn(final String id, final LookupSpec spec, final Class<T> fragmentType) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call() {
+            public Observable<SimpleSubdocResponse> call(Subscriber s) {
                 SubGetRequest request = new SubGetRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                request.subscriber(s);
+                request.xattr(spec.xattr());
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -435,11 +449,12 @@ public class AsyncLookupInBuilder {
     }
 
     private Observable<DocumentFragment<Lookup>> existsIn(final String id, final LookupSpec spec) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call() {
+            public Observable<SimpleSubdocResponse> call(Subscriber s) {
                 SubExistRequest request = new SubExistRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                request.subscriber(s);
+                request.xattr(spec.xattr());
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {

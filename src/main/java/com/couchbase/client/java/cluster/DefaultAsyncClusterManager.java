@@ -18,7 +18,22 @@ package com.couchbase.client.java.cluster;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.config.*;
+import com.couchbase.client.core.message.config.BucketsConfigRequest;
+import com.couchbase.client.core.message.config.BucketsConfigResponse;
+import com.couchbase.client.core.message.config.ClusterConfigRequest;
+import com.couchbase.client.core.message.config.ClusterConfigResponse;
+import com.couchbase.client.core.message.config.GetUsersRequest;
+import com.couchbase.client.core.message.config.GetUsersResponse;
+import com.couchbase.client.core.message.config.InsertBucketRequest;
+import com.couchbase.client.core.message.config.InsertBucketResponse;
+import com.couchbase.client.core.message.config.RemoveBucketRequest;
+import com.couchbase.client.core.message.config.RemoveBucketResponse;
+import com.couchbase.client.core.message.config.RemoveUserRequest;
+import com.couchbase.client.core.message.config.RemoveUserResponse;
+import com.couchbase.client.core.message.config.UpdateBucketRequest;
+import com.couchbase.client.core.message.config.UpdateBucketResponse;
+import com.couchbase.client.core.message.config.UpsertUserRequest;
+import com.couchbase.client.core.message.config.UpsertUserResponse;
 import com.couchbase.client.core.message.internal.AddNodeRequest;
 import com.couchbase.client.core.message.internal.AddNodeResponse;
 import com.couchbase.client.core.message.internal.AddServiceRequest;
@@ -26,6 +41,7 @@ import com.couchbase.client.core.message.internal.AddServiceResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.core.utils.ConnectionString;
+import com.couchbase.client.core.utils.NetworkAddress;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
@@ -40,8 +56,6 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -158,8 +172,16 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                             } else {
                                 ramQuota = bucket.getObject("quota").getInt("ram") / 1024 / 1024;
                             }
-                            BucketType bucketType = "membase".equalsIgnoreCase(bucket.getString("bucketType")) ?
-                                BucketType.COUCHBASE : BucketType.MEMCACHED;
+
+                            BucketType bucketType;
+                            String rawType = bucket.getString("bucketType");
+                            if ("membase".equalsIgnoreCase(rawType)) {
+                                bucketType = BucketType.COUCHBASE;
+                            } else if ("ephemeral".equalsIgnoreCase(rawType)) {
+                                bucketType = BucketType.EPHEMERAL;
+                            } else {
+                                bucketType = BucketType.MEMCACHED;
+                            }
 
                             settings.add(DefaultBucketSettings.builder()
                                     .name(bucket.getString("name"))
@@ -367,7 +389,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                                     i++;
                                 }
                                 User user = new User(userJsonObj.getString("name"), userJsonObj.getString("id"),
-                                        userJsonObj.getString("type"), userRoles);
+                                        userJsonObj.getString("domain"), userRoles);
                                 users.add(user);
                             }
                             return Observable.from(users);
@@ -389,8 +411,19 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
         actual.put("authType", "sasl");
         actual.put("saslPassword", settings.password());
         actual.put("replicaNumber", settings.replicas());
-        actual.put("proxyPort", settings.port());
-        actual.put("bucketType", settings.type() == BucketType.COUCHBASE ? "membase" : "memcached");
+        if (settings.port() > 0) {
+            actual.put("proxyPort", settings.port());
+        }
+
+        String bucketType;
+        switch(settings.type()) {
+            case COUCHBASE: bucketType = "membase"; break;
+            case MEMCACHED: bucketType = "memcached"; break;
+            case EPHEMERAL: bucketType = "ephemeral"; break;
+            default:
+                throw new UnsupportedOperationException("Could not convert bucket type " + settings.type());
+        }
+        actual.put("bucketType", bucketType);
         actual.put("flushEnabled", settings.enableFlush() ? "1" : "0");
         for (Map.Entry<String, Object> customSetting : customSettings.entrySet()) {
             if (actual.containsKey(customSetting.getKey()) || (!includeName && "name".equals(customSetting.getKey()))) {
@@ -493,20 +526,16 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
         }
 
         return Observable
-            .just(connectionString.hosts().get(0).getHostName())
-            .map(new Func1<String, InetAddress>() {
+            .just(connectionString.hosts().get(0).getAddress().getHostAddress())
+            .map(new Func1<String, NetworkAddress>() {
                 @Override
-                public InetAddress call(String hostname) {
-                    try {
-                        return InetAddress.getByName(hostname);
-                    } catch(UnknownHostException e) {
-                        throw new CouchbaseException(e);
-                    }
+                public NetworkAddress call(String hostname) {
+                    return NetworkAddress.create(hostname);
                 }
             })
-            .flatMap(new Func1<InetAddress, Observable<AddServiceResponse>>() {
+            .flatMap(new Func1<NetworkAddress, Observable<AddServiceResponse>>() {
                 @Override
-                public Observable<AddServiceResponse> call(final InetAddress hostname) {
+                public Observable<AddServiceResponse> call(final NetworkAddress hostname) {
                     return core
                         .<AddNodeResponse>send(new AddNodeRequest(hostname))
                         .flatMap(new Func1<AddNodeResponse, Observable<AddServiceResponse>>() {
