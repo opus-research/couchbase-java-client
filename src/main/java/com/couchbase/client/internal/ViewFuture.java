@@ -29,10 +29,6 @@ import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewResponseWithDocs;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.couchbase.client.protocol.views.ViewRowWithDocs;
-import net.spy.memcached.internal.BulkFuture;
-import net.spy.memcached.internal.GenericCompletionListener;
-import net.spy.memcached.ops.OperationStatus;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -43,6 +39,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.internal.GenericCompletionListener;
+import net.spy.memcached.ops.OperationStatus;
 
 /**
  * A ViewFuture.
@@ -69,7 +68,7 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
       return null;
     }
 
-    Map<String, Object> docMap = multigetRef.get().get(duration, units);
+    Map<String, Object> docMap = multigetRef.get().get();
     final ViewResponseWithDocs viewResp = (ViewResponseWithDocs) objRef.get();
     Collection<ViewRow> rows = new LinkedList<ViewRow>();
     Iterator<ViewRow> itr = viewResp.iterator();
