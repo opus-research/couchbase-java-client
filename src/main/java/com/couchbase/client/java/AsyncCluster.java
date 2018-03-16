@@ -20,7 +20,6 @@ import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.internal.ServicesHealth;
 import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.auth.ClassicAuthenticator;
 import com.couchbase.client.java.auth.CredentialContext;
@@ -217,7 +216,4 @@ public interface AsyncCluster {
      * @return this Cluster instance for chaining.
      */
     AsyncCluster authenticate(String username, String password);
-
-
-    Observable<ServicesHealth> healthCheck(boolean ping);
 }
