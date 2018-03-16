@@ -95,7 +95,7 @@ public class BucketManagerIndexManagementTests {
                 .quota(100));
         indexedBucket = cluster.openBucket(indexedBucketName);
         LOGGER.info(indexedBucket + " created and opened");
-        List<IndexInfo> initialIndexes = indexedBucket.bucketManager().listN1qlIndexes();
+        List<IndexInfo> initialIndexes = indexedBucket.bucketManager().listIndexes();
         assertEquals("Newly created bucket unexpectedly has indexes: " + initialIndexes, 0, initialIndexes.size());
     }
 
@@ -112,12 +112,12 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testListIndexes() throws Exception {
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(indexes.toString(), 0, indexes.size());
 
         indexedBucket.query(N1qlQuery.simple("CREATE PRIMARY INDEX ON `" + indexedBucketName + "`"));
-        indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(indexes.toString(), 1, indexes.size());
         IndexInfo first = indexes.get(0);
@@ -131,7 +131,7 @@ public class BucketManagerIndexManagementTests {
 
         indexedBucket.query(N1qlQuery.simple("CREATE INDEX `bIndex` ON `" + indexedBucketName + "` (tata, toto)"));
         indexedBucket.query(N1qlQuery.simple("CREATE INDEX `aIndex` ON `" + indexedBucketName + "` (tata)"));
-        indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(indexes.toString(), 3, indexes.size());
         assertEquals(first, indexes.get(0)); //primary is still listed first
@@ -151,13 +151,13 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testListIndexesIgnoresNonGsi() {
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
         assertEquals(indexes.toString(), 0, indexes.size());
 
         indexedBucket.query(N1qlQuery.simple("CREATE PRIMARY INDEX ON `" + indexedBucketName + "`"));
         indexedBucket.query(N1qlQuery.simple("CREATE INDEX `ambiguousIndex` ON `" + indexedBucketName + "` (tata, toto)"));
         indexedBucket.query(N1qlQuery.simple("CREATE INDEX `ambiguousIndex` ON `" + indexedBucketName + "` (tata) USING VIEW"));
-        indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(indexes.toString(), 2, indexes.size());
         IndexInfo first = indexes.get(0);
@@ -190,56 +190,37 @@ public class BucketManagerIndexManagementTests {
     @Test
     public void testCreateIndex() {
         final String index = "secondaryIndex";
-        indexedBucket.bucketManager().createN1qlIndex(index, false, false, "toto", x("tata"));
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexedBucket.bucketManager().createIndex(index, false, false, "toto", x("tata"));
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(1, indexes.size());
-        JsonArray expectedKeys = JsonArray.from("`toto`", "`tata`");
-        assertEquals(expectedKeys, indexes.get(0).indexKey());
-        assertEquals("", indexes.get(0).condition());
-    }
-
-    @Test
-    public void testCreateIndexWithWhereClause() {
-        final String index = "secondaryConditionalIndex";
-        List<Object> fields = Arrays.asList("toto", x("tata"));
-        indexedBucket.bucketManager().createN1qlIndex(index, fields,
-                x("toto").isNotMissing()
-                .and(x("tata").isNotNull()),
-                false, false);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
-
-        assertEquals(1, indexes.size());
-        JsonArray expectedKeys = JsonArray.from("`toto`", "`tata`");
-        assertEquals(expectedKeys, indexes.get(0).indexKey());
-        assertEquals("((`toto` is not missing) and (`tata` is not null))", indexes.get(0).condition());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testCreateIndexFailsIfBadField() {
-        indexedBucket.bucketManager().createN1qlIndex("secondaryIndex", false, false, "toto", x("tata"), 128L);
+        indexedBucket.bucketManager().createIndex("secondaryIndex", false, false, "toto", x("tata"), 128L);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testCreateIndexEmptyFieldsFails() {
-        indexedBucket.bucketManager().createN1qlIndex("secondaryIndex", false, false);
+        indexedBucket.bucketManager().createIndex("secondaryIndex", false, false);
     }
 
     @Test
     public void testCreateExistingIndexSeveralTimes() {
         String index = "secondaryIndex";
-        boolean firstAttempt = indexedBucket.bucketManager().createN1qlIndex(index, false, false, "toto");
+        boolean firstAttempt = indexedBucket.bucketManager().createIndex(index, false, false, "toto");
         try {
-            indexedBucket.bucketManager().createN1qlIndex(index, false, false, "tata");
+            indexedBucket.bucketManager().createIndex(index, false, false, "tata");
             fail("expected failure of second index creation");
         } catch (IndexAlreadyExistsException e) {
             //OK
         }
-        boolean existingAttempt = indexedBucket.bucketManager().createN1qlIndex(index, true, false, "titi");
+        boolean existingAttempt = indexedBucket.bucketManager().createIndex(index, true, false, "titi");
 
         assertTrue(firstAttempt);
         assertFalse(existingAttempt);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
         assertEquals(1, indexes.size());
         assertNotNull(indexes.get(0).indexKey());
         assertEquals(1, indexes.get(0).indexKey().size());
@@ -248,8 +229,8 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testCreatePrimaryIndex() {
-        indexedBucket.bucketManager().createN1qlPrimaryIndex(false, false);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexedBucket.bucketManager().createPrimaryIndex(false, false);
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(1, indexes.size());
         assertEquals(Index.PRIMARY_NAME, indexes.get(0).name());
@@ -258,8 +239,8 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testCreatePrimaryIndexWithCustomName() {
-        indexedBucket.bucketManager().createN1qlPrimaryIndex("def_primary", false, false);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        indexedBucket.bucketManager().createPrimaryIndex("def_primary", false, false);
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(1, indexes.size());
         assertEquals("def_primary", indexes.get(0).name());
@@ -268,18 +249,18 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testCreatePrimaryIndexSeveralTimes() {
-        boolean firstAttempt = indexedBucket.bucketManager().createN1qlPrimaryIndex(false, false);
+        boolean firstAttempt = indexedBucket.bucketManager().createPrimaryIndex(false, false);
         try {
-            indexedBucket.bucketManager().createN1qlPrimaryIndex(false, false);
+            indexedBucket.bucketManager().createPrimaryIndex(false, false);
             fail("expected failure of second index creation");
         } catch (IndexAlreadyExistsException e) {
             //OK
         }
-        boolean existingAttempt = indexedBucket.bucketManager().createN1qlPrimaryIndex(true, false);
+        boolean existingAttempt = indexedBucket.bucketManager().createPrimaryIndex(true, false);
 
         assertTrue(firstAttempt);
         assertFalse(existingAttempt);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listN1qlIndexes();
+        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
         assertEquals(1, indexes.size());
         assertNotNull(indexes.get(0).indexKey());
         assertTrue(indexes.get(0).isPrimary());
@@ -287,81 +268,81 @@ public class BucketManagerIndexManagementTests {
 
     @Test
     public void testCreatePrimaryIndexesWithDifferentNames() {
-        boolean namedAttempt1 = indexedBucket.bucketManager().createN1qlPrimaryIndex("def_primary", false, false);
-        boolean namedAttempt2 = indexedBucket.bucketManager().createN1qlPrimaryIndex("def_primary2", false, false);
-        boolean unamedAttempt = indexedBucket.bucketManager().createN1qlPrimaryIndex(false, false);
+        boolean namedAttempt1 = indexedBucket.bucketManager().createPrimaryIndex("def_primary", false, false);
+        boolean namedAttempt2 = indexedBucket.bucketManager().createPrimaryIndex("def_primary2", false, false);
+        boolean unamedAttempt = indexedBucket.bucketManager().createPrimaryIndex(false, false);
 
         assertTrue(namedAttempt1);
         assertTrue(namedAttempt2);
         assertTrue(unamedAttempt);
 
-        assertEquals(3, indexedBucket.bucketManager().listN1qlIndexes().size());
+        assertEquals(3, indexedBucket.bucketManager().listIndexes().size());
     }
 
     @Test
     public void testDropIndex() {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlIndex("toDrop", true, false, "field");
-        assertEquals(1, mgr.listN1qlIndexes().size());
+        mgr.createIndex("toDrop", true, false, "field");
+        assertEquals(1, mgr.listIndexes().size());
 
-        mgr.dropN1qlIndex("toDrop", false);
-        assertEquals(0, mgr.listN1qlIndexes().size());
+        mgr.dropIndex("toDrop", false);
+        assertEquals(0, mgr.listIndexes().size());
     }
 
     @Test(expected = IndexDoesNotExistException.class)
     public void testDropIndexThatDoesntExistFails() {
-        indexedBucket.bucketManager().dropN1qlIndex("blabla", false);
+        indexedBucket.bucketManager().dropIndex("blabla", false);
     }
 
     @Test
     public void testDropIgnoreIndexThatDoesntExistSucceeds() {
-        boolean dropped = indexedBucket.bucketManager().dropN1qlIndex("blabla", true);
+        boolean dropped = indexedBucket.bucketManager().dropIndex("blabla", true);
         assertFalse(dropped);
     }
 
     @Test
     public void testDropPrimaryIndex() {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlPrimaryIndex(true, false);
-        assertEquals(1, mgr.listN1qlIndexes().size());
+        mgr.createPrimaryIndex(true, false);
+        assertEquals(1, mgr.listIndexes().size());
 
-        mgr.dropN1qlPrimaryIndex(false);
-        assertEquals(0, mgr.listN1qlIndexes().size());
+        mgr.dropPrimaryIndex(false);
+        assertEquals(0, mgr.listIndexes().size());
     }
 
     @Test(expected = IndexDoesNotExistException.class)
     public void testDropPrimaryIndexThatDoesntExistFails() {
-        indexedBucket.bucketManager().dropN1qlPrimaryIndex(false);
+        indexedBucket.bucketManager().dropPrimaryIndex(false);
     }
 
     @Test
     public void testDropIgnorePrimaryIndexThatDoesntExistSucceeds() {
-        boolean dropped = indexedBucket.bucketManager().dropN1qlPrimaryIndex(true);
+        boolean dropped = indexedBucket.bucketManager().dropPrimaryIndex(true);
         assertFalse(dropped);
     }
 
     @Test
     public void testDropNamedPrimaryIndex() {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlPrimaryIndex("def_primary", true, false);
-        assertEquals(1, mgr.listN1qlIndexes().size());
+        mgr.createPrimaryIndex("def_primary", true, false);
+        assertEquals(1, mgr.listIndexes().size());
 
-        mgr.dropN1qlPrimaryIndex("def_primary", false);
-        assertEquals(0, mgr.listN1qlIndexes().size());
+        mgr.dropPrimaryIndex("def_primary", false);
+        assertEquals(0, mgr.listIndexes().size());
     }
 
     @Test
     public void testDropPrimaryIndexWithNameFailsIfNameNotProvided() {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlPrimaryIndex("def_primary", true, false);
-        assertEquals(1, mgr.listN1qlIndexes().size());
+        mgr.createPrimaryIndex("def_primary", true, false);
+        assertEquals(1, mgr.listIndexes().size());
 
-        boolean dropped = mgr.dropN1qlPrimaryIndex(true);
+        boolean dropped = mgr.dropPrimaryIndex(true);
         assertEquals(false, dropped);
-        assertEquals(1, mgr.listN1qlIndexes().size());
+        assertEquals(1, mgr.listIndexes().size());
 
         try {
-            mgr.dropN1qlPrimaryIndex(false);
+            mgr.dropPrimaryIndex(false);
             fail("Expected IndexDoesNotExistException");
         } catch (IndexDoesNotExistException e) {
             //OK
@@ -370,29 +351,29 @@ public class BucketManagerIndexManagementTests {
 
     @Test(expected = IndexDoesNotExistException.class)
     public void testDropNamedPrimaryIndexThatDoesntExistFails() {
-        indexedBucket.bucketManager().dropN1qlPrimaryIndex("invalidPrimaryIndex", false);
+        indexedBucket.bucketManager().dropPrimaryIndex("invalidPrimaryIndex", false);
     }
 
     @Test
     public void testDropIgnoreNamedPrimaryIndexThatDoesntExistSucceeds() {
-        boolean dropped = indexedBucket.bucketManager().dropN1qlPrimaryIndex("invalidPrimaryIndex", true);
+        boolean dropped = indexedBucket.bucketManager().dropPrimaryIndex("invalidPrimaryIndex", true);
         assertFalse(dropped);
     }
 
     @Test
     public void testDeferredBuildTriggersAllPending() throws InterruptedException {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlIndex("first", false, false, "first");
-        List<String> triggered = mgr.buildN1qlDeferredIndexes();
+        mgr.createIndex("first", false, false, "first");
+        List<String> triggered = mgr.buildDeferredIndexes();
         assertEquals(0, triggered.size());
 
-        mgr.createN1qlPrimaryIndex(false, true);
-        mgr.createN1qlIndex("toto", false, true, "toto");
-        mgr.createN1qlIndex("tata", false, true, "tata");
-        mgr.createN1qlIndex("titi", false, false, "titi");
+        mgr.createPrimaryIndex(false, true);
+        mgr.createIndex("toto", false, true, "toto");
+        mgr.createIndex("tata", false, true, "tata");
+        mgr.createIndex("titi", false, false, "titi");
 
         String[] watch = new String[]{"toto", "tata", Index.PRIMARY_NAME};
-        triggered = mgr.buildN1qlDeferredIndexes();
+        triggered = mgr.buildDeferredIndexes();
         assertEquals(3, triggered.size());
         assertTrue("Unexpected triggered list " + triggered + ", expected " + watch, triggered.containsAll(Arrays.asList(watch)));
     }
@@ -400,24 +381,24 @@ public class BucketManagerIndexManagementTests {
     @Test
     public void testWatchDeferredWaitsForAllPending() {
         BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createN1qlIndex("first", false, false, "first");
-        List<String> triggered = mgr.buildN1qlDeferredIndexes();
+        mgr.createIndex("first", false, false, "first");
+        List<String> triggered = mgr.buildDeferredIndexes();
         assertEquals(0, triggered.size());
 
-        mgr.createN1qlPrimaryIndex(false, true);
-        mgr.createN1qlIndex("toto", false, true, "toto");
-        mgr.createN1qlIndex("tata", false, true, "tata");
-        mgr.createN1qlIndex("titi", false, false, "titi");
+        mgr.createPrimaryIndex(false, true);
+        mgr.createIndex("toto", false, true, "toto");
+        mgr.createIndex("tata", false, true, "tata");
+        mgr.createIndex("titi", false, false, "titi");
 
         List<String> watch = Arrays.asList("toto", "tata", Index.PRIMARY_NAME);
-        List<IndexInfo> readyInMilliseconds = mgr.watchN1qlIndexes(watch, 10, TimeUnit.MILLISECONDS);
+        List<IndexInfo> readyInMilliseconds = mgr.watchIndexes(watch, false, 10, TimeUnit.MILLISECONDS);
         assertEquals(0, readyInMilliseconds.size());
 
-        triggered = mgr.buildN1qlDeferredIndexes();
+        triggered = mgr.buildDeferredIndexes();
         assertEquals(3, triggered.size());
         assertTrue("Unexpected triggered list " + triggered + ", expected " + watch, triggered.containsAll(watch));
 
-        List<IndexInfo> readyInSeconds = mgr.async().watchN1qlIndexes(watch, 10, TimeUnit.SECONDS)
+        List<IndexInfo> readyInSeconds = mgr.async().watchIndexes(watch, false, 10, TimeUnit.SECONDS)
                 .doOnNext(new Action1<IndexInfo>() {
                     @Override
                     public void call(IndexInfo indexInfo) {
@@ -427,5 +408,15 @@ public class BucketManagerIndexManagementTests {
                 .toList()
                 .toBlocking().single();
         assertEquals("Not all indexes are online after 10 seconds", 3, readyInSeconds.size());
+    }
+
+    @Test
+    public void testWatchIndexesWithPrimaryTrueAddsPrimaryToWatchList() {
+        BucketManager mgr = indexedBucket.bucketManager();
+        mgr.createPrimaryIndex(true, false);
+
+        final List<IndexInfo> indexInfos = mgr.watchIndexes(Collections.<String>emptyList(), true, 3, TimeUnit.SECONDS);
+        assertEquals("Expected primary index to be added to watch list", 1, indexInfos.size());
+        assertEquals(Index.PRIMARY_NAME, indexInfos.get(0).name());
     }
 }

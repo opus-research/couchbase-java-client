@@ -31,7 +31,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class DocumentNotJsonException extends SubDocumentException {
 

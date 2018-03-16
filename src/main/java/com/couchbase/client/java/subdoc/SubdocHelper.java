@@ -49,7 +49,7 @@ import com.couchbase.client.java.error.subdoc.ValueTooDeepException;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Private
 public class SubdocHelper {
 

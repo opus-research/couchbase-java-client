@@ -114,7 +114,7 @@ public class CouchbaseTestContext {
      */
     public CouchbaseTestContext ensurePrimaryIndex() {
         //test for N1QL
-        if (clusterManager.info().checkAvailable(CouchbaseFeature.N1QL)) {
+        if (env.queryEnabled() || clusterManager.info().checkAvailable(CouchbaseFeature.N1QL)) {
             N1qlQueryResult result = bucket().query(
                     N1qlQuery.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`",
                             N1qlParams.build().consistency(ScanConsistency.REQUEST_PLUS)), 2, TimeUnit.MINUTES);
@@ -140,6 +140,7 @@ public class CouchbaseTestContext {
     public static final class Builder {
 
         private boolean createAdhocBucket;
+        private boolean forceQueryEnabled;
         private String seedNode;
         private String adminName;
         private String adminPassword;
@@ -150,10 +151,14 @@ public class CouchbaseTestContext {
         private boolean flushOnInit;
 
         public Builder() {
+            forceQueryEnabled = TestProperties.queryEnabled();
             seedNode = TestProperties.seedNode();
             adminName = TestProperties.adminName();
             adminPassword = TestProperties.adminPassword();
             envBuilder = DefaultCouchbaseEnvironment.builder();
+            if (forceQueryEnabled) {
+                envBuilder.queryEnabled(true);
+            }
             bucketName = TestProperties.bucket();
             bucketPassword = TestProperties.password();
             bucketSettingsBuilder = DefaultBucketSettings
@@ -174,6 +179,14 @@ public class CouchbaseTestContext {
         public Builder adhoc(boolean isAdhoc) {
             this.createAdhocBucket = isAdhoc;
             this.flushOnInit = false;
+            return this;
+        }
+
+        /**
+         * Forces the environment to be created with {@link CouchbaseEnvironment#queryEnabled()} set to true.
+         */
+        public Builder forceQueryEnabled(boolean force) {
+            this.forceQueryEnabled = force;
             return this;
         }
 
@@ -202,7 +215,8 @@ public class CouchbaseTestContext {
         }
 
         /**
-         * Forces an environment configuration to be used.
+         * Forces an environment configuration to be used. Note that the builder is required, and its configuration
+         * will be changed if {@link #forceQueryEnabled(boolean)} was used.
          */
         public Builder withEnv(DefaultCouchbaseEnvironment.Builder envBuilder) {
             this.envBuilder = envBuilder;
@@ -270,6 +284,7 @@ public class CouchbaseTestContext {
 
             this.bucketSettingsBuilder = bucketSettingsBuilder.name(this.bucketName)
                     .password(this.bucketPassword);
+            this.envBuilder = envBuilder.queryEnabled(forceQueryEnabled);
 
             CouchbaseEnvironment env = envBuilder.build();
 
@@ -314,7 +329,7 @@ public class CouchbaseTestContext {
      */
     public void deleteAll() {
         //test for N1QL
-        if (clusterManager.info().checkAvailable(CouchbaseFeature.N1QL)) {
+        if (env.queryEnabled() || clusterManager.info().checkAvailable(CouchbaseFeature.N1QL)) {
             N1qlQueryResult result = bucket.query(N1qlQuery.simple("DELETE FROM `" + bucketName + "`"));
             if (!result.finalSuccess()) {
                 throw new CouchbaseException("Could not DELETE ALL - " + result.errors().toString());
@@ -350,7 +365,7 @@ public class CouchbaseTestContext {
      * By calling this in @BeforeClass, tests will be skipped if N1QL is unavailable and is not forced on the env.
      */
     public CouchbaseTestContext ignoreIfNoN1ql() {
-        return ignoreIfMissing(CouchbaseFeature.N1QL, false);
+        return ignoreIfMissing(CouchbaseFeature.N1QL, env.queryEnabled());
     }
 
     /**
