@@ -49,12 +49,13 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
+import com.couchbase.client.java.fts.SearchParams;
+import com.couchbase.client.java.fts.SearchQuery;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.search.SearchQueryResult;
-import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.subdoc.LookupInBuilder;
 import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -73,7 +74,7 @@ import rx.Observable;
  *
  * Default timeouts are always applied and can be configured through the {@link CouchbaseEnvironment}. Overloads
  * are also available to change them on a per-call basis.
- *
+ *q
  * @author Michael Nitschinger
  * @since 2.0
  */
@@ -2726,8 +2727,11 @@ public interface Bucket {
      * @param query the query builder.
      * @return a query result containing the matches and additional information.
      */
+    //FIXME return fts SearchQueryResult
     @InterfaceStability.Experimental
-    SearchQueryResult query(SearchQuery query);
+    SearchQueryResult query(String indexName, SearchQuery query);
+    @InterfaceStability.Experimental
+    SearchQueryResult query(String indexName, SearchQuery query, SearchParams params);
 
     /**
      * Experimental: Queries a Full-Text Index
@@ -2743,8 +2747,12 @@ public interface Bucket {
      * @param timeUnit the unit for the timeout.
      * @return a query result containing the matches and additional information.
      */
+    //FIXME return fts SearchQueryResult
     @InterfaceStability.Experimental
-    SearchQueryResult query(SearchQuery query, long timeout, TimeUnit timeUnit);
+    SearchQueryResult query(String indexName, SearchQuery query, long timeout, TimeUnit timeUnit);
+    @InterfaceStability.Experimental
+    SearchQueryResult query(String indexName, SearchQuery query,  SearchParams params, long timeout, TimeUnit timeUnit);
+
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.

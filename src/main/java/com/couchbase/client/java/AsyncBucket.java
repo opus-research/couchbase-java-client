@@ -46,13 +46,14 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
+import com.couchbase.client.java.fts.SearchParams;
+import com.couchbase.client.java.fts.SearchQuery;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.search.SearchQueryResult;
-import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -1234,8 +1235,11 @@ public interface AsyncBucket {
      * @param query the query builder.
      * @return a query result containing the matches and additional information.
      */
+    //FIXME change to fts AsyncSearchQueryResult
     @InterfaceStability.Experimental
-    Observable<SearchQueryResult> query(SearchQuery query);
+    Observable<SearchQueryResult> query(String indexName, SearchQuery query);
+    @InterfaceStability.Experimental
+    Observable<SearchQueryResult> query(String indexName, SearchQuery query, SearchParams searchParams);
 
     /**
      * Unlocks a write-locked {@link Document}.
