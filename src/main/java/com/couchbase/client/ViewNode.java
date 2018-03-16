@@ -22,10 +22,8 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.http.AsyncConnectionManager;
-import com.couchbase.client.http.AsyncConnectionRequest;
+import com.couchbase.client.http.HttpResponseCallback;
 import com.couchbase.client.http.HttpUtil;
-import com.couchbase.client.http.RequestHandle;
 import com.couchbase.client.protocol.views.HttpOperation;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -33,20 +31,27 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import net.spy.memcached.compat.SpyObject;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.entity.BufferedHttpEntity;
-import org.apache.http.nio.NHttpClientConnection;
-import org.apache.http.nio.NHttpConnection;
-import org.apache.http.nio.entity.BufferingNHttpEntity;
-import org.apache.http.nio.entity.ConsumingNHttpEntity;
-import org.apache.http.nio.protocol.EventListener;
-import org.apache.http.nio.protocol.NHttpRequestExecutionHandler;
+import org.apache.http.HttpHost;
+import org.apache.http.config.ConnectionConfig;
+import org.apache.http.impl.nio.DefaultHttpClientIODispatch;
+import org.apache.http.impl.nio.pool.BasicNIOConnPool;
+import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.nio.protocol.BasicAsyncRequestProducer;
+import org.apache.http.nio.protocol.BasicAsyncResponseConsumer;
+import org.apache.http.nio.protocol.HttpAsyncRequestExecutor;
+import org.apache.http.nio.protocol.HttpAsyncRequester;
+import org.apache.http.nio.reactor.ConnectingIOReactor;
+import org.apache.http.nio.reactor.IOEventDispatch;
 import org.apache.http.nio.reactor.IOReactorException;
-import org.apache.http.nio.util.HeapByteBufferAllocator;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.util.EntityUtils;
+import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.protocol.HttpProcessor;
+import org.apache.http.protocol.HttpProcessorBuilder;
+import org.apache.http.protocol.RequestConnControl;
+import org.apache.http.protocol.RequestContent;
+import org.apache.http.protocol.RequestExpectContinue;
+import org.apache.http.protocol.RequestTargetHost;
+import org.apache.http.protocol.RequestUserAgent;
 
 /**
  * Establishes a HTTP connection to a single Couchbase node.
@@ -57,28 +62,59 @@ import org.apache.http.util.EntityUtils;
 public class ViewNode extends SpyObject {
 
   private final InetSocketAddress addr;
-  private final AsyncConnectionManager connMgr;
-  // TODO: These unused variables need to be utilized in the
-  // AsyncConnectionManager.
-  private final long opQueueMaxBlockTime;
-  private final long opQueueLen;
-  private final long defaultOpTimeout;
   private final String user;
   private final String pass;
   private boolean shuttingDown = false;
 
+  private final ViewConnection viewConnection;
+
+  private final HttpProcessor httpProc;
+  private final ConnectingIOReactor ioReactor;
+  private final BasicNIOConnPool pool;
+  private final IOEventDispatch ioEventDispatch;
+  private final HttpHost host;
+  private final HttpAsyncRequester requester;
+
   private Thread ioThread;
 
-  public ViewNode(InetSocketAddress a, AsyncConnectionManager mgr,
-      long queueLen, long maxBlockTime, long operationTimeout, String usr,
-      String pwd) {
+  public ViewNode(InetSocketAddress a, String usr,
+    String pwd, ViewConnection conn) throws IOReactorException {
     addr = a;
-    connMgr = mgr;
-    opQueueMaxBlockTime = maxBlockTime;
-    opQueueLen = queueLen;
-    defaultOpTimeout = operationTimeout;
     user = usr;
     pass = pwd;
+    viewConnection = conn;
+
+    httpProc = HttpProcessorBuilder.create()
+      .add(new RequestContent())
+      .add(new RequestTargetHost())
+      .add(new RequestConnControl())
+      .add(new RequestUserAgent("JCBC/1.2"))
+      .add(new RequestExpectContinue(true)).build();
+
+    // Create client-side HTTP protocol handler
+    HttpAsyncRequestExecutor protocolHandler = new HttpAsyncRequestExecutor();
+
+    // Create client-side I/O event dispatch
+    ioEventDispatch = new DefaultHttpClientIODispatch(protocolHandler,
+      ConnectionConfig.DEFAULT);
+
+    // Create client-side I/O reactor
+    ioReactor = new DefaultConnectingIOReactor(IOReactorConfig.custom()
+      .setConnectTimeout(5000)
+      .setSoTimeout(5000)
+      .setTcpNoDelay(true)
+      .build());
+
+    // Create HTTP connection pool
+    pool = new BasicNIOConnPool(ioReactor, ConnectionConfig.DEFAULT);
+
+    // Limit total number of connections to just two
+    pool.setDefaultMaxPerRoute(2);
+    pool.setMaxTotal(2);
+
+    host = new HttpHost(addr.getHostName(), addr.getPort(), "http");
+    requester = new HttpAsyncRequester(httpProc);
+
   }
 
   public void init() {
@@ -86,7 +122,7 @@ public class ViewNode extends SpyObject {
     ioThread = new Thread(new Runnable() {
       public void run() {
         try {
-          connMgr.execute();
+          ioReactor.execute(ioEventDispatch);
         } catch (InterruptedIOException ex) {
           getLogger().error("I/O reactor Interrupted", ex);
         } catch (IOException e) {
@@ -98,46 +134,30 @@ public class ViewNode extends SpyObject {
     ioThread.start();
   }
 
-  public boolean writeOp(HttpOperation op) {
-    AsyncConnectionRequest connRequest = connMgr.requestConnection();
-    try {
-      connRequest.waitFor();
-    } catch (InterruptedException e) {
-      getLogger().warn(
-          "Interrupted while trying to get a connection.");
-      connRequest.cancel();
-      return false;
+  public boolean writeOp(final HttpOperation op) {
+    HttpCoreContext coreContext = HttpCoreContext.create();
+
+    if (!user.equals("default")) {
+      try {
+        op.addAuthHeader(HttpUtil.buildAuthHeader(user, pass));
+      } catch (UnsupportedEncodingException ex) {
+        getLogger().error("Could not create auth header for request, "
+          + "could not encode credentials into base64. Canceling op."
+          + op, ex);
+        op.cancel();
+        return true;
+      }
     }
 
-    NHttpClientConnection conn = connRequest.getConnection();
-    if (conn == null) {
-      getLogger().debug("Failed to obtain connection on node " + this.addr);
-      connRequest.cancel();
-      return false;
-    } else {
-      if (!user.equals("default")) {
-        try {
-          op.addAuthHeader(HttpUtil.buildAuthHeader(user, pass));
-        } catch (UnsupportedEncodingException ex) {
-          getLogger().error("Could not create auth header for request, "
-            + "could not encode credentials into base64. Canceling op."
-            + op, ex);
-          op.cancel();
-          connRequest.cancel();
-        }
-      }
-      HttpContext context = conn.getContext();
-      RequestHandle handle = new RequestHandle(connMgr, conn);
-      context.setAttribute("request-handle", handle);
-      context.setAttribute("operation", op);
-      conn.requestOutput();
-    }
+    requester.execute(
+      new BasicAsyncRequestProducer(host, op.getRequest()),
+      new BasicAsyncResponseConsumer(),
+      pool,
+      coreContext,
+      new HttpResponseCallback(op, viewConnection)
+    );
 
     return true;
-  }
-
-  public boolean hasWriteOps() {
-    return connMgr.hasPendingRequests();
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -156,7 +176,7 @@ public class ViewNode extends SpyObject {
       waittime = TimeUnit.MILLISECONDS.convert(time, unit);
     }
 
-    connMgr.shutdown(waittime);
+    ioReactor.shutdown();
     try {
       ioThread.join(waittime);
     } catch (InterruptedException ex) {
@@ -169,152 +189,4 @@ public class ViewNode extends SpyObject {
     return shuttingDown;
   }
 
-  static class MyHttpRequestExecutionHandler extends SpyObject
-    implements NHttpRequestExecutionHandler  {
-
-    private final ViewConnection vconn;
-
-    public MyHttpRequestExecutionHandler(ViewConnection vconn) {
-      super();
-      this.vconn = vconn;
-    }
-
-    public void initalizeContext(final HttpContext context,
-        final Object attachment) {
-    }
-
-    public void finalizeContext(final HttpContext context) {
-      RequestHandle handle =
-          (RequestHandle) context.removeAttribute("request-handle");
-      if (handle != null) {
-        handle.cancel();
-      }
-    }
-
-    public HttpRequest submitRequest(final HttpContext context) {
-      HttpOperation op = (HttpOperation) context.getAttribute("operation");
-      if (op == null) {
-        return null;
-      }
-      return op.getRequest();
-    }
-
-    public void handleResponse(final HttpResponse response,
-        final HttpContext context) {
-      RequestHandle handle =
-          (RequestHandle) context.removeAttribute("request-handle");
-      HttpOperation op = (HttpOperation) context.removeAttribute("operation");
-
-      try {
-        response.setEntity(new BufferedHttpEntity(response.getEntity()));
-      } catch(IOException ex) {
-        throw new RuntimeException("Could not convert HttpEntity content.");
-      }
-
-      int statusCode = response.getStatusLine().getStatusCode();
-      if (handle != null) {
-        boolean shouldRetry = shouldRetry(statusCode, response);
-        if(shouldRetry) {
-          if(!op.isTimedOut() && !op.isCancelled()) {
-            getLogger().info("Retrying HTTP operation Request: "
-              + op.getRequest().getRequestLine() + ", Response: "
-              + response.getStatusLine());
-            vconn.addOp(op);
-          }
-        } else {
-          op.handleResponse(response);
-        }
-        handle.completed();
-      }
-    }
-
-    private boolean shouldRetry(int statusCode, HttpResponse response) {
-      switch(statusCode) {
-      case 200:
-        return false;
-      case 404:
-        return analyse404Response(response);
-      case 500:
-        return analyse500Response(response);
-      case 300:
-      case 301:
-      case 302:
-      case 303:
-      case 307:
-      case 401:
-      case 408:
-      case 409:
-      case 412:
-      case 416:
-      case 417:
-      case 501:
-      case 502:
-      case 503:
-      case 504:
-        return true;
-      default:
-        return false;
-      }
-    }
-
-    private boolean analyse404Response(HttpResponse response) {
-      try {
-        String body = EntityUtils.toString(response.getEntity());
-        // Indicates a Not Found Design Document
-        if(body.contains("not_found")
-          && (body.contains("missing") || body.contains("deleted"))) {
-          return false;
-        }
-      } catch(IOException ex) {
-        return false;
-      }
-      return true;
-    }
-
-    private boolean analyse500Response(HttpResponse response) {
-      try {
-        String body = EntityUtils.toString(response.getEntity());
-        // Indicates a Not Found Design Document
-        if(body.contains("error")
-          && body.contains(("{not_found, missing_named_view}"))) {
-          return false;
-        }
-      } catch(IOException ex) {
-        return false;
-      }
-      return true;
-    }
-
-    @Override
-    public ConsumingNHttpEntity responseEntity(HttpResponse response,
-        HttpContext context) throws IOException {
-      return new BufferingNHttpEntity(response.getEntity(),
-          new HeapByteBufferAllocator());
-    }
-  }
-
-  static class EventLogger extends SpyObject implements EventListener {
-
-    public void connectionOpen(final NHttpConnection conn) {
-      getLogger().debug("Connection open: " + conn);
-    }
-
-    public void connectionTimeout(final NHttpConnection conn) {
-      getLogger().error("Connection timed out: " + conn);
-    }
-
-    public void connectionClosed(final NHttpConnection conn) {
-      getLogger().debug("Connection closed: " + conn);
-    }
-
-    public void fatalIOException(final IOException ex,
-        final NHttpConnection conn) {
-      getLogger().error("I/O error: " + ex.getMessage());
-    }
-
-    public void fatalProtocolException(final HttpException ex,
-        final NHttpConnection conn) {
-      getLogger().error("HTTP error: " + ex.getMessage());
-    }
-  }
 }
