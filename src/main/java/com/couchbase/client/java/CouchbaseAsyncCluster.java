@@ -101,7 +101,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * // Perform your work here...
  *
  * cluster.disconnect();
- * environment.shutdownAsync().toBlocking().single();
+ * environment.shutdown().toBlocking().single();
  * ```
  *
  * @since 2.0.0
@@ -428,7 +428,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             .flatMap(new Func1<DisconnectResponse, Observable<Boolean>>() {
                 @Override
                 public Observable<Boolean> call(DisconnectResponse disconnectResponse) {
-                    return sharedEnvironment ? Observable.just(true) : environment.shutdownAsync();
+                    return sharedEnvironment ? Observable.just(true) : environment.shutdown();
                 }
             })
             .doOnNext(new Action1<Boolean>() {
