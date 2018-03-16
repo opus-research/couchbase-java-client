@@ -42,7 +42,6 @@ public class ClusterDependentTest {
                 .bucketQuota(256)
                 .bucketType(BucketType.COUCHBASE)
                 .flushOnInit(true)
-                .enableFlush(true)
                 .build();
     }
 
