@@ -22,7 +22,6 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.CbTestConfig;
 import com.couchbase.client.vbucket.config.Bucket;
 
 import java.net.URI;
@@ -37,6 +36,8 @@ import net.spy.memcached.TestConfig;
  * A ConfigurationHTTPTest.
  */
 public class ConfigurationProviderHTTPTest extends TestCase {
+  private static final String REST_USER = "Administrator";
+  private static final String REST_PWD = "password";
   private static final String DEFAULT_BUCKET_NAME = "default";
   private ConfigurationProviderHTTP configProvider;
   private ReconfigurableMock reconfigurable = new ReconfigurableMock();
@@ -46,9 +47,8 @@ public class ConfigurationProviderHTTPTest extends TestCase {
     super.setUp();
     List<URI> baseList = Arrays.asList(new URI("http://"
         + TestConfig.IPV4_ADDR + ":8091/pools"));
-    configProvider = new ConfigurationProviderHTTP(baseList,
-            CbTestConfig.CLUSTER_ADMINNAME,
-            CbTestConfig.CLUSTER_PASS);
+    configProvider = new ConfigurationProviderHTTP(baseList, REST_USER,
+        REST_PWD);
     assertNotNull(configProvider);
   }
 
