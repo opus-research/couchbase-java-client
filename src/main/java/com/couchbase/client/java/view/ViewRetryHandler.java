@@ -22,7 +22,6 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
@@ -74,17 +73,15 @@ public class ViewRetryHandler {
                         .flatMap(new Func1<Throwable, Observable<?>>() {
                             @Override
                             public Observable<?> call(Throwable throwable) {
-                                if (throwable instanceof ShouldRetryViewRequestException
-                                    || throwable instanceof RequestCancelledException) {
-                                    return Observable.timer(10, TimeUnit.MILLISECONDS);
+                                if (throwable instanceof ShouldRetryViewRequestException) {
+                                    return Observable.interval(10, TimeUnit.MILLISECONDS);
                                 } else {
                                     return Observable.error(throwable);
                                 }
                             }
                         });
                 }
-            })
-            .last();
+            });
     }
 
     /**
@@ -103,25 +100,19 @@ public class ViewRetryHandler {
             .info()
             .map(new Func1<ByteBuf, ViewQueryResponse>() {
                 @Override
-                public ViewQueryResponse call(ByteBuf infoBuffer) {
-                    ByteBuf infoBufferCopy = infoBuffer.copy();
+                public ViewQueryResponse call(ByteBuf byteBuf) {
+                    ByteBuf infoCopy = byteBuf.copy();
                     JsonObject content = null;
                     try {
                         content =
-                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoBufferCopy);
+                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoCopy);
                     } catch (Exception e) {
-                        if (infoBuffer.refCnt() > 0) {
-                            infoBuffer.release();
-                        }
                         throw new CouchbaseException("Could not parse View error message", e);
                     } finally {
-                        infoBufferCopy.release();
+                        infoCopy.release();
                     }
 
                     if (shouldRetry(responseCode, content)) {
-                        if (infoBuffer.refCnt() > 0) {
-                            infoBuffer.release();
-                        }
                         throw SHOULD_RETRY;
                     }
                     return response;

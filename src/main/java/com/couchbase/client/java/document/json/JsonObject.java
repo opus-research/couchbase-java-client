@@ -28,6 +28,7 @@ import java.util.Set;
 
 import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.java.transcoder.JacksonTransformers;
+import com.couchbase.client.java.transcoder.JsonTranscoder;
 
 /**
  * Represents a JSON object that can be stored and loaded from Couchbase Server.
@@ -154,9 +155,7 @@ public class JsonObject extends JsonValue {
      * @return the {@link JsonObject}.
      */
     public JsonObject put(final String name, final Object value) {
-        if (this == value) {
-            throw new IllegalArgumentException("Cannot put self");
-        } else if (value == JsonValue.NULL) {
+        if (value == JsonValue.NULL) {
             putNull(name);
         } else if (checkType(value)) {
             content.put(name, value);
@@ -324,9 +323,6 @@ public class JsonObject extends JsonValue {
      * @return the {@link JsonObject}.
      */
     public JsonObject put(String name, JsonObject value) {
-        if (this == value) {
-            throw new IllegalArgumentException("Cannot put self");
-        }
         content.put(name, value);
         return this;
     }
@@ -419,26 +415,12 @@ public class JsonObject extends JsonValue {
     }
 
     /**
-     * Transforms the {@link JsonObject} into a {@link Map}. The resulting
-     * map is not backed by this {@link JsonObject}, and all sub-objects or
-     * sub-arrays ({@link JsonArray}) are also recursively converted to
-     * maps and lists, respectively.
+     * Creates a copy of the underlying {@link Map} and returns it.
      *
-     * @return the content copied as a {@link Map}.
+     * @return the {@link Map} of the content.
      */
     public Map<String, Object> toMap() {
-        Map<String, Object> copy = new HashMap<String, Object>(content.size());
-        for (Map.Entry<String, Object> entry : content.entrySet()) {
-            Object content = entry.getValue();
-            if (content instanceof JsonObject) {
-                copy.put(entry.getKey(), ((JsonObject) content).toMap());
-            } else if (content instanceof JsonArray) {
-                copy.put(entry.getKey(), ((JsonArray) content).toList());
-            } else {
-                copy.put(entry.getKey(), content);
-            }
-        }
-        return copy;
+        return new HashMap<String, Object>(content);
     }
 
     /**
