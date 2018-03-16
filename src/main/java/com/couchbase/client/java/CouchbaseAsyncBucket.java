@@ -74,12 +74,14 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
     private final AsyncBucketManager bucketManager;
 
+    private boolean closed;
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final String name, final String password,
                                 final List<Transcoder<? extends Document, ?>> customTranscoders) {
         bucket = name;
         this.password = password;
         this.core = core;
+        this.closed = false;
 
         transcoders = new ConcurrentHashMap<Class<? extends Document>, Transcoder<? extends Document, ?>>();
         transcoders.put(JSON_OBJECT_TRANSCODER.documentType(), JSON_OBJECT_TRANSCODER);
@@ -98,6 +100,17 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         }
 
         bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
+    }
+
+    /**
+     * This method can be invoked prior to a call to the server (eg. through core) in order to check the state of the
+     * Bucket instance. Notably, it will throw a {@link com.couchbase.client.java.error.BucketClosedException} if it finds
+     * that the Bucket instance was closed.
+     */
+    protected final void safeCheck() {
+        if (closed) {
+            throw new BucketClosedException("Reference to bucket " + this.name() + " has been closed");
+        }
     }
 
     @Override
@@ -119,6 +132,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
+        safeCheck();
         return core
             .<GetResponse>send(new GetRequest(id, bucket))
             .filter(new Func1<GetResponse, Boolean>() {
@@ -150,6 +164,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
+        safeCheck();
         return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
@@ -180,6 +195,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
+        safeCheck();
         return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
@@ -211,6 +227,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getFromReplica(final String id, final ReplicaMode type,
         final Class<D> target) {
+        safeCheck();
 
         Observable<GetResponse> incoming;
         if (type == ReplicaMode.ALL) {
@@ -262,6 +279,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> insert(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
@@ -303,6 +321,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> upsert(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
@@ -338,9 +357,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> replace(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
+        return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
 
         .flatMap(new Func1<ReplaceResponse, Observable<D>>() {
             @Override
@@ -376,6 +396,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
             bucket);
@@ -430,6 +451,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
   public Observable<AsyncViewResult> query(final ViewQuery query) {
+    safeCheck();
     final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
         query.toString(), bucket, password);
         return core.<ViewQueryResponse>send(request)
@@ -495,6 +517,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final String query) {
+        safeCheck();
         GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
         return core
             .<GenericQueryResponse>send(request)
@@ -555,6 +578,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
+        safeCheck();
         return core
             .<CounterResponse>send(new CounterRequest(id, initial, delta, expiry, bucket))
             .map(new Func1<CounterResponse, JsonLongDocument>() {
@@ -567,6 +591,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> unlock(String id, long cas) {
+        safeCheck();
         return core
             .<UnlockResponse>send(new UnlockRequest(id, cas, bucket))
             .map(new Func1<UnlockResponse, Boolean>() {
@@ -590,6 +615,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> touch(String id, int expiry) {
+        safeCheck();
         return core.<TouchResponse>send(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
             @Override
             public Boolean call(TouchResponse touchResponse) {
@@ -606,6 +632,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> append(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
@@ -625,6 +652,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> prepend(final D document) {
+        safeCheck();
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
@@ -712,8 +740,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<CloseBucketResponse, Boolean>() {
                 @Override
                 public Boolean call(CloseBucketResponse response) {
+                    if (response.status().isSuccess())
+                        CouchbaseAsyncBucket.this.closed = true;
                     return response.status().isSuccess();
                 }
             });
+    }
+
+    @Override
+    public boolean isClosed() {
+        return this.closed;
     }
 }
