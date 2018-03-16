@@ -69,7 +69,7 @@ public class Pool {
    * @return an atomic reference to the current Map of buckets
    */
   private AtomicReference<Map<String, Bucket>> getCurrentBuckets() {
-    if (currentBuckets == null) {
+    if (currentBuckets.get().isEmpty()) {
       throw new ConfigurationException("Buckets were never populated.");
     }
     return currentBuckets;

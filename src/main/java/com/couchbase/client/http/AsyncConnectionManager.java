@@ -98,7 +98,7 @@ public class AsyncConnectionManager extends SpyObject {
       if (!this.shutdown) {
         this.shutdown = true;
         while (!this.pendingRequests.isEmpty()) {
-          AsyncConnectionRequest request = this.pendingRequests.remove();
+          AsyncConnectionRequest request = this.pendingRequests.poll();
           if(request != null) {
             NHttpClientConnection connection = request.getConnection();
             if(connection != null) {

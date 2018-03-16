@@ -448,16 +448,15 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
           ConfigurationProvider oldConfigProvider = getConfigurationProvider();
 
-          if (null != oldConfigProvider) {
-            oldConfigProvider.shutdown();
-          }
-
           ConfigurationProvider newConfigProvider =
             new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
           setConfigurationProvider(newConfigProvider);
 
-          newConfigProvider.subscribe(bucket,
-            oldConfigProvider.getReconfigurable());
+          if (oldConfigProvider != null) {
+            newConfigProvider.subscribe(bucket,
+              oldConfigProvider.getReconfigurable());
+            oldConfigProvider.shutdown();
+          }
 
           if (!doingResubscribe.compareAndSet(true, false)) {
             LOGGER.log(Level.WARNING,
