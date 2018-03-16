@@ -16,16 +16,11 @@
 package com.couchbase.client.java;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.UUID;
 
-import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
 import com.couchbase.client.java.query.DefaultN1qlQueryResult;
@@ -51,62 +46,28 @@ import rx.functions.Func6;
  * @author Simon Baslé
  * @since 2.1
  */
+@Ignore("travel-sample with indexes are required for these tests")
 public class N1qlPreparedTest {
 
     private static CouchbaseTestContext ctx;
 
     private static final ScanConsistency CONSISTENCY = ScanConsistency.REQUEST_PLUS;
     private static N1qlQueryExecutor executor;
-    private static int count = 0;
 
     @BeforeClass
     public static void init() throws InterruptedException {
         ctx = CouchbaseTestContext.builder()
-                .adhoc(true)
-                .bucketName("N1qlPrepared")
-                .bucketQuota(100)
+                .adhoc(false)
+                .bucketName("travel-sample")
                 .build()
-                .ignoreIfNoN1ql()
-        .ensurePrimaryIndex();
+                .ignoreIfNoN1ql();
 
         executor = new N1qlQueryExecutor(ctx.cluster().core(), ctx.bucketName(), ctx.bucketPassword(), false);
-        final JsonObject jsonObject = JsonObject.create();
-        for (int i=0; i < 10; i++) {
-            jsonObject.put("field" + i,  UUID.randomUUID().toString());
-        }
-        List<String> keys = new ArrayList<String>();
-        for (int i=0; i < 15000; i++) {
-            keys.add("Key" + i);
-        }
-
-        List<JsonDocument> documents = Observable.from(keys)
-                .flatMap(new Func1<String, Observable<JsonDocument>>() {
-                    @Override
-                    public Observable<JsonDocument> call(String key) {
-                        return ctx.bucket().async().upsert(JsonDocument.create(key, jsonObject)) ;
-                    }
-                })
-                .onErrorResumeNext(new Func1<Throwable, Observable<JsonDocument>>() {
-                    @Override
-                    public Observable<JsonDocument> call(Throwable throwable) {
-                        if (throwable instanceof TemporaryFailureException) {
-                            return Observable.empty();
-                        } else {
-                            return Observable.error(throwable);
-                        }
-                    }
-                })
-                .toList()
-                .toBlocking()
-                .single();
-
-        count = documents.size();
-        assertTrue(count >= 10000);
     }
 
     @AfterClass
     public static void cleanup() {
-        ctx.destroyBucketAndDisconnect();
+        ctx.disconnect();
     }
 
     public static N1qlQueryResult query(N1qlQuery query) {
@@ -155,10 +116,10 @@ public class N1qlPreparedTest {
 
     @Test
     public void testLongRunningPreparedQuery() {
-        int fetzhSz = 10000;
-        N1qlQuery query = N1qlQuery.simple("select * from `"+ ctx.bucketName() +"` limit " + fetzhSz, N1qlParams.build().adhoc(false));
+        int fetchSz = 20000;
+        N1qlQuery query = N1qlQuery.simple("select * from `"+ ctx.bucketName() +"` limit " + fetchSz, N1qlParams.build().adhoc(false));
         N1qlQueryResult result = ctx.bucket().query(query);
         System.out.println("Elapsed time:" + result.info().elapsedTime());
-        assertEquals("Did not fetch all results", result.allRows().size(), fetzhSz);
+        assertEquals("Result size incorrect", fetchSz, result.allRows().size());
     }
 }
