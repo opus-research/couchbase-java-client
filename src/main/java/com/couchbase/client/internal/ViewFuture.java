@@ -35,10 +35,12 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.internal.GenericCompletionListener;
 import net.spy.memcached.ops.OperationStatus;
 
 /**
@@ -47,10 +49,11 @@ import net.spy.memcached.ops.OperationStatus;
 public class ViewFuture extends HttpFuture<ViewResponse> {
   private final AtomicReference<BulkFuture<Map<String, Object>>> multigetRef;
 
-  private AbstractView view;
+  private final AbstractView view;
 
-  public ViewFuture(CountDownLatch latch, long timeout, AbstractView view) {
-    super(latch, timeout);
+  public ViewFuture(CountDownLatch latch, long timeout, AbstractView view,
+    ExecutorService service) {
+    super(latch, timeout, service);
     this.multigetRef =
         new AtomicReference<BulkFuture<Map<String, Object>>>(null);
     this.view = view;
@@ -80,7 +83,7 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
           docMap.get(r.getId())));
       }
     }
-    return new ViewResponseWithDocs(rows, viewResp.getErrors(), viewResp.getTotalViewRows());
+    return new ViewResponseWithDocs(rows, viewResp.getErrors());
   }
 
   public void set(ViewResponse viewResponse,
@@ -88,5 +91,17 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
     objRef.set(viewResponse);
     multigetRef.set(oper);
     status = s;
+  }
+
+  @Override
+  public ViewFuture addListener(HttpCompletionListener listener) {
+    super.addToListeners((GenericCompletionListener) listener);
+    return this;
+  }
+
+  @Override
+  public ViewFuture removeListener(HttpCompletionListener listener) {
+    super.removeFromListeners((GenericCompletionListener) listener);
+    return this;
   }
 }

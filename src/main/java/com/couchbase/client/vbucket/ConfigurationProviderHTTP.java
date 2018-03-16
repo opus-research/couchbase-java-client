@@ -25,6 +25,7 @@ package com.couchbase.client.vbucket;
 import com.couchbase.client.http.HttpUtil;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
+import com.couchbase.client.vbucket.config.ConfigType;
 import com.couchbase.client.vbucket.config.ConfigurationParser;
 import com.couchbase.client.vbucket.config.ConfigurationParserJSON;
 import com.couchbase.client.vbucket.config.Pool;
@@ -41,15 +42,12 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-
 import java.text.ParseException;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.compat.SpyObject;
@@ -71,16 +69,17 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    */
   public static final String CLIENT_SPEC_VER = "1.0";
   private volatile List<URI> baseList;
-  private String restUsr;
-  private String restPwd;
+  private final String restUsr;
+  private final String restPwd;
   private URI loadedBaseUri;
 
-  private final Map<String, Bucket> buckets = new ConcurrentHashMap<String, Bucket>();
+  private final Map<String, Bucket> buckets =
+    new ConcurrentHashMap<String, Bucket>();
 
-  private ConfigurationParser configurationParser =
-      new ConfigurationParserJSON();
-  private Map<String, BucketMonitor> monitors =
-      new HashMap<String, BucketMonitor>();
+  private final ConfigurationParser configurationParser =
+    new ConfigurationParserJSON();
+  private final Map<String, BucketMonitor> monitors =
+    new HashMap<String, BucketMonitor>();
   private volatile String reSubBucket;
   private volatile Reconfigurable reSubRec;
 
@@ -91,7 +90,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * @param baseList list of urls to treat as base
    * @throws IOException
    */
-  public ConfigurationProviderHTTP(List<URI> baseList) throws IOException {
+  public ConfigurationProviderHTTP(List<URI> baseList) {
     this(baseList, null, null);
   }
 
@@ -143,9 +142,13 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       boolean warmedUp = false;
       int maxBackoffRetries = 5;
       int retryCount = 1;
-      while(warmedUp == false) {
+      while(!warmedUp) {
         readPools(bucketname);
         Config config = this.buckets.get(bucketname).getConfig();
+        if(config.getConfigType().equals(ConfigType.MEMCACHE)) {
+          warmedUp = true;
+          continue;
+        }
         if(config.getVbucketsCount() == 0) {
           if(retryCount > maxBackoffRetries) {
             throw new ConfigurationException("Cluster is not in a warmed up "
@@ -209,7 +212,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
             + " response... skipping");
           continue;
         }
-        Map<String, Pool> pools = this.configurationParser.parseBase(base);
+        Map<String, Pool> pools = this.configurationParser.parsePools(base);
 
         // check for the default pool name
         if (!pools.containsKey(DEFAULT_POOL_NAME)) {
@@ -224,7 +227,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           URLConnection poolConnection = urlConnBuilder(baseUri,
             pool.getUri());
           String poolString = readToString(poolConnection);
-          configurationParser.loadPool(pool, poolString);
+          configurationParser.parsePool(pool, poolString);
           URLConnection poolBucketsConnection = urlConnBuilder(baseUri,
             pool.getBucketsUri());
           String sBuckets = readToString(poolBucketsConnection);
@@ -248,6 +251,13 @@ public class ConfigurationProviderHTTP extends SpyObject implements
               this.buckets.put(bucketEntry.getKey(), bucketEntry.getValue());
             }
           }
+
+          if (this.buckets.get(bucketToFind) == null) {
+            getLogger().warn("Bucket found, but has no bucket "
+              + "configuration attached...skipping");
+            continue;
+          }
+
           this.loadedBaseUri = baseUri;
           return;
         }
@@ -260,9 +270,9 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           + " ...skipping", e);
         continue;
       }
-      throw new ConfigurationException("Configuration for bucket "
-          + bucketToFind + " was not found.");
     }
+    throw new ConfigurationException("Configuration for bucket \""
+      + bucketToFind + "\" was not found in server list (" + baseList + ").");
   }
 
   public List<InetSocketAddress> getServerList(final String bucketname) {
@@ -323,7 +333,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     if (monitor == null) {
       URI streamingURI = bucket.getStreamingURI();
       monitor = new BucketMonitor(this.loadedBaseUri.resolve(streamingURI),
-        bucketName, this.restUsr, this.restPwd, configurationParser);
+        this.restUsr, this.restPwd, configurationParser, this);
       this.monitors.put(bucketName, monitor);
       monitor.addObserver(obs);
       monitor.startMonitor();
@@ -450,6 +460,20 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     result += "reconf:" + reSubRec;
     result += "baseList:" + baseList;
     return result;
+  }
+
+  /**
+   * Override the old baseList with new values.
+   *
+   * Updating the original baseList ensures that subsequent node
+   * reconfigurations make their way into this list which will be used if
+   * the streaming node gets removed (or is stale) and a new one needs to be
+   * selected.
+   *
+   * @param newList the new BaseList.
+   */
+  public void updateBaseListFromConfig(List<URI> newList) {
+    baseList = newList;
   }
 
 }

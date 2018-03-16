@@ -33,7 +33,7 @@
 
   <property name="name" value="couchbase-client"/>
   <property name="copyright" value="2006-2012 Dustin Sallings, Matt Ingenthron" />
-  <property name="group" value="couchbase" />
+  <property name="group" value="com.couchbase.client" />
 
   <property name="base.src.dir" value="${basedir}/src" />
   <property name="build.dir" value="${basedir}/build" />
@@ -57,9 +57,10 @@
   <property name="ivy.settings.dir" value="${basedir}/ivy" />
   <property name="ivy.pom.url"
       value="http://www.couchbase.com/develop/java/current" />
-  <property name="ivy.pom.groupId" value="couchbase" />
+  <property name="ivy.pom.groupId" value="com.couchbase.client" />
   <property name="ivy.pom.description"
-   value = "A client library for Couchbase Server" />
+   value = "The official Couchbase Java SDK" />
+  <property name="ivy.pom.name" value="Couchbase Java SDK" />
 
   <!-- tests -->
   <property name="build.test" location="${build.dir}/test"/>
@@ -105,7 +106,15 @@
   <property name="server.address_v4" value="127.0.0.1"/>
   <property name="server.address_v6" value="::1"/>
   <property name="server.type" value="memcached"/>
+  <property name="cluster.adminname" value="Administrator"/>
+  <property name="cluster.password" value="password"/>
   <property name="test.type" value="unit"/>
+
+  <!-- Maven Central URLs -->
+  <property name="maven-snapshots-repository-id" value="sonatype-nexus-snapshots" />
+  <property name="maven-snapshots-repository-url" value="https://oss.sonatype.org/content/repositories/snapshots/" />
+  <property name="maven-staging-repository-id" value="sonatype-nexus-staging" />
+  <property name="maven-staging-repository-url" value="https://oss.sonatype.org/service/local/staging/deploy/maven2/" />
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern"
@@ -232,8 +241,10 @@
       description="Run couchbase-client unit tests">
     <echo>IPV4 address ${server.address_v4}</echo>
     <echo>IPV6 address ${server.address_v6}</echo>
+    <echo>Admin user ${cluster.adminname}</echo>
+    <echo>Admin password ${cluster.password}</echo>
     <echo>Test Type (unit|ci) ${test.type}</echo>
-    <echo>Testing against ${java.version}</echo>
+    <echo>Used Java version is: ${java.version}</echo>
     <delete dir="${junit.dir}"/>
     <mkdir  dir="${junit.dir}/data"/>
     <junit fork="yes" timeout="5400000" failureproperty="junit.failure" showoutput="true">
@@ -245,6 +256,8 @@
       </batchtest>
       <jvmarg value="-ea" />
       <sysproperty key="server.address_v4" value="${server.address_v4}"/>
+      <sysproperty key="cluster.password" value="${cluster.password}"/>
+      <sysproperty key="cluster.adminname" value="${cluster.adminname}"/>
       <sysproperty key="server.address_v6" value="${server.address_v6}"/>
       <sysproperty key="server.type" value="${server.type}"/>
       <sysproperty key="test.type" value="${test.type}"/>
@@ -279,7 +292,9 @@
         includes="**/*.java"
         destdir="${build.test.classes}"
         debug="${javac.debug}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath>
         <path refid="test.classpath"/>
       </classpath>
@@ -327,6 +342,7 @@
 
   <target name="docsjar" depends="docs"
       description="Create the documentation jar">
+    <mkdir dir="${build.dir}/javadocs" />
     <zip destfile="${build.dir}/javadocs/${name}-${version}.jar"
         basedir="${build.javadoc}" />
   </target>
@@ -356,7 +372,7 @@
 
   <target name="compile" depends="ivy-init, gen-version, ivy-retrieve"
       description="Compile and run the project">
-    <echo>Compiling against ${java.version}</echo>
+    <echo>Used Java version is: ${java.version}</echo>
     <mkdir dir="${build.classes}" />
     <javac
         encoding="${build.encoding}"
@@ -365,7 +381,9 @@
         destdir="${build.classes}"
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath refid="${name}.common.classpath" />
     </javac>
 
@@ -376,7 +394,9 @@
         destdir="${build.classes}"
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath refid="${name}.common.classpath"/>
     </javac>
     <move file="${build.src.dir}/com/couchbase/client/changelog.txt"
@@ -385,7 +405,7 @@
 
   <target name="srcjar" depends="init,jar"
       description="Create source jars">
-    <mkdir dir="${build.dir}" />
+    <mkdir dir="${build.dir}/sources" />
     <jar jarfile="${build.dir}/sources/${name}-${version}.jar">
       <fileset dir="${src.dir}" />
       <fileset dir="${build.src.dir}" />
@@ -396,6 +416,7 @@
   </target>
 
   <target name="jar" depends="compile,compile-test" description="Creates a jar file for the library">
+    <mkdir dir="${build.dir}/jars" />
     <jar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
       <manifest>
         <attribute name="Implementation-Title" value="java memcached client" />
@@ -456,6 +477,7 @@
     <mkdir dir="${mvn.build.dir}/poms" />
     <ivy:makepom ivyfile="ivy/couchbase-client.xml"
         pomfile="${couchbase-client.pom}"
+        templatefile="ivy/pom.template.xml"
         settingsRef="${name}.ivy.settings">
       <mapping conf="default" scope="compile" />
       <mapping conf="runtime" scope="runtime" />
@@ -463,6 +485,7 @@
 
     <ivy:makepom ivyfile="ivy/couchbase-client-test.xml"
         pomfile="${couchbase-client-test.pom}"
+        templatefile="ivy/pom.template.xml"
         settingsRef="${name}.ivy.settings">
       <mapping conf="default" scope="compile" />
       <mapping conf="runtime" scope="runtime" />
@@ -487,7 +510,7 @@
       <attach file="${build.dir}/sources/${name}-${version}.jar"
           classifier="sources" />
     <attach file="${build.dir}/javadocs/${name}-${version}.jar"
-          classifier="javadocs" />
+          classifier="javadoc" />
     </artifact:install>
     <artifact:pom id="couchbase-client-test" file="${couchbase-client-test.pom}" />
     <artifact:install file="${build.dir}/jars/${name}-test-${version}.jar">
@@ -497,10 +520,45 @@
     </artifact:install>
   </target>
 
+
+  <target name="mvn-stage" depends="mvn-install" description="deploy release version to maven staging repository">
+    <!-- sign and deploy the main artifact -->
+    <artifact:mvn>
+        <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+        <arg value="-Durl=${maven-staging-repository-url}" />
+        <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+        <arg value="-DpomFile=${couchbase-client.pom}" />
+        <arg value="-Dfile=${build.dir}/jars/${name}-${version}.jar" />
+        <arg value="-Pgpg" />
+    </artifact:mvn>
+
+    <!-- sign and deploy the sources artifact -->
+    <artifact:mvn>
+        <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+        <arg value="-Durl=${maven-staging-repository-url}" />
+        <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+        <arg value="-DpomFile=${couchbase-client.pom}" />
+        <arg value="-Dfile=${build.dir}/sources/${name}-${version}.jar" />
+        <arg value="-Dclassifier=sources" />
+        <arg value="-Pgpg" />
+    </artifact:mvn>
+
+    <!-- sign and deploy the javadoc artifact -->
+    <artifact:mvn>
+        <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+        <arg value="-Durl=${maven-staging-repository-url}" />
+        <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+        <arg value="-DpomFile=${couchbase-client.pom}" />
+        <arg value="-Dfile=${build.dir}/javadocs/${name}-${version}.jar" />
+        <arg value="-Dclassifier=javadoc" />
+        <arg value="-Pgpg" />
+    </artifact:mvn>
+  </target>
+
   <!-- ======================================
         Section: Stage Maven locally
        ====================================== -->
-  <target name="mvn-stage" depends="package,ivy-init,mvn-prep" description="publish jar/source to maven repo mounted at ~/repo">
+  <target name="mvn-stage-local" depends="package,ivy-init,mvn-prep" description="publish jar/source to maven repo mounted at ~/repo">
     <ivy:publish resolver="share-m2" forcedeliver="true" overwrite="true" publishivy="false">
       <artifacts pattern="build/[type]s/[artifact]-[revision].[ext]" />
     </ivy:publish>
@@ -574,6 +632,8 @@
         <exclude name="TESTING.md" />
         <exclude name="README.md" />
         <exclude name="cbclient.properties.dist" />
+	<exclude name=".git/**" />
+	<exclude name=".idea/**" />
       </fileset>
     </delete>
   </target>

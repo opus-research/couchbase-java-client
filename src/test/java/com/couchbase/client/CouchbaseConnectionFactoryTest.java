@@ -27,6 +27,11 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import com.couchbase.client.vbucket.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProviderMemcacheMock;
+import com.couchbase.client.vbucket.CouchbaseNodeOrder;
+import com.couchbase.client.vbucket.config.Config;
 import net.spy.memcached.TestConfig;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +57,21 @@ public class CouchbaseConnectionFactoryTest {
     return instance.buildCouchbaseConnection(uris, "default", "");
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfBucketIsNull() throws Exception {
+    new CouchbaseConnectionFactory(uris, null, "");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfBucketIsEmpty() throws Exception {
+    new CouchbaseConnectionFactory(uris, "", "");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfPasswordIsNull() throws Exception {
+    new CouchbaseConnectionFactory(uris, "default", null);
+  }
+
   /**
    * Make sure that the first calls to pastReconnThreshold() yield false
    * and the first one who is over getMaxConfigCheck() yields true.
@@ -73,9 +93,9 @@ public class CouchbaseConnectionFactoryTest {
 
   /**
    * Verifies that when
-   * {@link CouchbaseConnectionFactory#pastReconnectThreshold()} is called
-   * in longer frames than the time period allows, no configuration update is
-   * triggered.
+   * {@link com.couchbase.client.CouchbaseConnectionFactory#pastReconnThreshold()}
+   * is called in longer frames than the time period allows, no configuration update
+   * is triggered.
    */
   @Test
   public void testPastReconnectThresholdWithSleep() throws Exception {
@@ -92,6 +112,88 @@ public class CouchbaseConnectionFactoryTest {
       boolean pastReconnThreshold = connFact.pastReconnThreshold();
       assertFalse(pastReconnThreshold);
     }
+  }
+
+  @Test
+  public void shouldRandomizeNodeList() throws Exception {
+    ConfigurationProviderMemcacheMock providerMock = new ConfigurationProviderMemcacheMock(
+      Arrays.asList("127.0.0.1:8091/pools", "127.0.0.2:8091/pools",
+        "127.0.0.3:8091/pools", "127.0.0.4:8091/pools")
+    );
+
+    CouchbaseConnectionFactory connFact = new CouchbaseConnectionFactoryMock(
+      Arrays.asList(
+        new URI("http://127.0.0.1:8091/pools"), new URI("http://127.0.0.2:8091/pools"),
+        new URI("http://127.0.0.3:8091/pools"), new URI("http://127.0.0.5:8091/pools")
+      ), "default", "", providerMock, CouchbaseNodeOrder.RANDOM
+    );
+
+    List<URI> oldList = connFact.getStoredBaseList();
+    int oIndex1 = oldList.indexOf(new URI("http://127.0.0.1:8091/pools"));
+    int oIndex2 = oldList.indexOf(new URI("http://127.0.0.2:8091/pools"));
+    int oIndex3 = oldList.indexOf(new URI("http://127.0.0.3:8091/pools"));
+    int oIndex4 = oldList.indexOf(new URI("http://127.0.0.5:8091/pools"));
+
+    int tries = 100;
+    for(int i = 0; i < tries; i++) {
+      connFact.updateStoredBaseList(connFact.getVBucketConfig());
+      assertTrue(providerMock.baseListUpdated);
+      List<URI> newList = connFact.getStoredBaseList();
+      System.out.println("old: " + oldList);
+      System.out.println("new: " + newList);
+      int nIndex1 = newList.indexOf(new URI("http://127.0.0.1:8091/pools"));
+      int nIndex2 = newList.indexOf(new URI("http://127.0.0.2:8091/pools"));
+      int nIndex3 = newList.indexOf(new URI("http://127.0.0.3:8091/pools"));
+      int nIndex4 = newList.indexOf(new URI("http://127.0.0.5:8091/pools"));
+      if (oIndex1 != nIndex1 || oIndex2 != nIndex2 || oIndex3 != nIndex3 || oIndex4 == nIndex4) {
+        assertTrue(true);
+        return;
+      }
+    }
+
+    assertTrue("Node list was not different after " + tries + " tries", false);
+  }
+
+  @Test
+  public void shouldBootstrapThroughProperties() throws Exception {
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.password", "");
+
+    CouchbaseConnectionFactory factory = new CouchbaseConnectionFactory();
+    Config config = factory.getVBucketConfig();
+
+    assertTrue(config.getServersCount() > 0);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoNodeProperty() throws Exception {
+    System.clearProperty("cbclient.nodes");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.password", "");
+
+    new CouchbaseConnectionFactory();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoBucketProperty() throws Exception {
+    System.clearProperty("cbclient.bucket");
+    System.setProperty("cbclient.password", "");
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+
+    new CouchbaseConnectionFactory();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoPasswordProperty() throws Exception {
+    System.clearProperty("cbclient.password");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+
+    new CouchbaseConnectionFactory();
   }
 
 }

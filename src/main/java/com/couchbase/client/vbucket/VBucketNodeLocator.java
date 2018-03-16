@@ -26,6 +26,7 @@ import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigDifference;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.couchbase.client.vbucket.config.VBucket;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.compat.SpyObject;
@@ -73,11 +75,12 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     int serverNumber = config.getMaster(vbucket);
 
     if(serverNumber == -1) {
-      throw new RuntimeException("The key "+ k +" pointed to vbucket "+ vbucket
-        + ", for which no server is responsible in the cluster map. This "
+      getLogger().warn("The key "+ k +" pointed to vbucket "+ vbucket
+        + ", for which no server is responsible in the cluster map (-1). This "
         + "can be an indication that either no replica is defined for a "
         + "failed server or more nodes have been failed over than replicas "
         + "defined.");
+      return null;
     }
 
     String server = config.getServer(serverNumber);
@@ -101,6 +104,40 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
       }
     }
     assert (pNode != null);
+    return pNode;
+  }
+
+  /**
+   * Return a replica node for the given key and replica index.
+   *
+   * Based on the ReplicaIndex ID given, this method calculates the
+   * replica node. It works similar to the getMaster method, but has the
+   * additional capability to find the node based on the given replica
+   * index.
+   *
+   * @param key the key to find the node for.
+   * @param index the Nth replica number
+   * @return the node where the given replica exists
+   * @throws RuntimeException when no replica is defined for the given key
+   */
+  public MemcachedNode getReplica(String key, int index) {
+    TotalConfig totConfig = fullConfig.get();
+    Config config = totConfig.getConfig();
+    Map<String, MemcachedNode> nodesMap = totConfig.getNodesMap();
+    int vbucket = config.getVbucketByKey(key);
+    int serverNumber = config.getReplica(vbucket, index);
+
+    if(serverNumber == -1) {
+      getLogger().warn("The key " + key + " pointed to vbucket "
+        + vbucket + ", for which no server is responsible in the cluster map."
+        + "This can be an indication that either no replica is defined for a "
+        + "failed server or more nodes have been failed over than replicas "
+        + "defined.");
+      return null;
+    }
+
+    String server = config.getServer(serverNumber);
+    MemcachedNode pNode = nodesMap.get(server);
     return pNode;
   }
 
@@ -235,9 +272,47 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     }
   }
 
+  /**
+   * Gets a list of vBucket indexes for the current replicas defined.
+   *
+   * This method helps in identifying the actual current replicas because
+   * during a rebalance or failover scenario this list can differ from the
+   * actual config setting in the bucket.
+   *
+   * @param key the key to check for.
+   * @return a list of currently usable replica indexes.
+   */
+  public List<Integer> getReplicaIndexes(String key) {
+    TotalConfig totConfig = fullConfig.get();
+    Config config = totConfig.getConfig();
+    int vbucket = config.getVbucketByKey(key);
+    VBucket bucket = config.getVbuckets().get(vbucket);
+    List<Integer> indexes = new ArrayList<Integer>();
+    for (int i = 0; i < VBucket.MAX_REPLICAS; i++) {
+      if (bucket.getReplica(i) != VBucket.REPLICA_NOT_USED) {
+        indexes.add(i);
+      }
+    }
+    return indexes;
+  }
+
+  /**
+   * Checks if in the current vbucket the master is not "-1".
+   *
+   * @param key the key to check for.
+   * @return true if there is a master assigned for the key.
+   */
+  public boolean hasActiveMaster(String key) {
+    TotalConfig totConfig = fullConfig.get();
+    Config config = totConfig.getConfig();
+    int vbucket = config.getVbucketByKey(key);
+    VBucket bucket = config.getVbuckets().get(vbucket);
+    return bucket.getMaster() != -1;
+  }
+
   private static class TotalConfig {
-    private Config config;
-    private Map<String, MemcachedNode> nodesMap;
+    private final Config config;
+    private final Map<String, MemcachedNode> nodesMap;
 
     public TotalConfig(Config newConfig, Map<String, MemcachedNode> newMap) {
       config = newConfig;

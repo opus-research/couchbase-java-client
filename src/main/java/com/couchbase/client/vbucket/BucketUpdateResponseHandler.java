@@ -31,7 +31,6 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -39,11 +38,11 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A BucketUpdateResponseHandler.
  */
-@ChannelPipelineCoverage("one")
 public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
 
   private volatile boolean readingChunks;
@@ -68,7 +67,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
       if (chunk.isLast()) {
         readingChunks = false;
       } else {
-        String curChunk = chunk.getContent().toString("UTF-8");
+        String curChunk = chunk.getContent().toString(CharsetUtil.UTF_8);
         /*
          * Server sends four new lines in a chunk as a sentinal between
          * responses.
@@ -110,13 +109,16 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
     if (response.getStatus().getCode() == 200 && response.isChunked()) {
       readingChunks = true;
       finerLog("CHUNKED CONTENT {");
-    } else {
+    } else if(response.getStatus().getCode() == 200) {
       ChannelBuffer content = response.getContent();
       if (content.readable()) {
         finerLog("CONTENT {");
-        finerLog(content.toString("UTF-8"));
+        finerLog(content.toString(CharsetUtil.UTF_8));
         finerLog("} END OF CONTENT");
       }
+    } else {
+      throw new ConnectionException("Could not retrieve configuration chunk. "
+        + "Response Code is: " + response.getStatus());
     }
   }
 
@@ -133,7 +135,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
   }
 
   /**
-   * @param lastResponse the lastResponse to set
+   * @param newLastResponse the lastResponse to set
    */
   private void setLastResponse(String newLastResponse) {
     this.lastResponse = newLastResponse;
@@ -152,7 +154,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
   }
 
   /**
-   * @param receivedFuture the receivedFuture to set
+   * @param newReceivedFuture the receivedFuture to set
    */
   private void setReceivedFuture(ChannelFuture newReceivedFuture) {
     this.receivedFuture = newReceivedFuture;
@@ -184,8 +186,8 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
           + "restarting the monitor.");
         monitor.notifyDisconnected(); // connection has been dropped
       } else if(csEvent.getState() == ChannelState.OPEN
-        && Boolean.valueOf(csEvent.getValue().toString()) == false) {
-         LOGGER.log(Level.FINE, "Channel has been closed on us, "
+        && !Boolean.valueOf(csEvent.getValue().toString())) {
+        LOGGER.log(Level.FINE, "Channel has been closed on us, "
           + "restarting the monitor.");
         monitor.notifyDisconnected(); // connection has been closed
       } else {
