@@ -31,7 +31,6 @@ import com.couchbase.client.vbucket.config.Bucket;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.compat.log.Logger;
 import net.spy.memcached.compat.log.LoggerFactory;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -105,7 +104,10 @@ public class BucketConfigurationProviderTest {
 
   @Test
   public void shouldBootstrapBothBinaryAndHttp() throws Exception {
-    Assume.assumeTrue(isCCCPAware);
+    if (!isCCCPAware) {
+      LOGGER.info("Skipping Test because cluster is not CCCP aware.");
+      return;
+    }
 
     BucketConfigurationProvider provider = new BucketConfigurationProvider(
       seedNodes,
@@ -160,8 +162,10 @@ public class BucketConfigurationProviderTest {
 
   @Test
   public void shouldReloadBinaryConfigOnSignalOutdated() throws Exception {
-    Assume.assumeTrue(isCCCPAware);
-
+    if (!isCCCPAware) {
+      LOGGER.info("Skipping Test because cluster is not CCCP aware.");
+      return;
+    }
 
     List<URI> seedNodes = Arrays.asList(
       new URI("http://foobar:8091/pools"),
@@ -205,7 +209,10 @@ public class BucketConfigurationProviderTest {
 
   @Test
   public void shouldSkipBinaryOnManualDisable() throws Exception {
-    Assume.assumeTrue(isCCCPAware);
+    if (!isCCCPAware) {
+      LOGGER.info("Skipping Test because cluster is not CCCP aware.");
+      return;
+    }
     System.setProperty("cbclient.disableCarrierBootstrap", "true");
 
     BucketConfigurationProvider provider = new BucketConfigurationProvider(
