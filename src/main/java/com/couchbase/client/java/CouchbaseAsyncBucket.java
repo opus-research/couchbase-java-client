@@ -72,16 +72,17 @@ import com.couchbase.client.java.error.DurabilityException;
 import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
+import com.couchbase.client.java.search.SearchParams;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.queries.AbstractFtsQuery;
+import com.couchbase.client.java.search.result.AsyncSearchQueryResult;
+import com.couchbase.client.java.search.result.impl.DefaultAsyncSearchQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.core.N1qlQueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
-import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.queries.AbstractFtsQuery;
-import com.couchbase.client.java.search.result.AsyncSearchQueryResult;
-import com.couchbase.client.java.search.result.impl.DefaultAsyncSearchQueryResult;
 import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
@@ -779,20 +780,21 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<AsyncSearchQueryResult> query(final SearchQuery query) {
+    public Observable<AsyncSearchQueryResult> query(SearchQuery query) {
         final String indexName = query.indexName();
         final AbstractFtsQuery queryPart = query.query();
+        final SearchParams params = query.params();
 
         //always set a server side timeout. if not explicit, set it to the client side timeout
-        if (query.getServerSideTimeout() == null) {
-            query.serverSideTimeout(environment().searchTimeout(), TimeUnit.MILLISECONDS);
+        if (params.getServerSideTimeout() == null) {
+            params.serverSideTimeout(environment().searchTimeout(), TimeUnit.MILLISECONDS);
         }
 
         Observable<SearchQueryResponse> source = Observable.defer(new Func0<Observable<SearchQueryResponse>>() {
             @Override
             public Observable<SearchQueryResponse> call() {
                 final SearchQueryRequest request =
-                    new SearchQueryRequest(indexName, query.export().toString(), bucket, password);
+                    new SearchQueryRequest(indexName, queryPart.export(params).toString(), bucket, password);
                 return core.send(request);
             }
         });

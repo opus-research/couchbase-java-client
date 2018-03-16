@@ -18,6 +18,7 @@ package com.couchbase.client.java.search.queries;
 import static org.junit.Assert.assertEquals;
 
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -25,8 +26,7 @@ public class PrefixQueryTest {
 
     @Test
     public void shouldExportPrefixQuery() {
-        PrefixQuery fts = SearchQuery.prefix("someterm");
-        SearchQuery query = new SearchQuery("foo", fts);
+        PrefixQuery query = SearchQuery.prefix("someterm");
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create().put("prefix", "someterm"));
         assertEquals(expected, query.export());
@@ -34,11 +34,10 @@ public class PrefixQueryTest {
 
     @Test
     public void shouldExportPrefixQueryWithAllOptions() {
-        PrefixQuery fts = SearchQuery.prefix("someterm")
+        SearchParams params = SearchParams.build().explain();
+        PrefixQuery query = SearchQuery.prefix("someterm")
             .field("field")
             .boost(1.5);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .explain();
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
@@ -46,7 +45,7 @@ public class PrefixQueryTest {
                 .put("boost", 1.5)
                 .put("field", "field"))
             .put("explain", true);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
 }

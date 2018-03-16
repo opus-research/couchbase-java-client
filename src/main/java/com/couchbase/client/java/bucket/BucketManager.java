@@ -15,9 +15,6 @@
  */
 package com.couchbase.client.java.bucket;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
@@ -29,6 +26,8 @@ import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.view.DesignDocument;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides management capabilities for a {@link Bucket}.
@@ -523,6 +522,7 @@ public interface BucketManager {
      * is defined for this bucket).
      * @throws TranscodingException if the server response couldn't be parsed.
      */
+    @InterfaceStability.Experimental
     List<IndexInfo> listN1qlIndexes();
 
     /**
@@ -538,6 +538,7 @@ public interface BucketManager {
      * is defined for this bucket).
      * @throws TranscodingException if the server response couldn't be parsed.
      */
+    @InterfaceStability.Experimental
     List<IndexInfo> listN1qlIndexes(long timeout, TimeUnit timeUnit);
 
     /**
@@ -554,6 +555,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlPrimaryIndex(boolean ignoreIfExist, boolean defer);
 
     /**
@@ -572,6 +574,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlPrimaryIndex(boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit);
 
     /**
@@ -589,6 +592,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer);
 
     /**
@@ -608,6 +612,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit);
 
     /**
@@ -631,6 +636,7 @@ public interface BucketManager {
      * @throws CouchbaseException if another error occurs during index creation.
      * @see #createN1qlIndex(String, List, Expression, boolean, boolean)
      */
+    @InterfaceStability.Experimental
     boolean createN1qlIndex(String indexName, boolean ignoreIfExist, boolean defer, Object... fields); //for convenience
 
     /**
@@ -654,6 +660,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlIndex(String indexName, List<Object> fields, Expression whereClause, boolean ignoreIfExist,
             boolean defer); //for consistency with timeout api below
 
@@ -680,6 +687,7 @@ public interface BucketManager {
      * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
      * @throws CouchbaseException if another error occurs during index creation.
      */
+    @InterfaceStability.Experimental
     boolean createN1qlIndex(String indexName, List<Object> fields, Expression whereClause, boolean ignoreIfExist,
             boolean defer, long timeout, TimeUnit timeUnit);
 
@@ -694,6 +702,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlPrimaryIndex(boolean ignoreIfNotExist);
 
     /**
@@ -709,6 +718,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlPrimaryIndex(boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit);
 
     /**
@@ -723,6 +733,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist);
 
     /**
@@ -739,6 +750,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit);
 
     /**
@@ -752,6 +764,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlIndex(String name, boolean ignoreIfNotExist);
 
     /**
@@ -767,6 +780,7 @@ public interface BucketManager {
      * @throws IndexDoesNotExistException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
      * @throws CouchbaseException if another error occurs during index drop.
      */
+    @InterfaceStability.Experimental
     boolean dropN1qlIndex(String name, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit);
 
     /**
@@ -780,6 +794,7 @@ public interface BucketManager {
      * @return a {@link List} of index names, the names of the indexes that have been triggered.
      * @see #watchN1qlIndexes(List, long, TimeUnit) to poll for a list of indexes to become online.
      */
+    @InterfaceStability.Experimental
     List<String> buildN1qlDeferredIndexes();
 
     /**
@@ -795,6 +810,7 @@ public interface BucketManager {
      * @return a {@link List} of index names, the names of the indexes that have been triggered.
      * @see #watchN1qlIndexes(List, long, TimeUnit) to poll for a list of indexes to become online.
      */
+    @InterfaceStability.Experimental
     List<String> buildN1qlDeferredIndexes(long timeout, TimeUnit timeUnit);
 
     /**
@@ -813,5 +829,6 @@ public interface BucketManager {
      * @return a {@link List} of the {@link IndexInfo} for the indexes that went online during the watch period. Can be
      * empty if all indexes where online, no index to watch or no index became online within the watchTimeout timeframe.
      */
+    @InterfaceStability.Experimental
     List<IndexInfo> watchN1qlIndexes(List<String> watchList, long watchTimeout, TimeUnit watchTimeUnit);
 }

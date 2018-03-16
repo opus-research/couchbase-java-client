@@ -29,8 +29,8 @@ import com.couchbase.client.core.annotations.InterfaceStability;
 @InterfaceAudience.Public
 public class TermFacet extends SearchFacet {
 
-    TermFacet(String field, int limit) {
-        super(field, limit);
+    TermFacet(String name, String field, int limit) {
+        super(name, field, limit);
     }
 
 }

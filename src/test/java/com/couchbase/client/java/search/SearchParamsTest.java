@@ -29,14 +29,12 @@ import com.couchbase.client.java.search.facet.SearchFacet;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-/**
- * Tests the global parameter part of a {@link SearchQuery}.
- */
+
 public class SearchParamsTest {
 
     @Test
     public void shouldBeEmptyByDefault() {
-        SearchQuery p = new SearchQuery(null, null);
+        SearchParams p = SearchParams.build();
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -46,7 +44,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectLimit() {
-        SearchQuery p = new SearchQuery(null, null).limit(10);
+        SearchParams p = SearchParams.build().limit(10);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -56,7 +54,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectSkip() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .skip(100);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -67,7 +65,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectLimitAndSkip() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .limit(500)
             .skip(100);
         JsonObject result = JsonObject.empty();
@@ -79,7 +77,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectExplain() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .explain();
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -90,7 +88,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectHighlightStyle() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .highlight(HighlightStyle.HTML);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -102,7 +100,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectHighlightStyleWithFields() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .highlight(HighlightStyle.ANSI, "foo", "bar");
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -114,7 +112,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldClearHighlightStyle() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .highlight(HighlightStyle.ANSI, "foo", "bar")
             .clearHighlight();
         JsonObject result = JsonObject.empty();
@@ -126,7 +124,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectFields() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .fields("foo", "bar", "baz");
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -138,7 +136,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldReplaceFieldsWhenCalledTwice() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .fields("foo", "bar", "baz")
             .fields("bingo");
         JsonObject result = JsonObject.empty();
@@ -151,7 +149,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldClearFieldsWhenCalledEmpty() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .fields("foo", "bar", "baz")
             .fields();
         JsonObject result = JsonObject.empty();
@@ -163,10 +161,12 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectFacets() {
-        SearchQuery p = new SearchQuery(null, null)
-            .addFacet("term", SearchFacet.term("somefield", 10))
-            .addFacet("dr", SearchFacet.date("datefield", 1).addRange("name", "start", "end"))
-            .addFacet("nr", SearchFacet.numeric("numfield", 99).addRange("name2", 0.0, 99.99));
+        SearchParams p = SearchParams.build()
+            .addFacets(
+                SearchFacet.term("term", "somefield", 10),
+                SearchFacet.date("dr", "datefield", 1).addRange("name", "start", "end"),
+                SearchFacet.numeric("nr", "numfield", 99).addRange("name2", 0.0, 99.99)
+            );
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -194,9 +194,9 @@ public class SearchParamsTest {
 
     @Test
     public void shouldAddFacetsToExistingFacets() {
-        SearchQuery p = new SearchQuery(null, null)
-                .addFacet("A", SearchFacet.term("field1", 1))
-                .addFacet("B", SearchFacet.term("field2", 2));
+        SearchParams p = SearchParams.build()
+                .addFacets(SearchFacet.term("A", "field1", 1))
+                .addFacets(SearchFacet.term("B", "field2", 2));
 
         JsonObject result = JsonObject.create();
         p.injectParams(result);
@@ -211,9 +211,9 @@ public class SearchParamsTest {
 
     @Test
     public void shouldReplaceExistingFacetWithSameName() {
-        SearchQuery p = new SearchQuery(null, null)
-                .addFacet("A", SearchFacet.term("field1", 1))
-                .addFacet("A", SearchFacet.term("field2", 2));
+        SearchParams p = SearchParams.build()
+                .addFacets(SearchFacet.term("A", "field1", 1))
+                .addFacets(SearchFacet.term("A", "field2", 2));
 
         JsonObject result = JsonObject.create();
         p.injectParams(result);
@@ -228,10 +228,10 @@ public class SearchParamsTest {
 
     @Test
     public void shouldClearExistingFacets() {
-        SearchQuery p = new SearchQuery(null, null)
-                .addFacet("A", SearchFacet.term("field1", 1))
+        SearchParams p = SearchParams.build()
+                .addFacets(SearchFacet.term("A", "field1", 1))
                 .clearFacets()
-                .addFacet("B", SearchFacet.term("field2", 2));
+                .addFacets(SearchFacet.term("B", "field2", 2));
 
         JsonObject result = JsonObject.create();
         p.injectParams(result);
@@ -245,47 +245,47 @@ public class SearchParamsTest {
 
     @Test
     public void shouldThrowOnDateRangeWithoutName() {
-        verifyException(SearchFacet.date("field", 1).addRange("rangeName", "", ""), NullPointerException.class)
+        verifyException(SearchFacet.date("facet", "field", 1).addRange("rangeName", "", ""), NullPointerException.class)
                 .addRange(null, "a", "b"); //where the exception is expected
     }
 
     @Test
     public void shouldThrowOnDateRangeWithoutBoundaries() {
-        verifyException(SearchFacet.date("field", 1).addRange("rangeName", "", ""), NullPointerException.class)
+        verifyException(SearchFacet.date("facet", "field", 1).addRange("rangeName", "", ""), NullPointerException.class)
                 .addRange("name", (String) null, null); //where the exception is expected
 
-        verifyException(SearchFacet.date("field", 1).addRange("rangeName", "", ""), NullPointerException.class)
+        verifyException(SearchFacet.date("facet", "field", 1).addRange("rangeName", "", ""), NullPointerException.class)
                 .addRange("name", (Date) null, null); //where the exception is expected
     }
 
     @Test
     public void shouldThrowOnNumericRangeWithoutName() {
-        verifyException(SearchFacet.numeric("field", 1).addRange("rangeName", 0d, 0d), NullPointerException.class)
+        verifyException(SearchFacet.numeric("facet", "field", 1).addRange("rangeName", 0d, 0d), NullPointerException.class)
                 .addRange(null, 1.2, 3.4); //where the exception is expected
     }
 
     @Test
     public void shouldThrowOnNumericRangeWithoutBoundaries() {
-        verifyException(SearchFacet.numeric("field", 1).addRange("rangeName", 0d, 0d), NullPointerException.class)
+        verifyException(SearchFacet.numeric("facet", "field", 1).addRange("rangeName", 0d, 0d), NullPointerException.class)
                 .addRange("name", null, null); //where the exception is expected
     }
 
     @Test
     public void shouldAllowOneNullBoundOnDateRange() {
-        SearchFacet.date("field", 1)
+        SearchFacet.date("facet", "field", 1)
                 .addRange("rangeName", "", "")
                 .addRange("name", "a", null);
-        SearchFacet.date("field", 1)
+        SearchFacet.date("facet", "field", 1)
                 .addRange("rangeName", "", "")
                 .addRange("name", null, "b");
     }
 
     @Test
     public void shouldAllowOneNullBoundOnNumericRange() {
-        SearchFacet.numeric("field", 1)
+        SearchFacet.numeric("facet", "field", 1)
                 .addRange("rangeName", 0d, 0d)
                 .addRange("name", 1.2, null);
-        SearchFacet.numeric("field", 1)
+        SearchFacet.numeric("facet", "field", 1)
                 .addRange("rangeName", 0d, 0d)
                 .addRange("name", null, 3.4);
     }
@@ -298,8 +298,8 @@ public class SearchParamsTest {
         Calendar end = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         end.clear();
         end.set(2016, Calendar.FEBRUARY, 3, 16, 46, 1);
-        SearchQuery params = new SearchQuery(null, null)
-                .addFacet("facet", SearchFacet.date("field", 1).addRange("date", start.getTime(), end.getTime()));
+        SearchParams params = SearchParams.build().addFacets(
+                SearchFacet.date("facet", "field", 1).addRange("date", start.getTime(), end.getTime()));
         JsonObject json = JsonObject.create();
         params.injectParams(json);
 
@@ -320,7 +320,7 @@ public class SearchParamsTest {
 
     @Test
     public void shouldInjectServerSideTimeout() {
-        SearchQuery p = new SearchQuery(null, null)
+        SearchParams p = SearchParams.build()
             .serverSideTimeout(3, TimeUnit.SECONDS);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
