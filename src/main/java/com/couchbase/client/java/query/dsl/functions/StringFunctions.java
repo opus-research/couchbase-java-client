@@ -34,8 +34,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 @InterfaceAudience.Public
 public class StringFunctions {
 
-    private StringFunctions() {}
-
     /**
      * Returned expression results in True if the string expression contains the substring.
      */

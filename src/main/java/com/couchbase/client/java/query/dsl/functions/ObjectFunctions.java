@@ -32,8 +32,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 @InterfaceAudience.Public
 public class ObjectFunctions {
 
-    private ObjectFunctions() {}
-
     /**
      * Returned expression results in the number of name-value pairs in the object.
      */

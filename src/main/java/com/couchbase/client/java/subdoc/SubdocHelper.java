@@ -47,8 +47,6 @@ import com.couchbase.client.java.error.subdoc.ValueTooDeepException;
 @InterfaceAudience.Private
 public class SubdocHelper {
 
-    private SubdocHelper() {}
-
     /**
      * Convert status that can happen in a subdocument context to corresponding exceptions.
      * Other status just become a {@link CouchbaseException}.
