@@ -19,12 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.springframework;
+package com.couchbase.client.protocol.views;
 
-import org.springframework.cache.support.SimpleCacheManager;
 /**
- * A Couchbase based backing store Cache Manager to be used in
- * conjunction with the Spring framework.
+ * Is thrown when either the design doc or the view is not found
+ * in the cluster.
  */
-public class CouchbaseCacheManager extends SimpleCacheManager {
+public class InvalidViewException extends RuntimeException {
+
+  private static final long serialVersionUID = 3816900873646688019L;
+
+  public InvalidViewException() {
+    super();
+  }
+
+  public InvalidViewException(String message) {
+    super(message);
+  }
+
+  public InvalidViewException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
+  public InvalidViewException(Throwable cause) {
+    super(cause);
+  }
 }
