@@ -36,8 +36,6 @@ import static com.couchbase.client.java.query.dsl.functions.ArrayFunctions.array
 import static com.couchbase.client.java.query.dsl.functions.Case.caseSearch;
 import static com.couchbase.client.java.query.dsl.functions.Collections.anyIn;
 import static com.couchbase.client.java.query.dsl.functions.Collections.arrayIn;
-import static com.couchbase.client.java.query.dsl.functions.DateFunctions.DatePartExt.month;
-import static com.couchbase.client.java.query.dsl.functions.DateFunctions.DatePartExt.year;
 import static com.couchbase.client.java.query.dsl.functions.DateFunctions.datePartStr;
 import static com.couchbase.client.java.query.dsl.functions.DateFunctions.strToMillis;
 import static com.couchbase.client.java.query.dsl.functions.MetaFunctions.meta;
@@ -48,7 +46,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.dsl.functions.DateFunctions;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -585,8 +582,8 @@ public class SelectDslSmokeTest {
     public void test48() {
         Statement statement = select("purchases.purchaseId", "l.product").from("purchases")
                 .unnest("purchases.lineItems").as("l")
-                .where(datePartStr("purchases.purchasedAt", month).eq(4)
-                .and(datePartStr("purchases.purchasedAt", year).eq(2014))
+                .where(datePartStr("purchases.purchasedAt", "month").eq(4)
+                .and(datePartStr("purchases.purchasedAt", "year").eq(2014))
                 .and(sub(select("product.productId")
                                 .from("product")
                                 .useKeys("l.product")
