@@ -24,8 +24,6 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
-import java.io.Serializable;
-
 /**
  * Contract to describe N1QL queries. Queries are formed of a mandatory {@link Statement}
  * and optionally can have other components, as described in each implementation of this.
@@ -35,9 +33,7 @@ import java.io.Serializable;
  * @author Simon Baslé
  * @since 2.1
  */
-public abstract class Query implements Serializable {
-
-    private static final long serialVersionUID = 3758119606237959729L;
+public abstract class Query {
 
     /**
      * Returns the {@link Statement} from this query. Note that this is the only mandatory
@@ -295,5 +291,4 @@ public abstract class Query implements Serializable {
     public static PreparedQuery prepared(QueryPlan plan, JsonObject namedParams, QueryParams params) {
         return new PreparedQuery(plan, namedParams, params);
     }
-
 }
