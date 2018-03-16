@@ -3,6 +3,7 @@ package com.couchbase.client.java.cluster;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.java.ConnectionString;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.search.IndexSettings;
 import com.couchbase.client.java.util.Blocking;
 
 import java.util.List;
@@ -99,5 +100,45 @@ public class DefaultClusterManager implements ClusterManager {
     @Override
     public Boolean removeBucket(String name, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncClusterManager.removeBucket(name).single(), timeout, timeUnit);
+    }
+
+    @Override
+    public IndexSettings insertSearchIndex(IndexSettings settings) {
+        return insertSearchIndex(settings, timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public IndexSettings insertSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncClusterManager.insertSearchIndex(settings).single(), timeout, timeUnit);
+    }
+
+    @Override
+    public IndexSettings updateSearchIndex(IndexSettings settings) {
+        return updateSearchIndex(settings, timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public IndexSettings updateSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncClusterManager.updateSearchIndex(settings).single(), timeout, timeUnit);
+    }
+
+    @Override
+    public Boolean hasSearchIndex(String name) {
+        return hasSearchIndex(name, timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public Boolean hasSearchIndex(String name, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncClusterManager.hasSearchIndex(name).single(), timeout, timeUnit);
+    }
+
+    @Override
+    public Boolean removeSearchIndex(String name) {
+        return removeSearchIndex(name, timeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public Boolean removeSearchIndex(String name, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncClusterManager.removeSearchIndex(name).single(), timeout, timeUnit);
     }
 }
