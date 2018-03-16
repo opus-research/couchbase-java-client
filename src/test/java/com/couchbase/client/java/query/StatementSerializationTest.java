@@ -23,11 +23,10 @@
 package com.couchbase.client.java.query;
 
 import static com.couchbase.client.java.query.Select.select;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import com.couchbase.client.java.SerializationHelper;
+import com.couchbase.client.java.document.json.JsonObject;
 import org.junit.Test;
 
 public class StatementSerializationTest {
@@ -54,23 +53,21 @@ public class StatementSerializationTest {
         PrepareStatement deserialized = SerializationHelper.deserializeFromBytes(bytes,
                 PrepareStatement.class);
         assertEquals(st.toString(), deserialized.toString());
-        assertTrue(deserialized.toString().startsWith(PrepareStatement.PREPARE_PREFIX));
-        assertTrue(deserialized.toString().endsWith(toPrepare.toString()));
+        assertEquals(PrepareStatement.PREPARE_PREFIX + toPrepare.toString(), deserialized.toString());
     }
     @Test
-    public void preparedPayloadShouldBeSerializable() throws Exception {
-        PreparedPayload plan = new PreparedPayload(select("*"), "planName");
+    public void queryPlanShouldBeSerializable() throws Exception {
+        JsonObject internalPlan = JsonObject.create().put("plan", "test");
+        QueryPlan plan = new QueryPlan(internalPlan);
 
         byte[] bytes = SerializationHelper.serializeToBytes(plan);
         assertNotNull(bytes);
 
-        PreparedPayload deserialized = SerializationHelper.deserializeFromBytes(bytes,
-                PreparedPayload.class);
+        QueryPlan deserialized = SerializationHelper.deserializeFromBytes(bytes,
+                QueryPlan.class);
         assertNotNull(deserialized);
-        assertNotNull(deserialized.preparedName());
-        assertNotNull(deserialized.originalStatement());
-        assertEquals(plan.originalStatement().toString(), deserialized.originalStatement().toString());
-        assertEquals(plan.preparedName(), deserialized.preparedName());
+        assertNotNull(deserialized.plan());
+        assertEquals(plan.plan(), deserialized.plan());
         assertEquals(plan.toString(), deserialized.toString());
     }
 
