@@ -23,6 +23,8 @@ package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
+import com.couchbase.client.core.RequestFactory;
+import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.config.*;
 import com.couchbase.client.core.message.internal.AddNodeRequest;
 import com.couchbase.client.core.message.internal.AddNodeResponse;
@@ -77,7 +79,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             .flatMap(new Func1<Boolean, Observable<ClusterConfigResponse>>() {
                 @Override
                 public Observable<ClusterConfigResponse> call(Boolean aBoolean) {
-                    return core.send(new ClusterConfigRequest(username, password));
+                    return core.send(new RequestFactory() {
+                        @Override
+                        public CouchbaseRequest call() {
+                            return new ClusterConfigRequest(username, password);
+                        }
+                    });
                 }
             })
             .doOnNext(new Action1<ClusterConfigResponse>() {
@@ -110,7 +117,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             .flatMap(new Func1<Boolean, Observable<BucketsConfigResponse>>() {
                 @Override
                 public Observable<BucketsConfigResponse> call(Boolean aBoolean) {
-                    return core.send(new BucketsConfigRequest(username, password));
+                    return core.send(new RequestFactory() {
+                        @Override
+                        public CouchbaseRequest call() {
+                            return new BucketsConfigRequest(username, password);
+                        }
+                    });
                 }
             })
             .doOnNext(new Action1<BucketsConfigResponse>() {
@@ -134,7 +146,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;
 
-                            int ramQuota = 0;
+                            int ramQuota;
                             if (bucket.getObject("quota").get("ram") instanceof Long) {
                                 ramQuota = (int) (bucket.getObject("quota").getLong("ram") / 1024 / 1024);
                             } else {
@@ -190,7 +202,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             .flatMap(new Func1<Boolean, Observable<RemoveBucketResponse>>() {
                 @Override
                 public Observable<RemoveBucketResponse> call(Boolean aBoolean) {
-                    return core.send(new RemoveBucketRequest(name, username, password));
+                    return core.send(new RequestFactory() {
+                        @Override
+                        public CouchbaseRequest call() {
+                            return new RemoveBucketRequest(name, username, password);
+                        }
+                    });
                 }
             }).map(new Func1<RemoveBucketResponse, Boolean>() {
                 @Override
@@ -223,7 +240,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             }).flatMap(new Func1<Boolean, Observable<InsertBucketResponse>>() {
                 @Override
                 public Observable<InsertBucketResponse> call(Boolean exists) {
-                    return core.send(new InsertBucketRequest(sb.toString(), username, password));
+                    return core.send(new RequestFactory() {
+                        @Override
+                        public CouchbaseRequest call() {
+                            return new InsertBucketRequest(sb.toString(), username, password);
+                        }
+                    });
                 }
             })
             .map(new Func1<InsertBucketResponse, BucketSettings>() {
@@ -259,7 +281,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             }).flatMap(new Func1<Boolean, Observable<UpdateBucketResponse>>() {
                 @Override
                 public Observable<UpdateBucketResponse> call(Boolean exists) {
-                    return core.send(new UpdateBucketRequest(settings.name(), sb.toString(), username, password));
+                    return core.send(new RequestFactory() {
+                        @Override
+                        public CouchbaseRequest call() {
+                            return new UpdateBucketRequest(settings.name(), sb.toString(), username, password);
+                        }
+                    });
                 }
             }).map(new Func1<UpdateBucketResponse, BucketSettings>() {
                 @Override
@@ -329,14 +356,24 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                 @Override
                 public Observable<AddServiceResponse> call(final InetAddress hostname) {
                     return core
-                        .<AddNodeResponse>send(new AddNodeRequest(hostname))
+                        .<AddNodeResponse>send(new RequestFactory() {
+                            @Override
+                            public CouchbaseRequest call() {
+                                return new AddNodeRequest(hostname);
+                            }
+                        })
                         .flatMap(new Func1<AddNodeResponse, Observable<AddServiceResponse>>() {
                             @Override
                             public Observable<AddServiceResponse> call(AddNodeResponse response) {
-                                int port = environment.sslEnabled()
+                                final int port = environment.sslEnabled()
                                     ? environment.bootstrapHttpSslPort() : environment.bootstrapHttpDirectPort();
-                                return core.send(new AddServiceRequest(ServiceType.CONFIG, username, password,
-                                    port, hostname));
+                                return core.send(new RequestFactory() {
+                                    @Override
+                                    public CouchbaseRequest call() {
+                                        return new AddServiceRequest(ServiceType.CONFIG, username, password,
+                                            port, hostname);
+                                    }
+                                });
                             }
                         });
                 }

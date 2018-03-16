@@ -24,9 +24,11 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.CouchbaseException;
+import com.couchbase.client.core.RequestFactory;
 import com.couchbase.client.core.config.ConfigurationException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.cluster.DisconnectRequest;
@@ -98,8 +100,12 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     CouchbaseAsyncCluster(final CouchbaseEnvironment environment, final ConnectionString connectionString, final boolean sharedEnvironment) {
         this.sharedEnvironment = sharedEnvironment;
         core = new CouchbaseCore(environment);
-        SeedNodesRequest request = new SeedNodesRequest(assembleSeedNodes(connectionString, environment));
-        core.send(request).toBlocking().single();
+        core.send(new RequestFactory() {
+            @Override
+            public CouchbaseRequest call() {
+                return new SeedNodesRequest(assembleSeedNodes(connectionString, environment));
+            }
+        }).toBlocking().single();
         this.environment = environment;
         this.connectionString = connectionString;
     }
@@ -181,7 +187,12 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
             ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
         return core
-            .send(new OpenBucketRequest(name, password))
+            .send(new RequestFactory() {
+                @Override
+                public CouchbaseRequest call() {
+                    return new OpenBucketRequest(name, password);
+                }
+            })
             .map(new Func1<CouchbaseResponse, AsyncBucket>() {
                 @Override
                 public AsyncBucket call(CouchbaseResponse response) {
@@ -202,7 +213,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                         } else if (throwable.getCause() instanceof IllegalStateException
                             && throwable.getCause().getMessage().contains("Unauthorized")) {
                             return Observable.error(new InvalidPasswordException("Passwords for bucket \"" + name
-                                +"\" do not match."));
+                                + "\" do not match."));
                         } else {
                             return Observable.error(throwable);
                         }
@@ -218,7 +229,12 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     @Override
     public Observable<Boolean> disconnect() {
         return core
-            .<DisconnectResponse>send(new DisconnectRequest())
+            .<DisconnectResponse>send(new RequestFactory() {
+                @Override
+                public CouchbaseRequest call() {
+                    return new DisconnectRequest();
+                }
+            })
             .flatMap(new Func1<DisconnectResponse, Observable<Boolean>>() {
                 @Override
                 public Observable<Boolean> call(DisconnectResponse disconnectResponse) {
