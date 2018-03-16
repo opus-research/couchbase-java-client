@@ -63,8 +63,15 @@ public class JsonArray implements JsonValue, Iterable<Object> {
         return this;
       }
 
-      public Long getLong(int index) {
-          return (Long) content.get(index);
+      public long getLong(int index) {
+          Object found = content.get(index);
+          if (found == null) {
+              throw new NullPointerException();
+          }
+          if (found instanceof Integer) {
+              return (Integer) found;
+          }
+          return (Long) found;
       }
 
       public JsonArray add(int value) {
@@ -72,7 +79,7 @@ public class JsonArray implements JsonValue, Iterable<Object> {
         return this;
       }
 
-      public Integer getInt(int index) {
+      public int getInt(int index) {
         return (Integer) content.get(index);
       }
 
@@ -81,7 +88,7 @@ public class JsonArray implements JsonValue, Iterable<Object> {
         return this;
       }
 
-      public Double getDouble(int index) {
+      public double getDouble(int index) {
         return (Double) content.get(index);
       }
 
@@ -118,7 +125,7 @@ public class JsonArray implements JsonValue, Iterable<Object> {
       }
 
       public List<Object> toList() {
-        return new ArrayList<Object>(content);
+        return content;
       }
 
       public boolean isEmpty() {
