@@ -58,12 +58,9 @@ public class DefaultConfig extends SpyObject implements Config {
 
   private final Set<String> serversWithVBuckets;
 
-  private final List<String> restEndpoints;
-
   public DefaultConfig(HashAlgorithm hashAlgorithm, int serversCount,
       int replicasCount, int vbucketsCount, List<String> servers,
-      List<VBucket> vbuckets, List<URL> couchServers,
-      List<String> restEndpoints) {
+      List<VBucket> vbuckets, List<URL> couchServers) {
     this.hashAlgorithm = hashAlgorithm;
     this.serversCount = serversCount;
     this.replicasCount = replicasCount;
@@ -73,7 +70,6 @@ public class DefaultConfig extends SpyObject implements Config {
     this.vbuckets = vbuckets;
     this.couchServers = couchServers;
     this.serversWithVBuckets = new HashSet<String>();
-    this.restEndpoints = restEndpoints;
 
     cacheServersWithVBuckets();
   }
@@ -208,11 +204,6 @@ public class DefaultConfig extends SpyObject implements Config {
     return hashAlgorithm;
   }
 
-  @Override
-  public List<String> getRestEndpoints() {
-    return restEndpoints;
-  }
-
   /**
    * Check if the given node has active VBuckets.
    *
@@ -237,21 +228,5 @@ public class DefaultConfig extends SpyObject implements Config {
   @Override
   public ConfigType getConfigType() {
     return ConfigType.COUCHBASE;
-  }
-
-  @Override
-  public String toString() {
-    return "DefaultConfig{" +
-      "hashAlgorithm=" + hashAlgorithm +
-      ", vbucketsCount=" + vbucketsCount +
-      ", mask=" + mask +
-      ", serversCount=" + serversCount +
-      ", replicasCount=" + replicasCount +
-      ", servers=" + servers +
-      ", vbuckets=" + vbuckets +
-      ", couchServers=" + couchServers +
-      ", serversWithVBuckets=" + serversWithVBuckets +
-      ", restEndpoints=" + restEndpoints +
-      '}';
   }
 }

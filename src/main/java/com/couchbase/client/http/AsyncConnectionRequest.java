@@ -20,66 +20,60 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket.config;
+package com.couchbase.client.http;
 
-import java.util.EnumMap;
-import java.util.Map;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * A Node.
+ * An AsyncConnectionRequest.
  */
-public class Node {
-  private final Status status;
-  private final String hostname;
-  private final Map<Port, String> ports;
+public class AsyncConnectionRequest {
 
-  public Node(Status status, String hostname, Map<Port, String> ports) {
-    this.status = status;
-    this.hostname = hostname;
-    this.ports = new EnumMap<Port, String>(ports);
+  private volatile boolean completed;
+  private volatile NHttpClientConnection conn;
+
+  public AsyncConnectionRequest() {
+    super();
   }
 
-  public Status getStatus() {
-    return status;
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  public String getHostname() {
-    return hostname;
+  public void setConnection(NHttpClientConnection newConn) {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      this.conn = newConn;
+      notifyAll();
+    }
   }
 
-  public Map<Port, String> getPorts() {
-    return ports;
+  public NHttpClientConnection getConnection() {
+    return this.conn;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+  public void cancel() {
+    if (this.completed) {
+      return;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
     }
-
-    Node node = (Node) o;
-
-    if (!hostname.equals(node.hostname)) {
-      return false;
-    }
-    if (status != node.status) {
-      return false;
-    }
-    if (!ports.equals(node.ports)) {
-      return false;
-    }
-
-    return true;
   }
 
-  @Override
-  public int hashCode() {
-    int result = status != null ? status.hashCode() : 0;
-    result = 31 * result + hostname.hashCode();
-    result = 31 * result + ports.hashCode();
-    return result;
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait(5000);
+        this.completed = true;
+      }
+    }
   }
 }

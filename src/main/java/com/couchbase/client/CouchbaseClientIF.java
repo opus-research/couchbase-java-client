@@ -776,8 +776,7 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *            returning.
    * @return the future result of the CAS operation.
    */
-  CASResponse cas(String key, long cas, Object value, PersistTo req,
-    ReplicateTo rep);
+  CASResponse cas(String key, long cas, Object value, PersistTo req, ReplicateTo rep);
 
   /**
    * Set a value with a CAS and durability options.
@@ -814,8 +813,7 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *            returning.
    * @return the future result of the CAS operation.
    */
-  CASResponse cas(String key, long cas, int exp, Object value, PersistTo req,
-    ReplicateTo rep);
+  CASResponse cas(String key, long cas, int exp, Object value, PersistTo req, ReplicateTo rep);
 
   /**
    * Set a value with a CAS and durability options.
@@ -905,169 +903,6 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    */
   CASResponse cas(String key, long cas, int exp, Object value, ReplicateTo rep);
 
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * To make sure that a value is stored the way you want it to in the
-   * cluster, you can use the PersistTo and ReplicateTo arguments. The
-   * operation will block until the desired state is satisfied or
-   * otherwise an exception is raised. There are many reasons why this could
-   * happen, the more frequent ones are as follows:
-   *
-   * - The given replication settings are invalid.
-   * - The operation could not be completed within the timeout.
-   * - Something goes wrong and a cluster failover is triggered.
-   *
-   * The client does not attempt to guarantee the given durability
-   * constraints, it just reports whether the operation has been completed
-   * or not. If it is not achieved, it is the responsibility of the
-   * application code using this API to re-retrieve the items to verify
-   * desired state, redo the operation or both.
-   *
-   * Note that even if an exception during the observation is raised,
-   * this doesn't mean that the operation has failed. A normal asyncCAS()
-   * operation is initiated and after the OperationFuture has returned,
-   * the key itself is observed with the given durability options (watch
-   * out for Observed*Exceptions) in this case.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  OperationFuture<CASResponse> asyncCas(String key, long cas, Object value,
-    PersistTo req, ReplicateTo rep);
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * This is a shorthand method so that you only need to provide a
-   * PersistTo value if you don't care if the value is already replicated.
-   * A PersistTo.TWO durability setting implies a replication to at least
-   * one node.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  OperationFuture<CASResponse> asyncCas(String key, long cas, Object value,
-    PersistTo req);
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * This method allows you to express durability at the replication level
-   * only and is the functional equivalent of PersistTo.ZERO.
-   *
-   * A common use case for this would be to achieve good insert-performance
-   * and at the same time making sure that the data is at least replicated
-   * to the given amount of nodes to provide a better level of data safety.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param value the value of the key.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */Future<CASResponse> asyncCas(String key, long cas, Object value,
-    ReplicateTo rep);
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * This is a shorthand method so that you only need to provide a
-   * PersistTo value if you don't care if the value is already replicated.
-   * A PersistTo.TWO durability setting implies a replication to at least
-   * one node.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp the TTL of the document.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, PersistTo req);
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * This method allows you to express durability at the replication level
-   * only and is the functional equivalent of PersistTo.ZERO.
-   *
-   * A common use case for this would be to achieve good insert-performance
-   * and at the same time making sure that the data is at least replicated
-   * to the given amount of nodes to provide a better level of data safety.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp the TTL of the document.
-   * @param value the value of the key.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, ReplicateTo rep);
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * To make sure that a value is stored the way you want it to in the
-   * cluster, you can use the PersistTo and ReplicateTo arguments. The
-   * operation will block until the desired state is satisfied or
-   * otherwise an exception is raised. There are many reasons why this could
-   * happen, the more frequent ones are as follows:
-   *
-   * - The given replication settings are invalid.
-   * - The operation could not be completed within the timeout.
-   * - Something goes wrong and a cluster failover is triggered.
-   *
-   * The client does not attempt to guarantee the given durability
-   * constraints, it just reports whether the operation has been completed
-   * or not. If it is not achieved, it is the responsibility of the
-   * application code using this API to re-retrieve the items to verify
-   * desired state, redo the operation or both.
-   *
-   * Note that even if an exception during the observation is raised,
-   * this doesn't mean that the operation has failed. A normal asyncCAS()
-   * operation is initiated and after the OperationFuture has returned,
-   * the key itself is observed with the given durability options (watch
-   * out for Observed*Exceptions) in this case.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp expiration time for the key.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, PersistTo req, ReplicateTo rep);
 
   /**
    * Delete a value with durability options for persistence.
@@ -1075,6 +910,7 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param key the key to set
    * @param req the persistence option requested
    * @return whether or not the operation was performed
+   *
    */
   OperationFuture<Boolean> delete(String key, PersistTo req);
 
@@ -1143,24 +979,11 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * If no design document was found, the enclosed DesignDocument inside
    * the future will be null.
    *
-   * Use {@link #asyncGetDesignDoc(String)} instead.
-   *
    * @param designDocumentName the name of the design document.
    * @return a future containing a DesignDocument from the cluster.
    */
-  @Deprecated
   HttpFuture<DesignDocument> asyncGetDesignDocument(String designDocumentName);
 
-  /**
-   * Gets a future with a design document from the cluster.
-   *
-   * If no design document was found, the enclosed DesignDocument inside
-   * the future will be null.
-   *
-   * @param designDocumentName the name of the design document.
-   * @return a future containing a DesignDocument from the cluster.
-   */
-  HttpFuture<DesignDocument> asyncGetDesignDoc(String designDocumentName);
 
   /**
    * Store a design document in the cluster.
@@ -1183,25 +1006,12 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
   /**
    * Returns a representation of a design document stored in the cluster.
    *
-   * Use {@link #getDesignDoc(String)} instead.
-   *
    * @param designDocumentName the name of the design document.
    * @return a DesignDocument object from the cluster.
    * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
    * @throws java.util.concurrent.CancellationException if operation was canceled.
    */
-  @Deprecated
   DesignDocument getDesignDocument(final String designDocumentName);
-
-  /**
-   * Returns a representation of a design document stored in the cluster.
-   *
-   * @param designDocumentName the name of the design document.
-   * @return a DesignDocument object from the cluster.
-   * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
-   */
-  DesignDocument getDesignDoc(final String designDocumentName);
 
   /**
    * Get a document from a replica node.
