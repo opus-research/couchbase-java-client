@@ -59,6 +59,21 @@ public abstract class Query {
      */
     public abstract JsonObject n1ql();
 
+    //== PRIVATE CLASS FOR RAW STATEMENT ==
+
+    private static class RawStatement implements Statement {
+        private final String rawStatement;
+
+        public RawStatement(String rawStatement) {
+            this.rawStatement = rawStatement;
+        }
+
+        @Override
+        public String toString() {
+            return rawStatement;
+        }
+    }
+
     //========== FACTORY METHODS ==========
     /**
      * Create a new {@link Query} with a plain un-parametrized {@link Statement}.
@@ -78,6 +93,26 @@ public abstract class Query {
      */
     public static SimpleQuery simple(Statement statement, QueryParams params) {
         return new SimpleQuery(statement, params);
+    }
+
+    /**
+     * Create a new {@link Query} with a plain raw statement in String form.
+     *
+     * @param statement the raw statement string to execute (eg. "SELECT * FROM default").
+     */
+    public static SimpleQuery raw(String statement) {
+        return simple(new RawStatement(statement));
+    }
+
+    /**
+     * Create a new {@link Query} with a plain raw statement in String form and
+     * custom query parameters.
+     *
+     * @param statement the raw statement string to execute (eg. "SELECT * FROM default").
+     * @param params the {@link QueryParams query parameters}.
+     */
+    public static SimpleQuery raw(String statement, QueryParams params) {
+        return simple(new RawStatement(statement), params);
     }
 
     /**
