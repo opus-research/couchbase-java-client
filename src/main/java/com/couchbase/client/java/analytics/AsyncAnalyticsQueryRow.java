@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.document.json.JsonObject;
 
-@InterfaceStability.Committed
+@InterfaceStability.Uncommitted
 @InterfaceAudience.Public
-public interface N1qlQueryRow {
+public interface AsyncAnalyticsQueryRow {
 
     /**
      * @return the raw array of bytes representing the JSON of this row.
