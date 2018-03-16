@@ -21,12 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
@@ -40,6 +34,12 @@ import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Main synchronous entry point to a Couchbase Cluster.
@@ -231,18 +231,14 @@ public class CouchbaseCluster implements Cluster {
      */
     CouchbaseCluster(final CouchbaseEnvironment environment,
         final ConnectionString connectionString, final boolean sharedEnvironment) {
-        this.environment = environment;
-        this.connectionString = connectionString;
-        this.bucketCache = new ConcurrentHashMap<String, Bucket>();
-        couchbaseAsyncCluster = createAsyncCluster(sharedEnvironment);
-    }
-
-    protected CouchbaseAsyncCluster createAsyncCluster(final boolean sharedEnvironment) {
-        return new CouchbaseAsyncCluster(
+        couchbaseAsyncCluster = new CouchbaseAsyncCluster(
             environment,
             connectionString,
             sharedEnvironment
         );
+        this.environment = environment;
+        this.connectionString = connectionString;
+        this.bucketCache = new ConcurrentHashMap<String, Bucket>();
     }
 
     @Override
@@ -282,7 +278,7 @@ public class CouchbaseCluster implements Cluster {
     }
 
     @Override
-    public Bucket openBucket(final String name, String password,
+    public Bucket openBucket(final String name, final String password,
         final List<Transcoder<? extends Document, ?>> transcoders,
         long timeout, TimeUnit timeUnit) {
         if (name == null || name.isEmpty()) {
@@ -294,14 +290,15 @@ public class CouchbaseCluster implements Cluster {
             return cachedBucket;
         }
 
-        final String resolvedBucketPassword = credentialsManager().resolveBucketPassword(name, password);
+        final List<Transcoder<? extends Document, ?>> trans = transcoders == null
+            ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
 
         return Blocking.blockForSingle(couchbaseAsyncCluster
-            .openBucket(name, resolvedBucketPassword, transcoders)
+            .openBucket(name, password, transcoders)
             .map(new Func1<AsyncBucket, Bucket>() {
                 @Override
                 public Bucket call(AsyncBucket asyncBucket) {
-                    CouchbaseBucket bucket = new CouchbaseBucket(asyncBucket, environment, core(), name, resolvedBucketPassword);
+                    CouchbaseBucket bucket = new CouchbaseBucket(asyncBucket, environment, core(), name, password);
                     bucketCache.put(name, bucket);
                     return bucket;
                 }
@@ -312,7 +309,7 @@ public class CouchbaseCluster implements Cluster {
      * Helper method to get a bucket instead of opening it if it is cached already.
      *
      * @param name the name of the bucket
-     * @return the cached bucket if found, null if not (or if getting from bucket cache is disabled).
+     * @return the cached bucket if found, null if not.
      */
     private Bucket getCachedBucket(final String name) {
         Bucket cachedBucket = bucketCache.get(name);
@@ -321,7 +318,7 @@ public class CouchbaseCluster implements Cluster {
             if (cachedBucket.isClosed()) {
                 LOGGER.debug("Not returning cached bucket \"{}\", because it is closed.", name);
                 bucketCache.remove(name);
-            } else if (environment.useBucketCache()) {
+            } else {
                 LOGGER.debug("Returning still open, cached bucket \"{}\"", name);
                 return cachedBucket;
             }
@@ -333,25 +330,12 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ClusterManager clusterManager(final String username, final String password) {
         return couchbaseAsyncCluster
-                .clusterManager(username, password)
-                .map(new Func1<AsyncClusterManager, ClusterManager>() {
-                    @Override
-                    public ClusterManager call(AsyncClusterManager asyncClusterManager) {
-                        return DefaultClusterManager.create(asyncClusterManager, environment);
-                    }
-                })
-                .toBlocking()
-                .single();
-    }
-
-    @Override
-    public ClusterManager clusterManager() {
-        return couchbaseAsyncCluster
-            .clusterManager()
+            .clusterManager(username, password)
             .map(new Func1<AsyncClusterManager, ClusterManager>() {
                 @Override
                 public ClusterManager call(AsyncClusterManager asyncClusterManager) {
-                    return DefaultClusterManager.create(asyncClusterManager, environment);
+                    return DefaultClusterManager.create(username, password, connectionString,
+                        environment, core());
                 }
             })
             .toBlocking()
@@ -382,15 +366,5 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ClusterFacade core() {
         return couchbaseAsyncCluster.core().toBlocking().single();
-    }
-
-    @Override
-    public CredentialsManager credentialsManager() {
-        return couchbaseAsyncCluster.credentialsManager();
-    }
-
-    @Override
-    public void setCredentialsManager(CredentialsManager newManager) {
-        couchbaseAsyncCluster.setCredentialsManager(newManager);
     }
 }

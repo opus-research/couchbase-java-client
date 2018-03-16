@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.java.error.BucketDoesNotExistException;
 import com.couchbase.client.java.error.InvalidPasswordException;
 import com.couchbase.client.java.util.TestProperties;
@@ -30,7 +29,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -63,19 +61,6 @@ public class ConnectionTest  {
     public void shouldThrowConfigurationExceptionForWrongBucketPassword() {
         Cluster cluster = CouchbaseCluster.create(TestProperties.seedNode());
         cluster.openBucket(TestProperties.bucket(), "completelyWrongPassword");
-    }
-
-    @Test
-    public void shouldConnectAfterFailedAttempt() {
-        Cluster cluster = CouchbaseCluster.create(TestProperties.seedNode());
-        try {
-            cluster.openBucket("protected");
-        } catch (CouchbaseException e) {
-            System.out.println(e);
-        }
-        cluster.credentialsManager().addBucketCredential("protected", "protected");
-        Bucket b = cluster.openBucket("protected");
-        assertNotNull(b);
     }
 
     @Test
