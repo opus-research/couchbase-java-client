@@ -30,8 +30,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import org.apache.commons.codec.binary.Base64;
 
-import sun.misc.BASE64Encoder;
 /**
  * A TestAdmin Class.
  */
@@ -60,9 +60,8 @@ public final class TestAdmin {
       //Create connection
       connection = (HttpURLConnection)targetURL.openConnection();
       // write auth header
-      BASE64Encoder encoder = new BASE64Encoder();
       String encodedCredential =
-              encoder.encode((username + ":" + password).getBytes());
+        Base64.encodeBase64String((username + ":" + password).getBytes());
       connection.setRequestProperty("Authorization",
               "Basic " + encodedCredential);
       connection.setRequestMethod("POST");
@@ -117,9 +116,8 @@ public final class TestAdmin {
 
     if (username != null) {
       // write auth header
-      BASE64Encoder encoder = new BASE64Encoder();
       String encodedCredential =
-              encoder.encode((username + ":" + password).getBytes());
+        Base64.encodeBase64String((username + ":" + password).getBytes());
       connection.setRequestProperty("Authorization",
               "Basic " + encodedCredential);
     }
