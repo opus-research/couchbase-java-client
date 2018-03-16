@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class InvalidPasswordException extends CouchbaseException {
 
     public InvalidPasswordException() {
-        super();
     }
 
     public InvalidPasswordException(String message) {
