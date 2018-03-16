@@ -34,7 +34,7 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.PrepareStatement;
-import com.couchbase.client.java.query.PreparedQuery;
+import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryRow;
@@ -44,7 +44,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Integration tests of the N1QL Query functionalities.
+ * Integration tests of the N1QL Query features.
  *
  * @author Simon Baslé
  * @since 2.1
@@ -69,7 +69,7 @@ public class QueryTest extends ClusterDependentTest {
         assertTrue(plan.plan().containsKey("operator"));
         assertFalse(plan.plan().getObject("operator").isEmpty());
 
-        QueryResult response = bucket().query(new PreparedQuery(plan, JsonArray.from(123)));
+        QueryResult response = bucket().query(Query.prepared(plan, JsonArray.from(123)));
         assertTrue(response.success());
         List<QueryRow> rows = response.allRows();
         assertEquals(1, rows.size());
