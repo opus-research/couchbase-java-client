@@ -18,6 +18,7 @@ package com.couchbase.client.java.search.queries;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 
 /**
@@ -43,11 +44,36 @@ public abstract class AbstractFtsQuery {
     }
 
     /**
+     * Export the FTS query in its JSON format, not taking any global level {@link SearchParams parameters} into account.
+     *
+     * @return the FTS query JSON.
+     */
+    public JsonObject export() {
+        return export(null);
+    }
+
+    /**
+     * Export the FTS query in its JSON format, taking global level {@link SearchParams parameters} into account.
+     *
+     * @param searchParams the global level parameters for the search.
+     * @return the FTS query JSON.
+     */
+    public JsonObject export(SearchParams searchParams) {
+        JsonObject result = JsonObject.create();
+        if (searchParams != null) {
+            searchParams.injectParams(result);
+        }
+        JsonObject query = JsonObject.create();
+        injectParamsAndBoost(query);
+        return result.put("query", query);
+    }
+
+    /**
      * Injects the query's parameters (including the common boost and query-specific parameters)
      * into a prepared {@link JsonObject}.
      *
      * @param input the prepared JsonObject to receive the parameters.
-     * @see SearchQuery#export() for a usage of this method.
+     * @see #export(SearchParams) for a usage of this method.
      */
     public void injectParamsAndBoost(JsonObject input) {
         if (boost != null) {
@@ -57,7 +83,7 @@ public abstract class AbstractFtsQuery {
     }
 
     /**
-     * Override to inject query-specific parameters when doing the {@link SearchQuery#export()}.
+     * Override to inject query-specific parameters when doing the {@link #export(SearchParams)}.
      *
      * @param input the prepared {@link JsonObject} that will represent the query.
      */
@@ -68,9 +94,7 @@ public abstract class AbstractFtsQuery {
      */
     @Override
     public String toString() {
-        JsonObject json = JsonObject.create();
-        injectParamsAndBoost(json);
-        return json.toString();
+        return export(null).toString();
     }
 
 }

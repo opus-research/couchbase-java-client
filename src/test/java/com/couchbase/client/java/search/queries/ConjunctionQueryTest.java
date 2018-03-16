@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -26,14 +27,13 @@ public class ConjunctionQueryTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldFailExportWhenNoChild() {
-        new SearchQuery("foo", SearchQuery.disjuncts()).export();
+        SearchQuery.disjuncts().export();
     }
 
     @Test
     public void shouldExportConjunctionQueryWithInnerBoost() {
         PrefixQuery inner = SearchQuery.prefix("someterm").boost(2);
-        ConjunctionQuery fts = SearchQuery.conjuncts(inner);
-        SearchQuery query = new SearchQuery("foo", fts);
+        ConjunctionQuery query = SearchQuery.conjuncts(inner);
 
         JsonObject expectedInner = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         JsonObject expected = JsonObject.create()
@@ -45,8 +45,7 @@ public class ConjunctionQueryTest {
     @Test
     public void shouldExportConjunctionQueryWithDefaults() {
         PrefixQuery inner = SearchQuery.prefix("someterm");
-        ConjunctionQuery fts = SearchQuery.conjuncts(inner);
-        SearchQuery query = new SearchQuery("foo", fts);
+        ConjunctionQuery query = SearchQuery.conjuncts(inner);
 
         JsonObject expectedInner = JsonObject.create().put("prefix", "someterm");
         JsonObject expected = JsonObject.create()
@@ -61,9 +60,8 @@ public class ConjunctionQueryTest {
         PrefixQuery innerB = SearchQuery.prefix("termB");
         PrefixQuery innerC = SearchQuery.prefix("termC");
 
-        ConjunctionQuery fts = SearchQuery.conjuncts(innerA, innerB)
+        ConjunctionQuery query = SearchQuery.conjuncts(innerA, innerB)
                 .and(innerC);
-        SearchQuery query = new SearchQuery("foo", fts);
 
         JsonObject expectedInnerA = JsonObject.create().put("prefix", "someterm").put("boost", 2d);
         JsonObject expectedInnerB = JsonObject.create().put("prefix", "termB");
@@ -76,15 +74,14 @@ public class ConjunctionQueryTest {
 
     @Test
     public void shouldExportDisjunctionQueryWithAllOptions() {
+        SearchParams params = SearchParams.build().explain();
         PrefixQuery innerA = SearchQuery.prefix("someterm").boost(2.0);
         PrefixQuery innerB = SearchQuery.prefix("termB");
         PrefixQuery innerC = SearchQuery.prefix("termC");
 
-        ConjunctionQuery fts = SearchQuery.conjuncts()
+        ConjunctionQuery query = SearchQuery.conjuncts()
             .boost(1.5)
             .and(innerA, innerB, innerC);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .explain();
 
         JsonObject expectedInnerA = JsonObject.create().put("prefix", "someterm").put("boost", 2d);
         JsonObject expectedInnerB = JsonObject.create().put("prefix", "termB");
@@ -94,7 +91,7 @@ public class ConjunctionQueryTest {
                 .put("boost", 1.5)
                 .put("conjuncts", JsonArray.from(expectedInnerA, expectedInnerB, expectedInnerC)))
             .put("explain", true);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
 }

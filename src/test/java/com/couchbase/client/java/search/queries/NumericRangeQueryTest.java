@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -28,8 +29,7 @@ public class NumericRangeQueryTest {
 
     @Test
     public void shouldFailIfNoBounds() {
-        NumericRangeQuery fts = SearchQuery.numericRange();
-        SearchQuery query = new SearchQuery("foo", fts);
+        NumericRangeQuery query = SearchQuery.numericRange();
         catchException(query).export();
 
         assertTrue(caughtException() instanceof NullPointerException);
@@ -38,8 +38,7 @@ public class NumericRangeQueryTest {
 
     @Test
     public void shouldAcceptMinOnly() {
-        NumericRangeQuery fts = SearchQuery.numericRange().min(12.3);
-        SearchQuery query = new SearchQuery("foo", fts);
+        NumericRangeQuery query = SearchQuery.numericRange().min(12.3);
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
                 .put("min", 12.3));
@@ -48,8 +47,7 @@ public class NumericRangeQueryTest {
 
     @Test
     public void shouldAcceptMaxOnly() {
-        NumericRangeQuery fts = SearchQuery.numericRange().max(12.3);
-        SearchQuery query = new SearchQuery("foo", fts);
+        NumericRangeQuery query = SearchQuery.numericRange().max(12.3);
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
                 .put("max", 12.3));
@@ -58,13 +56,12 @@ public class NumericRangeQueryTest {
 
     @Test
     public void shouldNotImplicitlySetDefaultsForInclusiveMinAndMax() {
-        NumericRangeQuery fts = SearchQuery.numericRange()
+        SearchParams params = SearchParams.build().explain();
+        NumericRangeQuery query = SearchQuery.numericRange()
             .boost(1.5)
             .field("field")
             .min(12.3)
             .max(4.5);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .explain();
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
@@ -73,18 +70,17 @@ public class NumericRangeQueryTest {
                 .put("boost", 1.5)
                 .put("field", "field"))
             .put("explain", true);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
     @Test
     public void shouldExportDateRangeQueryWithAllOptions() {
-        NumericRangeQuery fts = SearchQuery.numericRange()
+        SearchParams params = SearchParams.build().explain();
+        NumericRangeQuery query = SearchQuery.numericRange()
             .boost(1.5)
             .field("field")
             .min(12.3, false)
             .max(4.5, true);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .explain();
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
@@ -95,7 +91,7 @@ public class NumericRangeQueryTest {
                 .put("boost", 1.5)
                 .put("field", "field"))
             .put("explain", true);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
 }

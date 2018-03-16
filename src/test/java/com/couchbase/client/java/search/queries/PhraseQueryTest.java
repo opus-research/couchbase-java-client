@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNotNull;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -28,8 +29,7 @@ public class PhraseQueryTest {
 
     @Test
     public void shouldExportPhraseQuery() {
-        PhraseQuery fts = SearchQuery.phrase("salty", "beers");
-        SearchQuery query = new SearchQuery("foo", fts);
+        PhraseQuery query = SearchQuery.phrase("salty", "beers");
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create().put("terms", JsonArray.from("salty", "beers")));
         assertEquals(expected, query.export());
@@ -42,19 +42,17 @@ public class PhraseQueryTest {
 
     @Test
     public void shouldIllegalArgumentOnEmptyTermsDuringExport() {
-        PhraseQuery fts = SearchQuery.phrase();
-        SearchQuery query = new SearchQuery("foo", fts);
+        PhraseQuery query = SearchQuery.phrase();
         assertNotNull(query);
         verifyException(query, IllegalArgumentException.class).export();
     }
 
     @Test
     public void shouldExportPhraseQueryWithAllOptions() {
-        PhraseQuery fts = SearchQuery.phrase("salty", "beers")
+        SearchParams params = SearchParams.build().limit(10);
+        PhraseQuery query = SearchQuery.phrase("salty", "beers")
             .boost(1.5)
             .field("field");
-        SearchQuery query = new SearchQuery("foo", fts)
-            .limit(10);
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
@@ -62,7 +60,7 @@ public class PhraseQueryTest {
                 .put("boost", 1.5)
                 .put("field", "field"))
             .put("size", 10);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
 }
