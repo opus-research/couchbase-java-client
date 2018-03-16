@@ -59,6 +59,7 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -815,13 +816,13 @@ public class CouchbaseClient extends MemcachedClient
    * @return whether or not the operation was performed
    *
    */
-  public OperationFuture<Boolean> delete(String key,
+  public Future<Boolean> delete(String key,
           PersistTo req, ReplicateTo rep) {
     OperationFuture<Boolean> deleteOp = delete(key);
     try {
-      deleteOp.get();
-      deleteOp.set(true, deleteOp.getStatus());
-      observePoll(key, 0L, req, rep);
+      if (deleteOp.get()) {
+        observePoll(key, 0L, req, rep);
+      }
     } catch (InterruptedException e) {
       deleteOp.set(false, deleteOp.getStatus());
     } catch (ExecutionException e) {
@@ -843,7 +844,7 @@ public class CouchbaseClient extends MemcachedClient
    * @return whether or not the operation was performed
    *
    */
-  public OperationFuture<Boolean> delete(String key, PersistTo req) {
+  public Future<Boolean> delete(String key, PersistTo req) {
     return delete(key, req, ReplicateTo.ZERO);
   }
 
@@ -930,6 +931,7 @@ public class CouchbaseClient extends MemcachedClient
             ArrayList<MemcachedNode>(1);
     List<MemcachedNode> replicaList = new
             ArrayList<MemcachedNode>(replicas);
+    List<MemcachedNode> allList = new ArrayList(allNodes);
 
     VBucketNodeLocator vbNodeLocator =
       ((VBucketNodeLocator)
@@ -946,6 +948,7 @@ public class CouchbaseClient extends MemcachedClient
       }
 
     }
+
     // Issue a Broadcast Op on the Master
     CountDownLatch blatch = broadcastOp(new BroadcastOpFactory() {
       public Operation newOp(final MemcachedNode n,
@@ -963,7 +966,6 @@ public class CouchbaseClient extends MemcachedClient
             observeResponse[0] = or;
             if (((or == ObserveResponse.FOUND_PERSISTED)
                     || (or == ObserveResponse.FOUND_NOT_PERSISTED))
-                    && cas != 0
                     && retCas != cas) {
               observeResponse[0] = ObserveResponse.MODIFIED;
             }
@@ -1003,7 +1005,6 @@ public class CouchbaseClient extends MemcachedClient
                 r = observeResponse[i] = or;
                 if (((or == ObserveResponse.FOUND_PERSISTED)
                         || (or == ObserveResponse.FOUND_NOT_PERSISTED))
-                        && cas != 0
                         && retCas != cas) {
                   observeResponse[i] = ObserveResponse.MODIFIED;
                 }
@@ -1106,12 +1107,12 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     ObserveResponse[] or;
+
     do {
       masterPersisted = false;
       totPersists = totReplicas = 0;
 
       or = observe(key, cas);
-
       // Assume Persisted for all cases unless modified
       if ((or[0] != ObserveResponse.FOUND_NOT_PERSISTED)
               && (or[0] != ObserveResponse.NOT_FOUND_NOT_PERSISTED)) {
