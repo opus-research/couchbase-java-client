@@ -38,14 +38,12 @@ public class DefaultAsyncViewRow implements AsyncViewRow {
     private final Object key;
     private final Object value;
     private final AsyncBucket bucket;
-    private final Document<?> document;
 
-    public DefaultAsyncViewRow(AsyncBucket bucket, String id, Object key, Object value, Document<?> document) {
+    public DefaultAsyncViewRow(AsyncBucket bucket, String id, Object key, Object value) {
         this.bucket = bucket;
         this.id = id;
         this.key = key;
         this.value = value;
-        this.document = document;
     }
 
     @Override
@@ -65,15 +63,14 @@ public class DefaultAsyncViewRow implements AsyncViewRow {
 
     @Override
     public Observable<JsonDocument> document() {
-        return document(JsonDocument.class);
+        if (id == null) {
+            return Observable.error(new UnsupportedOperationException("Document cannot be loaded, id is null."));
+        }
+        return bucket.get(id);
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> document(Class<D> target) {
-        if (document != null) {
-            return Observable.just((D) document);
-        }
         if (id == null) {
             return Observable.error(new UnsupportedOperationException("Document cannot be loaded, id is null."));
         }
@@ -86,7 +83,6 @@ public class DefaultAsyncViewRow implements AsyncViewRow {
         sb.append("id='").append(id).append('\'');
         sb.append(", key=").append(key);
         sb.append(", value=").append(value);
-        sb.append(", document=").append(document);
         sb.append('}');
         return sb.toString();
     }
