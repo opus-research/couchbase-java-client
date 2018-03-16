@@ -20,30 +20,42 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
+import com.couchbase.client.core.message.kv.MutationToken;
 
 /**
- * Internally represents a single lookup operation in a batch of subdocument operations.
+ * Represents a successful multi-mutation. This object allows to retrieve the CAS
+ * and, if available, the {@link MutationToken} of the mutated document, post-mutation.
  *
- * @author Michael Nitschinger
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
-public class LookupSpec extends LookupCommand {
+@InterfaceAudience.Public
+public class MultiMutationResult {
 
-    public LookupSpec(Lookup type, String path) {
-        super(type, path);
+    private final String docId;
+    private final long cas;
+    private final MutationToken mutationToken;
+
+    public MultiMutationResult(String docId, long cas, MutationToken mutationToken) {
+        this.docId = docId;
+        this.cas = cas;
+        this.mutationToken = mutationToken;
     }
 
-    @Override
-    public String toString() {
-        return "{" + lookup() + ":" + path() + "}";
+    public String id() {
+        return docId;
+    }
+
+    public long cas() {
+        return cas;
+    }
+
+    public MutationToken mutationToken() {
+        return mutationToken;
     }
 }

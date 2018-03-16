@@ -20,31 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicateTo;
-import com.couchbase.client.java.document.subdoc.DocumentFragment;
 
 /**
- * Subdocument exception thrown when a path already exists and it shouldn't
- * (for example, when using {@link Bucket#insertIn(DocumentFragment, boolean, PersistTo, ReplicateTo) insertIn}).
+ * The direction for a sub-document array extension operation.
+ * See {@link Bucket#extendIn(DocumentFragment, ExtendDirection, boolean, PersistTo, ReplicateTo)}.
  *
  * @author Simon Baslé
+ * @author Michael Nitschinger
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class PathExistsException extends SubDocumentException {
-
-    public PathExistsException(String id, String path) {
-        super("Path " + path + " already exist in document " + id);
-    }
-
-    public PathExistsException(String reason) {
-        super(reason);
-    }
+public enum ExtendDirection {
+    /**
+     * Extend the array by placing the value at the front of the array (index 0).
+     */
+    FRONT,
+    /**
+     * Extend the array by placing the value at the back of the array (largest index).
+     */
+    BACK
 }

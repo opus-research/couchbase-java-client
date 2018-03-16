@@ -20,39 +20,39 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.ResponseStatus;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 
 /**
- * Internally represent result corresponding to a single {@link LookupSpec} or {@link MutationSpec},
- * as part of a {@link DocumentFragment}.
+ * A result corresponding to a single {@link LookupSpec}, usually grouped inside a {@link MultiLookupResult}.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
-public class MultiResult<OPERATION> {
+@InterfaceAudience.Public
+public class LookupResult {
 
     private final String path;
-    private final OPERATION operation;
+    private final Lookup operation;
 
     private final ResponseStatus status;
 
     private final Object value;
 
     /**
-     * Create a new MultiResult.
+     * Create a new LookupResult.
      *
      * @param path the path that was looked up in a document.
-     * @param operation the kind of operation that was performed.
+     * @param operation the kind of lookup that was performed.
      * @param status the status for this lookup.
      * @param value the value for a successful GET, true/false for a EXIST, an Exception in case of FAILURE, null otherwise.
      */
-    private MultiResult(String path, OPERATION operation, ResponseStatus status, Object value) {
+    private LookupResult(String path, Lookup operation, ResponseStatus status, Object value) {
         this.path = path;
         this.operation = operation;
         this.status = status;
@@ -60,29 +60,40 @@ public class MultiResult<OPERATION> {
     }
 
     /**
-     * Create a {@link MultiResult} that denotes that a fatal Exception occurred when parsing
+     * Create a {@link LookupResult} that denotes that a fatal Exception occurred when parsing
      * server-side result. The exception can be found as the value, and the status is {@link ResponseStatus#FAILURE}.
      *
      * @param path the path looked up.
-     * @param operation the type of the operation which result couldn't be parsed.
+     * @param operation the lookup operation which result couldn't be parsed.
      * @param fatal the Exception that occurred during response parsing.
      * @return the fatal LookupResult.
      */
-    public static <OPERATION> MultiResult<OPERATION> createFatal(String path, OPERATION operation, RuntimeException fatal) {
-        return new MultiResult<OPERATION>(path, operation, ResponseStatus.FAILURE, fatal);
+    public static LookupResult createFatal(String path, Lookup operation, RuntimeException fatal) {
+        return new LookupResult(path, operation, ResponseStatus.FAILURE, fatal);
     }
 
     /**
-     * Create a {@link MultiResult} that corresponds to a GET.
+     * Create a {@link LookupResult} that corresponds to a GET.
      *
      * @param path the path looked up.
-     * @param operation the type of operation.
      * @param status the status of the GET.
      * @param value the value of the GET if successful, null otherwise.
      * @return the GET LookupResult.
      */
-    public static <OPERATION> MultiResult<OPERATION> createResult(String path, OPERATION operation, ResponseStatus status, Object value) {
-        return new MultiResult<OPERATION>(path, operation, status, value);
+    public static LookupResult createGetResult(String path, ResponseStatus status, Object value) {
+        return new LookupResult(path, Lookup.GET, status, value);
+    }
+
+    /**
+     * Create a {@link LookupResult} that corresponds to a EXIST.
+     *
+     * @param path the path looked up.
+     * @param status the status of the EXIST, its {@link ResponseStatus#isSuccess() isSuccess}
+     *               giving the LookupResult's value.
+     * @return the EXIST LookupResult.
+     */
+    public static LookupResult createExistResult(String path, ResponseStatus status) {
+        return new LookupResult(path, Lookup.EXIST, status, status.isSuccess());
     }
 
     /**
@@ -95,7 +106,7 @@ public class MultiResult<OPERATION> {
     /**
      * @return the exact kind of lookup that was performed.
      */
-    public OPERATION operation() {
+    public Lookup operation() {
         return operation;
     }
 
@@ -107,7 +118,7 @@ public class MultiResult<OPERATION> {
     }
 
     /**
-     * @return true if the value existed (and might have associated value), false otherwise.
+     * @return true if the value existed (and in the case of a GET, could be retrieved), false otherwise.
      */
     public boolean exists() {
         return status.isSuccess();
@@ -121,6 +132,7 @@ public class MultiResult<OPERATION> {
      *  - a {@link RuntimeException} if the client side parsing of the result failed ({@link #isFatal()}).
      *
      * @return the value
+     * @see #valueOrThrow() for a version that throws the exception instead of returning it.
      */
     public Object value() {
         return value;
@@ -132,5 +144,24 @@ public class MultiResult<OPERATION> {
      */
     public boolean isFatal() {
         return status == ResponseStatus.FAILURE;
+    }
+
+    /**
+     * Returns:
+     *  - the value retrieved by a successful GET.
+     *  - null for an unsuccessful GET (see the {@link #status()} for details).
+     *  - true/false for an EXIST (equivalent to {@link #exists()}).
+     *
+     * Throws:
+     *  - a {@link RuntimeException} if the client side parsing of the result failed ({@link #isFatal()}).
+     *
+     * @return the value
+     * @see #value() for a version that just returns the exception instead of throwing it.
+     */
+    public Object valueOrThrow() {
+        if (isFatal()) {
+            throw (RuntimeException) value;
+        }
+        return value;
     }
 }
