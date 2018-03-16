@@ -15,26 +15,33 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.cluster.BucketSettings;
-import com.couchbase.client.java.cluster.ClusterInfo;
-import com.couchbase.client.java.cluster.ClusterManager;
-import com.couchbase.client.java.cluster.DefaultBucketSettings;
-import com.couchbase.client.java.error.InvalidPasswordException;
-import com.couchbase.client.java.util.TestProperties;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import rx.Observable;
-import rx.functions.Func1;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import com.couchbase.client.core.message.config.RestApiRequest;
+import com.couchbase.client.core.message.config.RestApiResponse;
+import com.couchbase.client.deps.io.netty.handler.codec.http.HttpHeaders;
+import com.couchbase.client.java.cluster.BucketSettings;
+import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
+import com.couchbase.client.java.cluster.api.AsyncRestBuilder;
+import com.couchbase.client.java.cluster.api.ClusterApiClient;
+import com.couchbase.client.java.cluster.ClusterInfo;
+import com.couchbase.client.java.cluster.ClusterManager;
+import com.couchbase.client.java.cluster.DefaultBucketSettings;
+import com.couchbase.client.java.cluster.api.RestBuilder;
+import com.couchbase.client.java.error.InvalidPasswordException;
+import com.couchbase.client.java.util.TestProperties;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import rx.Observable;
+import rx.functions.Func1;
 
 public class ClusterManagerTest {
 
@@ -189,6 +196,42 @@ public class ClusterManagerTest {
         assertEquals(256, size);
 
 
+    }
+
+    @Test
+    public void shouldQueryClusterApi() {
+        ClusterApiClient apiClient = clusterManager.apiClient();
+
+        RestBuilder rest = apiClient.get("settings", "/autoFailover")
+                .withHeader(HttpHeaders.Names.ACCEPT, "*/*");
+        RestApiRequest request = rest.asRequest();
+        RestApiResponse response = rest.execute();
+
+        assertThat(response.request().path()).isEqualTo("/settings/autoFailover");
+        assertThat(response.httpStatus().code()).isEqualTo(200);
+        assertThat(response.status().isSuccess()).isTrue();
+        assertThat(response.body())
+                .contains("timeout")
+                .contains("enabled")
+                .contains("count");
+    }
+
+    @Test
+    public void shouldQueryClusterApiAsynchronously() {
+        AsyncClusterApiClient apiClient = clusterManager.async().apiClient().toBlocking().single();
+
+        AsyncRestBuilder rest = apiClient.get("settings", "/autoFailover")
+                .withHeader(HttpHeaders.Names.ACCEPT, "*/*");
+        RestApiRequest request = rest.asRequest();
+        RestApiResponse response = rest.execute().toBlocking().single();
+
+        assertThat(response.request().path()).isEqualTo("/settings/autoFailover");
+        assertThat(response.httpStatus().code()).isEqualTo(200);
+        assertThat(response.status().isSuccess()).isTrue();
+        assertThat(response.body())
+                .contains("timeout")
+                .contains("enabled")
+                .contains("count");
     }
 
 }
