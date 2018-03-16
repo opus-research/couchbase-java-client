@@ -8,6 +8,7 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.error.BucketClosedException;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.DefaultQueryResult;
 import com.couchbase.client.java.query.Query;
@@ -775,5 +776,10 @@ public class CouchbaseBucket implements Bucket {
             .timeout(timeout, timeUnit)
             .toBlocking()
             .single();
+    }
+
+    @Override
+    public boolean isClosed() {
+        return asyncBucket.isClosed();
     }
 }
