@@ -261,7 +261,6 @@ public class N1qlDmlTest extends ClusterDependentTest {
     }
 
     @Test
-    @Ignore // TODO: re-enable once MB-16732 is resolved
     public void shouldUpdateWithClause() throws Exception {
         String id1 = "n1qlUpW1";
         String id2 = "n1qlUpW2";
