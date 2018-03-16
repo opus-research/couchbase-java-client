@@ -53,35 +53,6 @@ import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
-import net.spy.memcached.AddrUtil;
-import net.spy.memcached.BroadcastOpFactory;
-import net.spy.memcached.CASResponse;
-import net.spy.memcached.CASValue;
-import net.spy.memcached.CachedData;
-import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.ObserveResponse;
-import net.spy.memcached.OperationTimeoutException;
-import net.spy.memcached.PersistTo;
-import net.spy.memcached.ReplicateTo;
-import net.spy.memcached.internal.GetFuture;
-import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.ops.GetOperation;
-import net.spy.memcached.ops.GetlOperation;
-import net.spy.memcached.ops.ObserveOperation;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.OperationCallback;
-import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.ops.ReplicaGetOperation;
-import net.spy.memcached.ops.StatsOperation;
-import net.spy.memcached.transcoders.Transcoder;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpVersion;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicHttpEntityEnclosingRequest;
-import org.apache.http.message.BasicHttpRequest;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -103,6 +74,33 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.BroadcastOpFactory;
+import net.spy.memcached.CASResponse;
+import net.spy.memcached.CASValue;
+import net.spy.memcached.CachedData;
+import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.ObserveResponse;
+import net.spy.memcached.OperationTimeoutException;
+import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
+import net.spy.memcached.internal.GetFuture;
+import net.spy.memcached.internal.OperationFuture;
+import net.spy.memcached.ops.GetlOperation;
+import net.spy.memcached.ops.ObserveOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.ops.ReplicaGetOperation;
+import net.spy.memcached.ops.StatsOperation;
+import net.spy.memcached.transcoders.Transcoder;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpVersion;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpEntityEnclosingRequest;
+import org.apache.http.message.BasicHttpRequest;
 
 /**
  * A client for Couchbase Server.
@@ -1087,66 +1085,15 @@ public class CouchbaseClient extends MemcachedClient
       final CountDownLatch latch = new CountDownLatch(1);
       final GetFuture<T> rv =
         new GetFuture<T>(latch, operationTimeout, key, executorService);
-      Operation op = createOperationForReplicaGet(key, rv, replicaFuture,
-        latch, tc, index, true);
-
-      rv.setOperation(op);
-      mconn.enqueueOperation(key, op);
-
-      if (op.isCancelled()) {
-        discardedOps++;
-        getLogger().debug("Silently discarding replica get for key \""
-          + key + "\" (cancelled).");
-      } else {
-        replicaFuture.addFutureToMonitor(rv);
-      }
-
-    }
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    final GetFuture<T> additionalActiveGet = new GetFuture<T>(latch, operationTimeout, key,
-      executorService);
-    Operation op = createOperationForReplicaGet(key, additionalActiveGet,
-      replicaFuture, latch, tc, 0, false);
-    additionalActiveGet.setOperation(op);
-    mconn.enqueueOperation(key, op);
-
-    if (op.isCancelled()) {
-      discardedOps++;
-      getLogger().debug("Silently discarding replica (active) get for key \""
-        + key + "\" (cancelled).");
-    } else {
-      replicaFuture.addFutureToMonitor(additionalActiveGet);
-    }
-
-    if (discardedOps == replicaCount + 1) {
-      throw new IllegalStateException("No replica get operation could be "
-        + "dispatched because all operations have been cancelled.");
-    }
-
-    return replicaFuture;
-  }
-
-  /**
-   * Helper method to create an operation for the asyncGetFromReplica method.
-   *
-   * @param replica if the operation should go to a replica node.
-   * @return the created {@link Operation}.
-   */
-  private <T> Operation createOperationForReplicaGet(final String key,
-    final GetFuture<T> future, final ReplicaGetFuture<T> replicaFuture,
-    final CountDownLatch latch, final Transcoder<T> tc, final int replicaIndex,
-    final boolean replica) {
-    if (replica) {
-      return opFact.replicaGet(key, replicaIndex,
+      Operation op = opFact.replicaGet(key, index,
         new ReplicaGetOperation.Callback() {
           private Future<T> val = null;
 
           @Override
           public void receivedStatus(OperationStatus status) {
-            future.set(val, status);
+            rv.set(val, status);
             if (!replicaFuture.isDone()) {
-              replicaFuture.setCompletedFuture(future);
+              replicaFuture.setCompletedFuture(rv);
             }
           }
 
@@ -1162,31 +1109,35 @@ public class CouchbaseClient extends MemcachedClient
             latch.countDown();
           }
         });
-    } else {
-      return opFact.get(key, new GetOperation.Callback() {
-        private Future<T> val = null;
 
-        @Override
-        public void receivedStatus(OperationStatus status) {
-          future.set(val, status);
-          if (!replicaFuture.isDone()) {
-            replicaFuture.setCompletedFuture(future);
-          }
-        }
+      rv.setOperation(op);
+      mconn.enqueueOperation(key, op);
 
-        @Override
-        public void gotData(String k, int flags, byte[] data) {
-          assert key.equals(k) : "Wrong key returned";
-          val = tcService.decode(tc, new CachedData(flags, data,
-            tc.getMaxSize()));
-        }
+      if (op.isCancelled()) {
+        discardedOps++;
+        getLogger().debug("Silently discarding replica get for key \""
+          + key + "\" (cancelled).");
+      } else {
+        replicaFuture.addFutureToMonitor(rv);
+      }
 
-        @Override
-        public void complete() {
-          latch.countDown();
-        }
-      });
     }
+
+    GetFuture<T> additionalActiveGet = asyncGet(key, tc);
+    if (additionalActiveGet.isCancelled()) {
+      discardedOps++;
+      getLogger().debug("Silently discarding replica (active) get for key \""
+        + key + "\" (cancelled).");
+    } else {
+      replicaFuture.addFutureToMonitor(additionalActiveGet);
+    }
+
+    if (discardedOps == replicaCount + 1) {
+      throw new IllegalStateException("No replica get operation could be "
+        + "dispatched because all operations have been cancelled.");
+    }
+
+    return replicaFuture;
   }
 
   /**
@@ -2329,71 +2280,6 @@ public class CouchbaseClient extends MemcachedClient
     return cas(key, cas, exp, value, PersistTo.ZERO, rep);
   }
 
-  private Map<MemcachedNode, ObserveResponse> observe(final String key,
-    final long cas, final boolean toMaster, final boolean toReplica) {
-    Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
-    VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
-
-    final int vb = locator.getVBucketIndex(key);
-    List<MemcachedNode> bcastNodes = new ArrayList<MemcachedNode>();
-
-    if (toMaster) {
-      MemcachedNode primary = locator.getPrimary(key);
-      if (primary != null) {
-        bcastNodes.add(primary);
-      }
-    }
-
-    if (toReplica) {
-      for (int i = 0; i < cfg.getReplicasCount(); i++) {
-        MemcachedNode replica = locator.getReplica(key, i);
-        if (replica != null) {
-          bcastNodes.add(replica);
-        }
-      }
-    }
-
-    final Map<MemcachedNode, ObserveResponse> response =
-      new HashMap<MemcachedNode, ObserveResponse>();
-
-    CountDownLatch blatch = broadcastOp(new BroadcastOpFactory() {
-      public Operation newOp(final MemcachedNode n,
-                             final CountDownLatch latch) {
-        return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
-
-          @Override
-          public void receivedStatus(OperationStatus s) {
-          }
-
-          @Override
-          public void gotData(String key, long retCas, MemcachedNode node,
-            ObserveResponse or) {
-            if (cas == retCas) {
-              response.put(node, or);
-            } else {
-              if (or == ObserveResponse.NOT_FOUND_PERSISTED) {
-                response.put(node, or);
-              } else {
-                response.put(node, ObserveResponse.MODIFIED);
-              }
-            }
-          }
-
-          @Override
-          public void complete() {
-            latch.countDown();
-          }
-        });
-      }
-    }, bcastNodes);
-    try {
-      blatch.await(operationTimeout, TimeUnit.MILLISECONDS);
-      return response;
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted waiting for value", e);
-    }
-  }
-
   /**
    * Observe a key with a associated CAS.
    *
@@ -2410,7 +2296,61 @@ public class CouchbaseClient extends MemcachedClient
    */
   public Map<MemcachedNode, ObserveResponse> observe(final String key,
       final long cas) {
-    return observe(key, cas, true, true);
+    Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
+
+    final int vb = locator.getVBucketIndex(key);
+    List<MemcachedNode> bcastNodes = new ArrayList<MemcachedNode>();
+
+    MemcachedNode primary = locator.getPrimary(key);
+    if (primary != null) {
+      bcastNodes.add(primary);
+    }
+
+    for (int i = 0; i < cfg.getReplicasCount(); i++) {
+      MemcachedNode replica = locator.getReplica(key, i);
+      if (replica != null) {
+        bcastNodes.add(replica);
+      }
+    }
+
+    final Map<MemcachedNode, ObserveResponse> response =
+        new HashMap<MemcachedNode, ObserveResponse>();
+
+    CountDownLatch blatch = broadcastOp(new BroadcastOpFactory() {
+      public Operation newOp(final MemcachedNode n,
+          final CountDownLatch latch) {
+        return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
+
+          public void receivedStatus(OperationStatus s) {
+          }
+
+          public void gotData(String key, long retCas, MemcachedNode node,
+              ObserveResponse or) {
+            if (cas == retCas) {
+              response.put(node, or);
+            } else /* cas doesn't match */ {
+              if (or == ObserveResponse.NOT_FOUND_PERSISTED) {
+                // CAS doesn't matter in this case.  tell the caller it's gone
+                response.put(node, or);
+              } else {
+                response.put(node, ObserveResponse.MODIFIED);
+              }
+            }
+          }
+          public void complete() {
+            latch.countDown();
+          }
+        });
+      }
+    }, bcastNodes);
+    try {
+      blatch.await(operationTimeout, TimeUnit.MILLISECONDS);
+      return response;
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted waiting for value", e);
+    }
   }
 
   /**
@@ -2445,7 +2385,8 @@ public class CouchbaseClient extends MemcachedClient
 
   private void checkObserveReplica(String key, int numPersist, int numReplica) {
     Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
-    VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
 
     if(numReplica > 0) {
       int vBucketIndex = locator.getVBucketIndex(key);
@@ -2456,7 +2397,10 @@ public class CouchbaseClient extends MemcachedClient
       }
     }
 
-    int replicaCount = Math.min(locator.getAll().size() - 1, cfg.getReplicasCount());
+
+    int replicaCount = Math.min(locator.getAll().size() - 1,
+          cfg.getReplicasCount());
+
     if (numReplica > replicaCount) {
       throw new ObservedException("Requested replication to " + numReplica
           + " node(s), but only " + replicaCount + " are available.");
@@ -2484,8 +2428,8 @@ public class CouchbaseClient extends MemcachedClient
    * @param replicate the replication settings.
    * @param isDelete if the key is to be deleted.
    */
-  public void observePoll(final String key, final long cas, PersistTo persist,
-    ReplicateTo replicate, final boolean isDelete) {
+  public void observePoll(String key, long cas, PersistTo persist,
+      ReplicateTo replicate, boolean isDelete) {
     if(persist == null) {
       persist = PersistTo.ZERO;
     }
@@ -2493,81 +2437,75 @@ public class CouchbaseClient extends MemcachedClient
       replicate = ReplicateTo.ZERO;
     }
 
-    final int maxPolls = cbConnFactory.getObsPollMax();
-    final long pollInterval = cbConnFactory.getObsPollInterval();
-    final VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
+    int persistReplica = persist.getValue() > 0 ? persist.getValue() - 1 : 0;
+    int replicateTo = replicate.getValue();
+    int obsPolls = 0;
+    int obsPollMax = cbConnFactory.getObsPollMax();
+    long obsPollInterval = cbConnFactory.getObsPollInterval();
+    boolean persistMaster = persist.getValue() > 0;
 
-    final int shouldPersistTo = persist.getValue() > 0 ? persist.getValue() - 1 : 0;
-    final int shouldReplicateTo = replicate.getValue();
-    final boolean shouldPersistToMaster = persist.getValue() > 0;
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
 
-    final boolean toMaster = persist.getValue() > 0;
-    final boolean toReplica = replicate.getValue() > 0 || persist.getValue() > 1;
+    checkObserveReplica(key, persistReplica, replicateTo);
 
-    int donePolls = 0;
-    int alreadyPersistedTo = 0;
-    int alreadyReplicatedTo = 0;
-    boolean alreadyPersistedToMaster = false;
-    while(shouldReplicateTo > alreadyReplicatedTo
-      || shouldPersistTo - 1 > alreadyPersistedTo
-      || (!alreadyPersistedToMaster && shouldPersistToMaster)) {
-      checkObserveReplica(key, shouldPersistTo, shouldReplicateTo);
+    int replicaPersistedTo = 0;
+    int replicatedTo = 0;
+    boolean persistedMaster = false;
+    while(replicateTo > replicatedTo || persistReplica - 1 > replicaPersistedTo
+        || (!persistedMaster && persistMaster)) {
+      checkObserveReplica(key, persistReplica, replicateTo);
 
-      if (++donePolls >= maxPolls) {
-        long timeTried = maxPolls * pollInterval;
+      if (++obsPolls >= obsPollMax) {
+        long timeTried = obsPollMax * obsPollInterval;
+        TimeUnit tu = TimeUnit.MILLISECONDS;
         throw new ObservedTimeoutException("Observe Timeout - Polled"
-          + " Unsuccessfully for at least "
-          + TimeUnit.MILLISECONDS.toSeconds(timeTried) + " seconds.");
+            + " Unsuccessfully for at least " + tu.toSeconds(timeTried)
+            + " seconds.");
       }
 
-      Map<MemcachedNode, ObserveResponse> response = observe(key, cas, toMaster,
-        toReplica);
+      Map<MemcachedNode, ObserveResponse> response = observe(key, cas);
 
       MemcachedNode master = locator.getPrimary(key);
-      alreadyPersistedTo = 0;
-      alreadyReplicatedTo = 0;
-      alreadyPersistedToMaster = false;
-      for (Entry<MemcachedNode, ObserveResponse> r : response.entrySet()) {
-        MemcachedNode node = r.getKey();
-        ObserveResponse observeResponse = r.getValue();
 
-        boolean isMaster = node == master ? true : false;
-        if (isMaster && observeResponse == ObserveResponse.MODIFIED) {
+      replicaPersistedTo = 0;
+      replicatedTo = 0;
+      persistedMaster = false;
+      for (Entry<MemcachedNode, ObserveResponse> r : response.entrySet()) {
+        boolean isMaster = r.getKey() == master ? true : false;
+        if (isMaster && r.getValue() == ObserveResponse.MODIFIED) {
           throw new ObservedModifiedException("Key was modified");
         }
-
-        if (isDelete) {
-          if (!isMaster && observeResponse == ObserveResponse.NOT_FOUND_NOT_PERSISTED) {
-            alreadyReplicatedTo++;
+        if (!isDelete) {
+          if (!isMaster && r.getValue()
+            == ObserveResponse.FOUND_NOT_PERSISTED) {
+            replicatedTo++;
           }
-          if (observeResponse == ObserveResponse.NOT_FOUND_PERSISTED) {
+          if (r.getValue() == ObserveResponse.FOUND_PERSISTED) {
             if (isMaster) {
-              alreadyPersistedToMaster = true;
+              persistedMaster = true;
             } else {
-              alreadyReplicatedTo++;
-              alreadyPersistedTo++;
+              replicatedTo++;
+              replicaPersistedTo++;
             }
           }
         } else {
-          if (!isMaster && observeResponse == ObserveResponse.FOUND_NOT_PERSISTED) {
-            alreadyReplicatedTo++;
+          if (r.getValue() == ObserveResponse.NOT_FOUND_NOT_PERSISTED) {
+            replicatedTo++;
           }
-          if (observeResponse == ObserveResponse.FOUND_PERSISTED) {
+          if (r.getValue() == ObserveResponse.NOT_FOUND_PERSISTED) {
+            replicatedTo++;
+            replicaPersistedTo++;
             if (isMaster) {
-              alreadyPersistedToMaster = true;
+              persistedMaster = true;
             } else {
-              alreadyReplicatedTo++;
-              alreadyPersistedTo++;
+              replicaPersistedTo++;
             }
           }
         }
       }
       try {
-        if (shouldReplicateTo > alreadyReplicatedTo
-          || shouldPersistTo - 1 > alreadyPersistedTo
-          || (!alreadyPersistedToMaster && shouldPersistToMaster)) {
-          Thread.sleep(pollInterval);
-        }
+        Thread.sleep(obsPollInterval);
       } catch (InterruptedException e) {
         getLogger().error("Interrupted while in observe loop.", e);
         throw new ObservedException("Observe was Interrupted ");
@@ -2582,7 +2520,7 @@ public class CouchbaseClient extends MemcachedClient
         new OperationFuture<Map<String, String>>(key, latch, operationTimeout,
           executorService);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
-      private final Map<String, String> stats = new HashMap<String, String>();
+      private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
         stats.put(name, val);
       }
@@ -2632,7 +2570,7 @@ public class CouchbaseClient extends MemcachedClient
     final OperationFuture<Boolean> rv =
       new OperationFuture<Boolean>("", latch, operationTimeout,
         executorService) {
-        private final CouchbaseConnectionFactory factory =
+        private CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
 
         @Override

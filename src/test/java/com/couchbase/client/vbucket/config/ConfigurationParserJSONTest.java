@@ -34,7 +34,7 @@ import net.spy.memcached.TestConfig;
  */
 public class ConfigurationParserJSONTest extends TestCase {
 
-  private final ConfigurationParser configParser = new ConfigurationParserJSON();
+  private ConfigurationParser configParser = new ConfigurationParserJSON();
   private static final String DEFAULT_POOL_NAME = "default";
 
   /**
@@ -45,7 +45,7 @@ public class ConfigurationParserJSONTest extends TestCase {
    * @throws Exception the exception
    */
   public void testParseBase() throws Exception {
-    Map<String, Pool> base = configParser.parsePools(BASE_STRING);
+    Map<String, Pool> base = configParser.parseBase(BASE_STRING);
     assertNotNull(base);
     assertTrue(!base.isEmpty());
     Pool pool = base.get(DEFAULT_POOL_NAME);
@@ -113,7 +113,7 @@ public class ConfigurationParserJSONTest extends TestCase {
    */
   public void testLoadPool() throws Exception {
     Pool pool = new Pool(null, null, null);
-    configParser.parsePool(pool, POOL_STRING);
+    configParser.loadPool(pool, POOL_STRING);
     assertNotNull(pool.getBucketsUri());
   }
 
@@ -127,7 +127,7 @@ public class ConfigurationParserJSONTest extends TestCase {
    */
   public void testInvalidURI() throws ParseException{
     try {
-      configParser.parsePools(INVALID_BASE_STRING);
+      configParser.parseBase(INVALID_BASE_STRING);
     } catch (ConnectionException e) {
       assertEquals(e.getMessage(), "Connection URI is either incorrect "
         + "or invalid as it cannot be parsed.");
@@ -140,7 +140,7 @@ public class ConfigurationParserJSONTest extends TestCase {
    * @param bucket the bucket
    * @throws Exception the exception
    */
-  private void checkBucket(Bucket bucket) {
+  private void checkBucket(Bucket bucket) throws Exception {
     assertNotNull("Bucket is null", bucket);
     assertNotNull(bucket.getName());
     assertNotNull(bucket.getStreamingURI());

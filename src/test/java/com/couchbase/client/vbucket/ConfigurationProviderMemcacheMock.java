@@ -37,7 +37,7 @@ import net.spy.memcached.TestConfig;
 public class ConfigurationProviderMemcacheMock
   implements ConfigurationProvider {
 
-  private final List<String> nodeList;
+  private List<String> nodeList;
   public boolean baseListUpdated;
 
   public ConfigurationProviderMemcacheMock(List<String> nodeList) {
