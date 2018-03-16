@@ -21,6 +21,19 @@
  */
 package com.couchbase.client.java;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DesignDocumentException;
@@ -31,11 +44,6 @@ import com.couchbase.client.java.view.SpatialView;
 import com.couchbase.client.java.view.View;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.*;
 
 /**
  * Verifies the functionality of the Design Document management facilities.
@@ -139,6 +147,60 @@ public class DesignDocumentTest extends ClusterDependentTest {
     }
 
     @Test
+    public void shouldHaveLessViewsWhenUpsertingWithOnlyNewViews() {
+        List<View> views = Collections.singletonList(DefaultView.create("v1", "function(d,m){}"));
+        DesignDocument designDocument = DesignDocument.create("upsert3", views);
+        manager.upsertDesignDocument(designDocument);
+
+        DesignDocument found = manager.getDesignDocument("upsert3");
+        assertNotNull(found);
+        assertEquals("upsert3", found.name());
+        assertEquals(1, found.views().size());
+        assertEquals("v1", found.views().get(0).name());
+        assertNull(found.views().get(0).reduce());
+
+        views = Collections.singletonList(DefaultView.create("v2", "function(d,m){}", "_count"));
+        designDocument = DesignDocument.create("upsert3", views);
+        manager.upsertDesignDocument(designDocument);
+
+        found = manager.getDesignDocument("upsert3");
+        assertNotNull(found);
+        assertEquals("upsert3", found.name());
+        assertEquals(1, found.views().size());
+        assertEquals("v2", found.views().get(0).name());
+        assertEquals("_count", found.views().get(0).reduce());
+    }
+
+    @Test
+    public void shouldUseLatestDefinitionWhenAddingViewNameTwice() {
+        List<View> views = new ArrayList<View>();
+        views.add(DefaultView.create("v1", "function(d,m){}"));
+        DesignDocument designDocument = DesignDocument.create("upsert4", views);
+        designDocument.views().add(DefaultView.create("v1", "function(d,m){emit(null,null);}", "_count"));
+        manager.upsertDesignDocument(designDocument);
+
+        DesignDocument found = manager.getDesignDocument("upsert4");
+        assertNotNull(found);
+        assertEquals("upsert4", found.name());
+        assertEquals(1, found.views().size());
+        assertEquals("v1", found.views().get(0).name());
+        assertEquals("function(d,m){emit(null,null);}", found.views().get(0).map());
+        assertEquals("_count", found.views().get(0).reduce());
+
+        //make also sure that the getDesignDocument views list is mutable
+        found.views().add(DefaultView.create("v1", "function(d,m){emit(d.type, null);}", null));
+        manager.upsertDesignDocument(found);
+
+        found = manager.getDesignDocument("upsert4");
+        assertNotNull(found);
+        assertEquals("upsert4", found.name());
+        assertEquals(1, found.views().size());
+        assertEquals("v1", found.views().get(0).name());
+        assertEquals("function(d,m){emit(d.type, null);}", found.views().get(0).map());
+        assertNull(found.views().get(0).reduce());
+    }
+
+    @Test
     public void shouldGetDesignDocuments() {
         List<View> views = Arrays.asList(DefaultView.create("v1", "function(d,m){}"));
         DesignDocument designDocument1 = DesignDocument.create("doc1", views);
@@ -236,6 +298,21 @@ public class DesignDocumentTest extends ClusterDependentTest {
         assertNotNull(view.map());
         assertNull(view.reduce());
         assertFalse(view.hasReduce());
+    }
+
+    @Test
+    public void shouldCreateAndLoadDesignDocumentWithOptions() {
+        List<View> views = Arrays.asList(DefaultView.create("vOpts", "function(d,m){}", "_count"));
+        Map<DesignDocument.Option, Long> options = new HashMap<DesignDocument.Option, Long>();
+        options.put(DesignDocument.Option.UPDATE_MIN_CHANGES, 100L);
+        options.put(DesignDocument.Option.REPLICA_UPDATE_MIN_CHANGES, 5000L);
+
+        DesignDocument designDocument = DesignDocument.create("upsertWithOpts", views, options);
+        manager.upsertDesignDocument(designDocument);
+
+        DesignDocument loaded = manager.getDesignDocument("upsertWithOpts");
+        assertEquals((Long) 100L, loaded.options().get(DesignDocument.Option.UPDATE_MIN_CHANGES));
+        assertEquals((Long) 5000L, loaded.options().get(DesignDocument.Option.REPLICA_UPDATE_MIN_CHANGES));
     }
 
 }
