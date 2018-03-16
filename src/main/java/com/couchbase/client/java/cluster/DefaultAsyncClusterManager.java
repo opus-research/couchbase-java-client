@@ -17,7 +17,6 @@ package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.config.*;
 import com.couchbase.client.core.message.internal.AddNodeRequest;
 import com.couchbase.client.core.message.internal.AddNodeResponse;
@@ -27,7 +26,6 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.ConnectionString;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -42,17 +40,15 @@ import rx.functions.Func1;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
-    final ClusterFacade core;
-    final String username;
-    final String password;
-    final CouchbaseEnvironment environment;
+    private final ClusterFacade core;
+    private final String username;
+    private final String password;
+    private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
 
     DefaultAsyncClusterManager(final String username, final String password, final ConnectionString connectionString,
@@ -67,18 +63,6 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
     public static DefaultAsyncClusterManager create(final String username, final String password,
                                                     final ConnectionString connectionString, final CouchbaseEnvironment environment, final ClusterFacade core) {
         return new DefaultAsyncClusterManager(username, password, connectionString, environment, core);
-    }
-
-    @Override
-    @InterfaceStability.Experimental
-    public Observable<AsyncClusterApiClient> apiClient() {
-        return ensureServiceEnabled()
-                .map(new Func1<Boolean, AsyncClusterApiClient>() {
-                    @Override
-                    public AsyncClusterApiClient call(Boolean aBoolean) {
-                        return new AsyncClusterApiClient(username, password, core);
-                    }
-                });
     }
 
     @Override
@@ -157,15 +141,15 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                                 BucketType.COUCHBASE : BucketType.MEMCACHED;
 
                             settings.add(DefaultBucketSettings.builder()
-                                    .name(bucket.getString("name"))
-                                    .enableFlush(enableFlush)
-                                    .type(bucketType)
-                                    .replicas(bucket.getInt("replicaNumber"))
-                                    .quota(ramQuota)
-                                    .indexReplicas(indexReplicas)
-                                    .port(bucket.getInt("proxyPort"))
-                                    .password(bucket.getString("saslPassword"))
-                                    .build(bucket));
+                                .name(bucket.getString("name"))
+                                .enableFlush(enableFlush)
+                                .type(bucketType)
+                                .replicas(bucket.getInt("replicaNumber"))
+                                .quota(ramQuota)
+                                .indexReplicas(indexReplicas)
+                                .port(bucket.getInt("proxyPort"))
+                                .password(bucket.getString("saslPassword"))
+                                .build());
                         }
                         return Observable.from(settings);
                     } catch (Exception e) {
@@ -216,7 +200,15 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
     @Override
     public Observable<BucketSettings> insertBucket(final BucketSettings settings) {
-        final String payload = getConfigureBucketPayload(settings, true);
+        final StringBuilder sb = new StringBuilder();
+        sb.append("name=").append(settings.name());
+        sb.append("&ramQuotaMB=").append(settings.quota());
+        sb.append("&authType=").append("sasl");
+        sb.append("&saslPassword=").append(settings.password());
+        sb.append("&replicaNumber=").append(settings.replicas());
+        sb.append("&proxyPort=").append(settings.port());
+        sb.append("&bucketType=").append(settings.type() == BucketType.COUCHBASE ? "membase" : "memcached");
+        sb.append("&flushEnabled=").append(settings.enableFlush() ? "1" : "0");
 
         return ensureBucketIsHealthy(hasBucket(settings.name())
             .doOnNext(new Action1<Boolean>() {
@@ -229,7 +221,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             }).flatMap(new Func1<Boolean, Observable<InsertBucketResponse>>() {
                 @Override
                 public Observable<InsertBucketResponse> call(Boolean exists) {
-                    return core.send(new InsertBucketRequest(payload, username, password));
+                    return core.send(new InsertBucketRequest(sb.toString(), username, password));
                 }
             })
             .map(new Func1<InsertBucketResponse, BucketSettings>() {
@@ -245,7 +237,14 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
     @Override
     public Observable<BucketSettings> updateBucket(final BucketSettings settings) {
-        final String payload = getConfigureBucketPayload(settings, false);
+        final StringBuilder sb = new StringBuilder();
+        sb.append("ramQuotaMB=").append(settings.quota());
+        sb.append("&authType=").append("sasl");
+        sb.append("&saslPassword=").append(settings.password());
+        sb.append("&replicaNumber=").append(settings.replicas());
+        sb.append("&proxyPort=").append(settings.port());
+        sb.append("&bucketType=").append(settings.type() == BucketType.COUCHBASE ? "membase" : "memcached");
+        sb.append("&flushEnabled=").append(settings.enableFlush() ? "1" : "0");
 
         return ensureBucketIsHealthy(hasBucket(settings.name())
             .doOnNext(new Action1<Boolean>() {
@@ -258,7 +257,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             }).flatMap(new Func1<Boolean, Observable<UpdateBucketResponse>>() {
                 @Override
                 public Observable<UpdateBucketResponse> call(Boolean exists) {
-                    return core.send(new UpdateBucketRequest(settings.name(), payload, username, password));
+                    return core.send(new UpdateBucketRequest(settings.name(), sb.toString(), username, password));
                 }
             }).map(new Func1<UpdateBucketResponse, BucketSettings>() {
                 @Override
@@ -269,37 +268,6 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                     return settings;
                 }
             }));
-    }
-
-    protected String getConfigureBucketPayload(BucketSettings settings, boolean includeName) {
-        Map<String, Object> customSettings = settings.customSettings();
-        Map<String, Object> actual = new LinkedHashMap<String, Object>(8 + customSettings.size());
-
-        if (includeName) {
-            actual.put("name", settings.name());
-        }
-        actual.put("ramQuotaMB", settings.quota());
-        actual.put("authType", "sasl");
-        actual.put("saslPassword", settings.password());
-        actual.put("replicaNumber", settings.replicas());
-        actual.put("proxyPort", settings.port());
-        actual.put("bucketType", settings.type() == BucketType.COUCHBASE ? "membase" : "memcached");
-        actual.put("flushEnabled", settings.enableFlush() ? "1" : "0");
-        for (Map.Entry<String, Object> customSetting : customSettings.entrySet()) {
-            if (actual.containsKey(customSetting.getKey()) || (!includeName && "name".equals(customSetting.getKey()))) {
-                continue;
-            }
-            actual.put(customSetting.getKey(), customSetting.getValue());
-        }
-
-        final StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Object> setting : actual.entrySet()) {
-            sb.append('&').append(setting.getKey()).append('=').append(setting.getValue());
-        }
-        if (sb.length() > 0) {
-            sb.deleteCharAt(0);
-        }
-        return sb.toString();
     }
 
     /**

@@ -13,22 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search;
+package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * An enum listing the various consistency levels for FTS searches
- * that don't need additional parameters (like a mutation token vector).
+ * A FTS query that performs a search according to the "string query" syntax.
  *
  * @author Simon Baslé
- * @since 2.3
+ * @author Michael Nitschinger
+ * @since 2.3.0
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public enum SearchConsistency {
+public class StringQuery extends AbstractFtsQuery {
 
-    NOT_BOUNDED;
-    //TODO in Spock, add REQUEST_PLUS
+    private final String query;
+
+    public StringQuery(String query) {
+        super();
+        this.query = query;
+    }
+
+    @Override
+    public StringQuery boost(double boost) {
+        super.boost(boost);
+        return this;
+    }
+
+    @Override
+    protected void injectParams(JsonObject input) {
+        input.put("query", query);
+    }
 }
