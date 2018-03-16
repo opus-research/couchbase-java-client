@@ -24,8 +24,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.lang.Tuple2;
-import com.couchbase.client.core.message.CouchbaseRequest;
-import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
@@ -72,15 +70,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     private final String bucket;
     private final String password;
-    /**
-     * The core ClusterFacade. Prefer using @{@link #checkedSend(CouchbaseRequest)} method
-     * to directly calling {@link ClusterFacade#send(CouchbaseRequest) core.send}
-     */
     private final ClusterFacade core;
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
     private final AsyncBucketManager bucketManager;
 
-    private volatile boolean closed;
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final String name, final String password,
                                 final List<Transcoder<? extends Document, ?>> customTranscoders) {
@@ -107,19 +100,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
     }
 
-    /**
-     * This method can be invoked to wrap a call to the server through core in order to check the state of the
-     * Bucket instance. Notably, it return an Observable  failing with a {@link BucketClosedException} if it finds
-     * that the Bucket instance was closed.
-     */
-    protected final <R extends CouchbaseResponse> Observable<R> checkedSend(CouchbaseRequest request) {
-        if (closed) {
-            return Observable.error(new BucketClosedException("Bucket " + name() + " has been closed"));
-        } else {
-            return core.<R>send(request);
-        }
-    }
-
     @Override
     public String name() {
         return bucket;
@@ -139,8 +119,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
-        return this
-            .<GetResponse>checkedSend(new GetRequest(id, bucket))
+        return core
+            .<GetResponse>send(new GetRequest(id, bucket))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse getResponse) {
@@ -170,7 +150,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
-        return this.<GetResponse>checkedSend(new GetRequest(id, bucket, true, false, lockTime))
+        return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse getResponse) {
@@ -200,7 +180,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
-        return this.<GetResponse>checkedSend(new GetRequest(id, bucket, false, true, expiry))
+        return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse getResponse) {
@@ -231,9 +211,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getFromReplica(final String id, final ReplicaMode type,
         final Class<D> target) {
-        if (closed) {
-            return Observable.error(new BucketClosedException("Bucket "+ name() + " has been closed"));
-        }
 
         Observable<GetResponse> incoming;
         if (type == ReplicaMode.ALL) {
@@ -287,8 +264,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> insert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return this
-            .<InsertResponse>checkedSend(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
+        return core
+            .<InsertResponse>send(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
             .flatMap(new Func1<InsertResponse, Observable<? extends D>>() {
                 @Override
                 public Observable<? extends D> call(InsertResponse response) {
@@ -328,8 +305,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> upsert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return this
-            .<UpsertResponse>checkedSend(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
+        return core
+            .<UpsertResponse>send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
             .flatMap(new Func1<UpsertResponse, Observable<D>>() {
                 @Override
                 public Observable<D> call(UpsertResponse response) {
@@ -363,7 +340,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   public <D extends Document<?>> Observable<D> replace(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return this.<ReplaceResponse>checkedSend(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
+    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
 
         .flatMap(new Func1<ReplaceResponse, Observable<D>>() {
             @Override
@@ -402,7 +379,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
             bucket);
-        return this.<RemoveResponse>checkedSend(request).map(new Func1<RemoveResponse, D>() {
+        return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
             @Override
             public D call(RemoveResponse response) {
                 return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), document.cas());
@@ -455,7 +432,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   public Observable<AsyncViewResult> query(final ViewQuery query) {
     final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
         query.toString(), bucket, password);
-        return this.<ViewQueryResponse>checkedSend(request)
+        return core.<ViewQueryResponse>send(request)
             .flatMap(new Func1<ViewQueryResponse, Observable<AsyncViewResult>>() {
                 @Override
                 public Observable<AsyncViewResult> call(final ViewQueryResponse response) {
@@ -519,8 +496,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<AsyncQueryResult> query(final String query) {
         GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
-        return this
-            .<GenericQueryResponse>checkedSend(request)
+        return core
+            .<GenericQueryResponse>send(request)
             .flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {
                 @Override
                 public Observable<AsyncQueryResult> call(final GenericQueryResponse response) {
@@ -578,8 +555,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
-        return this
-            .<CounterResponse>checkedSend(new CounterRequest(id, initial, delta, expiry, bucket))
+        return core
+            .<CounterResponse>send(new CounterRequest(id, initial, delta, expiry, bucket))
             .map(new Func1<CounterResponse, JsonLongDocument>() {
                 @Override
                 public JsonLongDocument call(CounterResponse response) {
@@ -590,8 +567,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> unlock(String id, long cas) {
-        return this
-            .<UnlockResponse>checkedSend(new UnlockRequest(id, cas, bucket))
+        return core
+            .<UnlockResponse>send(new UnlockRequest(id, cas, bucket))
             .map(new Func1<UnlockResponse, Boolean>() {
                 @Override
                 public Boolean call(UnlockResponse response) {
@@ -613,7 +590,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> touch(String id, int expiry) {
-        return this.<TouchResponse>checkedSend(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
+        return core.<TouchResponse>send(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
             @Override
             public Boolean call(TouchResponse touchResponse) {
                 return touchResponse.status().isSuccess();
@@ -631,8 +608,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> append(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return this
-            .<AppendResponse>checkedSend(new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket))
+        return core
+            .<AppendResponse>send(new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket))
             .map(new Func1<AppendResponse, D>() {
                 @Override
                 public D call(final AppendResponse response) {
@@ -650,8 +627,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> prepend(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return this
-            .<PrependResponse>checkedSend(new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket))
+        return core
+            .<PrependResponse>send(new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket))
             .map(new Func1<PrependResponse, D>() {
                 @Override
                 public D call(final PrependResponse response) {
@@ -731,20 +708,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> close() {
-        //allow the CloseBucketRequest to go through to the core
         return core.<CloseBucketResponse>send(new CloseBucketRequest(bucket))
             .map(new Func1<CloseBucketResponse, Boolean>() {
                 @Override
                 public Boolean call(CloseBucketResponse response) {
-                    //always consider the bucket closed, an isFailure would indicate an unstable state anyway
-                    CouchbaseAsyncBucket.this.closed = true;
                     return response.status().isSuccess();
                 }
             });
-    }
-
-    @Override
-    public boolean isClosed() {
-        return this.closed;
     }
 }
