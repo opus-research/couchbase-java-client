@@ -342,7 +342,9 @@ public class CouchbaseTestContext {
      */
     public void destroyBucketAndDisconnect() {
         if (isAdHoc) {
-            bucket.close();
+            if (!bucket.isClosed()) {
+                bucket.close();
+            }
             clusterManager.removeBucket(bucketName);
         }
         disconnect();
