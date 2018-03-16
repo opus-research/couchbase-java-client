@@ -26,6 +26,8 @@ import com.couchbase.client.ViewConnection;
 import com.couchbase.client.protocol.views.HttpOperation;
 import net.spy.memcached.compat.SpyObject;
 
+import net.spy.memcached.compat.log.Logger;
+import net.spy.memcached.compat.log.LoggerFactory;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -44,8 +46,13 @@ import java.net.SocketTimeoutException;
  * actual content or decides to retry or abort, depending on the response status
  * code and values.
  */
-public class HttpResponseCallback extends SpyObject
-  implements FutureCallback<HttpResponse> {
+public class HttpResponseCallback implements FutureCallback<HttpResponse> {
+
+  /**
+   * Static logger so that logging is also enabled for static methods.
+   */
+  private static final Logger LOGGER = LoggerFactory.getLogger(
+    HttpResponseCallback.class);
 
   /**
    * The underlying HTTP request made.
@@ -87,7 +94,7 @@ public class HttpResponseCallback extends SpyObject
     int statusCode = response.getStatusLine().getStatusCode();
     boolean shouldRetry = shouldRetry(statusCode, response);
     if (shouldRetry) {
-      getLogger().debug("Operation returned, but needs to be retried because "
+      LOGGER.debug("Operation returned, but needs to be retried because "
         + "of: " + response.getStatusLine());
       retryOperation(op);
     } else {
@@ -102,7 +109,7 @@ public class HttpResponseCallback extends SpyObject
    */
   private void retryOperation(final HttpOperation op) {
     if(!op.isTimedOut() && !op.isCancelled()) {
-      getLogger().debug("Retrying HTTP operation from node ("
+      LOGGER.debug("Retrying HTTP operation from node ("
         + host.toHostString() + "), Request: "
         + op.getRequest().getRequestLine());
       vconn.addOp(op);
@@ -115,7 +122,7 @@ public class HttpResponseCallback extends SpyObject
       || e instanceof ConnectionClosedException) {
       retryOperation(op);
     } else {
-      getLogger().info("View Operation " + op.getRequest().getRequestLine()
+      LOGGER.info("View Operation " + op.getRequest().getRequestLine()
         + " failed because of: ", e);
       op.cancel();
     }
@@ -123,7 +130,7 @@ public class HttpResponseCallback extends SpyObject
 
   @Override
   public void cancelled() {
-    getLogger().info("View Operation " + op.getRequest().getRequestLine()
+    LOGGER.info("View Operation " + op.getRequest().getRequestLine()
       + " got cancelled.");
     op.cancel();
   }
@@ -178,6 +185,7 @@ public class HttpResponseCallback extends SpyObject
       // Indicates a Not Found Design Document
       if(body.contains("not_found")
         && (body.contains("missing") || body.contains("deleted"))) {
+        LOGGER.debug("Design Document not found, body: " + body);
         return false;
       }
     } catch(IOException ex) {
@@ -198,6 +206,7 @@ public class HttpResponseCallback extends SpyObject
       // Indicates a Not Found Design Document
       if(body.contains("error")
         && body.contains("{not_found, missing_named_view}")) {
+        LOGGER.debug("Design Document not found, body: " + body);
         return false;
       }
     } catch(IOException ex) {
