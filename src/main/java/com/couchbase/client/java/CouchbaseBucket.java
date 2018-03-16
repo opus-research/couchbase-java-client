@@ -33,7 +33,6 @@ import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.java.bucket.BucketInfo;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.CouchbaseBucketManager;
 import com.couchbase.client.java.bucket.Observe;
@@ -677,10 +676,5 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> Observable<D> remove(String id, ReplicateTo replicateTo, Class<D> target) {
         return remove(id, PersistTo.NONE, replicateTo, target);
-    }
-
-    @Override
-    public Observable<BucketInfo> info() {
-        return null;
     }
 }

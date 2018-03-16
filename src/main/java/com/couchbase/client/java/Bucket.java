@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.bucket.BucketInfo;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
@@ -442,7 +441,5 @@ public interface Bucket {
 
     <D extends Document<?>> Observable<D> append(D document);
     <D extends Document<?>> Observable<D> prepend(D document);
-
-    Observable<BucketInfo> info();
 
 }
