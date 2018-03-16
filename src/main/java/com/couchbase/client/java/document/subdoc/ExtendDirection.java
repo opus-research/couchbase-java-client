@@ -20,36 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.document.subdoc;
 
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 
 /**
- * An exception indicating that an index does not exist, for instance
- * when trying to delete one using {@link BucketManager#dropIndex(String, boolean)}.
+ * The direction for a sub-document array extension operation.
+ * See {@link Bucket#extendIn(DocumentFragment, ExtendDirection, boolean, PersistTo, ReplicateTo)}.
  *
  * @author Simon Baslé
+ * @author Michael Nitschinger
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class IndexDoesNotExistException extends CouchbaseException {
-
-    public IndexDoesNotExistException() {
-    }
-
-    public IndexDoesNotExistException(String message) {
-        super(message);
-    }
-
-    public IndexDoesNotExistException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public IndexDoesNotExistException(Throwable cause) {
-        super(cause);
-    }
+public enum ExtendDirection {
+    /**
+     * Extend the array by placing the value at the front of the array (index 0).
+     */
+    FRONT,
+    /**
+     * Extend the array by placing the value at the back of the array (largest index).
+     */
+    BACK
 }

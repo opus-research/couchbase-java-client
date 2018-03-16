@@ -20,38 +20,44 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.document.subdoc;
 
-import java.util.List;
-
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
+import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
 
 /**
- * An exception indicating that an index already exists, for instance
- * when trying to create one using {@link BucketManager#createIndex(String, List, boolean, boolean)}.
+ * Utility class to create specs for the sub-document API's multi-{@link LookupCommand lookup} operations.
  *
+ * @author Michael Nitschinger
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class IndexAlreadyExistsException extends CouchbaseException {
+public class LookupSpec extends LookupCommand {
 
-    public IndexAlreadyExistsException() {
+    private LookupSpec(Lookup type, String path) {
+        super(type, path);
     }
 
-    public IndexAlreadyExistsException(String message) {
-        super(message);
+    @Override
+    public String toString() {
+        return "{" + lookup() + ":" + path() + "}";
     }
 
-    public IndexAlreadyExistsException(String message, Throwable cause) {
-        super(message, cause);
+    /**
+     * Create a GET lookup specification.
+     */
+    public static LookupSpec get(String path) {
+        return new LookupSpec(Lookup.GET, path);
     }
 
-    public IndexAlreadyExistsException(Throwable cause) {
-        super(cause);
+    /**
+     * Create an EXIST lookup specification.
+     */
+    public static LookupSpec exists(String path) {
+        return new LookupSpec(Lookup.EXIST, path);
     }
 }

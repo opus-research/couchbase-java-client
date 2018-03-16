@@ -23,6 +23,7 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.kv.MutationToken;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -30,8 +31,9 @@ import com.couchbase.client.java.document.subdoc.DocumentFragment;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -56,7 +58,7 @@ public class N1qlParams implements Serializable {
     private String clientContextId;
     private Integer maxParallelism;
 
-    private List<MutationToken> mutationTokens;
+    private Map<Bucket, List<MutationToken>> mutationTokens;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -95,17 +97,24 @@ public class N1qlParams implements Serializable {
                     + "together with `consistentWith(...)`");
             }
             JsonObject vectors = JsonObject.create();
-            for (MutationToken token : mutationTokens) {
-                JsonObject bucket = vectors.getObject(token.bucket());
+            for (Map.Entry<Bucket, List<MutationToken>> entry : mutationTokens.entrySet()) {
+                JsonObject bucket = vectors.getObject(entry.getKey().name());
+
                 if (bucket == null) {
-                    bucket = JsonObject.create();
-                    vectors.put(token.bucket(), bucket);
+                   bucket = JsonObject.create();
+                   vectors.put(entry.getKey().name(), bucket);
                 }
 
-                bucket.put(String.valueOf(token.vbucketID()), JsonArray.from(
-                    token.sequenceNumber(),
-                    String.valueOf(token.vbucketUUID())
-                ));
+                for (MutationToken token : entry.getValue()) {
+                    String vbid = String.valueOf(token.vbucketID());
+                    if (!bucket.containsKey(vbid)
+                        || bucket.getArray(vbid).getLong(0) < token.sequenceNumber()) {
+                        bucket.put(vbid, JsonArray.from(
+                            token.sequenceNumber(),
+                            String.valueOf(token.vbucketUUID())
+                        ));
+                    }
+                }
             }
 
             queryJson.put("scan_vectors", vectors);
@@ -184,18 +193,20 @@ public class N1qlParams implements Serializable {
     /**
      * Sets the {@link Document}s resulting of a mutation this query should be consistent with.
      *
+     * @param bucket the bucket scope for the (optional) list of documents.
      * @param documents the documents returned from a mutation.
      *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
-    public N1qlParams consistentWith(Document... documents) {
+    public N1qlParams consistentWith(Bucket bucket, Document... documents) {
         if (documents == null || documents.length == 0) {
             throw new IllegalArgumentException("At least one Document needs to be provided.");
+
         }
 
         for (Document doc : documents) {
-            storeToken(doc.mutationToken());
+            storeToken(bucket, doc.id(), doc.mutationToken());
         }
 
         return this;
@@ -204,18 +215,19 @@ public class N1qlParams implements Serializable {
     /**
      * Sets the {@link DocumentFragment}s resulting of a mutation this query should be consistent with.
      *
+     * @param bucket the bucket scope for the (optional) list of documents.
      * @param fragments the fragments returned from a mutation.
      *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
-    public N1qlParams consistentWith(DocumentFragment... fragments) {
+    public N1qlParams consistentWith(Bucket bucket, DocumentFragment... fragments) {
         if (fragments == null || fragments.length == 0) {
             throw new IllegalArgumentException("At least one DocumentFragment needs to be provided.");
         }
 
         for (DocumentFragment doc : fragments) {
-            storeToken(doc.mutationToken());
+            storeToken(bucket, doc.id(), doc.mutationToken());
         }
 
         return this;
@@ -224,30 +236,31 @@ public class N1qlParams implements Serializable {
     /**
      * Helper method to build up the token array and store it for later processing.
      */
-    private void storeToken(MutationToken token) {
+    private void storeToken(Bucket bucket, String id, MutationToken token) {
+        if (bucket == null) {
+            throw new IllegalArgumentException("A valid bucket reference must be provided.");
+        }
+
         if (token == null) {
-            throw new IllegalArgumentException("No MutationToken provided (must be enabled on the Environment).");
+            throw new UnsupportedOperationException(
+                "Document ID fallback for AT_PLUS not yet supported. ID: " + id);
+        } else if (token.bucket() != bucket.name()) {
+            throw new IllegalArgumentException(
+                "The given MutationToken does not correspond to the Bucket scope! Token: "
+                    + token.bucket() + ", Bucket: " + bucket.name());
         }
 
         if (mutationTokens == null) {
-            mutationTokens = new ArrayList<MutationToken>();
-            mutationTokens.add(token);
-            return;
+            mutationTokens = new HashMap<Bucket, List<MutationToken>>();
         }
 
-        Iterator<MutationToken> tokenIterator = mutationTokens.iterator();
-        while(tokenIterator.hasNext()) {
-            MutationToken t = tokenIterator.next();
-            if (t.vbucketID() == token.vbucketID() && t.bucket().equals(token.bucket())) {
-                if (token.sequenceNumber() > t.sequenceNumber()) {
-                    tokenIterator.remove();
-                    mutationTokens.add(token);
-                }
-                return;
-            }
+        List<MutationToken> tokens = mutationTokens.get(bucket);
+        if (tokens == null) {
+            tokens = new ArrayList<MutationToken>();
         }
 
-        mutationTokens.add(token);
+        tokens.add(token);
+        mutationTokens.put(bucket, tokens);
     }
 
     /**

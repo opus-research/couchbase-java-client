@@ -44,8 +44,6 @@ import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
 import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.error.IndexAlreadyExistsException;
-import com.couchbase.client.java.error.IndexDoesNotExistException;
 import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.dsl.path.index.IndexType;
@@ -174,7 +172,7 @@ public class BucketManagerIndexManagementTests {
         try {
             indexedBucket.bucketManager().createIndex(index, false, false, "tata");
             fail("expected failure of second index creation");
-        } catch (IndexAlreadyExistsException e) {
+        } catch (CouchbaseException e) {
             //OK
         }
         boolean existingAttempt = indexedBucket.bucketManager().createIndex(index, true, false, "titi");
@@ -202,7 +200,7 @@ public class BucketManagerIndexManagementTests {
         try {
             indexedBucket.bucketManager().createPrimaryIndex(false, false);
             fail("expected failure of second index creation");
-        } catch (IndexAlreadyExistsException e) {
+        } catch (CouchbaseException e) {
             //OK
         }
         boolean existingAttempt = indexedBucket.bucketManager().createPrimaryIndex(true, false);
@@ -225,7 +223,7 @@ public class BucketManagerIndexManagementTests {
         assertEquals(0, mgr.listIndexes().size());
     }
 
-    @Test(expected = IndexDoesNotExistException.class)
+    @Test(expected = CouchbaseException.class)
     public void testDropIndexThatDoesntExistFails() {
         indexedBucket.bucketManager().dropIndex("blabla", false);
     }
@@ -247,7 +245,7 @@ public class BucketManagerIndexManagementTests {
         assertEquals(0, mgr.listIndexes().size());
     }
 
-    @Test(expected = IndexDoesNotExistException.class)
+    @Test(expected = CouchbaseException.class)
     public void testDropPrimaryIndexThatDoesntExistFails() {
         indexedBucket.bucketManager().dropPrimaryIndex(false);
     }
