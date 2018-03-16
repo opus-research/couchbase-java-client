@@ -53,9 +53,24 @@ public class ViewConnectionTest {
   @Test
   public void testInitAndShutdown() throws IOException, InterruptedException {
 
+    ViewConnection vconn = createViewConn(TestConfig.IPV4_ADDR,8091);
+    assertFalse(vconn.getConnectedNodes().isEmpty());
+    vconn.shutdown();
+    assertTrue(vconn.getConnectedNodes().isEmpty());
+
+  }
+
+  /**
+   * Creates a view connection.
+   * @param host
+   * @param port
+   * @return
+   * @throws IOException
+   */
+  private ViewConnection createViewConn(String host, int port) throws IOException {
     CouchbaseConnectionFactory cf = new CouchbaseConnectionFactory(
       Arrays.asList(
-        URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")
+        URI.create("http://" + host + ":"+port+"/pools")
       ),
       "default",
       ""
@@ -66,10 +81,48 @@ public class ViewConnectionTest {
     );
 
     ViewConnection vconn = cf.createViewConnection(addrs);
-    assertFalse(vconn.getConnectedNodes().isEmpty());
-    vconn.shutdown();
-    assertTrue(vconn.getConnectedNodes().isEmpty());
-
+    return vconn;
   }
 
+  /**
+   * This test is performed by having the client connect to a host
+   * which is up, but using a bad port (i.e. not the default 8091)
+   *
+   * @pre  First a new instance is created using URI of invalid port.
+   * @post  The connection should not succeed, after which the connection
+   * nodes are verified to be available or empty.
+   * @throws Exception
+   */
+  @Test
+  public void testViewConnRefused() throws IOException, InterruptedException {
+    try {
+      ViewConnection vconn = createViewConn(TestConfig.IPV4_ADDR,2343);
+      assertTrue(vconn.getConnectedNodes().isEmpty());
+      vconn.shutdown();
+      assertTrue(vconn.getConnectedNodes().isEmpty());
+    } catch (Exception e) {
+      assertFalse(e.getMessage().isEmpty());
+    }
+  }
+
+  /**
+   * This test is performed by having the client connect
+   * to an IP for which no valid host is assigned.
+   *
+   * @pre  First a new instance is created using URI of invalid host.
+   * @post  The connection should not succeed, after which the connection
+   * nodes are verified to be available or empty.
+   * @throws Exception
+   */
+  @Test
+  public void testNetworkUnreachable() throws IOException,InterruptedException {
+    try {
+      ViewConnection vconn = createViewConn("10.34.34.23",8091);
+      assertTrue(vconn.getConnectedNodes().isEmpty());
+      vconn.shutdown();
+      assertTrue(vconn.getConnectedNodes().isEmpty());
+    } catch (Exception e) {
+      assertFalse(e.getMessage().isEmpty());
+    }
+  }
 }
