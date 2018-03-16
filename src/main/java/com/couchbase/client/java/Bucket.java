@@ -445,6 +445,4 @@ public interface Bucket {
 
     Observable<BucketInfo> info();
 
-    Observable<Boolean> close();
-
 }
