@@ -32,10 +32,9 @@ import com.couchbase.client.core.message.config.*;
 import com.couchbase.client.core.message.view.*;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
-import com.couchbase.client.java.CouchbaseAsyncBucket;
+import com.couchbase.client.java.CouchbaseBucket;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.FlushDisabledException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.view.DesignDocument;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
@@ -47,25 +46,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Default implementation of a {@link AsyncBucketManager}.
+ * Default implementation of a {@link BucketManager}.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-public class DefaultAsyncBucketManager implements AsyncBucketManager {
+public class CouchbaseBucketManager implements BucketManager {
 
     private final ClusterFacade core;
     private final String bucket;
     private final String password;
 
-    DefaultAsyncBucketManager(String bucket, String password, ClusterFacade core) {
+    public CouchbaseBucketManager(String bucket, String password, ClusterFacade core) {
         this.bucket = bucket;
         this.password = password;
         this.core = core;
-    }
-
-    public static DefaultAsyncBucketManager create(String bucket, String password, ClusterFacade core) {
-        return new DefaultAsyncBucketManager(bucket, password, core);
     }
 
     @Override
@@ -76,9 +71,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                 @Override
                 public BucketInfo call(BucketConfigResponse response) {
                     try {
-                        return DefaultBucketInfo.create(CouchbaseAsyncBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
+                        return DefaultBucketInfo.create(CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
                     } catch (Exception ex) {
-                        throw new TranscodingException("Could not decode bucket info.", ex);
+                        throw new CouchbaseException("Could not parse bucket info.", ex);
                     }
                 }
             });
@@ -98,14 +93,6 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
             }).flatMap(new Func1<FlushResponse, Observable<? extends Boolean>>() {
                 @Override
                 public Observable<? extends Boolean> call(FlushResponse flushResponse) {
-                    if (flushResponse.status() == ResponseStatus.FAILURE) {
-                        if (flushResponse.content().contains("disabled")) {
-                            return Observable.error(new FlushDisabledException("Flush is disabled for this bucket."));
-                        } else {
-                            return Observable.error(new CouchbaseException("Flush failed because of: "
-                                + flushResponse.content()));
-                        }
-                    }
                     if (flushResponse.isDone()) {
                         return Observable.just(true);
                     }
@@ -132,7 +119,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                 public Observable<DesignDocument> call(GetDesignDocumentsResponse response) {
                     JsonObject converted = null;
                     try {
-                        converted = CouchbaseAsyncBucket.JSON_TRANSCODER.stringToJsonObject(response.content());
+                        converted = CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.content());
                     } catch (Exception e) {
                         throw new TranscodingException("Could not decode design document.", e);
                     }
@@ -172,9 +159,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
             .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
                 @Override
                 public DesignDocument call(GetDesignDocumentResponse response) {
-                    JsonObject converted;
+                    JsonObject converted = null;
                     try {
-                        converted = CouchbaseAsyncBucket.JSON_TRANSCODER.stringToJsonObject(response.content().toString(CharsetUtil.UTF_8));
+                        converted = CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.content().toString(CharsetUtil.UTF_8));
                     } catch (Exception e) {
                         throw new TranscodingException("Could not decode design document.", e);
                     }
@@ -213,7 +200,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     public Observable<DesignDocument> upsertDesignDocument(final DesignDocument designDocument, boolean development) {
         String body = null;
         try {
-            body = CouchbaseAsyncBucket.JSON_TRANSCODER.jsonObjectToString(designDocument.toJsonObject());
+            body = CouchbaseBucket.JSON_TRANSCODER.jsonObjectToString(designDocument.toJsonObject());
         } catch (Exception e) {
             throw new TranscodingException("Could not encode design document: ", e);
         }

@@ -21,23 +21,17 @@
  */
 package com.couchbase.client.java.bucket;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * Provides information about a {@link Bucket}.
+ * Represents information about a bucket.
  *
- * Selected bucket properties are available through explicit getters, the full (raw JSON) response from the server
- * is accessible through the {@link #raw()} method. Note that the response is subject to change across server
- * versions and therefore should be properly checked before being used.
+ * Some bucket properties are accessible over getter methods, the full raw JSON response is accessible through the
+ * {@link #raw()} method.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-@InterfaceStability.Committed
-@InterfaceAudience.Public
 public interface BucketInfo {
 
     /**

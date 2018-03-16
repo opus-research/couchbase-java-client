@@ -21,478 +21,130 @@
  */
 package com.couchbase.client.java.bucket;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.view.DesignDocument;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+import rx.Observable;
 
 /**
- * Provides management capabilities for a {@link Bucket}.
+ * Represents management APIs for a bucket.
  *
- * Operations provided on the {@link BucketManager} can be used to perform administrative tasks which require
- * bucket-level credentials like managing {@link DesignDocument}s or flushing a {@link Bucket}. Access to the
- * underlying {@link AsyncBucketManager} is provided through the {@link #async()} method.
+ * Most common operations involve CRUD operations for design documents and flushing a bucket.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-@InterfaceStability.Committed
-@InterfaceAudience.Public
 public interface BucketManager {
 
     /**
-     * Returns the underlying {@link AsyncBucketManager} for asynchronous execution.
+     * Returns information about the connected bucket.
      *
-     * @return the underlying bucket manager.
+     * @return bucket information.
      */
-    AsyncBucketManager async();
+    Observable<BucketInfo> info();
 
     /**
-     * Returns information about the connected bucket with the default management timeout.
+     * Flushes the bucket if enabled.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
-     *
-     * @return bucket information wrapped in a {@link BucketInfo}.
+     * @return true if the bucket was flushed, false otherwise.
      */
-    BucketInfo info();
+    Observable<Boolean> flush();
 
     /**
-     * Returns information about the connected bucket with a custom timeout.
+     * Loads all design documents from production.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return bucket information wrapped in a {@link BucketInfo}.
+     * @return all design documents that are published to production.
      */
-    BucketInfo info(long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> getDesignDocuments();
 
     /**
-     * Flushes the bucket (removes all data) with the default management timeout.
+     * Loads all design documents from either production or development.
      *
-     * Note that flushing takes some time on the server to be performed properly, so do not set a too low timeout.
-     * Also, flush needs to be enabled on the bucket, otherwise an exception will be raised.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.FlushDisabledException: If flush is disabled.
-     * - com.couchbase.client.core.CouchbaseException: If the server response could not be parsed.
-     *
-     * @return true if the bucket was flushed, an exception thrown if otherwise.
+     * @param development if development environment should be used instead.
+     * @return all design documents from either production or development.
      */
-    Boolean flush();
+    Observable<DesignDocument> getDesignDocuments(boolean development);
 
     /**
-     * Flushes the bucket (removes all data) with a custom timeout.
+     * Load a single design document from production, identified by its name.
      *
-     * Note that flushing takes some time on the server to be performed properly, so do not set a too low timeout.
-     * Also, flush needs to be enabled on the bucket, otherwise an exception will be raised.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.FlushDisabledException: If flush is disabled.
-     * - com.couchbase.client.core.CouchbaseException: If the server response could not be parsed.
-     *
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return true if the bucket was flushed, an exception thrown if otherwise.
+     * @param name the name of the design document.
+     * @return a design document if found, an empty observable if not found.
      */
-    Boolean flush(long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> getDesignDocument(String name);
 
     /**
-     * Loads all published {@link DesignDocument}s with the default management timeout.
+     * Load a single design document from development or production, identified by its name.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @return a potentially empty list containing published {@link DesignDocument}s.
+     * @param name the name of the design document.
+     * @return a design document if found, an empty observable if not found.
      */
-    List<DesignDocument> getDesignDocuments();
+    Observable<DesignDocument> getDesignDocument(String name, boolean development);
 
     /**
-     * Loads all published {@link DesignDocument}s with a custom timeout.
+     * Insert a design document into production.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return a potentially empty list containing published {@link DesignDocument}s.
+     * @param designDocument the design document to insert.
+     * @return the inserted design document.
      */
-    List<DesignDocument> getDesignDocuments(long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> insertDesignDocument(DesignDocument designDocument);
 
     /**
-     * Loads all {@link DesignDocument}s from either development or production with the default management timeout.
+     * Insert a design document into production or development.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param development if {@link DesignDocument}s should be loaded from development or from production.
-     * @return a potentially empty list containing published {@link DesignDocument}s.
+     * @param designDocument the design document to insert.
+     * @return the inserted design document.
      */
-    List<DesignDocument> getDesignDocuments(boolean development);
+    Observable<DesignDocument> insertDesignDocument(DesignDocument designDocument, boolean development);
 
     /**
-     * Loads all {@link DesignDocument}s from either development or production with a custom timeout.
+     * Upsert a design document into production.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param development if {@link DesignDocument}s should be loaded from development or from production.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return a potentially empty list containing published {@link DesignDocument}s.
+     * @param designDocument the design document to upsert.
+     * @return the inserted design document.
      */
-    List<DesignDocument> getDesignDocuments(boolean development, long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> upsertDesignDocument(DesignDocument designDocument);
 
     /**
-     * Loads a published {@link DesignDocument} by its name with the default management timeout.
+     * Upsert a design document into production or development.
      *
-     * If the {@link DesignDocument} is not found, null is returned.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @return null if the document not found or a {@link DesignDocument}.
+     * @param designDocument the design document to insert.
+     * @return the inserted design document.
      */
-    DesignDocument getDesignDocument(String name);
+    Observable<DesignDocument> upsertDesignDocument(DesignDocument designDocument, boolean development);
 
     /**
-     * Loads a published {@link DesignDocument} by its name with the a custom timeout.
+     * Remove a design document from production.
      *
-     * If the {@link DesignDocument} is not found, null is returned.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return null if the document not found or a {@link DesignDocument}.
+     * @param name the name of the design document.
+     * @return the inserted design document.
      */
-    DesignDocument getDesignDocument(String name, long timeout, TimeUnit timeUnit);
+    Observable<Boolean> removeDesignDocument(String name);
 
     /**
-     * Loads a {@link DesignDocument} by its name from either development or production with the default management
-     * timeout.
+     * Remove a design document from production or development.
      *
-     * If the {@link DesignDocument} is not found, null is returned.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param development if {@link DesignDocument} should be loaded from development or from production.
-     * @return null if the document not found or a {@link DesignDocument}.
+     * @param name the name of the design document.
+     * @return the inserted design document.
      */
-    DesignDocument getDesignDocument(String name, boolean development);
+    Observable<Boolean> removeDesignDocument(String name, boolean development);
 
     /**
-     * Loads a {@link DesignDocument}s by its name from either development or production with a custom timeout.
+     * Publish a design document from development to production, but do not overwrite if it
+     * already exists.
      *
-     * If the {@link DesignDocument} is not found, null is returned.
+     * Throws a DesignDocumentAlreadyExistsException if it does already exist.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param development if {@link DesignDocument} should be loaded from development or from production.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return null if the document not found or a {@link DesignDocument}.
+     * @param name the name of the design document.
+     * @return the published design document.
      */
-    DesignDocument getDesignDocument(String name, boolean development, long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> publishDesignDocument(String name);
 
     /**
-     * Inserts a {@link DesignDocument} into production if it does not exist with the default management timeout.
+     * Publish a design document from development to production, and optionally override it.
      *
-     * Note that inserting a {@link DesignDocument} is not an atomic operation, but instead internally performs a
-     * {@link #getDesignDocument(String)} operation first. While expected to be very uncommon, a race condition may
-     * happen if two users at the same time perform this operation with the same {@link DesignDocument}.
+     * Throws a DesignDocumentAlreadyExistsException if it does already exist and overwriting is disabled.
      *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} exists.
-     *
-     * @param designDocument the {@link DesignDocument} to insert.
-     * @return the inserted {@link DesignDocument} on success.
+     * @param name the name of the design document.
+     * @return the published design document.
      */
-    DesignDocument insertDesignDocument(DesignDocument designDocument);
-
-    /**
-     * Inserts a {@link DesignDocument} into production if it does not exist with a custom timeout.
-     *
-     * Note that inserting a {@link DesignDocument} is not an atomic operation, but instead internally performs a
-     * {@link #getDesignDocument(String)} operation first. While expected to be very uncommon, a race condition may
-     * happen if two users at the same time perform this operation with the same {@link DesignDocument}.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} exists.
-     *
-     * @param designDocument the {@link DesignDocument} to insert.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the inserted {@link DesignDocument} on success.
-     */
-    DesignDocument insertDesignDocument(DesignDocument designDocument, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Inserts a {@link DesignDocument} into development or production if it does not exist with the default
-     * management timeout.
-     *
-     * Note that inserting a {@link DesignDocument} is not an atomic operation, but instead internally performs a
-     * {@link #getDesignDocument(String)} operation first. While expected to be very uncommon, a race condition may
-     * happen if two users at the same time perform this operation with the same {@link DesignDocument}.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} exists.
-     *
-     * @param designDocument the {@link DesignDocument} to insert.
-     * @param development if it should be inserted into development or production (published).
-     * @return the inserted {@link DesignDocument} on success.
-     */
-    DesignDocument insertDesignDocument(DesignDocument designDocument, boolean development);
-
-    /**
-     * Inserts a {@link DesignDocument} into development or production if it does not exist with a custom timeout.
-     *
-     * Note that inserting a {@link DesignDocument} is not an atomic operation, but instead internally performs a
-     * {@link #getDesignDocument(String)} operation first. While expected to be very uncommon, a race condition may
-     * happen if two users at the same time perform this operation with the same {@link DesignDocument}.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} exists.
-     *
-     * @param designDocument the {@link DesignDocument} to insert.
-     * @param development if it should be inserted into development or production (published).
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the inserted {@link DesignDocument} on success.
-     */
-    DesignDocument insertDesignDocument(DesignDocument designDocument, boolean development, long timeout,
-        TimeUnit timeUnit);
-
-    /**
-     * Upserts (inserts or replaces) a {@link DesignDocument} into production with the default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param designDocument the {@link DesignDocument} to upsert.
-     * @return the upserted {@link DesignDocument} on success.
-     */
-    DesignDocument upsertDesignDocument(DesignDocument designDocument);
-
-    /**
-     * Upserts (inserts or replaces) a {@link DesignDocument} into production with a custom timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param designDocument the {@link DesignDocument} to upsert.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the upserted {@link DesignDocument} on success.
-     */
-    DesignDocument upsertDesignDocument(DesignDocument designDocument, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Upserts (inserts or replaces) a {@link DesignDocument} into production or development with the default management
-     * timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param designDocument the {@link DesignDocument} to upsert.
-     * @param development if the {@link DesignDocument} should be upserted into development or production.
-     * @return the upserted {@link DesignDocument} on success.
-     */
-    DesignDocument upsertDesignDocument(DesignDocument designDocument, boolean development);
-
-    /**
-     * Upserts (inserts or replaces) a {@link DesignDocument} into production or development with a custom timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param designDocument the {@link DesignDocument} to upsert.
-     * @param development if the {@link DesignDocument} should be upserted into development or production.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the upserted {@link DesignDocument} on success.
-     */
-    DesignDocument upsertDesignDocument(DesignDocument designDocument, boolean development, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Removes a {@link DesignDocument} from production by its name with the default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @return true if succeeded, false otherwise.
-     */
-    Boolean removeDesignDocument(String name);
-
-    /**
-     * Removes a {@link DesignDocument} from production by its name with a custom timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return true if succeeded, false otherwise.
-     */
-    Boolean removeDesignDocument(String name, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Removes a {@link DesignDocument} from production or development by its name with the default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param development if the {@link DesignDocument} should be removed from development or production.
-     * @return true if succeeded, false otherwise.
-     */
-    Boolean removeDesignDocument(String name, boolean development);
-
-    /**
-     * Removes a {@link DesignDocument} from production or development by its name with a custom timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     *
-     * @param name the name of the {@link DesignDocument}.
-     * @param development if the {@link DesignDocument} should be removed from development or production.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return true if succeeded, false otherwise.
-     */
-    Boolean removeDesignDocument(String name, boolean development, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Publishes a {@link DesignDocument} from development into production with the default management timeout.
-     *
-     * Note that this method does not override a already existing {@link DesignDocument}
-     * (see {@link #publishDesignDocument(String, boolean)}) as an alternative.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} already
-     *   exists.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the  {@link DesignDocument} to publish.
-     * @return the published {@link DesignDocument} on success.
-     */
-    DesignDocument publishDesignDocument(String name);
-
-    /**
-     * Publishes a {@link DesignDocument} from development into production with a custom timeout.
-     *
-     * Note that this method does not override a already existing {@link DesignDocument}
-     * (see {@link #publishDesignDocument(String, boolean)}) as an alternative.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} already
-     *   exists.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the  {@link DesignDocument} to publish.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the published {@link DesignDocument} on success.
-     */
-    DesignDocument publishDesignDocument(String name, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Publishes a {@link DesignDocument} from development into production with the default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} already
-     *   exists and override is set to false.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the  {@link DesignDocument} to publish.
-     * @param overwrite if an existing {@link DesignDocument} should be overridden.
-     * @return the published {@link DesignDocument} on success.
-     */
-    DesignDocument publishDesignDocument(String name, boolean overwrite);
-
-    /**
-     * Publishes a {@link DesignDocument} from development into production with a custom timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentAlreadyExistsException: If the {@link DesignDocument} already
-     *   exists and override is set to false.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     *
-     * @param name the name of the  {@link DesignDocument} to publish.
-     * @param overwrite if an existing {@link DesignDocument} should be overridden.
-     * @param timeout the custom timeout.
-     * @param timeUnit the time unit for the custom timeout.
-     * @return the published {@link DesignDocument} on success.
-     */
-    DesignDocument publishDesignDocument(String name, boolean overwrite, long timeout, TimeUnit timeUnit);
+    Observable<DesignDocument> publishDesignDocument(String name, boolean overwrite);
 }
