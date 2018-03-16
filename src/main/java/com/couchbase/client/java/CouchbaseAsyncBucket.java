@@ -781,6 +781,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<AsyncSearchQueryResult> query(final SearchQuery query) {
         final String indexName = query.indexName();
+        final AbstractFtsQuery queryPart = query.query();
 
         //always set a server side timeout. if not explicit, set it to the client side timeout
         if (query.getServerSideTimeout() == null) {
@@ -804,9 +805,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     return DefaultAsyncSearchQueryResult.fromJson(json);
                 } else if (response.status() == ResponseStatus.INVALID_ARGUMENTS) {
                     return DefaultAsyncSearchQueryResult.fromHttp400(response.payload());
-                } else if (response.status() == ResponseStatus.FAILURE) {
-                    //TODO for now only HTTP 412 can lead to FAILURE in search, will need to keep the HTTP code in the future
-                    return DefaultAsyncSearchQueryResult.fromHttp412();
                 } else {
                     throw new CouchbaseException("Could not query search index, " + response.status() + ": " + response.payload());
                 }

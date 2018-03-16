@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.search;
 
-import com.couchbase.client.core.CouchbaseException;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
 /**
- * An exception denoting that the search engine couldn't satisfy an FTS request with
- * consistency before the specified timeout.
+ * An enum listing the various consistency levels for FTS searches
+ * that don't need additional parameters (like a mutation token vector).
  *
  * @author Simon Baslé
  * @since 2.3
  */
-public class FtsConsistencyTimeoutException extends CouchbaseException {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public enum ScanConsistency {
 
-    public FtsConsistencyTimeoutException() {
-        super("The requested consistency level could not be satisfied before the timeout was reached");
-    }
+    NOT_BOUNDED;
+    //TODO in Spock, add REQUEST_PLUS
 }

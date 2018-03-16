@@ -16,7 +16,6 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
-import com.couchbase.client.core.env.WaitStrategyFactory;
 import com.couchbase.client.core.env.resources.ShutdownHook;
 import com.couchbase.client.core.event.EventBus;
 import com.couchbase.client.core.event.consumers.LoggingConsumer;
@@ -500,7 +499,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder requestBufferWaitStrategy(WaitStrategyFactory waitStrategy) {
+        public Builder requestBufferWaitStrategy(WaitStrategy waitStrategy) {
             super.requestBufferWaitStrategy(waitStrategy);
             return this;
         }

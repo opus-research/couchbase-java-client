@@ -91,49 +91,6 @@ public class SearchParamsTest {
     }
 
     @Test
-    public void shouldHaveHighlightButNoStyleWhenServerDefault() {
-        SearchQuery p = new SearchQuery(null, null)
-            .highlight(HighlightStyle.SERVER_DEFAULT);
-        JsonObject result = JsonObject.empty();
-        p.injectParams(result);
-
-        JsonObject expected = JsonObject.create()
-            .put("highlight", JsonObject.empty());
-        assertEquals(expected, result);
-    }
-
-    @Test
-    public void testHighlightWithoutParamHasServerDefaultStyle() {
-        SearchQuery a = new SearchQuery(null, null)
-            .highlight(HighlightStyle.SERVER_DEFAULT);
-        SearchQuery b = new SearchQuery(null, null).highlight();
-
-        JsonObject resultA = JsonObject.create();
-        a.injectParams(resultA);
-        JsonObject resultB = JsonObject.create();
-        b.injectParams(resultB);
-
-        assertEquals(resultA, resultB);
-    }
-
-    @Test
-    public void testHighlightWithFieldsOnlyHasServerDefaultStyle() {
-        SearchQuery a = new SearchQuery(null, null)
-            .highlight(HighlightStyle.SERVER_DEFAULT, "foo", "bar");
-        SearchQuery b = new SearchQuery(null, null).highlight("foo", "bar");
-
-        JsonObject resultA = JsonObject.create();
-        a.injectParams(resultA);
-        JsonObject resultB = JsonObject.create();
-        b.injectParams(resultB);
-        JsonObject expected = JsonObject.create()
-            .put("highlight", JsonObject.create().put("fields", JsonArray.from("foo", "bar")));
-
-        assertEquals(expected, resultA);
-        assertEquals(resultA, resultB);
-    }
-
-    @Test
     public void shouldInjectHighlightStyle() {
         SearchQuery p = new SearchQuery(null, null)
             .highlight(HighlightStyle.HTML);
@@ -378,7 +335,7 @@ public class SearchParamsTest {
     @Test
     public void shouldInjectEmptyConsistencyLevel() {
         SearchQuery p = new SearchQuery(null, null)
-                .searchConsistency(SearchConsistency.NOT_BOUNDED);
+                .scanConsistency(ScanConsistency.NOT_BOUNDED);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -422,7 +379,7 @@ public class SearchParamsTest {
 
         SearchQuery p = new SearchQuery(null, null)
                 .consistentWith(doc1, doc2)
-                .searchConsistency(SearchConsistency.NOT_BOUNDED);
+                .scanConsistency(ScanConsistency.NOT_BOUNDED);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -442,7 +399,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .searchConsistency(SearchConsistency.NOT_BOUNDED)
+                .scanConsistency(ScanConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -466,7 +423,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .searchConsistency(SearchConsistency.NOT_BOUNDED)
+                .scanConsistency(ScanConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -489,7 +446,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .searchConsistency(SearchConsistency.NOT_BOUNDED)
+                .scanConsistency(ScanConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);

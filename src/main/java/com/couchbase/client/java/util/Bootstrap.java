@@ -56,14 +56,8 @@ public class Bootstrap {
      */
     private static final String DEFAULT_DNS_SECURE_SERVICE = "_couchbases._tcp.";
 
-    public static final void setDnsEnvParameter(String key, String value) {
-        DNS_ENV.put(key, value);
-    }
-
-    private Bootstrap() {}
-
     /**
-     * Fetch a bootstrap list from DNS SRV using default OS name resolution.
+     * Fetch a bootstrap list from DNS SRV.
      *
      * @param serviceName the DNS SRV locator.
      * @param full if the service name is the full one or needs to be enriched by the couchbase prefixes.
@@ -72,36 +66,13 @@ public class Bootstrap {
      * @throws NamingException if something goes wrong during the load process.
      */
     public static List<String> fromDnsSrv(final String serviceName, boolean full, boolean secure) throws NamingException {
-        return fromDnsSrv(serviceName, full, secure, null);
-    }
-
-    /**
-     * Fetch a bootstrap list from DNS SRV using a specific nameserver IP.
-     *
-     * @param serviceName the DNS SRV locator.
-     * @param full if the service name is the full one or needs to be enriched by the couchbase prefixes.
-     * @param secure if the secure service prefix should be used.
-     * @param nameServerIP an IPv4 for the name server to use for SRV resolution.
-     * @return a list of DNS SRV records.
-     * @throws NamingException if something goes wrong during the load process.
-     */
-    public static List<String> fromDnsSrv(final String serviceName, boolean full, boolean secure,
-            String nameServerIP) throws NamingException {
         String fullService;
         if (full) {
             fullService = serviceName;
         } else {
             fullService = (secure ? DEFAULT_DNS_SECURE_SERVICE : DEFAULT_DNS_SERVICE) + serviceName;
         }
-
-        DirContext ctx;
-        if (nameServerIP == null || nameServerIP.isEmpty()) {
-            ctx = new InitialDirContext(DNS_ENV);
-        } else {
-            Hashtable<String, String> finalEnv = new Hashtable<String, String>(DNS_ENV);
-            finalEnv.put("java.naming.provider.url", "dns://" + nameServerIP);
-            ctx = new InitialDirContext(finalEnv);
-        }
+        DirContext ctx = new InitialDirContext(DNS_ENV);
         return loadDnsRecords(fullService, ctx);
     }
 

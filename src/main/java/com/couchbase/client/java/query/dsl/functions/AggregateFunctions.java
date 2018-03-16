@@ -39,8 +39,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 @InterfaceAudience.Public
 public class AggregateFunctions {
 
-    private AggregateFunctions() {}
-
     /**
      * Returned expression results in a array of the non-MISSING values in the group, including NULLs.
      */

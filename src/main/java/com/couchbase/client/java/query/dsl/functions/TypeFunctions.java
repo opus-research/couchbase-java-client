@@ -31,8 +31,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 @InterfaceAudience.Public
 public class TypeFunctions {
 
-    private TypeFunctions() {}
-
     //===== TYPE CHECKING FUNCTIONS =====
 
     /**
