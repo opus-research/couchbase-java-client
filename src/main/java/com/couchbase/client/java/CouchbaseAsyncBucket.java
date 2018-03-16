@@ -21,9 +21,15 @@
  */
 package com.couchbase.client.java;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.lang.Tuple2;
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.kv.AppendRequest;
@@ -48,6 +54,13 @@ import com.couchbase.client.core.message.kv.UnlockRequest;
 import com.couchbase.client.core.message.kv.UnlockResponse;
 import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
+import com.couchbase.client.core.message.kv.subdoc.multi.LookupResult;
+import com.couchbase.client.core.message.kv.subdoc.multi.MultiLookupResponse;
+import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiLookupRequest;
+import com.couchbase.client.core.message.kv.subdoc.simple.SimpleSubdocResponse;
+import com.couchbase.client.core.message.kv.subdoc.simple.SubExistRequest;
+import com.couchbase.client.core.message.kv.subdoc.simple.SubGetRequest;
 import com.couchbase.client.core.message.observe.Observe;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
@@ -58,6 +71,8 @@ import com.couchbase.client.java.bucket.ReplicaReader;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
+import com.couchbase.client.java.document.subdoc.DocumentFragment;
+import com.couchbase.client.java.document.subdoc.LookupSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
@@ -67,6 +82,7 @@ import com.couchbase.client.java.error.DurabilityException;
 import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
+import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
@@ -94,10 +110,6 @@ import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.functions.Func0;
 import rx.functions.Func1;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 public class CouchbaseAsyncBucket implements AsyncBucket {
 
@@ -1214,6 +1226,191 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             }
         });
     }
+
+    /*---------------------------*
+     * START OF SUB-DOCUMENT API *
+     *---------------------------*/
+    public <T> Observable<DocumentFragment<T>> getIn(final String id, final String path, final Class<T> fragmentType) {
+        return Observable.defer(new Func0<Observable<SimpleSubdocResponse>>() {
+            @Override
+            public Observable<SimpleSubdocResponse> call() {
+                SubGetRequest request = new SubGetRequest(id, path, bucket);
+                return core.send(request);
+            }
+        }).filter(new Func1<SimpleSubdocResponse, Boolean>() {
+            @Override
+            public Boolean call(SimpleSubdocResponse response) {
+                if (response.status().isSuccess()) {
+                    return true;
+                }
+
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
+                }
+
+                switch(response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException("Document not found for subdoc API: " + id);
+                    case SUBDOC_PATH_NOT_FOUND:
+                        return false;
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    //TODO subdoc specifics
+                    case SUBDOC_DOC_NOT_JSON:
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        }).map(new Func1<SimpleSubdocResponse, DocumentFragment<T>>() {
+            @Override
+            public DocumentFragment<T> call(SimpleSubdocResponse response) {
+                try {
+                    T content = (T) JSON_OBJECT_TRANSCODER.byteBufJsonValueToObject(response.content());
+                    return new DocumentFragment<T>(id, path, content, 0, response.cas(), response.mutationToken());
+                } catch (Exception e) {
+                    throw new TranscodingException("Couldn't decode subget fragment for " + id + "/" + path, e);
+                } finally {
+                    if (response.content() != null) {
+                        response.content().release();
+                    }
+                }
+            }
+        });
+    }
+
+    public Observable<Boolean> existsIn(final String id, final String path) {
+        return Observable.defer(new Func0<Observable<SimpleSubdocResponse>>() {
+            @Override
+            public Observable<SimpleSubdocResponse> call() {
+                SubExistRequest request = new SubExistRequest(id, path, bucket);
+                return core.send(request);
+            }
+        }).map(new Func1<SimpleSubdocResponse, Boolean>() {
+            @Override
+            public Boolean call(SimpleSubdocResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
+                }
+
+                if (response.status().isSuccess()) {
+                    return true;
+                } else if (response.status() == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
+                    return false;
+                }
+
+                switch(response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException("Document not found for subdoc API: " + id);
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    //TODO subdoc specifics
+                    case SUBDOC_DELTA_RANGE:
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
+    }
+
+    @Override
+    public Observable<DocumentFragment<Object>> lookupIn(final String id, final LookupSpec... lookupSpecs) {
+        if (lookupSpecs == null) {
+            throw new NullPointerException("At least one LookupCommand is necessary for lookupIn");
+        }
+        if (lookupSpecs.length == 0) {
+            throw new IllegalArgumentException("At least one LookupCommand is necessary for lookupIn");
+        }
+
+        return Observable.defer(new Func0<Observable<MultiLookupResponse>>() {
+            @Override
+            public Observable<MultiLookupResponse> call() {
+                return core.send(new SubMultiLookupRequest(id, bucket, lookupSpecs));
+            }
+        }).filter(new Func1<MultiLookupResponse, Boolean>() {
+            @Override
+            public Boolean call(MultiLookupResponse response) {
+                if (response.status().isSuccess() || response.status() == ResponseStatus.SUBDOC_MULTI_PATH_FAILURE) {
+                    return true;
+                }
+
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
+                }
+
+                switch(response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException("Document not found for subdoc API: " + id);
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    //TODO subdoc specifics
+                    case SUBDOC_DOC_NOT_JSON:
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        }).flatMap(new Func1<MultiLookupResponse, Observable<DocumentFragment<Object>>>() {
+            @Override
+            public Observable<DocumentFragment<Object>> call(final MultiLookupResponse multiLookupResponse) {
+                return Observable.from(multiLookupResponse.responses())
+                        .map(new Func1<LookupResult, DocumentFragment<Object>>() {
+                            @Override
+                            public DocumentFragment<Object> call(LookupResult lookupResult) {
+                                String path = lookupResult.path();
+                                boolean isExist = lookupResult.operation() == Lookup.EXIST;
+                                boolean success = lookupResult.status().isSuccess();
+
+                                try {
+                                    Object content;
+                                    if (isExist) {
+                                        content = success;
+                                    } else if (success) {
+                                        content = JSON_OBJECT_TRANSCODER.byteBufJsonValueToObject(lookupResult.value());
+                                    } else {
+                                        content = null;//FIXME how to transpose the error?
+                                    }
+                                    return new DocumentFragment<Object>(id, path, content, 0, 0L, null);
+                                } catch (Exception e) {
+                                    throw new TranscodingException("Couldn't decode multi-lookup " +
+                                            lookupResult.operation() + " for " + id + "/" + path, e);
+                                } finally {
+                                    if (lookupResult.value() != null) {
+                                        lookupResult.value().release();
+                                    }
+                                }
+                            }
+                        });
+            }
+        });
+    }
+
+    //    <T> Observable<DocumentFragment<T>> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> insertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> replaceIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> extendIn(DocumentFragment<T> fragment, ExtendDirection direction, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> arrayInsertIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> addUniqueIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+//    <T> Observable<DocumentFragment<T>> removeIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+//    Observable<DocumentFragment<Long>> counterIn(DocumentFragment<Long> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+//
+//    // would look like:
+//    // Observable<DocumentFragment<Object>> found = bucket.lookupIn("doc", get("a.b"), exists("b.c"));
+//    <T> Observable<DocumentFragment<T>> lookupIn(String id, LookupSpec... lookupSpecs);
+//
+//    // would look like:
+//    // JsonDocument result = bucket().mutateIn(JsonDocument.create("doc"), PersistTo.NONE, ReplicateTo.NONE, upsert("a.b", JsonObject.empty(), false), replace("b.c", false));
+//    Observable<JsonDocument> mutateIn(JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo, MutationSpec... mutationSpecs);
+    /*-------------------------*
+     * END OF SUB-DOCUMENT API *
+     *-------------------------*/
 
     @Override
     public Observable<Boolean> close() {
