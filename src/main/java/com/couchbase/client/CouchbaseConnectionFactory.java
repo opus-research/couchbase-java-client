@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -101,14 +100,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private volatile boolean needsReconnect;
   private AtomicBoolean doingResubscribe = new AtomicBoolean(false);
   private volatile long thresholdLastCheck = System.nanoTime();
-  private AtomicInteger configThresholdCount = new AtomicInteger(0);
+  private volatile int configThresholdCount = 0;
   private final int maxConfigCheck = 10; //maximum allowed checks before we
                                          // reconnect in a 10 sec interval
   private volatile long configProviderLastUpdateTimestamp;
   private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
   private ExecutorService resubExec = Executors.newSingleThreadExecutor();
-  private long obsPollInterval = 100;
-  private int obsPollMax = 400;
+  private long obsPollInterval = 400;
+  private int obsPollMax = 10;
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, final String password)
@@ -279,13 +278,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private boolean pastReconnThreshold() {
     long currentTime = System.nanoTime();
     if (currentTime - thresholdLastCheck > 100000000) { //if longer than 10 sec
-      configThresholdCount.set(0); // it's been more than 10 sec since last
+      configThresholdCount = 0; // it's been more than 10 sec since last
                                 // tried, so don't try again just yet.
     }
-    configThresholdCount.incrementAndGet();
+    configThresholdCount++;
     thresholdLastCheck = currentTime;
 
-    if (configThresholdCount.get() >= maxConfigCheck) {
+    if (configThresholdCount >= maxConfigCheck) {
       return true;
     }
     return false;

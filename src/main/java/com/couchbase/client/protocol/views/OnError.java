@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,29 +23,16 @@
 package com.couchbase.client.protocol.views;
 
 /**
- * Possible on_error arguments to view queries.
- *
- * See http://www.couchbase.com/docs/couchbase-manual-2.0/couchbase-views-writing-querying-errorcontrol.html
- *
+ * An enum containing the two possible values for the stale
+ * parameter.
  */
 public enum OnError {
-  /**
-   * Stop the processing of the view query when an error occurs and populate the
-   * errors response with details.
-   *
-   */
   STOP {
     public String toString() {
       return "stop";
     }
   },
 
-  /**
-   * Continue processing the query even if errors occur, populating the errors
-   * response at the end of the query response.
-   *
-   * This is the default if no on_error argument is supplied.
-   */
   CONTINUE {
     public String toString() {
       return "continue";

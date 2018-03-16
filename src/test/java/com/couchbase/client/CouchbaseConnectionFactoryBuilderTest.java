@@ -28,18 +28,14 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-/**
- * Test for basic things in the CouchbaseConnectionFactoryBuilder.
- *
- */
 public class CouchbaseConnectionFactoryBuilderTest {
 
-  private List<URI> uris = Arrays.asList(
+  private List<URI> URIs = Arrays.asList(
       URI.create("http://localhost:8091/pools"));
 
   public CouchbaseConnectionFactoryBuilderTest() {
@@ -75,7 +71,7 @@ public class CouchbaseConnectionFactoryBuilderTest {
     assertEquals("Failed to set observe poll interval.", 600L,
       instanceResult.getObsPollInterval());
     assertEquals(instance, instanceResult);
-    instance.buildCouchbaseConnection(uris, "default", "");
+    instance.buildCouchbaseConnection(URIs, "default", "");
   }
 
   /**
@@ -88,9 +84,9 @@ public class CouchbaseConnectionFactoryBuilderTest {
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
     CouchbaseConnectionFactoryBuilder instanceResult
-      = instance.setObsPollMax(maxPoll);
+      = instance.setObsPollMax(40);
     assertEquals(instance, instanceResult);
-    assertEquals(maxPoll, instanceResult.getObsPollMax());
-    instance.buildCouchbaseConnection(uris, "default", "");
+    assertEquals(40, instanceResult.getObsPollMax());
+    instance.buildCouchbaseConnection(URIs, "default", "");
   }
 }

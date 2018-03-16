@@ -123,11 +123,6 @@ public class Query {
     return this;
   }
 
-  public Query setRangeStart(ComplexKey k) {
-    args.put(STARTKEY, k);
-    return this;
-  }
-
   public Query setReduce(boolean reduce) {
     args.put(REDUCE, new Boolean(reduce));
     return this;
