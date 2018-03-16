@@ -13,19 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.cluster.api;
+package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * Marker interface for {@link RestBuilder} and {@link AsyncRestBuilder}.
- * These builder classes can be used to incrementally construct REST API requests and execute
- * them. The execution is synchronous or asynchronous depending on the concrete builder type.
+ * A FTS query that performs a search according to the "query string" syntax.
  *
  * @author Simon Baslé
- * @since 2.3.2
+ * @author Michael Nitschinger
+ * @since 2.3.0
  */
-@InterfaceAudience.Private
 @InterfaceStability.Experimental
-public interface IRestBuilder { }
+@InterfaceAudience.Public
+public class QueryStringQuery extends AbstractFtsQuery {
+
+    private final String query;
+
+    public QueryStringQuery(String query) {
+        super();
+        this.query = query;
+    }
+
+    @Override
+    public QueryStringQuery boost(double boost) {
+        super.boost(boost);
+        return this;
+    }
+
+    @Override
+    protected void injectParams(JsonObject input) {
+        input.put("query", query);
+    }
+}
