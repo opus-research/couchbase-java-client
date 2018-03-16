@@ -26,7 +26,6 @@ import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -92,19 +91,17 @@ public class ViewQueryResponseMapper {
     static class ByteBufToJsonObject implements Func1<ByteBuf, JsonObject> {
 
         @Override
-        public JsonObject call(final ByteBuf input) {
-            if (input == null || input.readableBytes() == 0) {
+        public JsonObject call(final ByteBuf byteBuf) {
+            if (byteBuf == null || byteBuf.readableBytes() == 0) {
                 return JsonObject.empty();
             }
 
             try {
-                return TRANSCODER.byteBufToJsonObject(input);
+                JsonObject decoded = TRANSCODER.byteBufToJsonObject(byteBuf);
+                byteBuf.release();
+                return decoded;
             } catch (Exception e) {
-                throw new TranscodingException("Could not decode View JSON: " + input.toString(CharsetUtil.UTF_8), e);
-            } finally {
-                if (input.refCnt() > 0) {
-                    input.release();
-                }
+                throw new TranscodingException("Could not decode View JSON.", e);
             }
         }
 
