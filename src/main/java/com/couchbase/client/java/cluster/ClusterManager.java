@@ -377,36 +377,6 @@ public interface ClusterManager {
     List<User> getUsers(long timeout, TimeUnit timeUnit);
 
     /**
-     * Get user info in Couchbase with default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
-     *
-     * @return user info
-     */
-    @InterfaceStability.Experimental
-    User getUser(String userid);
-
-
-    /**
-     * Get user info in Couchbase with default management timeout.
-     *
-     * This method throws:
-     *
-     * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
-     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
-     *
-     * @return user info
-     */
-    @InterfaceStability.Experimental
-    User getUser(String userid, long timeout, TimeUnit timeUnit);
-
-
-    /**
      * Returns a new {@link ClusterApiClient} to prepare and perform REST API synchronous requests on this cluster.
      * The requests have a default timeout corresponding to the configured {@link CouchbaseEnvironment#managementTimeout()}.
      *

@@ -23,7 +23,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.auth.PasswordAuthenticator;
-import com.couchbase.client.java.cluster.User;
 import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.cluster.UserSettings;
 import com.couchbase.client.java.util.CouchbaseTestContext;
@@ -72,10 +71,7 @@ public class BucketAndClusterManagerUserTest {
     public void testGetReadOnlyClusterInfoAuth() {
         cluster.clusterManager().info();
         cluster.clusterManager().getBuckets();
-        List<User> users = cluster.clusterManager().getUsers();
-        assert(users.size() > 0);
-        User user = cluster.clusterManager().getUser(username);
-        assert(user.userId().compareTo(username) == 0);
+        cluster.clusterManager().getUsers();
     }
 
     @Test(expected = CouchbaseException.class)
