@@ -52,8 +52,6 @@ public abstract class ViewOperationImpl extends HttpOperationImpl
       ViewResponse vr = null;
       if (status.isSuccess()) {
         vr = parseResult(json);
-      } else {
-        parseError(json, errorcode);
       }
 
       ((ViewCallback) callback).gotData(vr);
@@ -64,9 +62,6 @@ public abstract class ViewOperationImpl extends HttpOperationImpl
     }
     callback.complete();
   }
-
-  protected abstract void parseError(String json, int errorcode)
-    throws ParseException;
 
   protected abstract ViewResponse parseResult(String json)
     throws ParseException;
