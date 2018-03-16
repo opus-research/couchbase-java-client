@@ -21,18 +21,42 @@
  */
 package com.couchbase.client.java.transcoder;
 
-import com.couchbase.client.core.lang.Tuple2;
-import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.java.document.Document;
+import org.junit.Test;
 
-public interface Transcoder<D extends Document<T>, T> {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-    D decode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status);
+/**
+ * Verifies the functionality of {@link TranscoderUtils}.
+ *
+ * @author Michael Nitschinger
+ * @since 2.0
+ */
+public class TranscoderUtilsTest {
 
-    Tuple2<ByteBuf, Integer> encode(D document);
+    @Test
+    public void testHasCommonFlags() {
+        assertFalse(TranscoderUtils.hasCommonFlags(4));
+        assertTrue(TranscoderUtils.hasCommonFlags(4 << 24));
+    }
 
-    D newDocument(String id, int expiry, T content, long cas);
+    @Test
+    public void testExtractCommonFlags() {
+        assertEquals(4, TranscoderUtils.extractCommonFlags(4 << 24));
+    }
 
-    Class<D> documentType();
+    @Test
+    public void testCreateCommonFlags() {
+        assertEquals(2 << 24, TranscoderUtils.createCommonFlags(2));
+    }
+
+    @Test
+    public void testHasJsonFlags() {
+        assertTrue(TranscoderUtils.hasJsonFlags(0));
+        assertTrue(TranscoderUtils.hasJsonFlags(2 << 24));
+        assertFalse(TranscoderUtils.hasJsonFlags(1));
+        assertFalse(TranscoderUtils.hasJsonFlags(4 << 24));
+    }
+
 }

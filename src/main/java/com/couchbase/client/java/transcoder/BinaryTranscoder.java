@@ -21,18 +21,37 @@
  */
 package com.couchbase.client.java.transcoder;
 
+import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.java.document.BinaryDocument;
+import com.couchbase.client.java.error.TranscodingException;
 
-public interface Transcoder<D extends Document<T>, T> {
+public class BinaryTranscoder extends AbstractTranscoder<BinaryDocument, ByteBuf> {
 
-    D decode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status);
+    @Override
+    protected BinaryDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags,
+        ResponseStatus status) throws Exception {
+        if (!TranscoderUtils.hasBinaryFlags(flags)) {
+            throw new TranscodingException("Flags (0x" + Integer.toHexString(flags) + ") indicate non-binary " +
+                "document for id " + id + ", could not decode.");
+        }
+        return BinaryDocument.create(id, expiry, content, cas);
+    }
 
-    Tuple2<ByteBuf, Integer> encode(D document);
+    @Override
+    protected Tuple2<ByteBuf, Integer> doEncode(BinaryDocument document) throws Exception {
+        return Tuple.create(document.content(), TranscoderUtils.BINARY_COMPAT_FLAGS);
+    }
 
-    D newDocument(String id, int expiry, T content, long cas);
+    @Override
+    public BinaryDocument newDocument(String id, int expiry, ByteBuf content, long cas) {
+        return BinaryDocument.create(id, expiry, content, cas);
+    }
 
-    Class<D> documentType();
+    @Override
+    public Class<BinaryDocument> documentType() {
+        return BinaryDocument.class;
+    }
 }

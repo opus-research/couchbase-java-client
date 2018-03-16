@@ -22,8 +22,8 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.LegacyDocument;
-import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
@@ -148,13 +148,13 @@ public class BinaryTest extends ClusterDependentTest {
 
     @Test
     public void shouldIncrementFromCounter() throws Exception {
-        LongDocument doc1 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
+        JsonLongDocument doc1 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
         assertEquals(0L, (long) doc1.content());
 
-        LongDocument doc2 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
+        JsonLongDocument doc2 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
         assertEquals(10L, (long) doc2.content());
 
-        LongDocument doc3 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
+        JsonLongDocument doc3 = bucket().counter("incr-key", 10, 0, 0).toBlocking().single();
         assertEquals(20L, (long) doc3.content());
 
         assertTrue(doc1.cas() != doc2.cas());
@@ -163,13 +163,13 @@ public class BinaryTest extends ClusterDependentTest {
 
     @Test
     public void shouldDecrementFromCounter() throws Exception {
-        LongDocument doc1 = bucket().counter("decr-key", -10, 100, 0).toBlocking().single();
+        JsonLongDocument doc1 = bucket().counter("decr-key", -10, 100, 0).toBlocking().single();
         assertEquals(100L, (long) doc1.content());
 
-        LongDocument doc2 = bucket().counter("decr-key", -10, 0, 0).toBlocking().single();
+        JsonLongDocument doc2 = bucket().counter("decr-key", -10, 0, 0).toBlocking().single();
         assertEquals(90L, (long) doc2.content());
 
-        LongDocument doc3 = bucket().counter("decr-key", -10, 0, 0).toBlocking().single();
+        JsonLongDocument doc3 = bucket().counter("decr-key", -10, 0, 0).toBlocking().single();
         assertEquals(80L, (long) doc3.content());
 
         assertTrue(doc1.cas() != doc2.cas());
