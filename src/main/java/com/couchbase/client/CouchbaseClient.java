@@ -1271,25 +1271,20 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public <T> OperationFuture<Boolean> set(String key, int exp, T value,
-    PersistTo req, ReplicateTo rep, Transcoder<T> tc) {
+  public OperationFuture<Boolean> set(String key, int exp,
+          Object value, PersistTo req, ReplicateTo rep) {
+
     if(mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
-          + " on memcached type buckets.");
+        + " on memcached type buckets.");
     }
 
-    OperationFuture<Boolean> setOp = set(key, exp, value, tc);
+    OperationFuture<Boolean> setOp = set(key, exp, value);
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return setOp;
     }
 
     return asyncObserveStore(key, setOp, req, rep, "Set", false);
-  }
-
-  @Override
-  public OperationFuture<Boolean> set(String key, int exp,
-    Object value, PersistTo req, ReplicateTo rep) {
-    return set(key, exp, value, req, rep, transcoder);
   }
 
   @Override
@@ -1327,25 +1322,20 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public <T> OperationFuture<Boolean> add(String key, int exp, T value,
-    PersistTo req, ReplicateTo rep, Transcoder<T> tc) {
+  public OperationFuture<Boolean> add(String key, int exp,
+    Object value, PersistTo req, ReplicateTo rep) {
+
     if(mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
-          + " on memcached type buckets.");
+        + " on memcached type buckets.");
     }
 
-    OperationFuture<Boolean> addOp = add(key, exp, value, tc);
+    OperationFuture<Boolean> addOp = add(key, exp, value);
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return addOp;
     }
 
     return asyncObserveStore(key, addOp, req, rep, "Add", false);
-  }
-
-  @Override
-  public OperationFuture<Boolean> add(String key, int exp,
-    Object value, PersistTo req, ReplicateTo rep) {
-    return add(key, exp, value, req, rep, transcoder);
   }
 
   @Override
@@ -1383,25 +1373,20 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public <T> OperationFuture<Boolean> replace(String key, int exp, T value,
-    PersistTo req, ReplicateTo rep, Transcoder<T> tc) {
+  public OperationFuture<Boolean> replace(String key, int exp,
+    Object value, PersistTo req, ReplicateTo rep) {
+
     if(mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
-          + " on memcached type buckets.");
+        + " on memcached type buckets.");
     }
 
-    OperationFuture<Boolean> replaceOp = replace(key, exp, value, tc);
+    OperationFuture<Boolean> replaceOp = replace(key, exp, value);
     if (req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return replaceOp;
     }
 
     return asyncObserveStore(key, replaceOp, req, rep, "Replace", false);
-  }
-
-  @Override
-  public OperationFuture<Boolean> replace(String key, int exp,
-    Object value, PersistTo req, ReplicateTo rep) {
-    return replace(key, exp, value, req, rep, transcoder);
   }
 
   /**
@@ -1511,13 +1496,13 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public <T> CASResponse cas(String key, long cas, int exp, T value, PersistTo req,
-    ReplicateTo rep, Transcoder<T> tc) {
+  public CASResponse cas(String key, long cas, int exp,
+          Object value, PersistTo req, ReplicateTo rep) {
     CASResponse casr = null;
 
     try {
       OperationFuture<CASResponse> casOp = asyncCas(key, cas, exp, value, req,
-          rep, tc);
+        rep);
 
       long timeout = cbConnFactory.getObsTimeout();
       if (req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
@@ -1537,12 +1522,6 @@ public class CouchbaseClient extends MemcachedClient
     } catch (TimeoutException e) {
       throw new OperationTimeoutException("Timeout waiting for value: ", e);
     }
-  }
-
-  @Override
-  public CASResponse cas(String key, long cas, int exp, Object value,
-    PersistTo req, ReplicateTo rep) {
-    return cas(key, cas, exp, value, req, rep, transcoder);
   }
 
   @Override
@@ -1600,19 +1579,21 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public <T> OperationFuture<CASResponse> asyncCas(final String key, long cas, int exp, T value,
-    final PersistTo req, final ReplicateTo rep, Transcoder<T> tc) {
+  public OperationFuture<CASResponse> asyncCas(final String key, long cas,
+    int exp, Object value, final PersistTo req, final ReplicateTo rep) {
+
     if (mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
-          + " on memcached type buckets.");
+        + " on memcached type buckets.");
     }
 
-    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, exp, value, tc);
+    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, exp, value,
+      transcoder);
 
     final CountDownLatch latch = new CountDownLatch(1);
     final ObserveFuture<CASResponse> observeFuture =
-        new ObserveFuture<CASResponse>(key, latch, cbConnFactory.getObsTimeout(),
-            executorService);
+      new ObserveFuture<CASResponse>(key, latch, cbConnFactory.getObsTimeout(),
+        executorService);
 
     casOp.addListener(new OperationCompletionListener() {
       @Override
@@ -1632,7 +1613,7 @@ public class CouchbaseClient extends MemcachedClient
         }
 
         if((casr != CASResponse.OK)
-            || (req == PersistTo.ZERO && rep == ReplicateTo.ZERO)) {
+          || (req == PersistTo.ZERO && rep == ReplicateTo.ZERO)) {
           latch.countDown();
           observeFuture.signalComplete();
           return;
@@ -1643,13 +1624,13 @@ public class CouchbaseClient extends MemcachedClient
           observeFuture.set(casr, future.getStatus());
         } catch (ObservedException e) {
           observeFuture.set(CASResponse.OBSERVE_ERROR_IN_ARGS,
-              new OperationStatus(false, e.getMessage()));
+            new OperationStatus(false, e.getMessage()));
         } catch (ObservedTimeoutException e) {
           observeFuture.set(CASResponse.OBSERVE_TIMEOUT,
-              new OperationStatus(false, e.getMessage()));
+            new OperationStatus(false, e.getMessage()));
         } catch (ObservedModifiedException e) {
           observeFuture.set(CASResponse.OBSERVE_MODIFIED,
-              new OperationStatus(false, e.getMessage()));
+            new OperationStatus(false, e.getMessage()));
         }
 
         latch.countDown();
@@ -1658,12 +1639,6 @@ public class CouchbaseClient extends MemcachedClient
     });
 
     return observeFuture;
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, PersistTo req, ReplicateTo rep) {
-    return asyncCas(key, cas, exp, value, req, rep, transcoder);
   }
 
   private Map<MemcachedNode, ObserveResponse> observe(final String key,
