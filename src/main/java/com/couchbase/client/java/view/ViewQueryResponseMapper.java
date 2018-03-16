@@ -218,7 +218,7 @@ public class ViewQueryResponseMapper {
             Observable<AsyncViewRow> rows = response
                 .rows()
                 .map(new ByteBufToJsonObject())
-                .concatMap(new Func1<JsonObject, Observable<AsyncViewRow>>() {
+                .flatMap(new Func1<JsonObject, Observable<AsyncViewRow>>() {
                     @Override
                     public Observable<AsyncViewRow> call(final JsonObject row) {
                         final String id = row.getString("id");
