@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.ops.OperationStatus;
 
@@ -64,6 +67,7 @@ import static org.junit.Assert.assertTrue;
  * A CouchbaseClientTest.
  */
 public class ViewTest {
+
   protected TestingClient client = null;
   private static final String SERVER_URI = "http://" + TestConfig.IPV4_ADDR
       + ":8091/pools";
@@ -171,13 +175,21 @@ public class ViewTest {
   }
 
   @Test
-  public void testQueryWithDocs() throws Exception {
+  public void testQueryWithDocs() {
     Query query = new Query();
     query.setReduce(false);
     query.setIncludeDocs(true);
+    query.setStale(Stale.FALSE);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future = client.asyncQuery(view, query);
-    ViewResponse response = future.get();
+    ViewResponse response=null;
+    try {
+      response = future.get();
+    } catch (ExecutionException ex) {
+      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (InterruptedException ex) {
+      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
+    }
     assert future.getStatus().isSuccess() : future.getStatus();
 
     Iterator<ViewRow> itr = response.iterator();
@@ -214,6 +226,7 @@ public class ViewTest {
   public void testReduce() throws Exception {
     Query query = new Query();
     query.setReduce(true);
+    query.setStale(Stale.FALSE);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future =
         client.asyncQuery(view, query);
@@ -554,6 +567,7 @@ public class ViewTest {
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     Query query = new Query();
     query.setReduce(false);
+    query.setStale(Stale.FALSE);
     Paginator op = client.paginatedQuery(view, query, 10);
 
     int count = 0;
