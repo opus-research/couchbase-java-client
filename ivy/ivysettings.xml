@@ -1,5 +1,5 @@
 <!--
-  Copyright (c) 2009-2011  Couchbase, Inc.
+  Copyright (c) 2009-2012  Couchbase, Inc.
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of
   this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,7 @@
   -->
 
 <ivysettings>
+
   <property name="repo.maven.org" value="http://repo1.maven.org/maven2/"
     override="false"/>
   <property name="ibiblio.maven.org" value="http://www.ibiblio.org/maven2/"
@@ -39,13 +40,18 @@
   <settings defaultResolver="default"/>
 
   <resolvers>
+
+    <filesystem name="share-m2" m2compatible="true">
+      <artifact pattern="${user.home}/mvn-stage/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"/>
+    </filesystem>
+
     <chain name="default">
       <ibiblio name="maven2" root="${repo.maven.org}"
         pattern="${maven2.pattern.ext}" m2compatible="true"/>
       <ibiblio name="ibiblio" root="${ibiblio.maven.org}"
         pattern="${maven2.pattern.ext}" m2compatible="true"/>
-      <ibiblio name="couchbase-maven" root="${repo.couchbase}"
-        pattern="${maven2.pattern.ext}" m2compatible="true"/>
+      <!--<ibiblio name="couchbase-maven" root="${repo.couchbase}"
+        pattern="${maven2.pattern.ext}" m2compatible="true"/>-->
       <filesystem name="local-maven2" m2compatible="true" >
         <ivy pattern="${local-maven2-pattern}"/>
         <artifact pattern="${local-maven2-pattern}"/>
