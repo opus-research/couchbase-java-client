@@ -30,7 +30,7 @@ version=$2
 specifiedgithash=$3
 echo $2
 
-outputdir=${buildroot}/src/com/couchbase/client
+outputdir=${buildroot}/src/net/spy/memcached
 buildinfofile=${outputdir}/BuildInfo.java
 changesfile=${outputdir}/changelog.txt
 
