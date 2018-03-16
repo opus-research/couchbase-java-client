@@ -169,11 +169,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<ClusterFacade> core() {
-        return Observable.just(core);
-    }
-
-    @Override
     public Observable<JsonDocument> get(final String id) {
         return get(id, JsonDocument.class);
     }
