@@ -240,7 +240,7 @@ public class BucketMonitor extends Observable {
     HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
       HttpMethod.GET, uri.toASCIIString());
     headers.setHeader(request, HttpHeaders.Names.HOST, h);
-    if (getHttpUser() != null && !getHttpUser().isEmpty()) {
+    if (getHttpUser() != null) {
       String basicAuthHeader;
       try {
         basicAuthHeader =
