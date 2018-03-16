@@ -132,6 +132,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ConnectionString connectionString;
     private final Map<String, AsyncBucket> bucketCache;
     private final boolean sharedEnvironment;
+    private CredentialsManager credentialsManager = new CredentialsManager();
 
     /**
      * Creates a new {@link CouchbaseAsyncCluster} reference against the {@link #DEFAULT_HOST}.
@@ -370,7 +371,18 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             return Observable.just(cachedBucket);
         }
 
-        final String pass = password == null ? "" : password;
+        final String pass;
+        if (password == null) {
+            //Try to get it from credential manager
+            String[][] creds = credentialsManager().getCredentials(AuthenticationContext.BUCKET_KEYVALUE, name);
+            if (creds != null && creds.length == 1 && creds[0] != null && creds[0].length == 2 && creds[0][1] != null) {
+                pass = creds[0][1];
+            } else {
+                pass = "";
+            }
+        } else {
+            pass = password;
+        }
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
             ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
 
@@ -393,6 +405,13 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                     return bucket;
                 }
             })
+//            .doOnNext(new Action1<AsyncBucket>() {
+//                @Override
+//                public void call(AsyncBucket asyncBucket) {
+//                    //verified credentials
+//                    credentialsManager().addBucketCredential(name, password);
+//                }
+//            })
             .onErrorResumeNext(new OpenBucketErrorHandler(name));
     }
 
@@ -442,9 +461,20 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     @Override
     public Observable<AsyncClusterManager> clusterManager(final String username,
         final String password) {
+        this.credentialsManager.addClusterCredentials(username, password);
         return Observable.just(
             (AsyncClusterManager) DefaultAsyncClusterManager.create(
                 username, password, connectionString, environment, core
+            )
+        );
+    }
+
+    @Override
+    public Observable<AsyncClusterManager> clusterManager() {
+        String[][] creds = this.credentialsManager().getCredentials(AuthenticationContext.CLUSTER_MANAGEMENT, null);
+        return Observable.just(
+            (AsyncClusterManager) DefaultAsyncClusterManager.create(
+                creds[0][0], creds[0][1], connectionString, environment, core
             )
         );
     }
@@ -490,5 +520,10 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                 return Observable.error(new CouchbaseException(throwable));
             }
         }
+    }
+
+    @Override
+    public CredentialsManager credentialsManager() {
+        return this.credentialsManager;
     }
 }

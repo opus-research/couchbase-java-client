@@ -329,13 +329,18 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public ClusterManager clusterManager(final String username, final String password) {
+        credentialsManager().addClusterCredentials(username, password);
+        return clusterManager();
+    }
+
+    @Override
+    public ClusterManager clusterManager() {
         return couchbaseAsyncCluster
-            .clusterManager(username, password)
+            .clusterManager()
             .map(new Func1<AsyncClusterManager, ClusterManager>() {
                 @Override
                 public ClusterManager call(AsyncClusterManager asyncClusterManager) {
-                    return DefaultClusterManager.create(username, password, connectionString,
-                        environment, core());
+                    return DefaultClusterManager.create(asyncClusterManager, environment);
                 }
             })
             .toBlocking()
@@ -366,5 +371,10 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ClusterFacade core() {
         return couchbaseAsyncCluster.core().toBlocking().single();
+    }
+
+    @Override
+    public CredentialsManager credentialsManager() {
+        return couchbaseAsyncCluster.credentialsManager();
     }
 }

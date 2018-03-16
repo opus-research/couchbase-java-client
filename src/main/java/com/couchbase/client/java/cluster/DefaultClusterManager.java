@@ -21,9 +21,18 @@ public class DefaultClusterManager implements ClusterManager {
         this.timeout = environment.managementTimeout();
     }
 
+    DefaultClusterManager(AsyncClusterManager asyncClusterManager, CouchbaseEnvironment environment) {
+        this.asyncClusterManager = asyncClusterManager;
+        this.timeout = environment.managementTimeout();
+    }
+
     public static DefaultClusterManager create(final String username, final String password,
                                                final ConnectionString connectionString, final CouchbaseEnvironment environment, final ClusterFacade core) {
         return new DefaultClusterManager(username, password, connectionString, environment, core);
+    }
+
+    public static DefaultClusterManager create(AsyncClusterManager asyncClusterManager, CouchbaseEnvironment env) {
+        return new DefaultClusterManager(asyncClusterManager, env);
     }
 
     @Override

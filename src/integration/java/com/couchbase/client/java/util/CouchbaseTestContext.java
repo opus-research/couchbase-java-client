@@ -447,6 +447,11 @@ public class CouchbaseTestContext {
         return cluster;
     }
 
+    /** @return the seedNode string to be used for tests in this context. */
+    public String seedNode() {
+        return seedNode;
+    }
+
     /** @return the {@link ClusterManager} to be used for tests in this context. */
     public ClusterManager clusterManager() {
         return clusterManager;
