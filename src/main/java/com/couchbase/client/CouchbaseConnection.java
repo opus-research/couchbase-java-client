@@ -39,32 +39,29 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
 
 /**
- * Couchbase implementation of CouchbaseConnection.
+ * Maintains connections to each node in a cluster of Couchbase Nodes.
  *
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
   Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
-  private final CouchbaseConnectionFactory cf;
 
-  public CouchbaseConnection(int bufSize, ConnectionFactory f,
-      List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
-      FailureMode fm, OperationFactory opfactory) throws IOException {
-    super(bufSize, f, a, obs, fm, opfactory);
+  public CouchbaseConnection(CouchbaseConnectionFactory cf,
+      List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
+    throws IOException {
+    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(),
+        cf.getOperationFactory());
   }
-
 
   public void reconfigure(Bucket bucket) {
     reconfiguring = true;
@@ -161,7 +158,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         this.getLogger().warn(
             "Could not redistribute "
                 + "to another node, retrying primary node for %s.", key);
-        cf.checkConfigUpdate();
       }
     }
 

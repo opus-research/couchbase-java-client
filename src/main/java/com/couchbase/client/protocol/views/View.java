@@ -20,52 +20,49 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
-
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+package com.couchbase.client.protocol.views;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * Holds information about a view that can be queried in
+ * Couchbase Server.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class View {
+  private final String viewName;
+  private final String designDocumentName;
+  private final String databaseName;
+  private final boolean map;
+  private final boolean reduce;
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  protected View(String dn, String ddn, String vn, boolean m, boolean r) {
+    databaseName = dn;
+    designDocumentName = ddn;
+    viewName = vn;
+    map = m;
+    reduce = r;
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public String getDatabaseName() {
+    return databaseName;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
+  public String getDesignDocumentName() {
+    return designDocumentName;
   }
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public String getViewName() {
+    return viewName;
+  }
+
+  public boolean hasMap() {
+    return map;
+  }
+
+  public boolean hasReduce() {
+    return reduce;
+  }
+
+  public String getURI() {
+    return "/" + databaseName + "/_design/" + designDocumentName + "/_view/"
+        + viewName;
   }
 }

@@ -20,52 +20,47 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
-
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+package com.couchbase.client.protocol.views;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * Holds a row in a view result that contains the fields
+ * key and value.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class ViewRowReduced implements ViewRow {
+  private String key;
+  private String value;
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  public ViewRowReduced(String key, String value) {
+    this.key = parseField(key);
+    this.value = parseField(value);
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+  private String parseField(String field) {
+    if (field != null && field.equals("null")) {
+      return null;
+    } else {
+      return field;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
   }
 
   @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public String getId() {
+    throw new UnsupportedOperationException("Reduced views don't contain "
+        + "document ids");
+  }
+
+  @Override
+  public String getKey() {
+    return key;
+  }
+
+  public String getValue() {
+    return value;
+  }
+
+  @Override
+  public String getDocument() {
+    throw new UnsupportedOperationException("Reduced views don't contain "
+        + "documents");
   }
 }

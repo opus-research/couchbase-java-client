@@ -20,52 +20,18 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import net.spy.memcached.ops.OperationCallback;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * A TestOperation.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
-
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
-
+public interface TestOperation {
   /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
+   * A TestCallback.
    */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  interface TestCallback extends OperationCallback {
+    void getData(String response);
   }
 }
