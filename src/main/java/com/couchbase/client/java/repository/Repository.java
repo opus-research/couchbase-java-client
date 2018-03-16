@@ -21,6 +21,11 @@
  */
 package com.couchbase.client.java.repository;
 
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicaMode;
+import com.couchbase.client.java.ReplicateTo;
+
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,10 +38,65 @@ public interface Repository {
 
     AsyncRepository async();
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    <T> T get(String id, Class<T> documentClass);
+    <T> T get(String id, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+
+    <T> List<T> getFromReplica(String id, ReplicaMode type, Class<T> documentClass);
+    <T> List<T> getFromReplica(String id, ReplicaMode type, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+
+    <T> T getAndLock(String id, int lockTime, Class<T> documentClass);
+    <T> T getAndLock(String id, int lockTime, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+
+    <T> T getAndTouch(String id, int expiry, Class<T> documentClass);
+    <T> T getAndTouch(String id, int expiry, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+
+    boolean exists(String id);
+    boolean exists(String id, long timeout, TimeUnit timeUnit);
+    <T> boolean exists(T document);
+    <T> boolean exists(T document, long timeout, TimeUnit timeUnit);
 
     <T> T upsert(T document);
     <T> T upsert(T document, long timeout, TimeUnit timeUnit);
+    <T> T upsert(T document, PersistTo persistTo);
+    <T> T upsert(T document, PersistTo persistTo, long timeout, TimeUnit timeUnit);
+    <T> T upsert(T document, ReplicateTo replicateTo);
+    <T> T upsert(T document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+    <T> T upsert(T document, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> T upsert(T document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+
+    <T> T insert(T document);
+    <T> T insert(T document, long timeout, TimeUnit timeUnit);
+    <T> T insert(T document, PersistTo persistTo);
+    <T> T insert(T document, PersistTo persistTo, long timeout, TimeUnit timeUnit);
+    <T> T insert(T document, ReplicateTo replicateTo);
+    <T> T insert(T document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+    <T> T insert(T document, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> T insert(T document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+
+    <T> T replace(T document);
+    <T> T replace(T document, long timeout, TimeUnit timeUnit);
+    <T> T replace(T document, PersistTo persistTo);
+    <T> T replace(T document, PersistTo persistTo, long timeout, TimeUnit timeUnit);
+    <T> T replace(T document, ReplicateTo replicateTo);
+    <T> T replace(T document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+    <T> T replace(T document, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> T replace(T document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+
+    <T> T remove(T document);
+    <T> T remove(T document, long timeout, TimeUnit timeUnit);
+    <T> T remove(T document, PersistTo persistTo);
+    <T> T remove(T document, PersistTo persistTo, long timeout, TimeUnit timeUnit);
+    <T> T remove(T document, ReplicateTo replicateTo);
+    <T> T remove(T document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+    <T> T remove(T document, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> T remove(T document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
+    <T> T remove(String id, Class<T> documentClass);
+    <T> T remove(String id, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+    <T> T remove(String id, PersistTo persistTo, Class<T> documentClass);
+    <T> T remove(String id, PersistTo persistTo, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+    <T> T remove(String id, ReplicateTo replicateTo, Class<T> documentClass);
+    <T> T remove(String id, ReplicateTo replicateTo, Class<T> documentClass, long timeout, TimeUnit timeUnit);
+    <T> T remove(String id, PersistTo persistTo, ReplicateTo replicateTo, Class<T> documentClass);
+    <T> T remove(String id, PersistTo persistTo, ReplicateTo replicateTo, Class<T> documentClass, long timeout, TimeUnit timeUnit);
 
 }
