@@ -216,27 +216,43 @@ public class ViewQueryResponseMapper {
             }
 
             Observable<AsyncViewRow> rows = response
-                .rows()
-                .map(new ByteBufToJsonObject())
-                .flatMap(new Func1<JsonObject, Observable<AsyncViewRow>>() {
-                    @Override
-                    public Observable<AsyncViewRow> call(final JsonObject row) {
-                        final String id = row.getString("id");
-
-                        if (query.isIncludeDocs()) {
-                            return bucket.get(id, query.includeDocsTarget()).map(new Func1<Document<?>, AsyncViewRow>() {
-                                @Override
-                                public AsyncViewRow call(Document<?> document) {
-                                    return new DefaultAsyncViewRow(bucket, id, row.get("key"), row.get("value"), document);
-                                }
-                            });
-                        } else {
-                            return Observable.just((AsyncViewRow)
-                                new DefaultAsyncViewRow(bucket, id, row.get("key"), row.get("value"), null)
-                            );
+                    .rows()
+                    .map(new ByteBufToJsonObject()).compose(new Observable.Transformer<JsonObject, AsyncViewRow>() {
+                        @Override
+                        public Observable<AsyncViewRow> call(Observable<JsonObject> jsonObjectObservable) {
+                            DocumentEmitMode mode = query.getDocumentEmitMode();
+                            if (mode == DocumentEmitMode.CONCAT) {
+                                return jsonObjectObservable.concatMap(buildAsyncViewRow());
+                            } else if (mode == DocumentEmitMode.CONCAT_EAGER) {
+                                return jsonObjectObservable.concatMapEager(buildAsyncViewRow());
+                            } else {
+                                return jsonObjectObservable.flatMap(buildAsyncViewRow());
+                            }
                         }
-                    }
-                });
+
+                        private Func1<JsonObject, Observable<AsyncViewRow>> buildAsyncViewRow() {
+                            return new Func1<JsonObject, Observable<AsyncViewRow>>() {
+                                @Override
+                                public Observable<AsyncViewRow> call(final JsonObject row) {
+                                    final String id = row.getString("id");
+
+                                    if (query.isIncludeDocs()) {
+                                        return bucket.get(id, query.includeDocsTarget()).map(new Func1<Document<?>, AsyncViewRow>() {
+                                            @Override
+                                            public AsyncViewRow call(Document<?> document) {
+                                                return new DefaultAsyncViewRow(bucket, id, row.get("key"), row.get("value"), document);
+                                            }
+                                        });
+                                    } else {
+                                        return Observable.just((AsyncViewRow)
+                                                        new DefaultAsyncViewRow(bucket, id, row.get("key"), row.get("value"), null)
+                                        );
+                                    }
+                                }
+                            };
+                        }
+                    });
+
 
             Observable<JsonObject> error = response
                 .error()

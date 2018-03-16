@@ -68,15 +68,17 @@ public class ViewQuery implements Serializable {
 
     private final String design;
     private final String view;
+    private final DocumentEmitMode documentEmitMode;
 
     private boolean development;
     private boolean includeDocs;
     private Class<? extends Document<?>> includeDocsTarget;
     private String keysJson;
 
-    private ViewQuery(String design, String view) {
+    private ViewQuery(String design, String view, DocumentEmitMode documentEmitMode) {
         this.design = design;
         this.view = view;
+        this.documentEmitMode = documentEmitMode;
         params = new String[NUM_PARAMS * 2];
         includeDocs = false;
         includeDocsTarget = null;
@@ -87,10 +89,22 @@ public class ViewQuery implements Serializable {
      *
      * @param design the name of the design document.
      * @param view the name of the view.
+     * @param documentEmitMode the document emission mode.
+     * @return a {@link ViewQuery} DSL.
+     */
+    public static ViewQuery from(String design, String view, DocumentEmitMode documentEmitMode) {
+        return new ViewQuery(design, view, documentEmitMode);
+    }
+
+    /**
+     * Creates an new {@link ViewQuery} with default {@link DocumentEmitMode} FLAT
+     *
+     * @param design the name of the design document.
+     * @param view the name of the view.
      * @return a {@link ViewQuery} DSL.
      */
     public static ViewQuery from(String design, String view) {
-        return new ViewQuery(design, view);
+        return new ViewQuery(design, view, DocumentEmitMode.FLAT);
     }
 
     public ViewQuery development() {
@@ -504,6 +518,10 @@ public class ViewQuery implements Serializable {
 
     public String getView() {
         return view;
+    }
+
+    DocumentEmitMode getDocumentEmitMode() {
+        return documentEmitMode;
     }
 
     /**
