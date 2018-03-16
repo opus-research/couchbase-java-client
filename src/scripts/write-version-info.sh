@@ -72,7 +72,7 @@ public final class BuildInfo extends Properties {
 
   public String toString() {
     StringBuilder sb = new StringBuilder(256);
-    sb.append("Spymemcached ");
+    sb.append("Couchbase Java Client ");
     sb.append(VERSION);
     sb.append("\n\nTree Version: ");
     sb.append(TREE_VERSION);
