@@ -20,37 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.protocol.views;
+package com.couchbase.client.vbucket.provider;
 
-import java.util.Collection;
-import java.util.Map;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.protocol.binary.OperationImpl;
 
-/**
- * Holds the response of a view query where the map and reduce
- * function were called.
- */
-public class ViewResponseReduced extends ViewResponse {
+public class GetConfigOperationImpl extends OperationImpl {
 
-  public ViewResponseReduced(final Collection<ViewRow> rows,
-      final Collection<RowError> errors) {
-    super(rows, errors);
+  private static final byte CMD = (byte) 0xb5;
+
+  public GetConfigOperationImpl(OperationCallback cb) {
+    super(CMD, 0, cb);
   }
 
   @Override
-  public Map<String, Object> getMap() {
-    throw new UnsupportedOperationException("This view doesn't contain "
-        + "documents");
+  public void initialize() {
+    prepareBuffer("", 0, EMPTY_BYTES);
   }
 
   @Override
-  public String toString() {
-    StringBuilder s = new StringBuilder();
-    for (ViewRow r : rows) {
-      s.append(r.getKey());
-      s.append(" : ");
-      s.append(r.getValue());
-      s.append("\n");
-    }
-    return s.toString();
+  protected void decodePayload(byte[] pl) {
+    getCallback().receivedStatus(new OperationStatus(true, new String(pl)));
   }
+
 }
