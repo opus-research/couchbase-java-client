@@ -27,7 +27,6 @@ import com.couchbase.client.internal.ThrottleManager;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
-import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
@@ -35,8 +34,6 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.OperationCallback;
-import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.ReplicaGetOperation;
 import net.spy.memcached.ops.VBucketAware;
 
@@ -53,8 +50,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Maintains connections to each node in a cluster of Couchbase Nodes.
@@ -63,18 +58,10 @@ import java.util.concurrent.TimeUnit;
 public class CouchbaseConnection extends MemcachedConnection  implements
   Reconfigurable {
 
-  /**
-   * The amount in seconds after which a op broadcast is forced to detect
-   * dead connections.
-   */
-  private static final int ALLOWED_IDLE_TIME = 5;
-
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cf;
   private final ThrottleManager throttleManager;
   private final boolean enableThrottling;
-
-  private volatile long lastWrite;
 
   public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
       List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
@@ -90,7 +77,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     } else {
       this.throttleManager = null;
     }
-    updateLastWrite();
   }
 
   public void reconfigure(Bucket bucket) {
@@ -270,7 +256,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         throttleManager.getThrottler(
           (InetSocketAddress)placeIn.getSocketAddress()).throttle();
       }
-      updateLastWrite();
       addOperation(placeIn, o);
     } else {
       assert o.isCancelled() : "No node found for " + key
@@ -305,7 +290,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       node.addOp(o);
       addedQueue.offer(node);
     }
-    updateLastWrite();
     Selector s = selector.wakeup();
     assert s == selector : "Wakeup returned the wrong selector.";
   }
@@ -403,41 +387,4 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     }
   }
 
-  /**
-   * Helper method to centralize updating the last write timestamp.
-   */
-  private void updateLastWrite() {
-    lastWrite = System.nanoTime();
-  }
-
-  /**
-   * Make sure that if the selector is woken up manually for an extended period
-   * of time that the sockets are still alive.
-   *
-   * <p>This is done by broadcasting a operation so that disconnected sockets
-   * are discovered even when no load is applied.</p>
-   */
-  @Override
-  protected void handleWokenUpSelector() {
-    long diff = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - lastWrite);
-    if (lastWrite > 0 && diff >= ALLOWED_IDLE_TIME) {
-      updateLastWrite();
-      getLogger().debug("Wakeup counter triggered, broadcasting noops.");
-      final OperationFactory fact = cf.getOperationFactory();
-      broadcastOperation(new BroadcastOpFactory() {
-        @Override
-        public Operation newOp(MemcachedNode n, final CountDownLatch latch) {
-          return fact.noop(new OperationCallback() {
-            @Override
-            public void receivedStatus(OperationStatus status) { }
-
-            @Override
-            public void complete() {
-              latch.countDown();
-            }
-          });
-        }
-      });
-    }
-  }
 }
