@@ -22,8 +22,8 @@
 package com.couchbase.client.java.bucket;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.CouchbaseException;
+import com.couchbase.client.core.endpoint.ResponseStatusConverter;
 import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.config.FlushRequest;
@@ -35,7 +35,6 @@ import com.couchbase.client.core.message.kv.UpsertResponse;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.error.FlushDisabledException;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -68,28 +67,27 @@ public class BucketFlusherTest {
     private static final CouchbaseResponse GOOD_FLUSH_RESPONSE = new FlushResponse(true, "", ResponseStatus.SUCCESS);
     private static final CouchbaseResponse PEND_FLUSH_RESPONSE =  new FlushResponse(false, "", ResponseStatus.SUCCESS);
     private static final CouchbaseResponse GOOD_UPSERT_RESPONSE = new UpsertResponse(ResponseStatus.SUCCESS,
-            BINARY_SUCCESS, 0, BUCKET, Unpooled.EMPTY_BUFFER, null, null);
+            BINARY_SUCCESS, 0, BUCKET, Unpooled.EMPTY_BUFFER, null);
 
     @Test
-    @Ignore
     public void shouldFlushBucket() {
-        CouchbaseCore core = mock(CouchbaseCore.class);
+        ClusterFacade core = mock(ClusterFacade.class);
 
         List<ByteBuf> upsertBuffers = new ArrayList<ByteBuf>();
         for (int i = 0; i < BucketFlusher.FLUSH_MARKER_SIZE; i++) {
             upsertBuffers.add(Unpooled.buffer());
         }
         final Iterator<ByteBuf> upsertIterator = upsertBuffers.iterator();
-        when(core.sendHot(isA(UpsertRequest.class))).thenAnswer(new Answer<Observable<CouchbaseResponse>>() {
+        when(core.send(isA(UpsertRequest.class))).thenAnswer(new Answer<Observable<CouchbaseResponse>>() {
             @Override
             public Observable<CouchbaseResponse> answer(InvocationOnMock invocation) throws Throwable {
                 return Observable.just(
                     (CouchbaseResponse) new UpsertResponse(ResponseStatus.SUCCESS, BINARY_SUCCESS, 0, BUCKET,
-                            upsertIterator.next(), null, null)
+                            upsertIterator.next(), null)
                 );
             }
         });
-        when(core.sendHot(isA(FlushRequest.class))).thenReturn(Observable.just(GOOD_FLUSH_RESPONSE));
+        when(core.send(isA(FlushRequest.class))).thenReturn(Observable.just(GOOD_FLUSH_RESPONSE));
 
         Observable<Boolean> flushResult = BucketFlusher.flush(core, BUCKET, PASSWORD);
         assertTrue(flushResult.toBlocking().single());
@@ -97,7 +95,6 @@ public class BucketFlusherTest {
     }
 
     @Test
-    @Ignore
     public void shouldPollIfNotDoneImmediately() {
         ClusterFacade core = mock(ClusterFacade.class);
 
@@ -111,7 +108,7 @@ public class BucketFlusherTest {
             public Observable<CouchbaseResponse> answer(InvocationOnMock invocation) throws Throwable {
                 return Observable.just(
                     (CouchbaseResponse) new UpsertResponse(ResponseStatus.SUCCESS, BINARY_SUCCESS,
-                            0, BUCKET, upsertIterator.next(), null, null)
+                            0, BUCKET, upsertIterator.next(), null)
                 );
             }
         });
@@ -141,7 +138,6 @@ public class BucketFlusherTest {
     }
 
     @Test
-    @Ignore
     public void shouldPollAsLongAsNeeded() {
         ClusterFacade core = mock(ClusterFacade.class);
 
@@ -168,7 +164,6 @@ public class BucketFlusherTest {
     }
 
     @Test(expected = FlushDisabledException.class)
-    @Ignore
     public void shouldFailIfFlushDisabled() {
         ClusterFacade core = mock(ClusterFacade.class);
 
@@ -180,7 +175,6 @@ public class BucketFlusherTest {
     }
 
     @Test(expected = CouchbaseException.class)
-    @Ignore
     public void shouldFailOnOtherError() {
         ClusterFacade core = mock(ClusterFacade.class);
 
