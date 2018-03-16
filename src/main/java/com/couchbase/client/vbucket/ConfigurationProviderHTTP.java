@@ -69,16 +69,16 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    */
   public static final String CLIENT_SPEC_VER = "1.0";
   private volatile List<URI> baseList;
-  private String restUsr;
-  private String restPwd;
+  private final String restUsr;
+  private final String restPwd;
   private URI loadedBaseUri;
 
   private final Map<String, Bucket> buckets =
     new ConcurrentHashMap<String, Bucket>();
 
-  private ConfigurationParser configurationParser =
+  private final ConfigurationParser configurationParser =
     new ConfigurationParserJSON();
-  private Map<String, BucketMonitor> monitors =
+  private final Map<String, BucketMonitor> monitors =
     new HashMap<String, BucketMonitor>();
   private volatile String reSubBucket;
   private volatile Reconfigurable reSubRec;
@@ -90,7 +90,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * @param baseList list of urls to treat as base
    * @throws IOException
    */
-  public ConfigurationProviderHTTP(List<URI> baseList) throws IOException {
+  public ConfigurationProviderHTTP(List<URI> baseList) {
     this(baseList, null, null);
   }
 
@@ -212,7 +212,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
             + " response... skipping");
           continue;
         }
-        Map<String, Pool> pools = this.configurationParser.parseBase(base);
+        Map<String, Pool> pools = this.configurationParser.parsePools(base);
 
         // check for the default pool name
         if (!pools.containsKey(DEFAULT_POOL_NAME)) {
@@ -227,7 +227,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           URLConnection poolConnection = urlConnBuilder(baseUri,
             pool.getUri());
           String poolString = readToString(poolConnection);
-          configurationParser.loadPool(pool, poolString);
+          configurationParser.parsePool(pool, poolString);
           URLConnection poolBucketsConnection = urlConnBuilder(baseUri,
             pool.getBucketsUri());
           String sBuckets = readToString(poolBucketsConnection);
@@ -333,7 +333,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     if (monitor == null) {
       URI streamingURI = bucket.getStreamingURI();
       monitor = new BucketMonitor(this.loadedBaseUri.resolve(streamingURI),
-        bucketName, this.restUsr, this.restPwd, configurationParser);
+        this.restUsr, this.restPwd, configurationParser, this);
       this.monitors.put(bucketName, monitor);
       monitor.addObserver(obs);
       monitor.startMonitor();
