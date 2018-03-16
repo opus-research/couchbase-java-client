@@ -25,6 +25,7 @@ package com.couchbase.client;
 import com.couchbase.client.ViewNode.EventLogger;
 import com.couchbase.client.ViewNode.MyHttpRequestExecutionHandler;
 import com.couchbase.client.http.AsyncConnectionManager;
+import com.couchbase.client.http.RequeueOpCallback;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -41,7 +42,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.compat.SpyThread;
+import net.spy.memcached.compat.SpyObject;
 
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequestInterceptor;
@@ -65,7 +66,7 @@ import org.apache.http.protocol.RequestUserAgent;
  * Couchbase implementation of ViewConnection.
  *
  */
-public class ViewConnection extends SpyThread  implements
+public class ViewConnection extends SpyObject  implements
   Reconfigurable {
   private static final int NUM_CONNS = 1;
 
@@ -88,7 +89,6 @@ public class ViewConnection extends SpyThread  implements
     connObservers.addAll(obs);
     couchNodes = createConnections(addrs);
     nextNode = 0;
-    start();
   }
 
   private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
@@ -123,7 +123,7 @@ public class ViewConnection extends SpyThread  implements
       AsyncConnectionManager connMgr =
           new AsyncConnectionManager(
               new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
-              protocolHandler, params);
+              protocolHandler, params, new RequeueOpCallback(this));
       getLogger().info("Added %s to connect queue", a);
 
       ViewNode node = connFactory.createViewNode(a, connMgr);
@@ -135,34 +135,12 @@ public class ViewConnection extends SpyThread  implements
   }
 
   public void addOp(final HttpOperation op) {
-    couchNodes.get(getNextNode()).addOp(op);
-  }
-
-  public void handleIO() {
-    for (ViewNode node : couchNodes) {
-      node.doWrites();
+    if (couchNodes.isEmpty()) {
+      op.cancel();
+    } else {
+      ViewNode node = couchNodes.get(getNextNode());
+      node.writeOp(op);
     }
-
-    for (ViewNode qa : nodesToShutdown) {
-      nodesToShutdown.remove(qa);
-      Collection<HttpOperation> notCompletedOperations = qa.destroyWriteQueue();
-      try {
-        qa.shutdown();
-      } catch (IOException e) {
-        getLogger().error("Error shutting down connection to "
-            + qa.getSocketAddress());
-      }
-      redistributeOperations(notCompletedOperations);
-    }
-  }
-
-  private void redistributeOperations(Collection<HttpOperation> ops) {
-    int added = 0;
-    for (HttpOperation op : ops) {
-      addOp(op);
-      added++;
-    }
-    assert added > 0 : "Didn't add any new operations when redistributing";
   }
 
   private int getNextNode() {
@@ -173,7 +151,6 @@ public class ViewConnection extends SpyThread  implements
     if (shutDown) {
       throw new IllegalStateException("Shutting down");
     }
-    assert isAlive();
   }
 
   public boolean shutdown() throws IOException {
@@ -186,7 +163,6 @@ public class ViewConnection extends SpyThread  implements
     for (ViewNode n : couchNodes) {
       if (n != null) {
         n.shutdown();
-        interrupt();
         if (n.hasWriteOps()) {
           getLogger().warn("Shutting down with ops waiting to be written");
         }
@@ -235,41 +211,20 @@ public class ViewConnection extends SpyThread  implements
       // call update locator with new nodes list and vbucket config
       couchNodes = mergedNodes;
 
-      // schedule shutdown for the oddNodes
-      nodesToShutdown.addAll(oddNodes);
+      // shutdown for the oddNodes
+      for (ViewNode qa : nodesToShutdown) {
+        try {
+          qa.shutdown();
+        } catch (IOException e) {
+          getLogger().error("Error shutting down connection to "
+              + qa.getSocketAddress());
+        }
+      }
+
     } catch (IOException e) {
       getLogger().error("Connection reconfiguration failed", e);
     } finally {
       reconfiguring = false;
-    }
-  }
-
-  /**
-   * Infinitely loop processing IO.
-   */
-  @Override
-  public void run() {
-    while (running) {
-      if (!reconfiguring) {
-        try {
-          handleIO();
-        } catch (IllegalStateException e) {
-          logRunException(e);
-        } catch (Exception e) {
-          logRunException(e);
-        }
-      }
-    }
-    getLogger().info("Shut down Couchbase client");
-  }
-
-  private void logRunException(Exception e) {
-    if (shutDown) {
-      // There are a couple types of errors that occur during the
-      // shutdown sequence that are considered OK. Log at debug.
-      getLogger().debug("Exception occurred during shutdown", e);
-    } else {
-      getLogger().warn("Problem handling Couchbase IO", e);
     }
   }
 }
