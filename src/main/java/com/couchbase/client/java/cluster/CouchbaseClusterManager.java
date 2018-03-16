@@ -82,7 +82,7 @@ public class CouchbaseClusterManager implements ClusterManager {
                 @Override
                 public ClusterInfo call(ClusterConfigResponse response) {
                     try {
-                        return new DefaultClusterInfo(CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
+                        return new DefaultClusterInfo(CouchbaseBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(response.config()));
                     } catch (Exception e) {
                         throw new CouchbaseException("Could not decode cluster info.", e);
                     }
@@ -103,7 +103,7 @@ public class CouchbaseClusterManager implements ClusterManager {
                 @Override
                 public Observable<BucketSettings> call(BucketsConfigResponse response) {
                     try {
-                        JsonArray decoded = CouchbaseBucket.JSON_TRANSCODER.stringTojsonArray(response.config());
+                        JsonArray decoded = CouchbaseBucket.JSON_ARRAY_TRANSCODER.stringToJsonArray(response.config());
                         List<BucketSettings> settings = new ArrayList<BucketSettings>();
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;
