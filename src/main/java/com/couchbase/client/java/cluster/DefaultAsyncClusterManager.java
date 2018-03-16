@@ -26,7 +26,6 @@ import com.couchbase.client.core.message.internal.AddServiceResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.core.utils.ConnectionString;
-import com.couchbase.client.core.utils.NetworkAddress;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
@@ -514,15 +513,19 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
         return Observable
             .just(connectionString.hosts().get(0).getHostName())
-            .map(new Func1<String, NetworkAddress>() {
+            .map(new Func1<String, InetAddress>() {
                 @Override
-                public NetworkAddress call(String hostname) {
-                    return NetworkAddress.create(hostname);
+                public InetAddress call(String hostname) {
+                    try {
+                        return InetAddress.getByName(hostname);
+                    } catch(UnknownHostException e) {
+                        throw new CouchbaseException(e);
+                    }
                 }
             })
-            .flatMap(new Func1<NetworkAddress, Observable<AddServiceResponse>>() {
+            .flatMap(new Func1<InetAddress, Observable<AddServiceResponse>>() {
                 @Override
-                public Observable<AddServiceResponse> call(final NetworkAddress hostname) {
+                public Observable<AddServiceResponse> call(final InetAddress hostname) {
                     return core
                         .<AddNodeResponse>send(new AddNodeRequest(hostname))
                         .flatMap(new Func1<AddNodeResponse, Observable<AddServiceResponse>>() {
