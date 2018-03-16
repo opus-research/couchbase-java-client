@@ -24,20 +24,11 @@ package com.couchbase.client.java.repository.mapping;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
-
-    private final Map<Class<?>, EntityMetadata> metadataCache;
-
-    public DefaultEntityConverter() {
-        this.metadataCache = new ConcurrentHashMap<Class<?>, EntityMetadata>();
-    }
 
     @Override
     public JsonDocument fromEntity(Object document) {
-        EntityMetadata entityMetadata = metadata(document.getClass());
+        EntityMetadata entityMetadata = new ReflectionBasedEntityMetadata(document.getClass());
 
         if (!entityMetadata.hasIdProperty()) {
             throw new RepositoryMappingException("No Id Field annotated with @Id present.");
@@ -72,7 +63,7 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
     @Override
     public <T> T toEntity(JsonDocument source, Class<T> clazz) {
         try {
-            EntityMetadata entityMetadata = metadata(clazz);
+            EntityMetadata entityMetadata = new ReflectionBasedEntityMetadata(clazz);
 
             T instance = clazz.newInstance(); // for now only support no-args constructor
 
@@ -91,24 +82,6 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
             return instance;
         } catch (Exception e) {
             throw new RepositoryMappingException("Could not instantiate entity.", e);
-        }
-    }
-
-    /**
-     * Helper method to return and cache the entity metadata.
-     *
-     * @param source the source class.
-     * @return the metadata.
-     */
-    private EntityMetadata metadata(final Class<?> source) {
-        EntityMetadata metadata = metadataCache.get(source);
-
-        if (metadata == null) {
-            EntityMetadata generated = new ReflectionBasedEntityMetadata(source);
-            metadataCache.put(source, generated);
-            return generated;
-        } else {
-            return metadata;
         }
     }
 }
