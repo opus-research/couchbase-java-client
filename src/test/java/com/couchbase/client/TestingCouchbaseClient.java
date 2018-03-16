@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,23 @@
 
 package com.couchbase.client;
 
-import net.spy.memcached.ops.OperationCallback;
+import com.couchbase.client.vbucket.Reconfigurable;
+import java.io.IOException;
+import net.spy.memcached.ops.Operation;
 
 /**
- * A TestOperation.
+ * A CouchbaseClient extended to allow direct operation enqueueing for testing.
  */
-public interface TestOperation {
-  /**
-   * A TestCallback.
-   */
-  interface TestCallback extends OperationCallback {
-    void getData(String response);
+public class TestingCouchbaseClient extends CouchbaseClient implements
+  CouchbaseClientIF, Reconfigurable {
+
+  public TestingCouchbaseClient(CouchbaseConnectionFactory cf) throws
+    IOException {
+    super(cf);
   }
+
+  public void enqueueTestOperation(String key, Operation op) {
+    mconn.enqueueOperation(key, op);
+  }
+
 }

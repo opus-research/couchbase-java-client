@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,10 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.http.AsyncConnectionManager;
-
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
+import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
@@ -34,7 +33,10 @@ import com.couchbase.client.vbucket.config.ConfigType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -46,6 +48,7 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
+
 
 /**
  * Couchbase implementation of ConnectionFactory.
@@ -76,19 +79,35 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    * Maximum length of the operation queue returned by this connection factory.
    */
   public static final int DEFAULT_OP_QUEUE_LEN = 16384;
+  /**
+   * Specify a default minimum reconnect interval of 0.5s.
+   * This means that if a reconnect is needed, it won't try to reconnect
+   * more frequently than 0.5s between tries
+   */
+  public static final long DEFAULT_MIN_RECONNECT_INTERVAL = 500;
 
-  private final ConfigurationProvider configurationProvider;
+  private volatile ConfigurationProvider configurationProvider;
   private final String bucket;
   private final String pass;
+  private final List<URI> storedBaseList;
+  private static final Logger LOGGER =
+    Logger.getLogger(CouchbaseConnectionFactory.class.getName());
+  private boolean needsReconnect;
+  private volatile long thresholdLastCheck = System.nanoTime();
+  private volatile int configThresholdCount = 0;
+  private final int maxConfigCheck = 10; //maximum checks in 10 sec interval
+  private volatile long configProviderLastUpdateTimestamp;
+  private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, final String password)
     throws IOException {
-    // ConnectionFactoryBuilder cfb = new ConnectionFactoryBuilder(cf);
+    storedBaseList = new ArrayList<URI>();
     for (URI bu : baseList) {
       if (!bu.isAbsolute()) {
         throw new IllegalArgumentException("The base URI must be absolute");
       }
+      storedBaseList.add(bu);
     }
     bucket = bucketName;
     pass = password;
@@ -96,22 +115,19 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         new ConfigurationProviderHTTP(baseList, bucketName, password);
   }
 
-  public ViewNode createViewNode(InetSocketAddress addr,
-      AsyncConnectionManager connMgr) {
-    return new ViewNode(addr, connMgr, opQueueLen,
-        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
-  }
-
   @Override
-  public MemcachedConnection createConnection(
-      List<InetSocketAddress> addrs) throws IOException {
-    return new CouchbaseConnection(this, addrs, getInitialObservers());
-  }
-
-
-  public ViewConnection createViewConnection(
-      List<InetSocketAddress> addrs) throws IOException {
-    return new ViewConnection(this, addrs, getInitialObservers());
+  public MemcachedConnection createConnection(List<InetSocketAddress> addrs)
+    throws IOException {
+    Config config = getVBucketConfig();
+    if (config.getConfigType() == ConfigType.MEMCACHE) {
+      return new CouchbaseMemcachedConnection(getReadBufSize(), this, addrs,
+        getInitialObservers(), getFailureMode(), getOperationFactory());
+    } else if (config.getConfigType() == ConfigType.COUCHBASE) {
+      return new CouchbaseConnection(getReadBufSize(), this, addrs,
+        getInitialObservers(), getFailureMode(), getOperationFactory());
+    }
+    throw new IOException("No ConnectionFactory for bucket type "
+      + config.getConfigType());
   }
 
   @Override
@@ -123,13 +139,22 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
 
     if (config.getConfigType() == ConfigType.MEMCACHE) {
-      return new KetamaNodeLocator(nodes, getHashAlg());
+      return new KetamaNodeLocator(nodes, DefaultHashAlgorithm.KETAMA_HASH);
     } else if (config.getConfigType() == ConfigType.COUCHBASE) {
       return new VBucketNodeLocator(nodes, getVBucketConfig());
     } else {
       throw new IllegalStateException("Unhandled locator type: "
           + config.getConfigType());
     }
+  }
+
+  /*
+   * (non-Javadoc)
+   *
+   * @see net.spy.memcached.ConnectionFactory#shouldOptimize()
+   */
+  public boolean shouldOptimize() {
+    return false;
   }
 
   public AuthDescriptor getAuthDescriptor() {
@@ -148,6 +173,16 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public Config getVBucketConfig() {
     try {
+      // If we find the config provider associated with this bucket is
+      // disconnected and thus stale, we simply replace the configuration
+      // provider
+      if (configurationProvider.getBucketConfiguration(bucket)
+           .isNotUpdating()) {
+        LOGGER.warning("Noticed bucket configuration to be disconnected, "
+            + "will attempt to reconnect");
+        setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
+          bucket, pass));
+      }
       return configurationProvider.getBucketConfiguration(bucket).getConfig();
     } catch (ConfigurationException e) {
       return null;
@@ -157,4 +192,74 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public ConfigurationProvider getConfigurationProvider() {
     return configurationProvider;
   }
+
+  protected void requestConfigReconnect(String bucketName, Reconfigurable rec) {
+    configurationProvider.markForResubscribe(bucketName, rec);
+    needsReconnect = true;
+  }
+
+  void setConfigurationProvider(ConfigurationProvider configProvider) {
+    this.configProviderLastUpdateTimestamp = System.currentTimeMillis();
+    this.configurationProvider = configProvider;
+  }
+
+  void setMinReconnectInterval(long reconnIntervalMsecs) {
+    this.minReconnectInterval = reconnIntervalMsecs;
+  }
+
+
+  void checkConfigUpdate() {
+    if (needsReconnect || pastReconnThreshold()) {
+
+      long now = System.currentTimeMillis();
+      long intervalWaited = now - this.configProviderLastUpdateTimestamp;
+      if (intervalWaited < this.getMinReconnectInterval()) {
+        LOGGER.log(Level.FINE, "Ignoring config update check.  Only {0}ms out"
+                + " of a threshold of {1}ms since last update.",
+                new Object[]{intervalWaited, this.getMinReconnectInterval()});
+        return;
+      }
+
+      LOGGER.log(Level.INFO,
+                 "Attempting to resubscribe for cluster config updates.");
+      ConfigurationProvider oldConfigProvider = this.configurationProvider;
+      setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
+        bucket, pass));
+      configurationProvider.finishResubscribe();
+
+      // cleanup the old config provider
+      if (null != oldConfigProvider) {
+        oldConfigProvider.shutdown();
+      }
+
+    } else {
+      LOGGER.log(Level.WARNING, "No reconnect required, though check requested."
+              + " Current config check is {0} out of a threshold of {1}.",
+              new Object[]{configThresholdCount, maxConfigCheck});
+    }
+  }
+
+  private boolean pastReconnThreshold() {
+    long currentTime = System.nanoTime();
+    if (currentTime - thresholdLastCheck > 100000000) { //if longer than 10 sec
+      configThresholdCount = 0;
+    }
+    configThresholdCount++;
+    thresholdLastCheck = currentTime;
+
+    if (configThresholdCount >= maxConfigCheck) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Will return the minimum reconnect interval in milliseconds.
+   *
+   * @return the minReconnectInterval
+   */
+  public long getMinReconnectInterval() {
+    return minReconnectInterval;
+  }
+
 }
