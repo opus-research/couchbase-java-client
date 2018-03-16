@@ -184,49 +184,6 @@ public class AsyncLookupInBuilder {
         return this;
     }
 
-
-    /**
-     * Get a value inside the JSON document.
-     *
-     * @param path the path inside the document where to get the value from.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public AsyncLookupInBuilder get(String path, SubdocOptionsBuilder optionsBuilder) {
-        if (path == null) {
-            throw new IllegalArgumentException("Path is mandatory for subdoc get");
-        }
-        if (optionsBuilder.createParents()) {
-            throw new IllegalArgumentException("Options createParents are not supported for lookup");
-        }
-        this.specs.add(new LookupSpec(Lookup.GET, path, optionsBuilder));
-        return this;
-    }
-
-
-    /**
-     * Get a value inside the JSON document.
-     *
-     * @param paths the path inside the document where to get the value from.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public AsyncLookupInBuilder get(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
-        if (paths == null) {
-            throw new IllegalArgumentException("Path is mandatory for subdoc get");
-        }
-        if (optionsBuilder.createParents()) {
-            throw new IllegalArgumentException("Options createParents are not supported for lookup");
-        }
-        for (String path : paths) {
-            if (StringUtil.isNullOrEmpty(path)) {
-                throw new IllegalArgumentException("Path is mandatory for subdoc get");
-            }
-            this.specs.add(new LookupSpec(Lookup.GET, path, optionsBuilder));
-        }
-        return this;
-    }
-
     /**
      * Check if a value exists inside the document (if it does not, attempting to get the
      * {@link DocumentFragment#content(int)} will raise an error).
@@ -248,56 +205,11 @@ public class AsyncLookupInBuilder {
         return this;
     }
 
-    /**
-     * Check if a value exists inside the document (if it does not, attempting to get the
-     * {@link DocumentFragment#content(int)} will raise an error).
-     * This doesn't transmit the value on the wire if it exists, saving the corresponding byte overhead.
-     *
-     * @param path the path inside the document to check for existence.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public AsyncLookupInBuilder exists(String path, SubdocOptionsBuilder optionsBuilder) {
-        if (path == null) {
-            throw new IllegalArgumentException("Path is mandatory for subdoc exists");
-        }
-        if (optionsBuilder.createParents()) {
-            throw new IllegalArgumentException("Options createParents are not supported for lookup");
-        }
-        this.specs.add(new LookupSpec(Lookup.EXIST, path, optionsBuilder));
-        return this;
-    }
-
-    /**
-     * Check if a value exists inside the document (if it does not, attempting to get the
-     * {@link DocumentFragment#content(int)} will raise an error).
-     * This doesn't transmit the value on the wire if it exists, saving the corresponding byte overhead.
-     *
-     * @param paths the path inside the document to check for existence.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public AsyncLookupInBuilder exists(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
-        if (paths == null) {
-            throw new IllegalArgumentException("Path is mandatory for subdoc exists");
-        }
-        if (optionsBuilder.createParents()) {
-            throw new IllegalArgumentException("Options createParents are not supported for lookup");
-        }
-        for (String path : paths) {
-            if (StringUtil.isNullOrEmpty(path)) {
-                throw new IllegalArgumentException("Path is mandatory for subdoc exists");
-            }
-            this.specs.add(new LookupSpec(Lookup.EXIST, path, optionsBuilder));
-        }
-        return this;
-    }
-
     protected Observable<DocumentFragment<Lookup>> doSingleLookup(LookupSpec spec) {
         if (spec.lookup() == Lookup.GET) {
-            return getIn(docId, spec, Object.class);
+            return getIn(docId, spec.path(), Object.class);
         } else if (spec.lookup() == Lookup.EXIST) {
-            return existsIn(docId, spec);
+            return existsIn(docId, spec.path());
         }
         return Observable.error(new UnsupportedOperationException("Lookup type " + spec.lookup() + " unknown"));
     }
@@ -388,12 +300,11 @@ public class AsyncLookupInBuilder {
     }
 
 
-    private <T> Observable<DocumentFragment<Lookup>> getIn(final String id, final LookupSpec spec, final Class<T> fragmentType) {
+    private <T> Observable<DocumentFragment<Lookup>> getIn(final String id, final String path, final Class<T> fragmentType) {
         return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
             public Observable<SimpleSubdocResponse> call() {
-                SubGetRequest request = new SubGetRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                SubGetRequest request = new SubGetRequest(id, path, bucketName);
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -407,9 +318,9 @@ public class AsyncLookupInBuilder {
                             raw = Arrays.copyOfRange(rawData.byteArray, rawData.offset, rawData.offset + rawData.length);
                         }
                         T content = subdocumentTranscoder.decodeWithMessage(response.content(), fragmentType,
-                                "Couldn't decode subget fragment for " + id + "/" + spec.path());
+                                "Couldn't decode subget fragment for " + id + "/" + path);
                         SubdocOperationResult<Lookup> single = SubdocOperationResult
-                                .createResult(spec.path(), Lookup.GET, response.status(), content, raw);
+                                .createResult(path, Lookup.GET, response.status(), content, raw);
                         return new DocumentFragment<Lookup>(id, response.cas(), response.mutationToken(),
                                 Collections.singletonList(single));
                     } finally {
@@ -424,22 +335,21 @@ public class AsyncLookupInBuilder {
 
                     if (response.status() == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
                         SubdocOperationResult<Lookup> single = SubdocOperationResult
-                                .createResult(spec.path(), Lookup.GET, response.status(), null);
+                                .createResult(path, Lookup.GET, response.status(), null);
                         return new DocumentFragment<Lookup>(id, response.cas(), response.mutationToken(), Collections.singletonList(single));
                     } else {
-                        throw SubdocHelper.commonSubdocErrors(response.status(), id, spec.path());
+                        throw SubdocHelper.commonSubdocErrors(response.status(), id, path);
                     }
                 }
             }
         });
     }
 
-    private Observable<DocumentFragment<Lookup>> existsIn(final String id, final LookupSpec spec) {
+    private Observable<DocumentFragment<Lookup>> existsIn(final String id, final String path) {
         return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
             public Observable<SimpleSubdocResponse> call() {
-                SubExistRequest request = new SubExistRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                SubExistRequest request = new SubExistRequest(id, path, bucketName);
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -451,15 +361,15 @@ public class AsyncLookupInBuilder {
 
                 if (response.status().isSuccess()) {
                     SubdocOperationResult<Lookup> result = SubdocOperationResult
-                            .createResult(spec.path(), Lookup.EXIST, response.status(), true);
+                            .createResult(path, Lookup.EXIST, response.status(), true);
                     return new DocumentFragment<Lookup>(docId, response.cas(), response.mutationToken(), Collections.singletonList(result));
                 } else if (response.status() == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
                     SubdocOperationResult<Lookup> result = SubdocOperationResult
-                            .createResult(spec.path(), Lookup.EXIST, response.status(), false);
+                            .createResult(path, Lookup.EXIST, response.status(), false);
                     return new DocumentFragment<Lookup>(docId, response.cas(), response.mutationToken(), Collections.singletonList(result));
                 }
 
-                throw SubdocHelper.commonSubdocErrors(response.status(), id, spec.path());
+                throw SubdocHelper.commonSubdocErrors(response.status(), id, path);
             }
         });
     }

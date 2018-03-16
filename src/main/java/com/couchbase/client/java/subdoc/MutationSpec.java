@@ -34,32 +34,13 @@ public class MutationSpec {
     private final String path;
     private final Object fragment;
     private final boolean createParents;
-    private final boolean attributeAccess;
 
-    @Deprecated
     public MutationSpec(Mutation type, String path, Object fragment, boolean createParents) {
         //TODO check fragment class?
         this.type = type;
         this.path = path;
         this.fragment = fragment;
         this.createParents = createParents;
-        this.attributeAccess = false;
-    }
-
-    public MutationSpec(Mutation type, String path, Object fragment, SubdocOptionsBuilder builder) {
-        this.type = type;
-        this.path = path;
-        this.fragment = fragment;
-        this.createParents = builder.createParents();
-        this.attributeAccess = builder.attributeAccess();
-    }
-
-    public MutationSpec(Mutation type, String path, Object fragment) {
-        this.type = type;
-        this.path = path;
-        this.fragment = fragment;
-        this.createParents = false;
-        this.attributeAccess = false;
     }
 
     /**
@@ -87,14 +68,7 @@ public class MutationSpec {
      * @return true should the mutation create missing intermediary elements in the path (if it supports it).
      */
     public boolean createParents() {
-        return this.createParents;
-    }
-
-    /**
-     * @return true if accessing extended attributes
-     */
-    public boolean attributeAccess() {
-        return this.attributeAccess;
+        return createParents;
     }
 
     @Override
@@ -102,9 +76,6 @@ public class MutationSpec {
         StringBuilder sb = new StringBuilder("{").append(type());
         if (createParents) {
             sb.append(", createParents");
-        }
-        if (attributeAccess) {
-            sb.append(", attributeAccess");
         }
         sb.append(':').append(path()).append('}');
         return sb.toString();
