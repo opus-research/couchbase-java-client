@@ -15,6 +15,13 @@ public class Sort {
         this.ordering = ordering;
     }
 
+    /**
+     * Use default sort, don't specify an order in the resulting expression.
+     */
+    public static Sort def(final String expression) {
+        return new Sort(expression, null);
+    }
+
     public static Sort asc(final String expression) {
         return new Sort(expression, Order.ASC);
     }
@@ -26,7 +33,11 @@ public class Sort {
 
     @Override
     public String toString() {
-        return expression + " " + ordering;
+        if (ordering != null) {
+            return expression + " " + ordering;
+        } else {
+            return expression;
+        }
     }
 
     public static enum Order  {
