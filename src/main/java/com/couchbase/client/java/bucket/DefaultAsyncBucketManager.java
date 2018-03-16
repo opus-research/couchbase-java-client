@@ -353,8 +353,11 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<IndexInfo> listIndexes() {
-        Statement listIndexes = select("idx.*").from(x("system:indexes").as("idx")).where(x("keyspace_id").eq(s(bucket)))
-                .orderBy(Sort.desc("is_primary"), Sort.asc("name"));
+        Expression whereClause = x("keyspace_id").eq(s(bucket))
+                .and(i("using").eq(s("gsi")));
+
+        Statement listIndexes = select("idx.*").from(x("system:indexes").as("idx")).where(whereClause)
+            .orderBy(Sort.desc("is_primary"), Sort.asc("name"));
 
         final Func1<List<JsonObject>, Observable<AsyncN1qlQueryRow>> errorHandler = errorsToThrowable(
                 "Error while listing indexes: ");
@@ -391,6 +394,20 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
         return queryExecutor.execute(N1qlQuery.simple(createIndex))
             .compose(checkIndexCreation(ignoreIfExist, "Error creating primary index"));
+    }
+
+    @Override
+    public Observable<Boolean> createNamedPrimaryIndex(final String customName, final boolean ignoreIfExist, boolean defer) {
+        Statement createIndex;
+        UsingWithPath usingWithPath = Index.createNamedPrimaryIndex(customName).on(bucket);
+        if (defer) {
+            createIndex = usingWithPath.withDefer();
+        } else {
+            createIndex = usingWithPath;
+        }
+
+        return queryExecutor.execute(N1qlQuery.simple(createIndex))
+            .compose(checkIndexCreation(ignoreIfExist, "Error creating custom primary index " + customName));
     }
 
     private static Expression expressionOrIdentifier(Object o) {
@@ -431,6 +448,12 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<Boolean> dropPrimaryIndex(final boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropPrimaryIndex(bucket).using(IndexType.GSI), "Error dropping primary index");
+    }
+
+    @Override
+    public Observable<Boolean> dropNamedPrimaryIndex(String customName, boolean ignoreIfNotExist) {
+        return drop(ignoreIfNotExist, Index.dropNamedPrimaryIndex(bucket, customName).using(IndexType.GSI),
+                "Error dropping custom primary index \"" + customName + "\"");
     }
 
     @Override
