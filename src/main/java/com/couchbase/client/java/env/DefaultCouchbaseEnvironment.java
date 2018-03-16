@@ -23,13 +23,13 @@ package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
-import com.couchbase.client.java.AsyncCluster;
+import com.couchbase.client.java.Cluster;
 import rx.Scheduler;
 
 /**
  * The default implementation of a {@link CouchbaseEnvironment}.
  *
- * This environment is intended to be reused and passed in across {@link AsyncCluster} instances. It is stateful and needs
+ * This environment is intended to be reused and passed in across {@link Cluster} instances. It is stateful and needs
  * to be shut down manually if it was passed in by the user. Some threads it manages are non-daemon threads.
  *
  * Default settings can be customized through the {@link Builder} or through the setting of system properties. Latter
@@ -39,13 +39,6 @@ import rx.Scheduler;
  * @since 2.0
  */
 public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implements CouchbaseEnvironment {
-
-    private static final long MANAGEMENT_TIMEOUT = 0;
-    private static final long QUERY_TIMEOUT = 0;
-    private static final long VIEW_TIMEOUT = 0;
-    private static final long BINARY_TIMEOUT = 0;
-    private static final long CONNECT_TIMEOUT = 0;
-    private static final long DISCONNECT_TIMEOUT = 0;
 
     private DefaultCouchbaseEnvironment(final Builder builder) {
        super(builder);
@@ -69,74 +62,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         return new Builder();
     }
 
-    public static class Builder extends DefaultCoreEnvironment.Builder implements CouchbaseEnvironment {
-
-        private long managementTimeout = MANAGEMENT_TIMEOUT;
-        private long queryTimeout = QUERY_TIMEOUT;
-        private long viewTimeout = VIEW_TIMEOUT;
-        private long binaryTimeout = BINARY_TIMEOUT;
-        private long connectTimeout = CONNECT_TIMEOUT;
-        private long disconnectTimeout = DISCONNECT_TIMEOUT;
-
-        @Override
-        public long managementTimeout() {
-            return managementTimeout;
-        }
-
-        public Builder managementTimeout(long managementTimeout) {
-            this.managementTimeout = managementTimeout;
-            return this;
-        }
-
-        @Override
-        public long queryTimeout() {
-            return queryTimeout;
-        }
-
-        public Builder queryTimeout(long queryTimeout) {
-            this.queryTimeout = queryTimeout;
-            return this;
-        }
-
-        @Override
-        public long viewTimeout() {
-            return viewTimeout;
-        }
-
-        public Builder viewTimeout(long viewTimeout) {
-            this.viewTimeout = viewTimeout;
-            return this;
-        }
-
-        @Override
-        public long binaryTimeout() {
-            return binaryTimeout;
-        }
-
-        public Builder binaryTimeout(long binaryTimeout) {
-            this.binaryTimeout = binaryTimeout;
-            return this;
-        }
-
-        @Override
-        public long connectTimeout() {
-            return connectTimeout;
-        }
-
-        public Builder connectTimeout(long connectTimeout) {
-            this.connectTimeout = connectTimeout;
-            return this;
-        }
-
-        @Override
-        public long disconnectTimeout() {
-            return disconnectTimeout;
-        }
-
-        public Builder disconnectTimeout(long disconnectTimeout) {
-            this.disconnectTimeout = disconnectTimeout;
-            return this;
-        }
+    public static class Builder extends DefaultCoreEnvironment.Builder {
 
         @Override
         public Builder sslEnabled(final boolean sslEnabled) {
@@ -262,35 +188,5 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }
-    }
-
-    @Override
-    public long managementTimeout() {
-        return 0;
-    }
-
-    @Override
-    public long queryTimeout() {
-        return 0;
-    }
-
-    @Override
-    public long viewTimeout() {
-        return 0;
-    }
-
-    @Override
-    public long binaryTimeout() {
-        return 0;
-    }
-
-    @Override
-    public long connectTimeout() {
-        return 0;
-    }
-
-    @Override
-    public long disconnectTimeout() {
-        return 0;
     }
 }
