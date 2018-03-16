@@ -20,25 +20,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.message.config.RestApiRequest;
 import com.couchbase.client.core.message.config.RestApiResponse;
 import com.couchbase.client.deps.io.netty.handler.codec.http.HttpHeaders;
-import com.couchbase.client.java.cluster.ClusterInfo;
-import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.BucketSettings;
-import com.couchbase.client.java.cluster.DefaultBucketSettings;
-import com.couchbase.client.java.cluster.UserSettings;
-import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
 import com.couchbase.client.java.cluster.api.AsyncRestBuilder;
 import com.couchbase.client.java.cluster.api.ClusterApiClient;
+import com.couchbase.client.java.cluster.ClusterInfo;
+import com.couchbase.client.java.cluster.ClusterManager;
+import com.couchbase.client.java.cluster.DefaultBucketSettings;
 import com.couchbase.client.java.cluster.api.RestBuilder;
 import com.couchbase.client.java.error.InvalidPasswordException;
 import com.couchbase.client.java.util.TestProperties;
@@ -58,8 +53,6 @@ public class ClusterManagerTest {
     private static final String BUCKET_2 = "bucket2";
     private static final String REMOVE_BUCKET = "removeBucket";
     private static final String UPDATE_BUCKET = "updateBucket";
-    private static final String USER_1 = "alice";
-    private static final String USER_2 = "bob";
 
     private static final Set<String> BUCKETS = new HashSet<String>(5);
     static {
@@ -249,48 +242,6 @@ public class ClusterManagerTest {
                 .contains("timeout")
                 .contains("enabled")
                 .contains("count");
-    }
-
-    @Test
-    public void testUpsertUser() {
-        Observable
-                .just(USER_1)
-                .map(new Func1<String, UserSettings>() {
-                    @Override
-                    public UserSettings call(final String username) {
-                        return UserSettings
-                                .build()
-                                .name(username)
-                                .password("password")
-                                .roles(Collections.singletonList(new UserRole("data_reader", "*")));
-                    }
-                }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
-            @Override
-            public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
-            }
-        }).toBlocking().single();
-        clusterManager.removeUser(USER_1);
-    }
-
-    @Test(expected = CouchbaseException.class)
-    public void testUpsertUserMissingPassword() {
-        Observable
-                .just(USER_2)
-                .map(new Func1<String, UserSettings>() {
-                    @Override
-                    public UserSettings call(final String username) {
-                        return UserSettings
-                                .build()
-                                .name(username)
-                                .roles(Collections.singletonList(new UserRole("data_reader", "*")));
-                    }
-                }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
-            @Override
-            public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
-            }
-        }).toBlocking().single();
     }
 
 }
