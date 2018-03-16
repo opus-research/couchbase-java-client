@@ -153,6 +153,9 @@ public class CouchbaseBucket implements Bucket {
 
     @Override
     public Observable<QueryResult> query(final Query query) {
+        if (!query.hasFrom()) {
+            query.from(bucket);
+        }
         return query(query.toString());
     }
 
