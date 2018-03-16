@@ -44,7 +44,7 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
         JsonObject content = JsonObject.create();
 
         for (Field field : properties.fieldProperties()) {
-            String name = properties.actualFieldPropertyName(field);
+            String name = field.getName();
             Class<?> type = field.getType();
             Object value = properties.get(field, document, Object.class);
 
@@ -69,7 +69,7 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
             T instance = clazz.newInstance(); // for now only support no-args constructor
 
             for (Field field : properties.fieldProperties()) {
-                String fieldName = properties.actualFieldPropertyName(field);
+                String fieldName = field.getName();
                 if (source.content().containsKey(fieldName)) {
                     properties.set(field, instance, source.content().get(fieldName));
                 }

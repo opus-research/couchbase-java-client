@@ -42,6 +42,4 @@ public interface EntityProperties {
 
     void set(Field field, Object source, Object value);
 
-    String actualFieldPropertyName(Field field);
-
 }
