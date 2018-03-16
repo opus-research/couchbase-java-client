@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.bucket;
+package com.couchbase.client.java.search.sort;
 
-/**
- * The type of the bucket.
- *
- * @author Michael Nitschinger
- * @since 2.0
- */
-public enum BucketType {
 
-    /**
-     * The couchbase bucket type.
-     */
-    COUCHBASE,
+public enum FieldMissing {
+    FIRST("first"),
+    LAST("last");
 
-    /**
-     * The memcached bucket type.
-     */
-    MEMCACHED,
+    private final String value;
 
-    /**
-     * The ephemeral bucket type.
-     */
-    EPHEMERAL
+    FieldMissing(String value) {
+        this.value = value;
+    }
 
+    public String value() {
+        return value;
+    }
 }
