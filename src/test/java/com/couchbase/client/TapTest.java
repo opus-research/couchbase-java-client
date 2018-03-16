@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import net.spy.memcached.ClientBaseCase;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.tapmessage.ResponseMessage;
 
@@ -38,7 +39,7 @@ import net.spy.memcached.tapmessage.ResponseMessage;
 /**
  * A TapTest.
  */
-public class TapTest extends CouchbaseClientBaseCase {
+public class TapTest extends ClientBaseCase {
 
   private static final long TAP_DUMP_TIMEOUT = 2000;
 
