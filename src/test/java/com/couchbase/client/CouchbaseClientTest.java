@@ -747,6 +747,30 @@ public class CouchbaseClientTest extends BinaryClientTest {
     assertNull("casWithExpiration key should be null but was: " + response, response);
   }
 
+  /**
+   * Test append >max data to document
+   *
+   * @pre Add a document and then append >20MB data
+   * @post Append should not succeed and return E2BIG
+   *
+   * @throws Exception
+   */
+  public void testE2BIG() throws Exception {
+    client.add("bigSizeDoc", 0, "");
+    int capacity = 10485761; // ~20MB
+    StringBuilder sb = new StringBuilder(capacity);
+    OperationStatus status = null;
+    for (int i=0; i<=capacity; i++) {
+      sb.append('a');
+      status = client.append("bigSizeDoc", sb.toString())
+                     .getStatus();
+      if(!status.isSuccess()){
+        break;
+      }
+    }
+    assertEquals((status.getMessage()),"Too large");
+  }
+
   @Override
   public void testGetStatsSlabs() throws Exception {
     // Empty
