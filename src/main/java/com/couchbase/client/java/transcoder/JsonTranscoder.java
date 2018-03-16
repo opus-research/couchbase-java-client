@@ -26,6 +26,7 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.TranscodingException;
@@ -48,7 +49,8 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(final JsonDocument document) throws Exception {
-        return Tuple.create(jsonObjectToByteBuf(document.content()), TranscoderUtils.JSON_COMPAT_FLAGS);
+        String content = jsonObjectToString(document.content());
+        return Tuple.create(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8), TranscoderUtils.JSON_COMPAT_FLAGS);
     }
 
     @Override
@@ -58,7 +60,9 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
             throw new TranscodingException("Flags (0x" + Integer.toHexString(flags) + ") indicate non-JSON document for "
                 + "id " + id + ", could not decode.");
         }
-        return newDocument(id, expiry, byteBufToJsonObject(content), cas);
+
+        JsonObject converted = stringToJsonObject(content.toString(CharsetUtil.UTF_8));
+        return newDocument(id, expiry, converted, cas);
     }
 
     @Override
@@ -68,10 +72,6 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
 
     public String jsonObjectToString(JsonObject input) throws Exception {
         return JacksonTransformers.MAPPER.writeValueAsString(input);
-    }
-
-    public ByteBuf jsonObjectToByteBuf(JsonObject input) throws Exception {
-        return Unpooled.wrappedBuffer(JacksonTransformers.MAPPER.writeValueAsBytes(input));
     }
 
     public JsonObject stringToJsonObject(String input) throws Exception {
@@ -86,14 +86,7 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
      * @throws Exception
      */
     public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
-        byte[] inputBytes;
-        if (input.hasArray()) {
-            inputBytes = input.array();
-        } else {
-            inputBytes = new byte[input.readableBytes()];
-            input.getBytes(0, inputBytes);
-        }
-        return JacksonTransformers.MAPPER.readValue(inputBytes, JsonObject.class);
+        return stringToJsonObject(input.toString(CharsetUtil.UTF_8));
     }
 
 

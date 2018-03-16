@@ -21,8 +21,12 @@
  */
 package com.couchbase.client.java.document.json;
 
-import com.couchbase.client.java.SerializationHelper;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,12 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.Test;
 
 /**
  * Verifies the functionality provided by a {@link JsonArray}.
@@ -353,16 +352,5 @@ public class JsonArrayTest {
         try { JsonArray.fromJson(bad2); fail(); } catch (IllegalArgumentException e) { }
         try { JsonArray.fromJson(bad3); fail(); } catch (IllegalArgumentException e) { }
         try { JsonArray.fromJson(bad4); fail(); } catch (IllegalArgumentException e) { }
-    }
-
-    @Test
-    public void shouldSupportSerialization() throws Exception {
-        JsonArray original = JsonArray.from("a", "b", JsonObject.create().put("foo", "bar"));
-
-        byte[] serialized = SerializationHelper.serializeToBytes(original);
-        assertNotNull(serialized);
-
-        JsonArray deserialized = SerializationHelper.deserializeFromBytes(serialized, JsonArray.class);
-        assertEquals(original, deserialized);
     }
 }

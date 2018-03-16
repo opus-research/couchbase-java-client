@@ -21,10 +21,6 @@
  */
 package com.couchbase.client.java.document;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
 /**
  * Common parent implementation of a {@link Document}.
  *
@@ -37,16 +33,10 @@ import java.io.ObjectOutputStream;
  */
 public abstract class AbstractDocument<T> implements Document<T> {
 
-    private String id;
-    private long cas;
-    private int expiry;
-    private T content;
-
-    /**
-     * Constructor needed for possible subclass serialization.
-     */
-    protected AbstractDocument() {
-    }
+    private final String id;
+    private final long cas;
+    private final int expiry;
+    private final T content;
 
     protected AbstractDocument(String id, int expiry, T content, long cas) {
         if (id == null || id.isEmpty()) {
@@ -118,33 +108,5 @@ public abstract class AbstractDocument<T> implements Document<T> {
         result = 31 * result + expiry;
         result = 31 * result + (content != null ? content.hashCode() : 0);
         return result;
-    }
-
-    /**
-     * Helper method to write the current document state to the output stream for serialization purposes.
-     *
-     * @param stream the stream to write to.
-     * @throws IOException
-     */
-    protected void writeToSerializedStream(ObjectOutputStream stream) throws IOException {
-        stream.writeLong(cas);
-        stream.writeInt(expiry);
-        stream.writeUTF(id);
-        stream.writeObject(content);
-    }
-
-    /**
-     * Helper method to create the document from an object input stream, used for serialization purposes.
-     *
-     * @param stream the stream to read from.
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    @SuppressWarnings("unchecked")
-    protected void readFromSerializedStream(final ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        cas = stream.readLong();
-        expiry = stream.readInt();
-        id = stream.readUTF();
-        content = (T) stream.readObject();
     }
 }
