@@ -23,9 +23,6 @@
 package com.couchbase.client.internal;
 
 import com.couchbase.client.protocol.views.HttpOperation;
-import net.spy.memcached.internal.AbstractListenableFuture;
-import net.spy.memcached.internal.GenericCompletionListener;
-import net.spy.memcached.ops.OperationStatus;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -34,6 +31,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import net.spy.memcached.compat.SpyObject;
+import net.spy.memcached.internal.AbstractListenableFuture;
+import net.spy.memcached.internal.CheckedOperationTimeoutException;
+import net.spy.memcached.internal.GenericCompletionListener;
+import net.spy.memcached.internal.OperationCompletionListener;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationStatus;
 
 /**
  * A future http response.
@@ -101,7 +105,8 @@ public class HttpFuture<T>
 
     if (op != null && op.isTimedOut()) {
       status = new OperationStatus(false, "Timed out");
-      throw new TimeoutException("Timed out waiting for operation");
+      throw new ExecutionException(new CheckedOperationTimeoutException(
+          "Operation timed out.", (Operation)op));
     }
   }
 
