@@ -76,14 +76,12 @@ public class SearchServiceUserTest {
     }
 
     @AfterClass
-    public static void cleanup() throws Exception {
-        if (ctx != null) {
-            cluster.disconnect();
-            clusterWithNoFtsPerms.disconnect();
-            ctx.clusterManager().removeUser(username);
-            ctx.clusterManager().removeUser(usernameWithNoPerms);
-            ctx.destroyBucketAndDisconnect();
-        }
+    public static void tearDown() throws Exception {
+        cluster.disconnect();
+        clusterWithNoFtsPerms.disconnect();
+        ctx.clusterManager().removeUser(username);
+        ctx.clusterManager().removeUser(usernameWithNoPerms);
+        ctx.destroyBucketAndDisconnect();
     }
 
     @Test

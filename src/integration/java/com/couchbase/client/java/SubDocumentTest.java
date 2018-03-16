@@ -105,10 +105,9 @@ public class SubDocumentTest {
     }
 
     @AfterClass
-    public static void cleanup() throws Exception {
-        if (ctx != null) {
-            ctx.destroyBucketAndDisconnect();
-        }
+    public static void disconnect() throws InterruptedException {
+        ctx.destroyBucketAndDisconnect();
+        ctx.disconnect();
     }
 
     @Test

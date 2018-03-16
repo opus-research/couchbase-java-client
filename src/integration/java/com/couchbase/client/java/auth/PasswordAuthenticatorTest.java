@@ -53,11 +53,9 @@ public class PasswordAuthenticatorTest {
     }
 
     @AfterClass
-    public static void cleanup() throws Exception {
-        if (ctx != null) {
-            ctx.clusterManager().removeUser(username);
-            ctx.destroyBucketAndDisconnect();
-        }
+    public static void tearDown() throws Exception {
+        ctx.clusterManager().removeUser(username);
+        ctx.destroyBucketAndDisconnect();
     }
 
     @Test

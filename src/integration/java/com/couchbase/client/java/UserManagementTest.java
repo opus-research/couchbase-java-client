@@ -57,9 +57,7 @@ public class UserManagementTest {
 
     @AfterClass
     public static void cleanup() {
-        if (ctx != null) {
-            ctx.destroyBucketAndDisconnect();
-        }
+        ctx.destroyBucketAndDisconnect();
     }
 
     @Test
