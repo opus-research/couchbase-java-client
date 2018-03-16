@@ -232,11 +232,15 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         if (o instanceof VBucketAware) {
           VBucketAware vbucketAwareOp = (VBucketAware) o;
           vbucketAwareOp.setVBucket(key, vbucketIndex);
-          if (!vbucketAwareOp.getNotMyVbucketNodes().isEmpty()) {
-            MemcachedNode alternative =
-                vbucketLocator.getAlternative(key,
-                    vbucketAwareOp.getNotMyVbucketNodes());
-            if (alternative != null) {
+          Collection<MemcachedNode> notMyVbucketNodes =
+            vbucketAwareOp.getNotMyVbucketNodes();
+          if (!notMyVbucketNodes.isEmpty()) {
+            cf.checkConfigUpdate();
+            MemcachedNode alternative = vbucketLocator.getAlternative(key,
+              notMyVbucketNodes);
+            if (alternative == null) {
+              notMyVbucketNodes.clear();
+            } else {
               placeIn = alternative;
             }
           }
@@ -245,10 +249,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       if(enableThrottling) {
         throttleManager.getThrottler(
           (InetSocketAddress)placeIn.getSocketAddress()).throttle();
-      }
-      if (!placeIn.isActive() || !placeIn.isAuthenticated()) {
-        System.out.println(placeIn);
-        System.out.println(placeIn.isActive() + ", " + placeIn.isAuthenticated());
       }
       addOperation(placeIn, o);
     } else {

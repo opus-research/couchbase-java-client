@@ -37,9 +37,11 @@ import java.util.logging.Logger;
 
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.DefaultConnectionFactory;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.OperationFactory;
+import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.Operation;
@@ -72,6 +74,7 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   protected MetricType metricType = null;
   protected MetricCollector collector = null;
   protected ExecutorService executorService = null;
+  protected long authWaitTime = -1;
 
   public Config getVBucketConfig() {
     return vBucketConfig;
@@ -201,6 +204,12 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
     return this;
   }
 
+  @Override
+  public ConnectionFactoryBuilder setAuthWaitTime(long authWaitTime) {
+    this.authWaitTime = authWaitTime;
+    return this;
+  }
+
   /**
    * Get the CouchbaseConnectionFactory set up with the provided parameters.
    * Note that a CouchbaseConnectionFactory requires the failure mode is set
@@ -290,6 +299,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
+      public long getAuthWaitTime() {
+        return authWaitTime == -1 ? super.getAuthWaitTime() : authWaitTime;
+      }
+
+      @Override
       public int getReadBufSize() {
         return readBufSize == -1 ? super.getReadBufSize() : readBufSize;
       }
@@ -374,6 +388,10 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         return executorService == null;
       }
 
+      @Override
+      public AuthDescriptor getAuthDescriptor() {
+        return authDescriptor == null ? super.getAuthDescriptor() : authDescriptor;
+      }
     };
   }
 
@@ -433,6 +451,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       @Override
       public long getOperationTimeout() {
         return opTimeout == -1 ? super.getOperationTimeout() : opTimeout;
+      }
+
+      @Override
+      public long getAuthWaitTime() {
+        return authWaitTime == -1 ? super.getAuthWaitTime() : authWaitTime;
       }
 
       @Override
@@ -519,6 +542,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       public boolean isDefaultExecutorService() {
         return executorService == null;
       }
+
+      @Override
+      public AuthDescriptor getAuthDescriptor() {
+        return authDescriptor == null ? super.getAuthDescriptor() : authDescriptor;
+      }
     };
   }
 
@@ -558,4 +586,7 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
     return viewConns;
   }
 
+  public long getAuthWaitTime() {
+    return authWaitTime;
+  }
 }
