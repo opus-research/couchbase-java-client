@@ -68,7 +68,8 @@ public class TapConnectionProvider
    * @throws IOException
    * @throws ConfigurationException
    */
-  public TapConnectionProvider(CouchbaseConnectionFactory cf) throws IOException {
+  public TapConnectionProvider(CouchbaseConnectionFactory cf)
+    throws IOException, ConfigurationException{
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
     this.cf=cf;
     cp = cf.getConfigurationProvider();
