@@ -20,52 +20,20 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import net.spy.memcached.ops.OperationCallback;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * An operation that represents a view that calls the map
+ * function and excludes the documents in the result.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
-
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
+public interface NoDocsOperation {
 
   /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
+   * Callback for the result of the NoDocsOperation.
    */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  interface NoDocsCallback extends OperationCallback {
+    void gotData(ViewResponse response);
   }
 }

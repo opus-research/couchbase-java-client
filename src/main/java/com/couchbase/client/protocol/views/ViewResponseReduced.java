@@ -20,52 +20,37 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import java.util.Collection;
+import java.util.Map;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * Holds the response of a view query where the map and reduce
+ * function were called.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class ViewResponseReduced extends ViewResponse {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
-
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public ViewResponseReduced(final Collection<ViewRow> rows,
+      final Collection<RowError> errors) {
+    super(rows, errors);
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
+  public Map<String, Object> getMap() {
+    throw new UnsupportedOperationException("This view doesn't contain "
+        + "documents");
   }
 
   @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public String toString() {
+    StringBuilder s = new StringBuilder();
+    for (ViewRow r : rows) {
+      s.append(r.getKey());
+      s.append(" : ");
+      s.append(r.getValue());
+      s.append("\n");
+    }
+    return s.toString();
   }
 }

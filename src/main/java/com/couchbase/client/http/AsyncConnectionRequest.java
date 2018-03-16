@@ -20,52 +20,59 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.http;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * An AsyncConnectionRequest.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class AsyncConnectionRequest {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  private volatile boolean completed;
+  private volatile NHttpClientConnection conn;
+
+  public AsyncConnectionRequest() {
+    super();
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+  public void setConnection(NHttpClientConnection newConn) {
+    if (this.completed) {
+      return;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+    this.completed = true;
+    synchronized (this) {
+      this.conn = newConn;
+      notifyAll();
     }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
   }
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public NHttpClientConnection getConnection() {
+    return this.conn;
+  }
+
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
+    }
+  }
+
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait();
+      }
+    }
   }
 }

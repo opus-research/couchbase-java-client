@@ -20,52 +20,37 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * Holds the response of a queried view.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public abstract class ViewResponse implements Iterable<ViewRow> {
+  protected final Collection<ViewRow> rows;
+  protected final Collection<RowError> errors;
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  public ViewResponse(final Collection<ViewRow> r,
+      final Collection<RowError> e) {
+    rows = r;
+    errors = e;
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public Collection<RowError> getErrors() {
+    return errors;
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
+  public Iterator<ViewRow> iterator() {
+    return rows.iterator();
   }
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public int size() {
+    return rows.size();
   }
+
+  public abstract Map<String, Object> getMap();
 }
