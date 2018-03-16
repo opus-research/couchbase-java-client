@@ -27,8 +27,8 @@ package com.couchbase.client.protocol.views;
  * key and value.
  */
 public class ViewRowReduced implements ViewRow {
-  private final String key;
-  private final String value;
+  private String key;
+  private String value;
 
   public ViewRowReduced(String key, String value) {
     this.key = parseField(key);

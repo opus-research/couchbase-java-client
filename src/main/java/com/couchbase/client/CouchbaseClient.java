@@ -2297,7 +2297,8 @@ public class CouchbaseClient extends MemcachedClient
   public Map<MemcachedNode, ObserveResponse> observe(final String key,
       final long cas) {
     Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
-    VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
 
     final int vb = locator.getVBucketIndex(key);
     List<MemcachedNode> bcastNodes = new ArrayList<MemcachedNode>();
@@ -2384,7 +2385,8 @@ public class CouchbaseClient extends MemcachedClient
 
   private void checkObserveReplica(String key, int numPersist, int numReplica) {
     Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
-    VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
 
     if(numReplica > 0) {
       int vBucketIndex = locator.getVBucketIndex(key);
@@ -2442,7 +2444,8 @@ public class CouchbaseClient extends MemcachedClient
     long obsPollInterval = cbConnFactory.getObsPollInterval();
     boolean persistMaster = persist.getValue() > 0;
 
-    VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
+    VBucketNodeLocator locator = ((VBucketNodeLocator)
+        ((CouchbaseConnection) mconn).getLocator());
 
     checkObserveReplica(key, persistReplica, replicateTo);
 
@@ -2517,7 +2520,7 @@ public class CouchbaseClient extends MemcachedClient
         new OperationFuture<Map<String, String>>(key, latch, operationTimeout,
           executorService);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
-      private final Map<String, String> stats = new HashMap<String, String>();
+      private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
         stats.put(name, val);
       }
@@ -2567,7 +2570,7 @@ public class CouchbaseClient extends MemcachedClient
     final OperationFuture<Boolean> rv =
       new OperationFuture<Boolean>("", latch, operationTimeout,
         executorService) {
-        private final CouchbaseConnectionFactory factory =
+        private CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
 
         @Override

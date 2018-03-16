@@ -22,18 +22,21 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.CbTestConfig;
 import com.couchbase.client.vbucket.config.ConfigurationParserMock;
-
 import java.net.URI;
-
-import junit.framework.TestCase;
-
 import net.spy.memcached.TestConfig;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import java.util.Arrays;
+import org.junit.Before;
 
 /**
  * A BucketMonitorTest.
  */
-public class BucketMonitorTest extends TestCase {
+public class BucketMonitorTest {
   private static final String USERNAME = "default";
   private static final String PASSWORD = "";
   private static final String STREAMING_URI = "http://" + TestConfig.IPV4_ADDR
@@ -41,6 +44,17 @@ public class BucketMonitorTest extends TestCase {
   private static final String BUCKET_NAME = "default";
   private static final ConfigurationParserMock CONFIG_PARSER =
       new ConfigurationParserMock();
+  private ConfigurationProviderHTTP configProvider;
+
+
+  @Before
+  public void setup() throws Exception {
+    configProvider = new ConfigurationProviderHTTP(
+      Arrays.asList(new URI("http://" + TestConfig.IPV4_ADDR + ":8091/pools")),
+      CbTestConfig.CLUSTER_ADMINNAME,
+      CbTestConfig.CLUSTER_PASS
+    );
+  }
 
   /**
    * Tests instantiation of the BucketMonitor.
@@ -51,9 +65,10 @@ public class BucketMonitorTest extends TestCase {
    * password match with those configured.
    * @throws Exception
    */
+  @Test
   public void testInstantiate() throws Exception {
-    BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
-        USERNAME, PASSWORD, CONFIG_PARSER);
+   BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
+        BUCKET_NAME, USERNAME, PASSWORD, CONFIG_PARSER, configProvider);
     assertEquals(USERNAME, bucketMonitor.getHttpUser());
     assertEquals(PASSWORD, bucketMonitor.getHttpPass());
   }
@@ -70,9 +85,10 @@ public class BucketMonitorTest extends TestCase {
    * Shutdown the bucket monitor.
    * @throws Exception
    */
+  @Test
   public void testObservable() throws Exception {
-    BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
-        USERNAME, PASSWORD, CONFIG_PARSER);
+   BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
+        BUCKET_NAME, USERNAME, PASSWORD, CONFIG_PARSER, configProvider);
 
     BucketObserverMock observer = new BucketObserverMock();
     bucketMonitor.addObserver(observer);
@@ -83,4 +99,17 @@ public class BucketMonitorTest extends TestCase {
         observer.isUpdateCalled());
     bucketMonitor.shutdown();
   }
+
+  /**
+   * Tests failing on invalid hostname.
+   *
+   * @throws Exception
+   */
+  @Test(expected = ConnectionException.class)
+  public void shouldFailOnInvalidPeer() throws Exception {
+    BucketMonitor monitor = new BucketMonitor(new URI("http://invalidHost:8091/"),
+      BUCKET_NAME, USERNAME, PASSWORD, CONFIG_PARSER, configProvider);
+    monitor.startMonitor();
+  }
+
 }

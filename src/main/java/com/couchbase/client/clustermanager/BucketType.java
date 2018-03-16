@@ -40,7 +40,7 @@ public enum BucketType {
   /**
    * Holds the authentication type.
    */
-  private final String type;
+  private String type;
 
   /**
    * Creates an BucketType instance.
