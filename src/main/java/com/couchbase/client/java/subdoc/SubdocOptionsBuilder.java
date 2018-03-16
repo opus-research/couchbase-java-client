@@ -30,7 +30,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
 @InterfaceStability.Committed
 @InterfaceAudience.Public
 public class SubdocOptionsBuilder {
-    private boolean createPath;
+    private boolean createParents;
     private boolean xattr;
 
     public SubdocOptionsBuilder() {
@@ -42,42 +42,17 @@ public class SubdocOptionsBuilder {
 
     /**
      * Set createParents to true to create missing intermediary nodes, else false.
-     *
-     * Please use {@link #createPath(boolean)} instead.
      */
-    @Deprecated
     public SubdocOptionsBuilder createParents(boolean createParents) {
-        return createPath(createParents);
-    }
-
-    /**
-     * Set true/false if the intermediate paths should be created.
-     *
-     * @param createPath true if they should be created, false otherwise.
-     * @return this builder for chaining purposes.
-     */
-    public SubdocOptionsBuilder createPath(boolean createPath) {
-        this.createPath = createPath;
+        this.createParents = createParents;
         return this;
     }
 
     /**
      * Get createParents value set on builder
-     *
-     * Please use {@link #createPath()} insteade.
      */
-    @Deprecated
     public boolean createParents() {
-        return createPath();
-    }
-
-    /**
-     * Returns true if the intermediate paths should be created.
-     *
-     * @return true if they should be created.
-     */
-    public boolean createPath() {
-        return createPath;
+        return this.createParents;
     }
 
     /**
@@ -100,7 +75,7 @@ public class SubdocOptionsBuilder {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        sb.append(" \"createPath\": " + createPath);
+        sb.append(" \"createParents\": " + createParents);
         sb.append(", \"xattr\":" + xattr);
         sb.append("}");
         return sb.toString();
