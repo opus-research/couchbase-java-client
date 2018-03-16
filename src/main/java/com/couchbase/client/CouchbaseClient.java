@@ -91,6 +91,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -121,9 +122,6 @@ import java.util.logging.Logger;
  */
 public class CouchbaseClient extends MemcachedClient
   implements CouchbaseClientIF, Reconfigurable {
-
-  private static final Logger LOGGER = Logger.getLogger(
-    CouchbaseClient.class.getName());
 
   private static final String MODE_PRODUCTION = "production";
   private static final String MODE_DEVELOPMENT = "development";
@@ -1717,24 +1715,20 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public boolean shutdown(final long timeout, final TimeUnit unit) {
+  public boolean shutdown(long timeout, TimeUnit unit) {
     boolean shutdownResult = false;
-
     try {
       shutdownResult = super.shutdown(timeout, unit);
-    } catch(Exception ex) {
-      LOGGER.log(Level.SEVERE, "Unexpected Exception in shutdown", ex);
-    }
-
-    try {
       CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
       cf.getConfigurationProvider().shutdown();
       if(vconn != null) {
         vconn.shutdown();
       }
     } catch (IOException ex) {
-      LOGGER.log(Level.SEVERE, "Unexpected IOException in shutdown", ex);
-      shutdownResult = false;
+      Logger.getLogger(
+         CouchbaseClient.class.getName()).log(Level.SEVERE,
+            "Unexpected IOException in shutdown", ex);
+      throw new RuntimeException(null, ex);
     }
     return shutdownResult;
   }
