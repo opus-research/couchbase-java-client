@@ -23,7 +23,6 @@ package com.couchbase.client.java.transcoder;
 
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.error.TranscodingException;
@@ -117,14 +116,5 @@ public abstract class AbstractTranscoder<D extends Document<T>, T> implements Tr
      */
     protected boolean shouldAutoReleaseOnError() {
         return true;
-    }
-
-    /**
-     * Default implementation for backwards compatibility.
-     */
-    @Override
-    public D newDocument(String id, int expiry, T content, long cas, MutationToken mutationToken) {
-        throw new UnsupportedOperationException("This Transcoder does not support the "
-            + "document creation with a mutation token (it needs to be implemented).");
     }
 }
