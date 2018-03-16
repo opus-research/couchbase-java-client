@@ -21,6 +21,7 @@
  */
 package com.couchbase.client.java.util;
 
+import com.couchbase.client.core.RequestFactory;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.config.BucketConfig;
@@ -29,6 +30,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.internal.GetConfigProviderRequest;
 import com.couchbase.client.core.message.internal.GetConfigProviderResponse;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
@@ -65,7 +67,12 @@ public class NodeLocatorHelper {
     private NodeLocatorHelper(final Bucket bucket) {
         configProvider = bucket
             .core()
-            .<GetConfigProviderResponse>send(new GetConfigProviderRequest())
+            .<GetConfigProviderResponse>send(new RequestFactory() {
+                @Override
+                public CouchbaseRequest call() {
+                    return new GetConfigProviderRequest();
+                }
+            })
             .toBlocking()
             .single()
             .provider();
