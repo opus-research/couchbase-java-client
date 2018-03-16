@@ -19,8 +19,6 @@ package com.couchbase.client.java;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
-
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -89,7 +87,7 @@ public class SubdocumentExtendedAttributesTest {
     public void shouldBeAbleToPersistXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).xattr(true))
+                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
                 .execute(PersistTo.ONE);
 
         assertTrue(result.cas() != 0);
@@ -97,7 +95,7 @@ public class SubdocumentExtendedAttributesTest {
 
         DocumentFragment<Lookup> lookupResult = ctx.bucket()
                 .lookupIn(key)
-                .get("spring.class", new SubdocOptionsBuilder().xattr(true))
+                .get("spring.class", new SubdocOptionsBuilder().attributeAccess(true))
                 .execute();
         assertTrue(lookupResult.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, lookupResult.status("spring.class"));
@@ -107,7 +105,7 @@ public class SubdocumentExtendedAttributesTest {
     public void shouldNotBeAbleToGetXATTRWithoutAccessFlagSet() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).xattr(true))
+                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
                 .execute(PersistTo.ONE);
 
         assertTrue(result.cas() != 0);
@@ -115,7 +113,7 @@ public class SubdocumentExtendedAttributesTest {
 
         DocumentFragment<Lookup> lookupResult = ctx.bucket()
                 .lookupIn(key)
-                .get("spring.class", new SubdocOptionsBuilder().xattr(false))
+                .get("spring.class", new SubdocOptionsBuilder().attributeAccess(false))
                 .execute();
         assertEquals(ResponseStatus.SUBDOC_PATH_NOT_FOUND, lookupResult.status("spring.class"));
     }
@@ -124,7 +122,7 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyExistXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).xattr(true))
+                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
                 .execute(PersistTo.ONE);
 
         assertTrue(result.cas() != 0);
@@ -132,7 +130,7 @@ public class SubdocumentExtendedAttributesTest {
 
         DocumentFragment<Lookup> lookupResult = ctx.bucket()
                 .lookupIn(key)
-                .exists("spring.class", new SubdocOptionsBuilder().xattr(true))
+                .exists("spring.class", new SubdocOptionsBuilder().attributeAccess(true))
                 .execute();
         assertEquals(ResponseStatus.SUCCESS, lookupResult.status("spring.class"));
     }
@@ -142,7 +140,7 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyArrayOpsXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("spring.refs", "id1", new SubdocOptionsBuilder().createParents(true).xattr(true))
+                .arrayAddUnique("spring.refs", "id1", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
                 .execute();
 
         assertTrue(result.cas() != 0);
@@ -151,41 +149,41 @@ public class SubdocumentExtendedAttributesTest {
 
         DocumentFragment<Lookup> lookupResult = ctx.bucket()
                 .lookupIn(key)
-                .exists("spring.refs", new SubdocOptionsBuilder().xattr(true))
+                .exists("spring.refs", new SubdocOptionsBuilder().attributeAccess(true))
                 .execute();
         assertEquals(ResponseStatus.SUCCESS, lookupResult.status("spring.refs"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAppend("spring.refs", "id0", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .arrayAppend("spring.refs", "id0", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .arrayPrepend("spring.refs", "id2", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .arrayPrepend("spring.refs", "id2", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .arrayInsert("spring.refs[0]", "id3", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .arrayInsert("spring.refs[0]", "id3", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs[0]"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .remove("spring.refs[0]", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .remove("spring.refs[0]", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs[0]"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
@@ -195,12 +193,12 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyChainArrayOpsXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("spring.refs", "id1", new SubdocOptionsBuilder().createParents(true).xattr(true))
-                .arrayAppend("spring.refs", "id0", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .arrayPrepend("spring.refs", "id2", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .arrayInsert("spring.refs[0]", "id3", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .remove("spring.refs[0]", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .arrayAddUnique("spring.refs", "id1", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
+                .arrayAppend("spring.refs", "id0", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .arrayPrepend("spring.refs", "id2", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .arrayInsert("spring.refs[0]", "id3", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .remove("spring.refs[0]", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
@@ -211,23 +209,23 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyChainArrayCollectionOpsXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAppendAll("spring.refs", Arrays.asList("id4", "id5", "id6", "id7"), new SubdocOptionsBuilder().createParents(true).xattr(true))
-                .arrayPrependAll("spring.refs", Arrays.asList("id0", "id1", "id2", "id3"), new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .arrayInsertAll("spring.refs[0]",  Arrays.asList("id8", "id9", "id10", "id11"), new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .arrayAppendAll("spring.refs", Arrays.asList("id4", "id5", "id6", "id7"), new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
+                .arrayPrependAll("spring.refs", Arrays.asList("id0", "id1", "id2", "id3"), new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .arrayInsertAll("spring.refs[0]",  Arrays.asList("id8", "id9", "id10", "id11"), new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
 
         DocumentFragment<Lookup> lookupResult = ctx.bucket()
                 .lookupIn(key)
-                .get("spring.refs",new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .get("spring.refs",new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertEquals(12, ((JsonArray)lookupResult.content("spring.refs")).size());
 
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .remove("spring.refs", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.refs"));
@@ -237,7 +235,7 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyDictOpsXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("spring.dict.foo1", "bar1", new SubdocOptionsBuilder().createParents(true).xattr(true))
+                .insert("spring.dict.foo1", "bar1", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
                 .execute();
 
         assertTrue(result.cas() != 0);
@@ -245,21 +243,21 @@ public class SubdocumentExtendedAttributesTest {
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .insert("spring.dict.foo2", "bar2", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .insert("spring.dict.foo2", "bar2", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict.foo2"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .upsert("spring.dict.foo1", 0, new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .upsert("spring.dict.foo1", 0, new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict.foo1"));
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .counter("spring.dict.foo1", 1, new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .counter("spring.dict.foo1", 1, new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict.foo1"));
@@ -267,7 +265,7 @@ public class SubdocumentExtendedAttributesTest {
 
         result = ctx.bucket()
                 .mutateIn(key)
-                .remove("spring.dict", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .remove("spring.dict", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict"));
@@ -278,73 +276,22 @@ public class SubdocumentExtendedAttributesTest {
     public void verifyChainDictOpsXATTR() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("spring.dict.foo1", "bar1", new SubdocOptionsBuilder().createParents(true).xattr(true))
-                .insert("spring.dict.foo2", "bar2", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .upsert("spring.dict.foo1", 0, new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .counter("spring.dict.foo1", 1, new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .insert("spring.dict.foo1", "bar1", new SubdocOptionsBuilder().createParents(true).attributeAccess(true))
+                .insert("spring.dict.foo2", "bar2", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .upsert("spring.dict.foo1", 0, new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
+                .counter("spring.dict.foo1", 1, new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
 
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict.foo1"));
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict.foo2"));
 
+
         result = ctx.bucket()
                 .mutateIn(key)
-                .remove("spring.dict", new SubdocOptionsBuilder().createParents(false).xattr(true))
+                .remove("spring.dict", new SubdocOptionsBuilder().createParents(false).attributeAccess(true))
                 .execute();
         assertTrue(result.cas() != 0);
         assertEquals(ResponseStatus.SUCCESS, result.status("spring.dict"));
-    }
-
-    @Test
-    public void shouldAllowfullDocGetAndSetWithXattr() {
-        String key = "XattrWithFullDoc";
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).xattr(true))
-                .upsert(content)
-                .createDocument(true)
-                .withExpiry(5)
-                .execute(PersistTo.ONE);
-
-        assertTrue(result.cas() != 0);
-        assertEquals(ResponseStatus.SUCCESS, result.status(0));
-        assertEquals(ResponseStatus.SUCCESS, result.status(1));
-
-        DocumentFragment<Lookup> lookupResult = ctx.bucket()
-                .lookupIn(key)
-                .get("spring.class", new SubdocOptionsBuilder().xattr(true))
-                .get()
-                .execute();
-        assertTrue(result.cas() != 0);
-        assertEquals(ResponseStatus.SUCCESS, lookupResult.status(0));
-        assertEquals(ResponseStatus.SUCCESS, lookupResult.status(1));
-        assertEquals(content, lookupResult.content(1));
-
-    }
-
-    @Test(expected = CouchbaseException.class)
-    public void shouldNotAllowfullDocSetWithXattrWithoutCreateDocument() {
-        String key = "XattrWithFullDocFail";
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        ctx.bucket()
-                .mutateIn(key)
-                .upsert(content)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(true).xattr(true))
-                .createDocument(false)
-                .execute(PersistTo.ONE);
-    }
-
-    @Test(expected = CouchbaseException.class)
-    public void shouldNotAllowfullDocSetWithXattrWithMissingPath() {
-        String key = "XattrWithFullDocMissingPath";
-        JsonObject content = JsonObject.create().put("foo", "bar");
-        ctx.bucket()
-                .mutateIn(key)
-                .upsert(content)
-                .upsert("spring.class", "SomeClass", new SubdocOptionsBuilder().createParents(false).xattr(true))
-                .createDocument(false)
-                .execute(PersistTo.ONE);
     }
 }
