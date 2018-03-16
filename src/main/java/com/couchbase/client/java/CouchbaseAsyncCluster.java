@@ -28,10 +28,6 @@ import com.couchbase.client.core.message.cluster.DisconnectResponse;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.OpenBucketResponse;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.Credential;
-import com.couchbase.client.java.auth.CredentialContext;
-import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultAsyncClusterManager;
 import com.couchbase.client.java.document.Document;
@@ -130,7 +126,6 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ConnectionString connectionString;
     private final Map<String, AsyncBucket> bucketCache;
     private final boolean sharedEnvironment;
-    private Authenticator authenticator;
 
     /**
      * Creates a new {@link CouchbaseAsyncCluster} reference against the {@link #DEFAULT_HOST}.
@@ -266,7 +261,6 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         this.environment = environment;
         this.connectionString = connectionString;
         this.bucketCache = new ConcurrentHashMap<String, AsyncBucket>();
-        this.authenticator = new PasswordAuthenticator();
     }
 
     /**
@@ -348,12 +342,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
 
     @Override
     public Observable<AsyncBucket> openBucket(final String name) {
-        try {
-            Credential cred = getSingleCredential(CredentialContext.BUCKET_KV, name);
-            return openBucket(cred.login(), cred.password());
-        } catch (IllegalArgumentException e) {
-            return Observable.error(e);
-        }
+        return openBucket(name, null);
     }
 
     @Override
@@ -392,7 +381,8 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                         throw new CouchbaseException("Could not open bucket.");
                     }
 
-                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, pass, trans, authenticator);
+                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, pass,
+                        trans);
                     bucketCache.put(name, bucket);
                     return bucket;
                 }
@@ -453,47 +443,9 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         );
     }
 
-    protected Credential getSingleCredential(CredentialContext context, String specific) {
-        if (this.authenticator == null) {
-            throw new IllegalStateException("Attempted an authenticated operation without credentials nor an Authenticator");
-        }
-        List<Credential> creds = this.authenticator.getCredentials(context, specific);
-        if (creds == null || creds.size() != 1) {
-            throw new IllegalStateException("Expected exactly 1 credential in Authenticator for this operation");
-        }
-        
-        Credential cred = creds.get(0);
-        return cred;
-    }
-    
-    @Override
-    public Observable<AsyncClusterManager> clusterManager() {
-        try {
-            Credential cred = getSingleCredential(CredentialContext.CLUSTER_MANAGEMENT, null);
-            return clusterManager(cred.login(), cred.password());
-        } catch (IllegalArgumentException e) {
-            return Observable.error(e);
-        }
-    }
-
     @Override
     public Observable<ClusterFacade> core() {
         return Observable.just(core);
-    }
-
-    @Override
-    public CouchbaseAsyncCluster authenticate(Authenticator auth) {
-        this.authenticator = auth;
-        if (!bucketCache.isEmpty()) {
-            LOGGER.warn("Authenticator was switched while {} buckets are still open. Operations on these buckets" +
-                    " will continue using the old Authenticator until you close and reopen them");
-        }
-        return this;
-    }
-
-    @Override
-    public Authenticator authenticator() {
-        return this.authenticator;
     }
 
     /**

@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
@@ -44,12 +43,12 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
+import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.result.SearchQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.result.SearchQueryResult;
 import com.couchbase.client.java.subdoc.LookupInBuilder;
 import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -4471,18 +4470,6 @@ public interface Bucket {
      * @return the bucket manager for administrative operations.
      */
     BucketManager bucketManager();
-
-    /**
-     * Returns the {@link Authenticator} used to open this bucket, which can in turn be used
-     * by other authenticated operations triggered at the bucket level (like a N1QL query).
-     *
-     * Note that in order to change the Authenticator implementation, it must be done at the
-     * {@link Cluster#authenticate(Authenticator) Cluster} level and this bucket must
-     * be {@link #close() closed} beforehand.
-     *
-     * @return the authenticator used.
-     */
-    Authenticator authenticator();
 
     /**
      * The {@link Repository} provides access to full object document mapping (ODM) capabilities.

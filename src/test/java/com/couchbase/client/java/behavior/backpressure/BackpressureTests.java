@@ -41,7 +41,6 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
-import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.StringDocument;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
@@ -85,7 +84,7 @@ public class BackpressureTests {
 
         CouchbaseCore core = createMock(counter, queued, overflowed);
         final AsyncBucket bucket = new CouchbaseAsyncBucket(core, DefaultCouchbaseEnvironment.create(), "test", "",
-                Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator());
+                Collections.<Transcoder<? extends Document, ?>>emptyList());
         final Func1<Integer, Observable<StringDocument>> intToAsyncGet = new Func1<Integer, Observable<StringDocument>>() {
             @Override
             public Observable<StringDocument> call(Integer i) {
@@ -118,7 +117,7 @@ public class BackpressureTests {
 
         CouchbaseCore core = createMock(counter, queued, overflowed);
         final AsyncBucket bucket = new CouchbaseAsyncBucket(core, DefaultCouchbaseEnvironment.create(), "test", "",
-                Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator());
+                Collections.<Transcoder<? extends Document, ?>>emptyList());
         final Func1<Integer, Observable<StringDocument>> intToAsyncGet = new Func1<Integer, Observable<StringDocument>>() {
             @Override
             public Observable<StringDocument> call(Integer i) {

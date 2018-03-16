@@ -23,7 +23,6 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
@@ -89,18 +88,6 @@ public interface AsyncBucket {
      * @return the CouchbaseEnvironment.
      */
     CouchbaseEnvironment environment();
-
-    /**
-     * Returns the {@link Authenticator} used to open this bucket, which can in turn be used
-     * by other authenticated operations triggered at the bucket level (like a N1QL query).
-     *
-     * Note that in order to change the Authenticator implementation, it must be done at the
-     * {@link AsyncCluster#authenticate(Authenticator) AsyncCluster} level and this bucket must
-     * be {@link #close() closed} beforehand.
-     *
-     * @return the authenticator used.
-     */
-    Authenticator authenticator();
 
     /**
      * Returns the underlying "core-io" library through its {@link ClusterFacade}.

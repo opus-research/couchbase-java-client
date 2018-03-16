@@ -29,7 +29,6 @@ import com.couchbase.client.core.message.kv.ReplaceResponse;
 import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -56,7 +55,7 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnInsertWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator()
+                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(InsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new InsertResponse(
@@ -74,7 +73,7 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnUpsertWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator()
+                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(UpsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new UpsertResponse(
@@ -92,7 +91,7 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnReplaceWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator()
+                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(ReplaceRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new ReplaceResponse(
@@ -110,7 +109,7 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnRemoveWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList(), new PasswordAuthenticator()
+                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(RemoveRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new RemoveResponse(
