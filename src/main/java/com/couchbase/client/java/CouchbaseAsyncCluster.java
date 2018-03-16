@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
@@ -40,7 +41,7 @@ import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.auth.Credential;
 import com.couchbase.client.java.auth.CredentialContext;
-import com.couchbase.client.java.auth.ClassicAuthenticator;
+import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultAsyncClusterManager;
 import com.couchbase.client.java.document.Document;
@@ -272,7 +273,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         this.environment = environment;
         this.connectionString = connectionString;
         this.bucketCache = new ConcurrentHashMap<String, AsyncBucket>();
-        this.authenticator = new ClassicAuthenticator();
+        this.authenticator = new PasswordAuthenticator();
     }
 
     /**
