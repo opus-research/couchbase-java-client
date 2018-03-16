@@ -15,18 +15,9 @@
  */
 package com.couchbase.client.java;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.config.ConfigurationException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
@@ -37,16 +28,11 @@ import com.couchbase.client.core.message.cluster.DisconnectResponse;
 import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.OpenBucketResponse;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.Credential;
-import com.couchbase.client.java.auth.CredentialContext;
-import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultAsyncClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
-import com.couchbase.client.java.error.AuthenticatorException;
 import com.couchbase.client.java.error.BucketDoesNotExistException;
 import com.couchbase.client.java.error.InvalidPasswordException;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -55,6 +41,12 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main asynchronous entry point to a Couchbase Cluster.
@@ -134,7 +126,6 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ConnectionString connectionString;
     private final Map<String, AsyncBucket> bucketCache;
     private final boolean sharedEnvironment;
-    private Authenticator authenticator;
 
     /**
      * Creates a new {@link CouchbaseAsyncCluster} reference against the {@link #DEFAULT_HOST}.
@@ -270,7 +261,6 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         this.environment = environment;
         this.connectionString = connectionString;
         this.bucketCache = new ConcurrentHashMap<String, AsyncBucket>();
-        this.authenticator = new PasswordAuthenticator();
     }
 
     /**
@@ -347,25 +337,12 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
 
     @Override
     public Observable<AsyncBucket> openBucket() {
-        //skip the openBucket(String) that checks the authenticator, default to empty password.
-        return openBucket(DEFAULT_BUCKET, null);
+        return openBucket(DEFAULT_BUCKET);
     }
 
     @Override
     public Observable<AsyncBucket> openBucket(final String name) {
-        Credential cred = new Credential(name, null);
-        try {
-            cred = getSingleCredential(CredentialContext.BUCKET_KV, name);
-        } catch (AuthenticatorException e) {
-            //only propagate an error if more than one matching credentials is returned
-            if (e.foundCredentials() > 1) {
-                return Observable.error(e);
-            }
-            //otherwise, the 0 credentials found case reverts back to old behavior of a null password
-            //which will get interpreted as empty string in openBucket(String, String, List) below.
-        }
-
-        return openBucket(cred.login(), cred.password());
+        return openBucket(name, null);
     }
 
     @Override
@@ -404,7 +381,8 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                         throw new CouchbaseException("Could not open bucket.");
                     }
 
-                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, pass, trans);
+                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, pass,
+                        trans);
                     bucketCache.put(name, bucket);
                     return bucket;
                 }
@@ -465,60 +443,9 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         );
     }
 
-    protected Credential getSingleCredential(CredentialContext context, String specific) {
-        if (this.authenticator == null || this.authenticator.isEmpty()) {
-            throw new AuthenticatorException("Attempted an authenticated operation with no Authenticator, or an empty Authenticator", context, specific, 0);
-        }
-        List<Credential> creds = this.authenticator.getCredentials(context, specific);
-        if (creds == null || creds.isEmpty()) {
-            throw new AuthenticatorException("Authenticator doesn't contain a credential for this operation, expected 1", context, specific, 0);
-        } else if (creds.size() != 1) {
-            throw new AuthenticatorException("Authenticator returned more than 1 credentials for this operation, expected 1", context, specific, creds.size());
-        }
-
-        Credential cred = creds.get(0);
-        return cred;
-    }
-
-    @Override
-    public Observable<AsyncClusterManager> clusterManager() {
-        try {
-            Credential cred = getSingleCredential(CredentialContext.CLUSTER_MANAGEMENT, null);
-            return clusterManager(cred.login(), cred.password());
-        } catch (AuthenticatorException e) {
-            return Observable.error(e);
-        }
-    }
-
     @Override
     public Observable<ClusterFacade> core() {
         return Observable.just(core);
-    }
-
-    @Override
-    public CouchbaseAsyncCluster authenticate(Authenticator auth) {
-        if (auth == null) {
-            LOGGER.trace("Authenticator was set to null, ignored");
-            return this;
-        }
-        this.authenticator = auth;
-        if (!bucketCache.isEmpty()) {
-            LOGGER.warn("Authenticator was switched while {} buckets are still open. Operations on these buckets" +
-                    " will continue using the old Authenticator until you close and reopen them", bucketCache.size());
-        }
-        return this;
-    }
-
-    /**
-     * Get the {@link Authenticator} currently used when credentials are needed for an
-     * operation, but no explicit credentials are provided.
-     *
-     * @return the Authenticator currently used for this cluster.
-     */
-    @InterfaceStability.Uncommitted
-    @InterfaceAudience.Private
-    public Authenticator authenticator() {
-        return authenticator;
     }
 
     /**
