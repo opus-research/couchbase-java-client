@@ -22,16 +22,25 @@
  */
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProviderMock;
+
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.TestConfig;
+
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
+import static org.junit.Assert.*;
 
 /**
  * Makes sure the CouchbaseConnectionFactory works as expected.
@@ -94,4 +103,81 @@ public class CouchbaseConnectionFactoryTest {
     }
   }
 
+  /**
+   * Tests the correctness of the initialization and shutdown phase
+   * of the Memcached connection.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Create memcached connection using the
+   * parameters as above.
+   * @post Assert true if the memcached connection is alive.
+   * Shutdown the client and then again check its alive.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
+   */
+  @Test
+  public void testMemcachedConnection() throws IOException, InterruptedException {
+    CouchbaseConnectionFactory cf = buildFactory();
+
+    List<InetSocketAddress> addrs = AddrUtil.getAddressesFromURL(
+      cf.getVBucketConfig().getCouchServers()
+    );
+
+    MemcachedConnection memConn = cf.createConnection(addrs);
+    assertTrue(memConn.isAlive());
+    memConn.shutdown();
+    Thread.sleep(5000);
+    assertFalse(memConn.isAlive());
+  }
+
+  /**
+   * Tests the VbucketConfig retrieved from connection factory.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Retrieve VBucket config from the same.
+   * @post Assert the message if it failed to retrieve.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
+   */
+  @Test
+  public void testVBucketConfig() throws IOException , InterruptedException {
+    CouchbaseConnectionFactory cf = buildFactory();
+    assert  cf.getVBucketConfig() == null
+      : "Couldn't retrieve VBucket Config";
+    assert  cf.getVBucketConfig().getServersCount() == 0
+      : "Couldn't retrieve server nodes in the configuration";
+  }
+
+  /**
+   * Resubscriber Backoff.
+   *
+   * @pre Prepare the base list which is an invalid URL.
+   * Create a mock configuration provider instance and pass it to
+   * couchbase connection factory. Create instance of Resubscriber
+   * and run it.
+   * @post Test succeeds to ensure that resubscriber runs once
+   * and then backs off.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  @Test
+  public void testResubscriberBackOff() throws IOException {
+
+      List<URI> baseList = new ArrayList<URI>();
+      baseList.add(URI.create("http://"+"badurl"+":8091/pools"));
+      ConfigurationProvider provider = new ConfigurationProviderMock();
+
+      CouchbaseConnectionFactoryMock factory;
+      factory = new CouchbaseConnectionFactoryMock(
+        baseList,
+        "resubscriber-bucket",
+        "",
+        provider
+      );
+      CouchbaseConnectionFactoryMock.Resubscriber resubscriber = factory.new Resubscriber(provider);
+      resubscriber.run();
+      assertNotNull(factory.getWaitTime());
+  }
 }
