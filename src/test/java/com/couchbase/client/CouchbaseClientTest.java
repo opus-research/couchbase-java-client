@@ -28,10 +28,7 @@ import java.util.Arrays;
 import net.spy.memcached.BinaryClientTest;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.PersistTo;
-import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.internal.OperationFuture;
 
 /**
  * A CouchbaseClientTest.
@@ -118,20 +115,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
     assert client.set("getunltest", 1, "newvalue").get().booleanValue()
       : "Key was locked for too long";
   }
-
-  public void testObserve() throws Exception {
-    assertNull(client.get("observetest"));
-    OperationFuture<Boolean> setOp =
-            (((CouchbaseClient)client).set("observetest", 0, "value",
-                PersistTo.MASTER));
-    assert setOp.get().booleanValue()
-            : "Key was not persisted to master";
-    setOp = (((CouchbaseClient)client).set("observetest", 0, "value",
-            PersistTo.FOUR, ReplicateTo.THREE));
-    assert !setOp.get().booleanValue()
-            : "Was there really 4 servers with 3 replicas"
-            + "for a testing system?";
-  }
   public void testGetStatsSlabs() throws Exception {
     // Empty
   }
@@ -150,8 +133,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
 
   protected void syncGetTimeoutsInitClient() throws Exception {
     initClient(new CouchbaseConnectionFactory(Arrays.asList(URI
-        .create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")),
-        "default", "") {
+        .create("http://localhost:8091/pools")), "default", "") {
       @Override
       public long getOperationTimeout() {
         return 2;
