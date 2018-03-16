@@ -24,7 +24,6 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.ViewQuery;
 import com.couchbase.client.java.query.ViewResult;
-import com.couchbase.client.java.util.Observe;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
@@ -125,19 +124,19 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public Observable<JsonDocument> getFromReplica(final String id, final ReplicaMode type) {
-        return getFromReplica(id, type, JsonDocument.class);
+    public Observable<JsonDocument> getReplica(final String id, final ReplicaMode type) {
+        return getReplica(id, type, JsonDocument.class);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getFromReplica(final D document, final ReplicaMode type) {
-        return (Observable<D>) getFromReplica(document.id(), type, document.getClass());
+    public <D extends Document<?>> Observable<D> getReplica(final D document, final ReplicaMode type) {
+        return (Observable<D>) getReplica(document.id(), type, document.getClass());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getFromReplica(final String id, final ReplicaMode type,
+    public <D extends Document<?>> Observable<D> getReplica(final String id, final ReplicaMode type,
         final Class<D> target) {
 
         Observable<GetResponse> incoming;
@@ -198,25 +197,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public <D extends Document<?>> Observable<D> insert(final D document, final PersistTo persistTo,
-        final ReplicateTo replicateTo) {
-
-        return insert(document).flatMap(new Func1<D, Observable<D>>() {
-            @Override
-            public Observable<D> call(final D doc) {
-                return Observe
-                    .call(core, bucket, document.id(), document.cas(), false, persistTo, replicateTo)
-                    .map(new Func1<Boolean, D>() {
-                    @Override
-                    public D call(Boolean aBoolean) {
-                        return doc;
-                    }
-                });
-            }
-        });
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> upsert(final D document) {
         final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
@@ -232,24 +212,7 @@ public class CouchbaseBucket implements Bucket {
             });
     }
 
-    @Override
-    public <D extends Document<?>> Observable<D> upsert(final D document, final PersistTo persistTo, final ReplicateTo replicateTo) {
-        return upsert(document).flatMap(new Func1<D, Observable<D>>() {
-            @Override
-            public Observable<D> call(final D doc) {
-                return Observe
-                    .call(core, bucket, document.id(), document.cas(), false, persistTo, replicateTo)
-                    .map(new Func1<Boolean, D>() {
-                        @Override
-                        public D call(Boolean aBoolean) {
-                            return doc;
-                        }
-                    });
-            }
-        });
-    }
-
-    @Override
+  @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> replace(final D document) {
     final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
@@ -264,67 +227,34 @@ public class CouchbaseBucket implements Bucket {
       });
   }
 
-    @Override
-    public <D extends Document<?>> Observable<D> replace(final D document, final PersistTo persistTo, final ReplicateTo replicateTo) {
-        return insert(document).flatMap(new Func1<D, Observable<D>>() {
-            @Override
-            public Observable<D> call(final D doc) {
-                return Observe
-                    .call(core, bucket, document.id(), document.cas(), false, persistTo, replicateTo)
-                    .map(new Func1<Boolean, D>() {
-                        @Override
-                        public D call(Boolean aBoolean) {
-                            return doc;
-                        }
-                    });
-            }
-        });
-    }
+  @Override
+  @SuppressWarnings("unchecked")
+  public <D extends Document<?>> Observable<D> remove(final D document) {
+      final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
+    RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
+      bucket);
+    return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
+      @Override
+      public D call(RemoveResponse response) {
+          return (D) converter.newDocument(document.id(), document.content(), document.cas(), document.expiry(),
+              response.status());
+      }
+    });
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> remove(final D document) {
-        final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
-        RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
-            bucket);
-        return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
-            @Override
-            public D call(RemoveResponse response) {
-                return (D) converter.newDocument(document.id(), document.content(), document.cas(), document.expiry(),
-                    response.status());
-            }
-        });
-    }
+  @Override
+  public Observable<JsonDocument> remove(final String id) {
+    return remove(id, JsonDocument.class);
+  }
 
-    @Override
-    public Observable<JsonDocument> remove(final String id) {
-        return remove(id, JsonDocument.class);
-    }
+  @Override
+  @SuppressWarnings("unchecked")
+  public <D extends Document<?>> Observable<D> remove(final String id, final Class<D> target) {
+    Converter<?, ?> converter = converters.get(target);
+    return remove((D) converter.newDocument(id, null, 0, 0, null));
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> remove(final String id, final Class<D> target) {
-        Converter<?, ?> converter = converters.get(target);
-        return remove((D) converter.newDocument(id, null, 0, 0, null));
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> remove(D document, PersistTo persistTo, ReplicateTo replicateTo) {
-        return (Observable<D>) remove(document.id(), persistTo, replicateTo, document.getClass());
-    }
-
-    @Override
-    public Observable<JsonDocument> remove(String id, PersistTo persistTo, ReplicateTo replicateTo) {
-        return null;
-    }
-
-    @Override
-    public <D extends Document<?>> Observable<D> remove(String id, PersistTo persistTo, ReplicateTo replicateTo, Class<D> target) {
-        return null;
-    }
-
-    @Override
+  @Override
   public Observable<ViewResult> query(final ViewQuery query) {
     final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
         query.toString(), bucket, password);
