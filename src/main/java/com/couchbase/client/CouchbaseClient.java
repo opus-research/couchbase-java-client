@@ -356,7 +356,6 @@ public class CouchbaseClient extends MemcachedClient
             });
     crv.setOperation(op);
     addOp(op);
-    assert crv != null : "Problem retrieving view";
     return crv;
   }
 
@@ -413,7 +412,6 @@ public class CouchbaseClient extends MemcachedClient
             });
     crv.setOperation(op);
     addOp(op);
-    assert crv != null : "Problem retrieving spatial view";
     return crv;
   }
 
@@ -2150,7 +2148,7 @@ public class CouchbaseClient extends MemcachedClient
 
     OperationFuture<CASResponse> casOp =
       asyncCAS(key, cas, exp, value, transcoder);
-    CASResponse casr = null;
+    CASResponse casr;
     try {
       casr = casOp.get();
     } catch (InterruptedException e) {
