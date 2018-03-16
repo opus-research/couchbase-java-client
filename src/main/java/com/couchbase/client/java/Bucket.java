@@ -2724,7 +2724,7 @@ public interface Bucket {
      * @param query the query builder.
      * @return a query result containing the matches and additional information.
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     SearchQueryResult query(SearchQuery query);
 
     /**
@@ -2741,7 +2741,7 @@ public interface Bucket {
      * @param timeUnit the unit for the timeout.
      * @return a query result containing the matches and additional information.
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     SearchQueryResult query(SearchQuery query, long timeout, TimeUnit timeUnit);
 
     /**
@@ -3471,10 +3471,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3488,7 +3484,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @return a {@link Document} containing the resulting value.
      */
     JsonLongDocument counter(String id, long delta, long initial, int expiry);
@@ -3499,10 +3495,6 @@ public interface Bucket {
      *
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
-     *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
      *
      * This method throws under the following conditions:
      *
@@ -3527,7 +3519,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param persistTo the persistence constraint to watch.
      * @return a {@link Document} containing the resulting value.
      */
@@ -3540,10 +3532,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3567,7 +3555,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param replicateTo the replication constraint to watch.
      * @return a {@link Document} containing the resulting value.
      */
@@ -3580,10 +3568,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3607,7 +3591,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param persistTo the persistence constraint to watch.
      * @param replicateTo the replication constraint to watch.
      * @return a {@link Document} containing the resulting value.
@@ -3621,10 +3605,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3638,7 +3618,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
      * @return a {@link Document} containing the resulting value.
@@ -3651,10 +3631,6 @@ public interface Bucket {
      *
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
-     *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
      *
      * This method throws under the following conditions:
      *
@@ -3679,7 +3655,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param persistTo the persistence constraint to watch.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
@@ -3694,10 +3670,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3721,7 +3693,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param replicateTo the replication constraint to watch.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
@@ -3736,10 +3708,6 @@ public interface Bucket {
      * This method allows to set an expiration time for the document as well. It is not allowed that the delta value
      * will bring the actual value below zero.
      *
-     * *Note*: Right now it is only possible to set the TTL of the counter document when it is created, not
-     * when it is updated! If this behavior is needed, please refer to the subdocument API and use the JSON
-     * based counters!
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
@@ -3763,7 +3731,7 @@ public interface Bucket {
      * @param id the id of the document.
      * @param delta the increment or decrement amount.
      * @param initial the initial value.
-     * @param expiry the new expiration time for the document, only used on creation.
+     * @param expiry the new expiration time of the counter.
      * @param persistTo the persistence constraint to watch.
      * @param replicateTo the replication constraint to watch.
      * @param timeout the custom timeout.

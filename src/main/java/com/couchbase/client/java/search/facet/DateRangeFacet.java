@@ -32,7 +32,7 @@ import com.couchbase.client.java.search.util.SearchUtils;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class DateRangeFacet extends SearchFacet {
 

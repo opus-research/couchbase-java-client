@@ -69,7 +69,6 @@ import com.couchbase.client.java.error.subdoc.PathInvalidException;
 import com.couchbase.client.java.error.subdoc.PathMismatchException;
 import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
-import com.couchbase.client.java.error.subdoc.XattrOrderingException;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
 import rx.Subscriber;
@@ -110,8 +109,7 @@ public class AsyncMutateInBuilder {
     protected long cas;
     protected PersistTo persistTo;
     protected ReplicateTo replicateTo;
-    protected boolean upsertDocument;
-    protected boolean insertDocument;
+    protected boolean createDocument;
 
     /**
      * Instances of this builder should be obtained through {@link AsyncBucket#mutateIn(String)} rather than directly
@@ -416,38 +414,10 @@ public class AsyncMutateInBuilder {
     /**
      * Set createDocument to true, if the document has to be created
      *
-     * This method has been renamed to {@link #upsertDocument(boolean)}
      * @param createDocument true to create document.
      */
-    @Deprecated
     public AsyncMutateInBuilder createDocument(boolean createDocument) {
-        return upsertDocument(createDocument);
-    }
-
-    /**
-     * Set upsertDocument to true, if the document has to be created
-     *
-     * @param upsertDocument true to create document.
-     */
-    public AsyncMutateInBuilder upsertDocument(boolean upsertDocument) {
-        if (this.insertDocument && upsertDocument) {
-            throw new IllegalArgumentException("Cannot set both upsertDocument and insertDocument to true");
-        }
-        this.upsertDocument = upsertDocument;
-        return this;
-    }
-
-    /**
-     * Set insertDocument to true, if the document has to be created only if it does not exist
-     *
-     * @param insertDocument true to insert document.
-     */
-    @InterfaceStability.Committed
-    public AsyncMutateInBuilder insertDocument(boolean insertDocument) {
-        if (this.upsertDocument && insertDocument) {
-            throw new IllegalArgumentException("Cannot set both upsertDocument and insertDocument to true");
-        }
-        this.insertDocument = insertDocument;
+        this.createDocument = createDocument;
         return this;
     }
 
@@ -561,7 +531,7 @@ public class AsyncMutateInBuilder {
      *
      * @param content full content of the JSON document
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     public AsyncMutateInBuilder upsert(JsonObject content) {
         this.mutationSpecs.add(new MutationSpec(Mutation.UPSERTDOC, "", content));
         return this;
@@ -1043,14 +1013,6 @@ public class AsyncMutateInBuilder {
         if (mutationSpecs.isEmpty()) {
             throw new IllegalArgumentException("At least one Mutation Spec is necessary for mutateIn");
         }
-        boolean seenNonXattr = false;
-        for (MutationSpec spec : mutationSpecs) {
-            if (spec.xattr() && seenNonXattr) {
-                throw new XattrOrderingException("Xattr-based commands must always come first in the builder!");
-            } else if (!spec.xattr()) {
-                seenNonXattr = true;
-            }
-        }
 
         Observable<DocumentFragment<Mutation>> mutations = Observable.defer(new Func0<Observable<MutationCommand>>() {
             @Override
@@ -1084,7 +1046,7 @@ public class AsyncMutateInBuilder {
             @Override
             public Observable<MultiMutationResponse> call(List<MutationCommand> mutationCommands) {
                 return core.send(new SubMultiMutationRequest(docId, bucketName,
-                        expiry, cas, SubMultiMutationDocOptionsBuilder.builder().upsertDocument(upsertDocument).insertDocument(insertDocument),
+                        expiry, cas, SubMultiMutationDocOptionsBuilder.builder().createDocument(createDocument),
                         mutationCommands));
             }
         }).flatMap(new Func1<MultiMutationResponse, Observable<DocumentFragment<Mutation>>>() {
@@ -1182,8 +1144,7 @@ public class AsyncMutateInBuilder {
                     SubDictUpsertRequest request = new SubDictUpsertRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.upsertDocument(upsertDocument);
-                    request.insertDocument(insertDocument);
+                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1213,8 +1174,7 @@ public class AsyncMutateInBuilder {
                     SubDictAddRequest request = new SubDictAddRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.upsertDocument(upsertDocument);
-                    request.insertDocument(insertDocument);
+                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1246,8 +1206,7 @@ public class AsyncMutateInBuilder {
                     SubReplaceRequest request = new SubReplaceRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.upsertDocument(upsertDocument);
-                    request.insertDocument(insertDocument);
+                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1288,8 +1247,7 @@ public class AsyncMutateInBuilder {
                             buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.upsertDocument(upsertDocument);
-                    request.insertDocument(insertDocument);
+                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1340,8 +1298,7 @@ public class AsyncMutateInBuilder {
                             SubArrayRequest.ArrayOperation.ADD_UNIQUE, buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.upsertDocument(upsertDocument);
-                    request.insertDocument(insertDocument);
+                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1468,8 +1425,7 @@ public class AsyncMutateInBuilder {
                         request.createIntermediaryPath(spec.createParents());
                         request.xattr(spec.xattr());
                         request.subscriber(s);
-                        request.upsertDocument(upsertDocument);
-                        request.insertDocument(insertDocument);
+                        request.createDocument(createDocument);
                         return core.send(request);
                     }
                 })

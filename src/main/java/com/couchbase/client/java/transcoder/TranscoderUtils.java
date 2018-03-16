@@ -18,16 +18,15 @@ package com.couchbase.client.java.transcoder;
 import com.couchbase.client.core.endpoint.util.WhitespaceSkipper;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.deps.io.netty.buffer.ByteBufInputStream;
 import com.couchbase.client.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -289,33 +288,11 @@ public class TranscoderUtils {
     }
 
     /**
-     * Converts a {@link ByteBuf} to a byte[] in the most straightforward manner available.
-     * the byte[] returned is a copy of the actual data
-     * @param input the ByteBuf to convert.
-     * @return a byte[] array
-     */
-    public static byte[] copyByteBufToByteArray(ByteBuf input) {
-        byte[] copy;
-        int length = input.readableBytes();
-        if (input.hasArray()) {
-            byte[] inputBytes = input.array();
-            int offset = input.arrayOffset() + input.readerIndex();
-            copy = Arrays.copyOfRange(inputBytes, offset, offset + length);
-            return copy;
-        } else {
-            copy = new byte[length];
-            input.getBytes(input.readerIndex(), copy);
-        }
-        return copy;
-    }
-
-    /**
      * Decode a {@link ByteBuf} representing a valid JSON entity to the requested target class,
      * using the {@link ObjectMapper} provided and without releasing the buffer.
      *
-     * Mapper uses a {@link ByteBufInputStream} reading directly the netty {@link ByteBuf} if its
-     * backed by a direct buffer and avoids a memory copy if backed by a heap buffer by using
-     * the original one with an offset.
+     * Mapper uses the byte[], performing the most straightforward conversion from ByteBuf to byte[] available. (see
+     * {@link #byteBufToByteArray(ByteBuf)}).
      *
      * @param input the ByteBuf to decode.
      * @param clazz the class to decode to.
@@ -325,21 +302,8 @@ public class TranscoderUtils {
      * @throws IOException in case decoding failed.
      */
     public static <T> T byteBufToClass(ByteBuf input, Class<? extends T> clazz, ObjectMapper mapper) throws IOException {
-        if (input.hasArray()) {
-            ByteBufToArray toArray = byteBufToByteArray(input);
-            return mapper.readValue(toArray.byteArray, toArray.offset, toArray.length, clazz);
-        } else {
-            ByteBufInputStream bbis = null;
-            try {
-                bbis = new ByteBufInputStream(input);
-                return mapper.readValue(bbis, clazz);
-            }
-            finally {
-                if (bbis != null) {
-                    bbis.close();
-                }
-            }
-        }
+        ByteBufToArray toArray = byteBufToByteArray(input);
+        return mapper.readValue(toArray.byteArray, toArray.offset, toArray.length, clazz);
     }
 
     /**

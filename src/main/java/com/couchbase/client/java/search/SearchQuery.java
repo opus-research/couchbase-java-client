@@ -64,7 +64,7 @@ import rx.Observable;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class SearchQuery {
 
