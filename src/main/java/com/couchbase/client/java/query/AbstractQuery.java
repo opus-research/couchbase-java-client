@@ -21,6 +21,8 @@
  */
 package com.couchbase.client.java.query;
 
+import javax.swing.plaf.nimbus.State;
+
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.document.json.JsonValue;
@@ -31,7 +33,7 @@ import com.couchbase.client.java.document.json.JsonValue;
  * @author Simon Baslé
  * @since 2.1
  */
-public abstract class AbstractQuery extends Query {
+public abstract class AbstractQuery implements Query {
 
     private QueryParams queryParameters;
     private Statement statement;

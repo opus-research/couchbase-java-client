@@ -43,12 +43,29 @@ public class ParametrizedQuery extends AbstractQuery {
 
     private final JsonValue statementParams;
 
-    /* package */ ParametrizedQuery(Statement statement, JsonArray positionalParams, QueryParams params) {
+    /**
+     * Create a new query with positionalParameters. Note that the {@link JsonArray}
+     * should not be mutated until {@link #n1ql()} is called since it backs the
+     * creation of the query string.
+     *
+     * @param statement the {@link Statement} to execute (containing positional placeholders)
+     * @param positionalParams the values for the positional placeholders in statement
+     * @param params the {@link QueryParams query parameters}.
+     */
+    public ParametrizedQuery(Statement statement, JsonArray positionalParams, QueryParams params) {
         super(statement, params);
         this.statementParams = positionalParams;
     }
 
-    /* package */ ParametrizedQuery(Statement statement, JsonObject namedParams, QueryParams params) {
+    /**
+     * Create a new query with named parameters. Note that the {@link JsonObject}
+     * should not be mutated until {@link #n1ql()} is called since it backs the
+     * creation of the query string.
+     *  @param statement the {@link Statement} to execute (containing named placeholders)
+     * @param namedParams the values for the named placeholders in statement
+     * @param params the {@link QueryParams query parameters}.
+     */
+    public ParametrizedQuery(Statement statement, JsonObject namedParams, QueryParams params) {
         super(statement, params);
         this.statementParams = namedParams;
     }

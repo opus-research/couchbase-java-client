@@ -44,7 +44,7 @@ public class QueryToN1qlTest {
 
     @Test
     public void simpleQueryShouldJustProduceStatement() {
-        SimpleQuery query = new SimpleQuery(select("*").from("tutorial").where(x("fname").eq(s("ian"))), null);
+        SimpleQuery query = new SimpleQuery(select("*").from("tutorial").where(x("fname").eq(s("ian"))));
 
         //notice ian is between escaped quotes since inside json
         assertEquals("{\"statement\":\"SELECT * FROM tutorial WHERE fname = \\\"ian\\\"\"}", query.n1ql().toString());
