@@ -21,12 +21,12 @@ import com.couchbase.client.java.MutationState;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.document.json.JsonValue;
-import com.couchbase.client.java.query.dsl.functions.ObjectFunctions;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,7 +52,6 @@ public class N1qlParams implements Serializable {
     private Integer maxParallelism;
     private boolean disableMetrics;
     private MutationState mutationState;
-    private Map<String, Object> rawParams;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -97,12 +96,6 @@ public class N1qlParams implements Serializable {
             }
             queryJson.put("scan_vectors", mutationState.export());
             queryJson.put("scan_consistency", "at_plus");
-        }
-
-        if (this.rawParams != null) {
-            for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
-                queryJson.put(entry.getKey(), entry.getValue());
-            }
         }
     }
 
@@ -268,30 +261,6 @@ public class N1qlParams implements Serializable {
     }
 
     /**
-     * Allows to specify an arbitrary, raw N1QL param.
-     *
-     * Use with care and only provide options that are supported by the server and are not exposed as part of the
-     * overall stable API in the {@link N1qlParams} class.
-     *
-     * @param name the name of the property.
-     * @param value the value of the property, only JSON value types are supported.
-     * @return this {@link N1qlParams} for chaining.
-     */
-    @InterfaceStability.Uncommitted
-    public N1qlParams rawParam(String name, Object value) {
-        if (this.rawParams == null) {
-            this.rawParams = new HashMap<String, Object>();
-        }
-
-        if (!JsonValue.checkType(value)) {
-            throw new IllegalArgumentException("Only JSON types are supported.");
-        }
-
-        rawParams.put(name, value);
-        return this;
-    }
-
-    /**
      * Helper method to check if a custom server side timeout has been applied on the params.
      *
      * @return true if it has, false otherwise.
@@ -316,19 +285,16 @@ public class N1qlParams implements Serializable {
 
         N1qlParams that = (N1qlParams) o;
 
-        if (disableMetrics != that.disableMetrics) return false;
         if (adhoc != that.adhoc) return false;
+        if (disableMetrics != that.disableMetrics) return false;
         if (serverSideTimeout != null ? !serverSideTimeout.equals(that.serverSideTimeout) : that.serverSideTimeout != null)
             return false;
         if (consistency != that.consistency) return false;
-        if (scanWait != null ? !scanWait.equals(that.scanWait) : that.scanWait != null) return false;
+        if (scanWait != null ? !scanWait.equals(that.scanWait) : that.scanWait != null)
+            return false;
         if (clientContextId != null ? !clientContextId.equals(that.clientContextId) : that.clientContextId != null)
             return false;
-        if (maxParallelism != null ? !maxParallelism.equals(that.maxParallelism) : that.maxParallelism != null)
-            return false;
-        if (mutationState != null ? !mutationState.equals(that.mutationState) : that.mutationState != null)
-            return false;
-        return rawParams != null ? rawParams.equals(that.rawParams) : that.rawParams == null;
+        return !(maxParallelism != null ? !maxParallelism.equals(that.maxParallelism) : that.maxParallelism != null);
 
     }
 
@@ -339,10 +305,8 @@ public class N1qlParams implements Serializable {
         result = 31 * result + (scanWait != null ? scanWait.hashCode() : 0);
         result = 31 * result + (clientContextId != null ? clientContextId.hashCode() : 0);
         result = 31 * result + (maxParallelism != null ? maxParallelism.hashCode() : 0);
-        result = 31 * result + (disableMetrics ? 1 : 0);
-        result = 31 * result + (mutationState != null ? mutationState.hashCode() : 0);
-        result = 31 * result + (rawParams != null ? rawParams.hashCode() : 0);
         result = 31 * result + (adhoc ? 1 : 0);
+        result = 31 * result + (disableMetrics ? 1 : 0);
         return result;
     }
 
@@ -356,7 +320,6 @@ public class N1qlParams implements Serializable {
         sb.append(", maxParallelism=").append(maxParallelism);
         sb.append(", adhoc=").append(adhoc);
         sb.append(", disableMetrics=").append(disableMetrics);
-        sb.append(", rawParams=").append(rawParams);
         sb.append('}');
         return sb.toString();
     }
