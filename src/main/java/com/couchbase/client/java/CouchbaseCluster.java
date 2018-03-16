@@ -31,8 +31,8 @@ import com.couchbase.client.core.message.cluster.OpenBucketRequest;
 import com.couchbase.client.core.message.cluster.SeedNodesRequest;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.CouchbaseClusterManager;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.env.DefaultClusterEnvironment;
 import rx.Observable;
 import rx.functions.Func1;
 
@@ -47,14 +47,14 @@ public class CouchbaseCluster implements Cluster {
     private static final String DEFAULT_HOST = "127.0.0.1";
 
     private final ClusterFacade core;
-    private final CouchbaseEnvironment environment;
+    private final ClusterEnvironment environment;
     private final ConnectionString connectionString;
 
     public static CouchbaseCluster create() {
         return create(DEFAULT_HOST);
     }
 
-    public static CouchbaseCluster create(final CouchbaseEnvironment environment) {
+    public static CouchbaseCluster create(final ClusterEnvironment environment) {
         return create(environment, DEFAULT_HOST);
     }
 
@@ -63,26 +63,26 @@ public class CouchbaseCluster implements Cluster {
     }
 
     public static CouchbaseCluster create(final List<String> nodes) {
-        return create(DefaultCouchbaseEnvironment.create(), nodes);
+        return create(DefaultClusterEnvironment.create(), nodes);
     }
 
-    public static CouchbaseCluster create(final CouchbaseEnvironment environment, final String... nodes) {
+    public static CouchbaseCluster create(final ClusterEnvironment environment, final String... nodes) {
         return create(environment, Arrays.asList(nodes));
     }
 
-    public static CouchbaseCluster create(final CouchbaseEnvironment environment, final List<String> nodes) {
+    public static CouchbaseCluster create(final ClusterEnvironment environment, final List<String> nodes) {
         return new CouchbaseCluster(environment, ConnectionString.fromHostnames(nodes));
     }
 
     public static CouchbaseCluster fromConnectionString(final String connectionString) {
-        return fromConnectionString(DefaultCouchbaseEnvironment.create(), connectionString);
+        return fromConnectionString(DefaultClusterEnvironment.create(), connectionString);
     }
 
-    public static CouchbaseCluster fromConnectionString(final CouchbaseEnvironment environment, final String connectionString) {
+    public static CouchbaseCluster fromConnectionString(final ClusterEnvironment environment, final String connectionString) {
         return new CouchbaseCluster(environment, ConnectionString.create(connectionString));
     }
 
-    CouchbaseCluster(final CouchbaseEnvironment environment, final ConnectionString connectionString) {
+    CouchbaseCluster(final ClusterEnvironment environment, final ConnectionString connectionString) {
         core = new CouchbaseCore(environment);
         List<String> seedNodes = new ArrayList<String>();
         for (InetSocketAddress node : connectionString.hosts()) {
