@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 Couchbase, Inc.
+ * Copyright (C) 2015 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,34 +19,38 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
-
-import com.couchbase.client.java.document.json.JsonValue;
+package com.couchbase.client.java.query.consistency;
 
 /**
- * The simplest form of N1QL {@link Query} with a plain un-parametrized {@link Statement}.
+ * The possible values for scan_consistency in a N1QL request.
  *
  * @author Simon Baslé
  * @since 2.1
  */
-public class SimpleQuery extends AbstractQuery {
+public enum ScanConsistency {
 
-    /* package */ SimpleQuery(Statement statement, QueryParams params) {
-        super(statement, params);
-    }
+    /**
+     * This is the default (for single-statement requests). No timestamp vector is used
+     * in the index scan.
+     * This is also the fastest mode, because we avoid the cost of obtaining the vector,
+     * and we also avoid any wait for the index to catch up to the vector.
+     */
+    NOT_BOUNDED,
+    /**
+     * This implements strong consistency per request.
+     * Before processing the request, a current vector is obtained.
+     * The vector is used as a lower bound for the statements in the request.
+     * If there are DML statements in the request, RYOW is also applied within the request.
+     */
+    REQUEST_PLUS,
+    /**
+     * This implements strong consistency per statement.
+     * Before processing each statement, a current vector is obtained
+     * and used as a lower bound for that statement.
+     */
+    STATEMENT_PLUS;
 
-    @Override
-    protected String statementType() {
-        return "statement";
-    }
-
-    @Override
-    protected Object statementValue() {
-        return statement().toString();
-    }
-
-    @Override
-    protected JsonValue statementParameters() {
-        return null;
+    public String n1ql() {
+        return this.name().toLowerCase();
     }
 }

@@ -515,12 +515,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Statement statement) {
-        return query(new SimpleQuery(statement));
+        return query(Query.simple(statement));
     }
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
-        return queryRaw(query.toN1QL());
+        return queryRaw(query.n1ql().toString());
     }
 
     /**
@@ -566,36 +566,38 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             }
                         }
                     });
-                    final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
-                        @Override
-                        public Boolean call(String s) {
-                            return "success".equalsIgnoreCase(s) || "completed".equalsIgnoreCase(s);
-                        }
-                    });
-                    final Observable<JsonObject> errors = response.errors().map(new Func1<ByteBuf, JsonObject>() {
-                        @Override
-                        public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            } finally {
-                                byteBuf.release();
+                    if (response.status().isSuccess()) {
+                        response.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
+                        return Observable.just((AsyncQueryResult) new DefaultAsyncQueryResult(rows, info, null,
+                                response.status().isSuccess()));
+                    } else {
+                        return response.errors().map(new Func1<ByteBuf, JsonObject>() {
+                            @Override
+                            public JsonObject call(ByteBuf byteBuf) {
+                                try {
+                                    return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                } catch (Exception e) {
+                                    throw new TranscodingException("Could not decode View Info.", e);
+                                } finally {
+                                    byteBuf.release();
+                                }
                             }
-                        }
-                    });
-                    boolean parseSuccess = response.status().isSuccess();
-
-                    AsyncQueryResult r = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess);
-                    return Observable.just(r);
+                        }).last().map(new Func1<JsonObject, AsyncQueryResult>() {
+                            @Override
+                            public AsyncQueryResult call(JsonObject error) {
+                                //TODO rework DefaultAsyncQueryResult
+                                return new DefaultAsyncQueryResult(rows, info, error, response.status().isSuccess());
+                            }
+                        });
+                    }
                 }
             });
     }
 
     @Override
     public Observable<QueryPlan> queryPrepare(PrepareStatement prepare) {
-        SimpleQuery query = new SimpleQuery(prepare);
-        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.toN1QL(),
+        SimpleQuery query = Query.simple(prepare);
+        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
                 bucket, password);
         return core
                 .<GenericQueryResponse>send(prepareRequest)

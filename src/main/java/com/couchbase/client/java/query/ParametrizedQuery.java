@@ -41,38 +41,16 @@ import com.couchbase.client.java.document.json.JsonValue;
  */
 public class ParametrizedQuery extends AbstractQuery {
 
-    private final Statement statement;
-    private final JsonValue params;
+    private final JsonValue statementParams;
 
-    /**
-     * Create a new query with positionalParameters. Note that the {@link JsonArray}
-     * should not be mutated until {@link #toN1QL()} is called since it backs the
-     * creation of the query string.
-     *
-     * @param statement the {@link Statement} to execute (containing positional placeholders)
-     * @param positionalParams the values for the positional placeholders in statement
-     */
-    public ParametrizedQuery(Statement statement, JsonArray positionalParams) {
-        this.statement = statement;
-        this.params = positionalParams;
+    /* package */ ParametrizedQuery(Statement statement, JsonArray positionalParams, QueryParams params) {
+        super(statement, params);
+        this.statementParams = positionalParams;
     }
 
-    /**
-     * Create a new query with named parameters. Note that the {@link JsonObject}
-     * should not be mutated until {@link #toN1QL()} is called since it backs the
-     * creation of the query string.
-     *
-     * @param statement the {@link Statement} to execute (containing named placeholders)
-     * @param namedParams the values for the named placeholders in statement
-     */
-    public ParametrizedQuery(Statement statement, JsonObject namedParams) {
-        this.statement = statement;
-        this.params = namedParams;
-    }
-
-    @Override
-    public Statement statement() {
-        return this.statement;
+    /* package */ ParametrizedQuery(Statement statement, JsonObject namedParams, QueryParams params) {
+        super(statement, params);
+        this.statementParams = namedParams;
     }
 
     @Override
@@ -82,11 +60,11 @@ public class ParametrizedQuery extends AbstractQuery {
 
     @Override
     protected Object statementValue() {
-        return statement.toString();
+        return statement().toString();
     }
 
     @Override
     protected JsonValue statementParameters() {
-        return params;
+        return statementParams;
     }
 }
