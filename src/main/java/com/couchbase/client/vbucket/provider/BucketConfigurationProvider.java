@@ -500,6 +500,7 @@ public class BucketConfigurationProvider extends SpyObject
               new ConfigurationProviderHTTP(seedNodes, bucket, password);
             newProvider.subscribe(bucket, provider);
             httpProvider.set(newProvider);
+            monitorBucket();
             oldProvider.shutdown();
             return;
           } catch(Exception ex) {
