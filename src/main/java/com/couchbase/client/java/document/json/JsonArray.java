@@ -92,8 +92,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Retrieves the value by the position in the {@link JsonArray} and does not cast it.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public Object get(int index) {
         return content.get(index);
@@ -131,8 +130,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Retrieves the value by the position in the {@link JsonArray} and casts it to {@link String}.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public String getString(int index) {
         return (String) content.get(index);
@@ -155,8 +153,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Note that if value was stored as another numerical type, some truncation or rounding may occur.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public Long getLong(int index) {
         Number n = (Number) content.get(index);
@@ -186,8 +183,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Note that if value was stored as another numerical type, some truncation or rounding may occur.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public Integer getInt(int index) {
         Number n = (Number) content.get(index);
@@ -217,8 +213,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Note that if value was stored as another numerical type, some truncation or rounding may occur.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public Double getDouble(int index) {
         Number n = (Number) content.get(index);
@@ -246,8 +241,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Retrieves the value by the position in the {@link JsonArray} and casts it to {@link Boolean}.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public boolean getBoolean(int index) {
         return (Boolean) content.get(index);
@@ -268,8 +262,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Retrieves the value by the position in the {@link JsonArray} and casts it to {@link JsonObject}.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public JsonObject getObject(int index) {
         return (JsonObject) content.get(index);
@@ -290,8 +283,7 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      * Retrieves the value by the position in the {@link JsonArray} and casts it to {@link JsonArray}.
      *
      * @param index the index of the value.
-     * @return the value at index.
-     * @throws IndexOutOfBoundsException if the index is negative or too large.
+     * @return the value if found, or null otherwise.
      */
     public JsonArray getArray(int index) {
         return (JsonArray) content.get(index);
