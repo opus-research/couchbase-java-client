@@ -46,6 +46,7 @@ import net.spy.memcached.ops.OperationStatus;
 
 import org.junit.Ignore;
 import static org.junit.Assume.assumeTrue;
+import org.junit.Test;
 
 /**
  * A CouchbaseClientTest.
@@ -55,15 +56,15 @@ public class CouchbaseClientTest extends BinaryClientTest {
   // Constant for empty string
   private static final String EMPTY = "";
 
+  private final List<URI> uris = Arrays.asList(URI.create("http://"
+        + TestConfig.IPV4_ADDR + ":8091/pools"));
+
   /**
    * Initialises the client, deletes all the buckets
    * and creates a new default bucket.
    */
   @Override
   protected void initClient() throws Exception {
-    final List<URI> uris = Arrays.asList(URI.create("http://"
-        + TestConfig.IPV4_ADDR + ":8091/pools"));
-
     BucketTool bucketTool = new BucketTool();
     bucketTool.deleteAllBuckets();
     bucketTool.createDefaultBucket(BucketType.COUCHBASE, 256, 1, true);
@@ -102,6 +103,21 @@ public class CouchbaseClientTest extends BinaryClientTest {
     client = new CouchbaseClient((CouchbaseConnectionFactory) cf);
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfBucketIsNull() throws Exception {
+    new CouchbaseClient(uris, null, "");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfBucketIsEmpty() throws Exception {
+    new CouchbaseClient(uris, "", "");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldThrowIfPasswordIsNull() throws Exception {
+    new CouchbaseClient(uris, "default", null);
+  }
+
   /**
    * Check the available servers, a client is able to connect to.
    *
@@ -115,25 +131,8 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   @Override
   public void testAvailableServers() {
-    // CouchbaseClient tracks hostname and ip address of servers need to
-    // make sure the available server list is 2 * (num servers)
-    try {
-      Thread.sleep(10); // Let the client warm up
-    } catch (InterruptedException e) {
-      fail("Interrupted while client was warming up");
-    }
-
-    StringBuilder availableServers = new StringBuilder();
-    for(SocketAddress sa : client.getAvailableServers()) {
-      if (availableServers.length() > 0) {
-        availableServers.append(";");
-      }
-      availableServers.append(sa.toString());
-    }
-
-    assert (client.getAvailableServers().size() % 2) ==  0 : "Num servers "
-      + client.getAvailableServers().size() + ". They are: "
-      + availableServers;
+    final Collection<SocketAddress> servers = client.getAvailableServers();
+    assertTrue("There are no servers available.", servers.size() > 0);
   }
 
   /**
@@ -179,7 +178,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   public void testSetInvalidKeyBlank() {
     try {
-      client.set(EMPTY,5,EMPTY);
+      client.set(EMPTY, 5, EMPTY);
     } catch (IllegalArgumentException e) {
       assertEquals("Key must contain at least one character.", e.getMessage());
     }
@@ -193,8 +192,23 @@ public class CouchbaseClientTest extends BinaryClientTest {
    * @throws Exception
    */
   public void testGetValBlank() throws Exception {
-    assertTrue(client.set("blankValue",0,EMPTY).get());
+    assertTrue(client.set("blankValue", 0, EMPTY).get());
     assertEquals(EMPTY, client.get("blankValue"));
+  }
+
+  /**
+   * Test whether the delete operation
+   * returns the CAS value.
+   * @pre The key is successfully set.
+   * @post The key is deleted and checked for CAS.
+   *
+   * @throws Exception
+   */
+  public void testDelReturnsCAS() throws Exception {
+    OperationFuture<Boolean> setOp = client.set("testDelReturnsCAS", 0, EMPTY);
+    assertTrue(setOp.get());
+    OperationFuture<Boolean> delOp = client.delete("testDelReturnsCAS");
+    assertTrue(delOp.getCas() > 0);
   }
 
   /**
@@ -416,6 +430,43 @@ public class CouchbaseClientTest extends BinaryClientTest {
   }
 
   /**
+   * Test observe with zero in both rep and persist.
+   *
+   * @pre No replication and persisting of key value pair for the
+   * add operations.
+   * @post Test succeeds to return an assert that the key was persisted
+   * to master or not. In case of the add operation it also returns
+   * whether the key has been replicated to other nodes.
+   *
+   * @throws Exception
+   */
+  public void testNoPersistRepObserve() throws Exception {
+    OperationFuture<Boolean> noPersistRep =
+      (((CouchbaseClient)client).add("testNoPersistRepObserve", 0, "value",
+      PersistTo.ZERO, ReplicateTo.ZERO));
+    assertTrue("Key not added and not persisted to master : "
+      + noPersistRep.getStatus().getMessage(), noPersistRep.get());
+  }
+
+  /**
+   * Test observe with stale CAS
+   *
+   * @pre Perform an add operation with cas1 and then set with cas2
+   * @post Append should not succeed if performed with cas1
+   *
+   * @throws Exception
+   */
+  public void testStaleCAS() throws Exception {
+    OperationFuture<Boolean> staleCasOp =
+      (((CouchbaseClient)client).add("testStaleCAS", 0, "value"));
+    long cas1 = staleCasOp.getCas();
+    client.set("testStaleCAS", 0, "value2").getCas();
+    assertFalse(client.append(cas1, "testStaleCAS", "")
+      .getStatus().isSuccess());
+    assertEquals((client.append(cas1, "testStaleCAS", "")
+      .getStatus().getMessage()),"Data exists for key");
+  }
+  /**
    * Get the key status from the client in the operation future object.
    *
    * @pre set a key value pair to db using the client. On the client object
@@ -573,6 +624,70 @@ public class CouchbaseClientTest extends BinaryClientTest {
                 PersistTo.MASTER));
     assert delOp.get();
     assertNotNull(delOp.getStatus().getMessage());
+  }
+
+  public void testIncrDecrZero() throws Exception {
+    String k = "testIncrDecrZero";
+    client.set(k, 0, "5");
+    assertEquals(5, client.incr(k, 0));
+    assertEquals(5, client.decr(k, 0));
+  }
+
+  public void testIncrDecrMax() throws Exception {
+    String k = "testIncrDecrMax";
+    client.set(k, 0, "5");
+    assertEquals(client.incr(k, Integer.MAX_VALUE),Integer.MAX_VALUE+(long)5);
+    client.set(k, 0, "5");
+    assertEquals(0, client.decr(k, Integer.MAX_VALUE));
+  }
+
+  /**
+   * Test deletion of non existent key.
+   * @pre The key is deleted and checked for CAS.
+   * @post assert is false
+   *
+   * @throws Exception
+   */
+  public void testDelNoExist() throws Exception {
+    OperationFuture<Boolean> delOp = client.delete("testDelNoExist");
+    assertTrue(delOp.get());
+    assertNull(delOp.getCas());
+  }
+
+  /**
+   * Get a value and update the expiration time to near zero for a key.
+   *
+   * @pre Call the simple get and touch operation for the same key
+   * and update the expiry time to 1.
+   * @post Test succeeds to call the get and touch operation and
+   * fetch the key/val as it never expires.
+   *
+   * @throws Exception
+   */
+  public void testGATZeroTimeout() throws Exception {
+    assertNull(client.get("gatkey"));
+    assertTrue(client.set("gatkey", 1, "gatvalue").get());
+    Thread.sleep(1500);
+    assertFalse("gatvalue".equals(client.get("gatkey")));
+    assertNull(client.getAndTouch("gatkey", 0));
+  }
+
+  /**
+   * Get a value and update the expiration time to a negative value.
+   *
+   * @pre Call the simple get and touch operation for the same key
+   * and update the expiry time to -1.
+   * @post Test succeeds to call the get and touch operation and
+   * fetch the key/val as it never expires.
+   *
+   * @throws Exception
+   */
+  public void testGATNegativeTimeout() throws Exception {
+    assertNull(client.get("gatkey"));
+    assertTrue(client.set("gatkey", -1, "gatvalue").get());
+    Thread.sleep(1500);
+    assertTrue("gatvalue".equals(client.get("gatkey")));
+    assertNotNull(client.getAndTouch("gatkey", -1));
   }
 
   @Override
