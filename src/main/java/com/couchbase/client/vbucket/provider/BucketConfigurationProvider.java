@@ -65,6 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class BucketConfigurationProvider extends SpyObject
   implements ConfigurationProvider, Reconfigurable {
 
+
   private static final int DEFAULT_BINARY_PORT = 11210;
   private static final String ANONYMOUS_BUCKET = "default";
 
@@ -81,7 +82,7 @@ public class BucketConfigurationProvider extends SpyObject
   private final AtomicReference<CouchbaseConnection> binaryConnection;
   private final boolean disableCarrierBootstrap;
   private final boolean disableHttpBootstrap;
-  private volatile BootstrapProviderType bootstrapProvider;
+  private volatile boolean isBinary;
   private volatile long lastRevision;
   private volatile boolean shutdown;
 
@@ -117,13 +118,13 @@ public class BucketConfigurationProvider extends SpyObject
       getLogger().debug("Omitting bootstrap since already shutdown.");
     }
 
-    bootstrapProvider = BootstrapProviderType.NONE;
+    isBinary = false;
     if (!bootstrapBinary() && !bootstrapHttp()) {
       throw new ConfigurationException("Could not fetch a valid Bucket "
         + "configuration.");
     }
 
-    if (bootstrapProvider == BootstrapProviderType.CARRIER) {
+    if (isBinary) {
       getLogger().info("Could bootstrap through carrier publication.");
     } else {
       getLogger().info("Carrier config not available, bootstrapped through "
@@ -147,7 +148,7 @@ public class BucketConfigurationProvider extends SpyObject
       return false;
     }
 
-    bootstrapProvider = BootstrapProviderType.CARRIER;
+    isBinary = true;
     List<InetSocketAddress> nodes =
       new ArrayList<InetSocketAddress>(seedNodes.size());
     for (URI seedNode : seedNodes) {
@@ -163,12 +164,12 @@ public class BucketConfigurationProvider extends SpyObject
 
       getLogger().debug("Not a single node returned a carrier publication "
         + "config.");
-      bootstrapProvider = BootstrapProviderType.NONE;
+      isBinary = false;
       return false;
     } catch(Exception ex) {
       getLogger().info("Could not fetch config from carrier publication seed "
         + "nodes.", ex);
-      bootstrapProvider = BootstrapProviderType.NONE;
+      isBinary = false;
       return false;
     }
   }
@@ -344,7 +345,7 @@ public class BucketConfigurationProvider extends SpyObject
       Bucket config = httpProvider.get().getBucketConfiguration(bucket);
       setConfig(config);
       monitorBucket();
-      bootstrapProvider = BootstrapProviderType.HTTP;
+      isBinary = false;
       return true;
     } catch(Exception ex) {
       getLogger().info("Could not fetch config from http seed nodes.", ex);
@@ -357,7 +358,7 @@ public class BucketConfigurationProvider extends SpyObject
    * used.
    */
   private void monitorBucket() {
-    if (!shutdown && bootstrapProvider == BootstrapProviderType.HTTP) {
+    if (!shutdown && !isBinary) {
         httpProvider.get().subscribe(bucket, this);
     }
   }
@@ -390,7 +391,7 @@ public class BucketConfigurationProvider extends SpyObject
       }
     }
     getLogger().debug("Applying new bucket config for bucket \"" + bucket
-      + "\" (carrier publication: " + bootstrapProvider + "): " + config);
+      + "\" (carrier publication: " + isBinary + "): " + config);
 
     this.config.set(config);
     httpProvider.get().updateBucket(config.getName(), config);
@@ -407,7 +408,7 @@ public class BucketConfigurationProvider extends SpyObject
    * @param config the config to check.
    */
   private void manageTaintedConfig(final Config config) {
-    if (bootstrapProvider == BootstrapProviderType.HTTP) {
+    if (!isBinary) {
       return;
     }
 
@@ -492,7 +493,7 @@ public class BucketConfigurationProvider extends SpyObject
       return;
     }
 
-    if (bootstrapProvider == BootstrapProviderType.CARRIER) {
+    if (isBinary) {
       if (binaryConnection.get() == null) {
         bootstrap();
       } else {
@@ -525,7 +526,7 @@ public class BucketConfigurationProvider extends SpyObject
 
   @Override
   public void reloadConfig() {
-    if (bootstrapProvider == BootstrapProviderType.CARRIER && !shutdown) {
+    if (isBinary && !shutdown) {
       signalOutdated();
     }
   }
@@ -645,7 +646,7 @@ public class BucketConfigurationProvider extends SpyObject
     @Override
     public void run() {
       try {
-        while (bootstrapProvider == BootstrapProviderType.CARRIER && getConfig().getConfig().isTainted()) {
+        while (isBinary && getConfig().getConfig().isTainted()) {
           getLogger().debug("Polling for new carrier configuration and " +
             "waiting " + waitPeriod + "ms (Attempt " + ++attempt + ").");
           signalOutdated();
