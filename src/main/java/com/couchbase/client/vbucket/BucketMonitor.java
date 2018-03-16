@@ -35,9 +35,9 @@ import java.util.Observable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import net.spy.memcached.compat.log.Logger;
+import net.spy.memcached.compat.log.LoggerFactory;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -57,6 +57,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 public class BucketMonitor extends Observable {
 
   private final URI cometStreamURI;
+  private Bucket bucket;
   private final String httpUser;
   private final String httpPass;
   private final ChannelFactory factory;
@@ -67,9 +68,14 @@ public class BucketMonitor extends Observable {
   private BucketUpdateResponseHandler handler;
   private final HttpMessageHeaders headers;
   private static final Logger LOGGER =
-      Logger.getLogger(BucketMonitor.class.getName());
+    LoggerFactory.getLogger(BucketMonitor.class.getName());
   private ClientBootstrap bootstrap;
-  private final ConfigurationProviderHTTP provider;
+
+  /**
+   * The specification version which this client meets. This will be included in
+   * requests to the server.
+   */
+  public static final String CLIENT_SPEC_VER = "1.0";
 
   /**
    * @param cometStreamURI the URI which will stream node changes
@@ -80,7 +86,7 @@ public class BucketMonitor extends Observable {
    *          service
    */
   public BucketMonitor(URI cometStreamURI, String bucketname, String username,
-      String password, ConfigurationParser configParser, ConfigurationProviderHTTP provider) {
+      String password, ConfigurationParser configParser) {
     super();
     if (cometStreamURI == null) {
       throw new IllegalArgumentException("cometStreamURI cannot be NULL");
@@ -101,21 +107,19 @@ public class BucketMonitor extends Observable {
     factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool());
     this.headers = new HttpMessageHeaders();
-      this.provider = provider;
   }
 
   /**
    * Take any action required when the monitor appears to be disconnected.
    */
   protected void notifyDisconnected() {
-    Bucket bucket = provider.getBucketConfiguration(provider.getBucket());
-    bucket.setIsNotUpdating();
-    LOGGER.log(Level.FINE, "Marked bucket " + bucket.getName()
-      + " as not updating.  Notifying observers.");
-    LOGGER.log(Level.FINER, "There appear to be " + this.countObservers()
-      + " observers waiting for notification");
+    this.bucket.setIsNotUpdating();
     setChanged();
-    notifyObservers();
+    LOGGER.trace("Marked bucket " + this.bucket.getName()
+      + " as not updating.  Notifying observers.");
+    LOGGER.trace("There appear to be " + this.countObservers()
+      + " observers waiting for notification");
+    notifyObservers(this.bucket);
   }
 
   /**
@@ -171,8 +175,7 @@ public class BucketMonitor extends Observable {
 
   public void startMonitor() {
     if (channel != null) {
-      Logger.getLogger(BucketMonitor.class.getName()).log(Level.WARNING,
-          "Bucket monitor is already started.");
+      LOGGER.info("Bucket monitor is already started.");
       return;
     }
 
@@ -184,12 +187,11 @@ public class BucketMonitor extends Observable {
       public void operationComplete(ChannelFuture cf) throws Exception {
         if(cf.isSuccess()) {
           channel = cf.getChannel();
-          channelLatch.countDown();
         } else {
-          bootstrap.releaseExternalResources();
-          throw new ConnectionException("Could not connect to any cluster pool "
-            + "member.");
+          LOGGER.warn("Could not start monitor channel because of: ",
+            cf.getCause());
         }
+        channelLatch.countDown();
       }
     });
 
@@ -200,23 +202,26 @@ public class BucketMonitor extends Observable {
         + "connection to arrive.");
     }
 
+    if (channel == null) {
+      bootstrap.releaseExternalResources();
+      throw new ConnectionException("Could not establish a streaming connection to "
+        + host + ":" + port);
+    }
+
     this.handler = channel.getPipeline().get(BucketUpdateResponseHandler.class);
     handler.setBucketMonitor(this);
     HttpRequest request = prepareRequest(cometStreamURI, host);
     channel.write(request);
     try {
       String response = this.handler.getLastResponse();
-      logFiner("Getting server list returns this last chunked response:\n"
+      LOGGER.debug("Getting server list returns this last chunked response:\n"
           + response);
       Bucket bucketToMonitor = this.configParser.parseBucket(response);
-      setChanged();
-      notifyObservers(bucketToMonitor);
+      setBucket(bucketToMonitor);
     } catch (ParseException ex) {
-      Logger.getLogger(BucketMonitor.class.getName()).log(Level.WARNING,
-        "Invalid client configuration received from server. Staying with "
-        + "existing configuration.", ex);
-      Logger.getLogger(BucketMonitor.class.getName()).log(Level.FINE,
-        "Invalid client configuration received:\n{0}",
+      LOGGER.warn("Invalid client configuration received from server. "
+        + "Staying with existing configuration.", ex);
+      LOGGER.debug("Invalid client configuration received:\n",
         handler.getLastResponse());
     }
   }
@@ -256,8 +261,23 @@ public class BucketMonitor extends Observable {
       HttpHeaders.Values.NO_CACHE);
     headers.setHeader(request, HttpHeaders.Names.ACCEPT, "application/json");
     headers.setHeader(request, HttpHeaders.Names.USER_AGENT,
-      "Couchbase Java Client");
+      "spymemcached vbucket client");
+    headers.setHeader(request,
+      "X-memcachekv-Store-Client-Specification-Version", CLIENT_SPEC_VER);
     return request;
+  }
+
+  /**
+   * Update the config if it has changed and notify our observers.
+   *
+   * @param newBucket the bucketToMonitor to set
+   */
+  private void setBucket(Bucket newBucket) {
+    if (this.bucket == null || !this.bucket.equals(newBucket)) {
+      this.bucket = newBucket;
+      setChanged();
+      notifyObservers(this.bucket);
+    }
   }
 
   /**
@@ -272,10 +292,6 @@ public class BucketMonitor extends Observable {
    */
   public String getHttpPass() {
     return httpPass;
-  }
-
-  private void logFiner(String msg) {
-    Logger.getLogger(BucketMonitor.class.getName()).log(Level.FINER, msg);
   }
 
   /**
@@ -306,12 +322,10 @@ public class BucketMonitor extends Observable {
     try {
       String response = handler.getLastResponse();
       Bucket updatedBucket = this.configParser.parseBucket(response);
-      setChanged();
-      notifyObservers(updatedBucket);
+      setBucket(updatedBucket);
     } catch (ParseException e) {
-      Logger.getLogger(BucketMonitor.class.getName()).log(Level.SEVERE,
-          "Invalid client configuration received from server. Staying with "
-          +  "existing configuration.", e);
+      LOGGER.warn("Invalid client configuration received from server. Staying with "
+        +  "existing configuration.", e);
     }
   }
 
