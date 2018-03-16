@@ -19,43 +19,38 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java;
+package com.couchbase.client.java.convert;
 
-import rx.Observable;
+import com.couchbase.client.core.message.ResponseStatus;
+import com.couchbase.client.java.document.Document;
+import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 
 /**
- * Represents a Couchbase Server cluster.
- *
- * @author Michael Nitschinger
- * @since 2.0
+ * Generic interface for document body converters.
  */
-public interface Cluster {
+public interface Converter<D extends Document, T> {
 
-    /**
-     * Open the default {@link Bucket}.
-     *
-     * @return a {@link Observable} containing the {@link Bucket} reference once open.
-     */
-    Observable<Bucket> openBucket();
+  /**
+   * Converts decode a {@link ByteBuf} into the target format.
+   *
+   * @param buffer the buffer encode convert decode.
+   * @return the converted object.
+   */
+  T decode(ByteBuf buffer);
 
-    /**
-     * Open the given {@link Bucket} without a password.
-     *
-     * @return a {@link Observable} containing the {@link Bucket} reference once open.
-     */
-    Observable<Bucket> openBucket(String name);
+  /**
+   * Converts decode the source format into a {@link ByteBuf}.
+   *
+   * @param content the source content.
+   * @return the converted byte buffer.
+   */
+  ByteBuf encode(T content);
 
-    /**
-     * Open the given {@link Bucket} with a password.
-     *
-     * @return a {@link Observable} containing the {@link Bucket} reference once open.
-     */
-    Observable<Bucket> openBucket(String name, String password);
+  /**
+   * Creates a new and empty document.
+   *
+   * @return a new document.
+   */
+  D newDocument(String id, T content, long cas, int expiry, ResponseStatus status);
 
-    /**
-     * Disconnects from the {@link Cluster} and closes all open buckets.
-     *
-     * @return a {@link Observable} containing true if successful.
-     */
-    Observable<Boolean> disconnect();
 }

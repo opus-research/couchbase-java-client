@@ -23,7 +23,6 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
-import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.binary.*;
 import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
@@ -36,21 +35,19 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.CouchbaseBucketManager;
 import com.couchbase.client.java.bucket.Observe;
+import com.couchbase.client.java.convert.Converter;
+import com.couchbase.client.java.convert.JacksonJsonConverter;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.LegacyDocument;
 import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.DurabilityException;
 import com.couchbase.client.java.query.*;
-import com.couchbase.client.java.transcoder.JsonTranscoder;
-import com.couchbase.client.java.transcoder.LegacyTranscoder;
-import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.transcoder.TranscodingException;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
+import rx.exceptions.OnErrorThrowable;
 import rx.functions.Func1;
 
 import java.util.ArrayList;
@@ -63,18 +60,16 @@ public class CouchbaseBucket implements Bucket {
   private final String bucket;
   private final String password;
   private final ClusterFacade core;
-  private final Map<Class<?>, Transcoder<?, ?>> transcoders;
+  private final Map<Class<?>, Converter<?, ?>> converters;
   private final BucketManager bucketManager;
-  private static final JsonTranscoder JSON_TRANSCODER = new JsonTranscoder();
 
     public CouchbaseBucket(final ClusterFacade core, final String name, final String password) {
         bucket = name;
         this.password = password;
         this.core = core;
 
-        transcoders = new HashMap<Class<?>, Transcoder<?, ?>>();
-        transcoders.put(JsonDocument.class, JSON_TRANSCODER);
-        transcoders.put(LegacyDocument.class, new LegacyTranscoder());
+        converters = new HashMap<Class<?>, Converter<?, ?>>();
+        converters.put(JsonDocument.class, new JacksonJsonConverter());
         bucketManager = new CouchbaseBucketManager(bucket, password, core);
     }
 
@@ -103,8 +98,9 @@ public class CouchbaseBucket implements Bucket {
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
-                    Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
+                    Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
+                    Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
+                    return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
                 }
             });
     }
@@ -133,8 +129,9 @@ public class CouchbaseBucket implements Bucket {
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
-                    Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
+                    Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
+                    Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
+                    return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
                 }
             });
     }
@@ -163,8 +160,9 @@ public class CouchbaseBucket implements Bucket {
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
-                    Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
+                    Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
+                    Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
+                    return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
                 }
             });
     }
@@ -226,8 +224,9 @@ public class CouchbaseBucket implements Bucket {
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
-                    Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
+                    Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
+                    Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
+                    return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
                 }
             });
     }
@@ -235,17 +234,17 @@ public class CouchbaseBucket implements Bucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> insert(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+        final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
+        ByteBuf content = converter.encode(document.content());
         return core
-            .<InsertResponse>send(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
+            .<InsertResponse>send(new InsertRequest(document.id(), content, document.expiry(), 0, bucket))
             .flatMap(new Func1<InsertResponse, Observable<? extends D>>() {
                 @Override
                 public Observable<? extends D> call(InsertResponse response) {
                     if (response.status() == ResponseStatus.EXISTS) {
                         return Observable.error(new DocumentAlreadyExistsException());
                     }
-                    return Observable.just((D) transcoder.newDocument(document.id(), document.content(), response.cas(),
+                    return Observable.just((D) converter.newDocument(document.id(), document.content(), response.cas(),
                         document.expiry(), response.status()));
                 }
             });
@@ -254,6 +253,7 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> Observable<D> insert(final D document, final PersistTo persistTo,
         final ReplicateTo replicateTo) {
+
         return insert(document).flatMap(new Func1<D, Observable<D>>() {
             @Override
             public Observable<D> call(final D doc) {
@@ -264,10 +264,10 @@ public class CouchbaseBucket implements Bucket {
                         public D call(Boolean aBoolean) {
                             return doc;
                         }
-                    }).onErrorResumeNext(new Func1<Throwable, Observable<? extends D>>() {
+                    }).onErrorFlatMap(new Func1<OnErrorThrowable, Observable<? extends D>>() {
                         @Override
-                        public Observable<? extends D> call(Throwable throwable) {
-                            return Observable.error(new DurabilityException("Durability constraint failed.", throwable));
+                        public Observable<? extends D> call(OnErrorThrowable onErrorThrowable) {
+                            return Observable.error(new DurabilityException("Durability constraint failed.", onErrorThrowable));
                         }
                     });
             }
@@ -277,14 +277,14 @@ public class CouchbaseBucket implements Bucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> upsert(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+        final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
+        ByteBuf content = converter.encode(document.content());
         return core
-            .<UpsertResponse>send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
+            .<UpsertResponse>send(new UpsertRequest(document.id(), content, document.expiry(), 0, bucket))
             .map(new Func1<UpsertResponse, D>() {
                 @Override
                 public D call(UpsertResponse response) {
-                    return (D) transcoder.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
+                    return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
                         response.status());
                 }
             });
@@ -310,20 +310,19 @@ public class CouchbaseBucket implements Bucket {
     @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> replace(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
-
-        .flatMap(new Func1<ReplaceResponse, Observable<D>>() {
-            @Override
-            public Observable<D> call(ReplaceResponse response) {
-                if (response.status() == ResponseStatus.NOT_EXISTS) {
-                    return Observable.error(new DocumentDoesNotExistException());
-                }
-                return Observable.just((D) transcoder.newDocument(document.id(), document.content(), response.cas(),
-                    document.expiry(), response.status()));
-            }
-        });
+    final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
+    ByteBuf content = converter.encode(document.content());
+    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), content, document.cas(), document.expiry(), 0, bucket))
+      .flatMap(new Func1<ReplaceResponse, Observable<D>>() {
+          @Override
+          public Observable<D> call(ReplaceResponse response) {
+              if (response.status() == ResponseStatus.NOT_EXISTS) {
+                  return Observable.error(new DocumentDoesNotExistException());
+              }
+              return Observable.just((D) converter.newDocument(document.id(), document.content(), response.cas(),
+                  document.expiry(), response.status()));
+          }
+      });
   }
 
     @Override
@@ -346,13 +345,13 @@ public class CouchbaseBucket implements Bucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
         RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
             bucket);
         return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
             @Override
             public D call(RemoveResponse response) {
-                return (D) transcoder.newDocument(document.id(), document.content(), document.cas(), document.expiry(),
+                return (D) converter.newDocument(document.id(), document.content(), document.cas(), document.expiry(),
                     response.status());
             }
         });
@@ -366,8 +365,8 @@ public class CouchbaseBucket implements Bucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final String id, final Class<D> target) {
-        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(target);
-        return remove((D) transcoder.newDocument(id, null, 0, 0, null));
+        Converter<?, ?> converter = converters.get(target);
+        return remove((D) converter.newDocument(id, null, 0, 0, null));
     }
 
     @Override
@@ -403,6 +402,8 @@ public class CouchbaseBucket implements Bucket {
   public Observable<ViewResult> query(final ViewQuery query) {
     final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
         query.toString(), bucket, password);
+
+        final Converter<?, ?> converter = converters.get(JsonDocument.class);
         return core.<ViewQueryResponse>send(request)
             .flatMap(new Func1<ViewQueryResponse, Observable<ViewResult>>() {
                 @Override
@@ -410,11 +411,7 @@ public class CouchbaseBucket implements Bucket {
                     return response.info().map(new Func1<ByteBuf, JsonObject>() {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            }
+                            return (JsonObject) converter.decode(byteBuf);
                         }
                     }).map(new Func1<JsonObject, ViewResult>() {
                         @Override
@@ -433,12 +430,7 @@ public class CouchbaseBucket implements Bucket {
                             Observable<ViewRow> rows = response.rows().map(new Func1<ByteBuf, ViewRow>() {
                                 @Override
                                 public ViewRow call(final ByteBuf byteBuf) {
-                                    JsonObject doc;
-                                    try {
-                                        doc = JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode View Info.", e);
-                                    }
+                                    JsonObject doc = (JsonObject) converter.decode(byteBuf);
                                     String id = doc.getString("id");
                                     return new DefaultViewRow(CouchbaseBucket.this, id, doc.get("key"), doc.get("value"));
                                 }
@@ -457,7 +449,7 @@ public class CouchbaseBucket implements Bucket {
 
     @Override
     public Observable<QueryResult> query(final String query) {
-        final Transcoder<?, ?> converter = transcoders.get(JsonDocument.class);
+        final Converter<?, ?> converter = converters.get(JsonDocument.class);
         GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
         return core
             .<GenericQueryResponse>send(request)
@@ -467,22 +459,15 @@ public class CouchbaseBucket implements Bucket {
                     final Observable<QueryRow> rows = response.rows().map(new Func1<ByteBuf, QueryRow>() {
                         @Override
                         public QueryRow call(ByteBuf byteBuf) {
-                            try {
-                                JsonObject value = JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                return new DefaultQueryRow(value);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            }
+                            JsonObject value = (JsonObject) converter.decode(byteBuf);
+                            return new DefaultQueryRow(value);
                         }
                     });
                     final Observable<JsonObject> info = response.info().map(new Func1<ByteBuf, JsonObject>() {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            }
+                            JsonObject value = (JsonObject) converter.decode(byteBuf);
+                            return value;
                         }
                     });
                     if (response.status().isSuccess()) {
@@ -492,13 +477,8 @@ public class CouchbaseBucket implements Bucket {
                         return response.info().map(new Func1<ByteBuf, QueryResult>() {
                             @Override
                             public QueryResult call(ByteBuf byteBuf) {
-                                try {
-                                    JsonObject error = JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    return new DefaultQueryResult(rows, info, error, response.status().isSuccess());
-                                } catch (Exception e) {
-                                    throw new TranscodingException("Could not decode View Info.", e);
-                                }
-
+                                JsonObject error = (JsonObject) converter.decode(byteBuf);
+                                return new DefaultQueryResult(rows, info, error, response.status().isSuccess());
                             }
                         });
                     }
