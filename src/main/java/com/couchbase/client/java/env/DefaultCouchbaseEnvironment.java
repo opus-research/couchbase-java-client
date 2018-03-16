@@ -588,6 +588,12 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
+        public DefaultCoreEnvironment.Builder certAuthEnabled(boolean certAuthEnabled) {
+            super.certAuthEnabled(certAuthEnabled);
+            return this;
+        }
+
+        @Override
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }
