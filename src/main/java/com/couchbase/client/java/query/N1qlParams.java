@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.java.MutationState;
@@ -41,6 +42,8 @@ import java.util.concurrent.TimeUnit;
  * @author Simon Baslé
  * @since 2.1
  */
+@InterfaceStability.Committed
+@InterfaceAudience.Public
 public class N1qlParams implements Serializable {
 
     private static final long serialVersionUID = 8888370260267213830L;
