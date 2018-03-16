@@ -1061,6 +1061,8 @@ public class CouchbaseClient extends MemcachedClient
   @Override
   public <T> ReplicaGetFuture<T> asyncGetFromReplica(final String key,
     final Transcoder<T> tc) {
+    int discardedOps = 0;
+
     int replicaCount = cbConnFactory.getVBucketConfig().getReplicasCount();
     if (replicaCount == 0) {
       throw new RuntimeException("Currently, there is no replica available for"
@@ -1075,23 +1077,47 @@ public class CouchbaseClient extends MemcachedClient
         new ReplicaGetOperation.Callback() {
           private Future<T> val = null;
 
+          @Override
           public void receivedStatus(OperationStatus status) {
             rv.set(val, status);
           }
 
+          @Override
           public void gotData(String k, int flags, byte[] data) {
             assert key.equals(k) : "Wrong key returned";
             val = tcService.decode(tc, new CachedData(flags, data,
               tc.getMaxSize()));
           }
 
+          @Override
           public void complete() {
             latch.countDown();
           }
         });
+
       rv.setOperation(op);
       mconn.enqueueOperation(key, op);
-      futures.add(rv);
+      if (op.isCancelled()) {
+        discardedOps++;
+        getLogger().info("Silently discarding replica get for key " + key);
+      } else {
+        futures.add(rv);
+      }
+
+    }
+
+    GetFuture<T> additionalActiveGet = asyncGet(key, tc);
+    if (additionalActiveGet.isCancelled()) {
+      discardedOps++;
+      getLogger().info("Silently discarding replica (active) get for key "
+        + key);
+    } else {
+      futures.add(additionalActiveGet);
+    }
+
+    if (discardedOps == replicaCount + 1) {
+      throw new IllegalStateException("No replica get operation could be "
+        + "dispatched because all operations have been discarded before.");
     }
 
     return new ReplicaGetFuture<T>(operationTimeout, futures);
