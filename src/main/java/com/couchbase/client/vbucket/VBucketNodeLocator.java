@@ -99,7 +99,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
    * {@inheritDoc}
    */
   @Override
-  public final Iterator<MemcachedNode> getSequence(String k) {
+  public Iterator<MemcachedNode> getSequence(String k) {
     return new NullIterator<MemcachedNode>();
   }
 
@@ -216,7 +216,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     }
   }
 
-  private static class TotalConfig {
+  private class TotalConfig {
     private Config config;
     private Map<String, MemcachedNode> nodesMap;
 
@@ -234,7 +234,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     }
   }
 
-  private static class NullIterator<E> implements Iterator<MemcachedNode> {
+  class NullIterator<E> implements Iterator<MemcachedNode> {
 
     public boolean hasNext() {
       return false;
