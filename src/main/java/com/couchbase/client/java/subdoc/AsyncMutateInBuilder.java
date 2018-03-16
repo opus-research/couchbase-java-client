@@ -27,7 +27,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.core.message.kv.subdoc.multi.MultiMutationResponse;
@@ -69,10 +68,8 @@ import com.couchbase.client.java.error.subdoc.PathInvalidException;
 import com.couchbase.client.java.error.subdoc.PathMismatchException;
 import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
-import com.couchbase.client.java.error.subdoc.XattrOrderingException;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -1014,14 +1011,6 @@ public class AsyncMutateInBuilder {
         if (mutationSpecs.isEmpty()) {
             throw new IllegalArgumentException("At least one Mutation Spec is necessary for mutateIn");
         }
-        boolean seenNonXattr = false;
-        for (MutationSpec spec : mutationSpecs) {
-            if (spec.xattr() && seenNonXattr) {
-                throw new XattrOrderingException("Xattr-based commands must always come first in the builder!");
-            } else if (!spec.xattr()) {
-                seenNonXattr = true;
-            }
-        }
 
         Observable<DocumentFragment<Mutation>> mutations = Observable.defer(new Func0<Observable<MutationCommand>>() {
             @Override
@@ -1153,7 +1142,6 @@ public class AsyncMutateInBuilder {
                     SubDictUpsertRequest request = new SubDictUpsertRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1183,7 +1171,6 @@ public class AsyncMutateInBuilder {
                     SubDictAddRequest request = new SubDictAddRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1215,7 +1202,6 @@ public class AsyncMutateInBuilder {
                     SubReplaceRequest request = new SubReplaceRequest(docId, spec.path(), buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1256,7 +1242,6 @@ public class AsyncMutateInBuilder {
                             buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1307,7 +1292,6 @@ public class AsyncMutateInBuilder {
                             SubArrayRequest.ArrayOperation.ADD_UNIQUE, buf, bucketName, expiry, cas);
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
-                    request.createDocument(createDocument);
                     return request;
                 }
             };
@@ -1335,9 +1319,9 @@ public class AsyncMutateInBuilder {
     private Observable<DocumentFragment<Mutation>> doSingleMutate(final MutationSpec spec,
             final Func2<MutationSpec, ByteBuf, ? extends AbstractSubdocMutationRequest> requestFactory,
             final Func3<ResponseStatus, String, String, Object> responseStatusDocIdAndPathToValueEvaluator) {
-        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call(Subscriber s) {
+            public Observable<SimpleSubdocResponse> call() {
                 ByteBuf buf;
                 try {
                     buf = subdocumentTranscoder.encodeWithMessage(spec.fragment(),
@@ -1347,9 +1331,7 @@ public class AsyncMutateInBuilder {
                     return Observable.error(e);
                 }
 
-                AbstractSubdocMutationRequest request = requestFactory.call(spec, buf);
-                request.subscriber(s);
-                return core.send(request);
+                return core.send(requestFactory.call(spec, buf));
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Mutation>>() {
             @Override
@@ -1378,11 +1360,10 @@ public class AsyncMutateInBuilder {
 
     private Observable<DocumentFragment<Mutation>> removeIn(final MutationSpec spec) {
         return deferAndWatch(
-                new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+                new Func0<Observable<SimpleSubdocResponse>>() {
                     @Override
-                    public Observable<SimpleSubdocResponse> call(Subscriber s) {
+                    public Observable<SimpleSubdocResponse> call() {
                         SubDeleteRequest request = new SubDeleteRequest(docId, spec.path(), bucketName, expiry, cas);
-                        request.subscriber(s);
                         request.xattr(spec.xattr());
                         return core.send(request);
                     }
@@ -1427,14 +1408,13 @@ public class AsyncMutateInBuilder {
 
         final long delta = fragment.longValue();
 
-        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(
+                new Func0<Observable<SimpleSubdocResponse>>() {
                     @Override
-                    public Observable<SimpleSubdocResponse> call(Subscriber s) {
+                    public Observable<SimpleSubdocResponse> call() {
                         SubCounterRequest request = new SubCounterRequest(docId, spec.path(), delta, bucketName, expiry, cas);
                         request.createIntermediaryPath(spec.createParents());
                         request.xattr(spec.xattr());
-                        request.subscriber(s);
-                        request.createDocument(createDocument);
                         return core.send(request);
                     }
                 })

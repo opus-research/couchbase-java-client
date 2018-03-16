@@ -21,7 +21,6 @@ import java.util.Arrays;
 
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
-import com.couchbase.client.java.cluster.AuthDomain;
 import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.cluster.UserSettings;
 import com.couchbase.client.java.document.Document;
@@ -48,15 +47,15 @@ public class PasswordAuthenticatorTest {
                 .build()
                 .ignoreIfClusterUnder(Version.parseVersion("5.0.0"));
 
-        ctx.clusterManager().upsertUser(AuthDomain.LOCAL, username, UserSettings.build().password(password)
-                .roles(Arrays.asList(new UserRole("bucket_full_access", "*"))));
+        ctx.clusterManager().upsertUser(username, UserSettings.build().password(password)
+                .roles(Arrays.asList(new UserRole("data_reader_writer", "*"))));
         Thread.sleep(100); //sleep a bit for the user to be async updated to memcached before opening bucket
     }
 
     @AfterClass
     public static void cleanup() throws Exception {
         if (ctx != null) {
-            ctx.clusterManager().removeUser(AuthDomain.LOCAL, username);
+            ctx.clusterManager().removeUser(username);
             ctx.destroyBucketAndDisconnect();
         }
     }

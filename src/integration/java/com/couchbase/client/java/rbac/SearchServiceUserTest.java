@@ -22,7 +22,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.auth.PasswordAuthenticator;
-import com.couchbase.client.java.cluster.AuthDomain;
 import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.cluster.UserSettings;
 import com.couchbase.client.java.search.SearchConsistency;
@@ -58,11 +57,11 @@ public class SearchServiceUserTest {
                 .ignoreIfSearchServiceNotFound()
                 .ignoreIfSearchIndexDoesNotExist(searchIndex);
 
-        ctx.clusterManager().upsertUser(AuthDomain.LOCAL, username, UserSettings.build().password(password)
+        ctx.clusterManager().upsertUser(username, UserSettings.build().password(password)
                 .roles(Arrays.asList(new UserRole("fts_searcher", ctx.bucketName()),
                         new UserRole("data_reader", ctx.bucketName())))); //needs a data role similar to query
 
-        ctx.clusterManager().upsertUser(AuthDomain.LOCAL, usernameWithNoPerms, UserSettings.build().password(password)
+        ctx.clusterManager().upsertUser(usernameWithNoPerms, UserSettings.build().password(password)
                 .roles(Arrays.asList(new UserRole("data_monitoring", ctx.bucketName()))));
 
         Thread.sleep(100); //sleep a bit for the user to be async updated to memcached before opening bucket
@@ -81,8 +80,8 @@ public class SearchServiceUserTest {
         if (ctx != null) {
             cluster.disconnect();
             clusterWithNoFtsPerms.disconnect();
-            ctx.clusterManager().removeUser(AuthDomain.LOCAL, username);
-            ctx.clusterManager().removeUser(AuthDomain.LOCAL, usernameWithNoPerms);
+            ctx.clusterManager().removeUser(username);
+            ctx.clusterManager().removeUser(usernameWithNoPerms);
             ctx.destroyBucketAndDisconnect();
         }
     }
