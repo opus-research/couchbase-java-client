@@ -23,8 +23,6 @@ package com.couchbase.client.java.query.dsl.functions;
 
 import static com.couchbase.client.java.query.dsl.Expression.x;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.query.dsl.Expression;
 
 /**
@@ -33,8 +31,6 @@ import com.couchbase.client.java.query.dsl.Expression;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Experimental
-@InterfaceAudience.Public
 public class AggregateFunctions {
 
     public static Expression count(Expression expression) {
@@ -52,28 +48,4 @@ public class AggregateFunctions {
     public static Expression avg(String expression) {
         return avg(x(expression));
     }
-
-    public static Expression sum(Expression expression) {
-        return x("SUM(" + expression.toString() + ")");
-    }
-
-    public static Expression sum(String expression) {
-        return sum(x(expression));
-    }
-
-    /**
-     * prefixes an expression with DISTINCT, useful for example for distinct count "COUNT(DISTINCT expression)".
-     */
-    public static Expression distinct(Expression expression) {
-        return x("DISTINCT " + expression.toString());
-    }
-
-    /**
-     * prefixes an expression with DISTINCT, useful for example for distinct count "COUNT(DISTINCT expression)".
-     */
-    public static Expression distinct(String expression) {
-        return x("DISTINCT " + expression);
-    }
-
-
 }
