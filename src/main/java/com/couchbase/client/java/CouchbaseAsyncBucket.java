@@ -21,19 +21,11 @@
  */
 package com.couchbase.client.java;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
-import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.lang.Tuple2;
-import com.couchbase.client.core.logging.CouchbaseLogger;
-import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.kv.AppendRequest;
@@ -63,7 +55,6 @@ import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
@@ -88,10 +79,8 @@ import com.couchbase.client.java.query.AsyncQueryRow;
 import com.couchbase.client.java.query.DefaultAsyncQueryResult;
 import com.couchbase.client.java.query.DefaultAsyncQueryRow;
 import com.couchbase.client.java.query.PrepareStatement;
-import com.couchbase.client.java.query.PreparedPayload;
-import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryMetrics;
+import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.SimpleQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.AsyncRepository;
@@ -116,15 +105,16 @@ import com.couchbase.client.java.view.ViewQueryResponseMapper;
 import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.exceptions.CompositeException;
-import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
-import rx.observables.ConnectableObservable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CouchbaseAsyncBucket implements AsyncBucket {
-
-    private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(CouchbaseAsyncBucket.class);
 
     private static final int COUNTER_NOT_EXISTS_EXPIRY = 0xffffffff;
 
@@ -184,13 +174,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<ClusterFacade> core() {
         return Observable.just(core);
-    }
-
-    /**
-     * @return the environment to use, especially useful for tests with mocks that call real methods
-     */
-    protected CouchbaseEnvironment environment() {
-        return environment;
     }
 
     @Override
@@ -744,71 +727,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Statement statement) {
-        if (statement instanceof PreparedPayload) {
-            PreparedPayload preparedPayload = (PreparedPayload) statement;
-            Query preparedQuery = Query.prepared(preparedPayload);
-            return query(preparedQuery);
+        if (statement instanceof QueryPlan) {
+            return query(Query.prepared((QueryPlan) statement));
         }
         return query(Query.simple(statement));
     }
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
-        Observable<AsyncQueryResult> result = queryRaw(query.n1ql().toString());
-
-        if (query instanceof PreparedQuery && environment().retryStrategy() == BestEffortRetryStrategy.INSTANCE) {
-            /*
-            retry handling for prepared statements:
-             - the statement() is a PreparedPayload (with a name and the original statement)
-             - attempting to prepare a PreparedPayload will reuse the name and original statement
-             - this will update the query node's cache with the same info as the node on which we previously prepared
-             */
-            result = result.flatMap(new Func1<AsyncQueryResult, Observable<? extends AsyncQueryResult>>() {
-                @Override
-                public Observable<? extends AsyncQueryResult> call(AsyncQueryResult aqr) {
-                    //cache errors so that peeking into it then re-emitting them works
-                    Observable<JsonObject> errors = aqr.errors().cache();
-                    //peek at errors
-                    return errors
-                            //only take interest in the 4040 error (prepared statement name doesn't exist)
-                            .filter(new Func1<JsonObject, Boolean>() {
-                                @Override
-                                public Boolean call(JsonObject error) {
-                                    return error.getInt("code") == 4040;
-                                }
-                            })
-                            .doOnNext(new Action1<JsonObject>() {
-                                @Override
-                                public void call(JsonObject planNotFound) {
-                                    LOGGER.warn(
-                                            "Re-prepared a named prepared statement, " + planNotFound.getString("msg"));
-                                }
-                            })
-                            //if 4040 encountered, re-prepare...
-                            .flatMap(new Func1<JsonObject, Observable<PreparedPayload>>() {
-                                @Override
-                                public Observable<PreparedPayload> call(JsonObject planNotFound) {
-                                    return CouchbaseAsyncBucket.this.prepare(query.statement());
-                                }
-                            })
-                            //...and reissue the query as is (this allows to include params as well...
-                            // the name should now be valid)
-                            .flatMap(new Func1<PreparedPayload, Observable<AsyncQueryResult>>() {
-                                @Override
-                                public Observable<AsyncQueryResult> call(PreparedPayload newPlan) {
-                                    return queryRaw(query.n1ql().toString());
-                                }
-                            })
-                            //...otherwise filtered errors will be empty. Recreate result from original
-                            // but with the cached errors (since original.errors() will have been consumed)
-                            .defaultIfEmpty(new DefaultAsyncQueryResult(aqr.rows(), aqr.signature(),
-                                    aqr.info(), errors, aqr.finalSuccess(), aqr.parseSuccess(),
-                                    aqr.requestId(), aqr.clientContextId()));
-                }
-            });
-
-        }
-        return result;
+        return queryRaw(query.n1ql().toString());
     }
 
     /**
@@ -854,7 +781,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             }
                         }
                     });
-                    final Observable<QueryMetrics> info = response.info().map(new Func1<ByteBuf, JsonObject>() {
+                    final Observable<JsonObject> info = response.info().map(new Func1<ByteBuf, JsonObject>() {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
                             try {
@@ -864,12 +791,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             } finally {
                                 byteBuf.release();
                             }
-                        }
-                    })
-                    .map(new Func1<JsonObject, QueryMetrics>() {
-                        @Override
-                        public QueryMetrics call(JsonObject jsonObject) {
-                            return new QueryMetrics(jsonObject);
                         }
                     });
                     final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
@@ -902,42 +823,32 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<PreparedPayload> prepare(String statement) {
+    public Observable<QueryPlan> prepare(String statement) {
         return prepare(PrepareStatement.prepare(statement));
     }
 
     @Override
-    public Observable<PreparedPayload> prepare(final Statement statement) {
-        final PrepareStatement prepared;
-        if (statement instanceof PrepareStatement) {
-            prepared = (PrepareStatement) statement;
-        } else {
-            prepared = PrepareStatement.prepare(statement);
-        }
+    public Observable<QueryPlan> prepare(Statement statement) {
+        Statement prepared = statement instanceof PrepareStatement ? statement : PrepareStatement.prepare(statement);
         SimpleQuery query = Query.simple(prepared);
 
         GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
             bucket, password);
         return core
             .<GenericQueryResponse>send(prepareRequest)
-            .flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
+            .flatMap(new Func1<GenericQueryResponse, Observable<QueryPlan>>() {
                 @Override
-                public Observable<PreparedPayload> call(GenericQueryResponse r) {
+                public Observable<QueryPlan> call(GenericQueryResponse r) {
                     if (r.status().isSuccess()) {
                         r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
                         r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
                         r.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        return r.rows().map(new Func1<ByteBuf, PreparedPayload>() {
+                        return r.rows().map(new Func1<ByteBuf, QueryPlan>() {
                             @Override
-                            public PreparedPayload call(ByteBuf byteBuf) {
+                            public QueryPlan call(ByteBuf byteBuf) {
                                 try {
                                     JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    String serverName = value.getString("name");
-                                    if (prepared.preparedName() != null && !prepared.preparedName().equals(serverName)) {
-                                        throw new IllegalStateException("Prepared statement name from server differs: " +
-                                        serverName + ", expected " + prepared.preparedName());
-                                    }
-                                    return new PreparedPayload(prepared.originalStatement(), prepared.preparedName());
+                                    return new QueryPlan(value);
                                 } catch (Exception e) {
                                     throw new TranscodingException("Could not decode N1QL Query Plan.", e);
                                 } finally {
@@ -969,9 +880,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                                         throwables.add(error);
                                         return throwables;
                                     }
-                                }).flatMap(new Func1<ArrayList<Throwable>, Observable<PreparedPayload>>() {
+                                }).flatMap(new Func1<ArrayList<Throwable>, Observable<QueryPlan>>() {
                             @Override
-                            public Observable<PreparedPayload> call(ArrayList<Throwable> errors) {
+                            public Observable<QueryPlan> call(ArrayList<Throwable> errors) {
                                 if (errors.size() == 1) {
                                     return Observable.error(new CouchbaseException(
                                             "Error while preparing plan", errors.get(0)));
