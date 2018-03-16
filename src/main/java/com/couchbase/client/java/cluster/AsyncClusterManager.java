@@ -25,6 +25,7 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.search.IndexSettings;
 import rx.Observable;
 
 /**
@@ -128,4 +129,8 @@ public interface AsyncClusterManager {
      */
     Observable<Boolean> removeBucket(String name);
 
+    Observable<IndexSettings> insertSearchIndex(IndexSettings settings);
+    Observable<IndexSettings> updateSearchIndex(IndexSettings settings);
+    Observable<Boolean> hasSearchIndex(String name);
+    Observable<Boolean> removeSearchIndex(String name);
 }
