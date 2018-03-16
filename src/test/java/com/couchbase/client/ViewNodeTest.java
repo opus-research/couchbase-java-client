@@ -145,7 +145,7 @@ public class ViewNodeTest {
 
     AsyncNHttpClientHandler protocolHandler = new AsyncNHttpClientHandler(
       httpproc,
-      new ViewNode.MyHttpRequestExecutionHandler(mock(ViewConnection.class)),
+      new ViewNode.MyHttpRequestExecutionHandler(),
       new DefaultConnectionReuseStrategy(),
       new DirectByteBufferAllocator(), params
     );

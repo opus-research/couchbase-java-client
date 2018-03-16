@@ -54,6 +54,8 @@ import net.spy.memcached.KetamaNodeLocator;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
+import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
 
@@ -141,17 +143,10 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       }
       storedBaseList.add(bu);
     }
-
-    if (bucketName == null || bucketName.isEmpty()) {
-      throw new IllegalArgumentException("The bucket name must not be null "
-        + "or empty.");
-    }
-    if (password == null) {
-      throw new IllegalArgumentException("The bucket password must not be "
-        + " null.");
-    }
-
     bucket = bucketName;
+    if(password == null) {
+      password = "";
+    }
     pass = password;
     configurationProvider =
         new ConfigurationProviderHTTP(baseList, bucketName, password);
@@ -263,6 +258,18 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   void setMinReconnectInterval(long reconnIntervalMsecs) {
     this.minReconnectInterval = reconnIntervalMsecs;
+  }
+
+  void checkConfigAgainstPersistence(PersistTo pers, ReplicateTo repl) {
+    int nodeCount = getVBucketConfig().getServersCount();
+    if(pers.getValue() > nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the persistence constraint.");
+    }
+    if(repl.getValue() >= nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the replication constraint.");
+    }
   }
 
   /**

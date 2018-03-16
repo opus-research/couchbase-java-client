@@ -36,7 +36,6 @@ import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -49,7 +48,6 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.ReplicaGetOperation;
 import net.spy.memcached.ops.VBucketAware;
 
 /**
@@ -81,12 +79,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   }
 
   public void reconfigure(Bucket bucket) {
-    if(reconfiguring) {
-      getLogger().debug("Suppressing attempt to reconfigure again while "
-        + "reconfiguring.");
-      return;
-    }
-
     reconfiguring = true;
     try {
       // get a new collection of addresses from the received config
@@ -181,22 +173,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   @Override
   public void addOperation(final String key, final Operation o) {
     MemcachedNode placeIn = null;
-
-    MemcachedNode primary;
-    if(o instanceof ReplicaGetOperation
-      && locator instanceof VBucketNodeLocator) {
-      primary = ((VBucketNodeLocator)locator).getReplica(key,
-        ((ReplicaGetOperation)o).getReplicaIndex());
-    } else {
-      primary = locator.getPrimary(key);
-    }
-
-    if (primary == null) {
-      o.cancel();
-      cf.checkConfigUpdate();
-      return;
-    }
-
+    MemcachedNode primary = locator.getPrimary(key);
     if (primary.isActive() || failureMode == FailureMode.Retry) {
       placeIn = primary;
     } else if (failureMode == FailureMode.Cancel) {
@@ -294,8 +271,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
           logRunException(e);
         } catch (IllegalStateException e) {
           logRunException(e);
-        } catch (ConcurrentModificationException e) {
-          logRunException(e);
         }
       }
     }
@@ -311,10 +286,4 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       getLogger().warn("Problem handling Couchbase IO", e);
     }
   }
-
-  boolean isShutDown() {
-    return shutDown;
-  }
-
-
 }
