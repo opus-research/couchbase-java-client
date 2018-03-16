@@ -341,7 +341,6 @@ public class BucketConfigurationProvider extends SpyObject
     }
 
     try {
-      httpProvider.get().clearBuckets();
       Bucket config = httpProvider.get().getBucketConfiguration(bucket);
       setConfig(config);
       monitorBucket();
