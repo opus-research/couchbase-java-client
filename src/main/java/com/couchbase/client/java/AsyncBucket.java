@@ -920,6 +920,8 @@ public interface AsyncBucket {
     /**
      * Queries a Couchbase Server Spatial {@link View}.
      *
+     * The returned {@link Observable} can error under the following conditions:
+     *
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - If the design document or view is not found: {@link ViewDoesNotExistException}
