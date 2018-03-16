@@ -48,8 +48,6 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
@@ -2687,11 +2685,6 @@ public interface Bucket {
      */
     N1qlQueryResult query(N1qlQuery query, long timeout, TimeUnit timeUnit);
 
-    SearchQueryResult search(String index, String query);
-    SearchQueryResult search(String index, String query, long timeout, TimeUnit timeUnit);
-    SearchQueryResult search(SearchQuery query);
-    SearchQueryResult search(SearchQuery query, long timeout, TimeUnit timeUnit);
-
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
      *
@@ -4416,5 +4409,12 @@ public interface Bucket {
      * @return true if the bucket was successfully closed.
      */
     Boolean close(long timeout, TimeUnit timeUnit);
+
+    /**
+     * Returns true if this bucket is already closed, false if it is still open.
+     *
+     * @return true if closed, false otherwise.
+     */
+    boolean isClosed();
 
 }
