@@ -2328,7 +2328,10 @@ public class CouchbaseClient extends MemcachedClient
 
       Map<MemcachedNode, ObserveResponse> response = observe(key, cas);
 
-      MemcachedNode master = locator.getPrimary(key);
+      int vb = locator.getVBucketIndex(key);
+      int index = ((CouchbaseConnectionFactory) connFactory)
+        .getVBucketConfig().getMaster(vb);
+      MemcachedNode master = locator.getServerByIndex(index);
 
       replicaPersistedTo = 0;
       replicatedTo = 0;
