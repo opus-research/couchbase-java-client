@@ -83,7 +83,7 @@ public final class ComplexKey {
    * @param components List of objects that should be converted
    */
   private ComplexKey(Object[] components) {
-    this.components = Arrays.asList(components);
+    this.components=Arrays.asList(components);
   }
 
   /**
@@ -149,6 +149,8 @@ public final class ComplexKey {
         return new JSONObject().toString();
       } else if(component instanceof String) {
         return "\"" + component + "\"";
+      } else if(component==null){
+        return "null";
       }
       return component.toString();
     }

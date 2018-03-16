@@ -26,10 +26,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+
 
 /**
  * Test the creation of complex keys for views.
@@ -205,10 +205,10 @@ public class ComplexKeyTest {
    * @post Asserts true if json string of the
    * complex key is equal to null.
    */
-  // TODO: eventually support this
-  @Ignore("Null argument not yet implemented") @Test
+  @Test
   public void testNullSingleValues() {
-    ComplexKey singleNull = ComplexKey.of((Object[]) null); // NPE here
+    Object[] expResult = new Object[] {null};
+    ComplexKey singleNull = ComplexKey.of(expResult);
     String aNullJsonString = singleNull.toJson();
     assertEquals("null", aNullJsonString);
   }
