@@ -1,5 +1,6 @@
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -13,8 +14,8 @@ public class DefaultViewRow implements ViewRow {
     private final AsyncViewRow asyncViewRow;
     private final long timeout;
 
-    public DefaultViewRow(CouchbaseEnvironment env, AsyncViewRow asyncViewRow) {
-        this.asyncViewRow = asyncViewRow;
+    public DefaultViewRow(CouchbaseEnvironment env, Bucket bucket, String id, Object key, Object value) {
+        this.asyncViewRow = new DefaultAsyncViewRow(bucket.async(), id, key, value);
         this.timeout = env.kvTimeout();
     }
 
