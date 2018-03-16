@@ -32,14 +32,12 @@ public enum ScanConsistency {
     /**
      * This is the default (for single-statement requests). No timestamp vector is used
      * in the index scan.
-     *
      * This is also the fastest mode, because we avoid the cost of obtaining the vector,
      * and we also avoid any wait for the index to catch up to the vector.
      */
     NOT_BOUNDED,
     /**
      * This implements strong consistency per request.
-     *
      * Before processing the request, a current vector is obtained.
      * The vector is used as a lower bound for the statements in the request.
      * If there are DML statements in the request, RYOW is also applied within the request.
@@ -47,19 +45,10 @@ public enum ScanConsistency {
     REQUEST_PLUS,
     /**
      * This implements strong consistency per statement.
-     *
      * Before processing each statement, a current vector is obtained
      * and used as a lower bound for that statement.
      */
-    STATEMENT_PLUS,
-    /**
-     * This implements bounded consistency.
-     *
-     * If this option used, additional mutation token need to be passed in which are used as a
-     * lower bound for that statement. This can be used to implement an optimized form of "read
-     * your own writes" over {@link ScanConsistency#REQUEST_PLUS}.
-     */
-    AT_PLUS;
+    STATEMENT_PLUS;
 
     public String n1ql() {
         return this.name().toLowerCase();
