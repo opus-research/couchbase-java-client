@@ -16,13 +16,6 @@ public interface PropertyMetadata {
     boolean isId();
 
     /**
-     * If this property represents the CAS field.
-     *
-     * @return true if it dos, false otherwise.
-     */
-    boolean isCAS();
-
-    /**
      * If this property represents a field in the Document.
      *
      * @return true if it does, false otherwise.

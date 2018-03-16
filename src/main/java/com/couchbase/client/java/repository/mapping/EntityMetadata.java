@@ -30,18 +30,4 @@ public interface EntityMetadata {
      * @return the metadata or null.
      */
     PropertyMetadata idProperty();
-
-    /**
-     * True if it contains a CAS property, false otherwise.
-     *
-     * @return true if there is one, false otherwise.
-     */
-    boolean hasCasProperty();
-
-    /**
-     * Returns the metadata for the cas property if set, or null otherwise.
-     *
-     * @return the metadata or null.
-     */
-    PropertyMetadata casProperty();
 }

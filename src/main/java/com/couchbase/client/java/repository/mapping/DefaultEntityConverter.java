@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.repository.mapping;
 
-import com.couchbase.client.java.document.EntityDocument;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 
@@ -37,17 +36,13 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
     }
 
     @Override
-    public JsonDocument fromEntity(EntityDocument<Object> source) {
-        Object document = source.content();
+    public JsonDocument fromEntity(Object document) {
         EntityMetadata entityMetadata = metadata(document.getClass());
 
-        String id = source.id();
-        if (id == null) {
-            verifyId(entityMetadata);
-            id = (String) entityMetadata.idProperty().get(document);
-            if (id == null || id.isEmpty()) {
-                throw new RepositoryMappingException("The @Id field cannot be null or empty.");
-            }
+        verifyId(entityMetadata);
+        String id = (String) entityMetadata.idProperty().get(document);
+        if (id == null || id.isEmpty()) {
+            throw new RepositoryMappingException("The @Id field cannot be null or empty.");
         }
 
         JsonObject content = JsonObject.create();
@@ -67,33 +62,26 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
                 throw new RepositoryMappingException("Unsupported field type: " + type);
             }
         }
-        return JsonDocument.create(id, source.expiry(), content, source.cas());
+        return JsonDocument.create(id, content);
     }
 
     @Override
-    public <T> EntityDocument<T> toEntity(JsonDocument source, Class<T> clazz) {
+    public <T> T toEntity(JsonDocument source, Class<T> clazz) {
         try {
             EntityMetadata entityMetadata = metadata(clazz);
 
             T instance = clazz.newInstance(); // for now only support no-args constructor
 
-            if (source.content() != null) {
-                for (PropertyMetadata propertyMetadata : entityMetadata.properties()) {
-                    String fieldName = propertyMetadata.name();
-                    if (source.content().containsKey(fieldName)) {
-                        propertyMetadata.set(source.content().get(fieldName), instance);
-                    }
+            for (PropertyMetadata propertyMetadata : entityMetadata.properties()) {
+                String fieldName = propertyMetadata.name();
+                if (source.content().containsKey(fieldName)) {
+                    propertyMetadata.set(source.content().get(fieldName), instance);
                 }
             }
 
-            if (entityMetadata.hasIdProperty()) {
-                entityMetadata.idProperty().set(source.id(), instance);
-                if (entityMetadata.hasCasProperty() && source.cas() != 0) {
-                    entityMetadata.casProperty().set(source.cas(), instance);
-                }
-            }
-
-            return EntityDocument.create(source.id(), source.expiry(), instance, source.cas());
+            verifyId(entityMetadata);
+            entityMetadata.idProperty().set(source.id(), instance);
+            return instance;
         } catch (Exception e) {
             throw new RepositoryMappingException("Could not instantiate entity.", e);
         }
