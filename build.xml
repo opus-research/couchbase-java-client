@@ -31,33 +31,33 @@
     </classpath>
   </taskdef>
 
-  <property name="name"               value="couchbase-client"                           />
-  <property name="docsjarname"        value="couchbase-java-client"                      />
-  <property name="copyright"          value="2006-2013 Dustin Sallings, Matt Ingenthron" />
-  <property name="group"              value="couchbase"                                  />
+  <property name="name"      value="couchbase-client"                           />
+  <property name="copyright" value="2006-2013 Dustin Sallings, Matt Ingenthron" />
+  <property name="group"     value="couchbase"                                  />
   
-  <property name="extern.root"        location="../spymemcached"                 />
-  <property name="extern.bld"         location="${extern.root}/build/docs"       />
-  <property name="extern.src.main"    location="${extern.root}/src/main/java/"   />
-  <property name="extern.src.test"    location="${extern.root}/src/test/java/"   />
+  <property name="extern.root"       location="../spymemcached"                                 />
+  <property name="extern.bld"        location="${extern.root}/build/docs"                       />
+  <property name="extern.package"    location="${extern.bld}/javadocs/spymemcached-2.8.12.jar"  />
+  <property name="extern.src.main"   location="${extern.root}/src/main/java/"   />
+  <property name="extern.src.test"   location="${extern.root}/src/test/java/"   />
 
-  <property name="base.src.dir"       value="${basedir}/src"                 />
-  <property name="build.dir"          value="${basedir}/build"               />
-  <property name="build.src.dir"      value="${build.dir}/src"               />
-  <property name="etc.dir"            value="${basedir}/etc"                 />
-  <property name="lib.dir"            value="${basedir}/lib"                 />
-  <property name="src.dir"            value="${base.src.dir}/main/java"      />
-  <property name="test.dir"           value="${base.src.dir}/test/java"      />
+  <property name="base.src.dir"       value="${basedir}/src"   />
+  <property name="build.dir"          value="${basedir}/build" />
+  <property name="build.src.dir"      value="${build.dir}/src" />
+  <property name="etc.dir"            value="${basedir}/etc"   />
+  <property name="lib.dir"            value="${basedir}/lib"   />
+  <property name="src.dir"            value="${base.src.dir}/main/java" />
+  <property name="test.dir"           value="${base.src.dir}/test/java" />
   <property name="test.resources.dir" value="${base.src.dir}/test/resources" />
-  <property name="script.src.dir"     value="${base.src.dir}/scripts"        />
-  <property name="build.javadoc"      location="${build.dir}/docs/"          />
-  <property name="junit.dir"          location="${build.dir}/junit"          />
+  <property name="script.src.dir"     value="${base.src.dir}/scripts" />
+  <property name="build.javadoc"      location="${build.dir}/docs/"   />
+  <property name="junit.dir"          location="${build.dir}/junit"   />
 
-  <property name="dist.dir"      value="${basedir}/target"       />
-  <property name="build.classes" location="${build.dir}/classes" />
+  <property name="dist.dir"      value="${basedir}/target" />
+  <property name="build.classes" location="${build.dir}/classes"/>
 
-  <property name="git.hash" value=""     />
-  <var name="version" value="no-version" />
+  <property name="git.hash" value="" />
+  <var name="version" value="no-version"/>
 
   <!-- ivy properties used -->
   <property name="ivy.settings.dir"     value="${basedir}/ivy"  />
@@ -66,27 +66,29 @@
   <property name="ivy.pom.description"  value = "A client library for Couchbase Server" />
 
   <!-- tests -->
-  <property name="build.test"          location="${build.dir}/test"      />
-  <property name="test.log.dir"        location="${build.dir}/test/logs" />
-  <property name="build.test.classes"  location="${build.test}/classes"  />
+  <property name="build.test" location="${build.dir}/test"/>
+  <property name="test.log.dir" location="${build.dir}/test/logs"/>
+  <property name="build.test.classes" location="${build.test}/classes" />
 
   <!-- maven -->
   <property name="mvn.build.dir" value="${build.dir}" />
 
   <!-- compilation -->
-  <property name="javac.deprecation" value="off"        />
-  <property name="javac.debug"       value="on"         />
-  <property name="build.encoding"    value="ISO-8859-1" />
+  <property name="javac.deprecation" value="off"/>
+  <property name="javac.debug" value="on"/>
+  <property name="build.encoding" value="ISO-8859-1"/>
 
   <!-- Checking code style -->
-  <property name="checkstyle.xml"        value="${etc.dir}/checkstyle.xml"          />
+  <property name="checkstyle.xml" value="${etc.dir}/checkstyle.xml" />
   <property name="checkstyle.format.xsl" value="${etc.dir}/checkstyle-noframes.xsl" />
-  <property name="checkstyle.report.dir" value="${build.dir}/checkstyle"            />
+  <property name="checkstyle.report.dir" value="${build.dir}/checkstyle" />
 
   <!-- static analysis -->
-  <property name="findbugs.out.dir"          value="${build.dir}/findbugs"           />
-  <property name="findbugs.output.xml.file"  value="${findbugs.out.dir}/report.xml"  />
-  <property name="findbugs.output.html.file" value="${findbugs.out.dir}/report.html" />
+  <property name="findbugs.out.dir" value="${build.dir}/findbugs" />
+  <property name="findbugs.output.xml.file"
+      value="${findbugs.out.dir}/report.xml" />
+  <property name="findbugs.output.html.file"
+      value="${findbugs.out.dir}/report.html" />
     
     
   <!-- Ivy-based dependency resolution -->
@@ -107,10 +109,10 @@
     
     
   <!--test related properties -->
-  <property name="server.address_v4"  value="127.0.0.1" />
-  <property name="server.address_v6"  value="::1"       />
-  <property name="server.type"        value="memcached" />
-  <property name="test.type"          value="unit"      />
+  <property name="server.address_v4" value="127.0.0.1"/>
+  <property name="server.address_v6" value="::1"/>
+  <property name="server.type" value="memcached"/>
+  <property name="test.type" value="unit"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
     
@@ -300,17 +302,13 @@
        ======================================= -->
 
   <target name="javadoc-uptodate" depends="init">
-      <uptodate property="javadoc.is.uptodate">
-          <srcfiles dir="${extern.src.main}">
-              <include name="**/*.java" />
-              <include name="**/*.html" />
-          </srcfiles>
-          <srcfiles dir="${src.dir}">
-              <include name="**/*.java" />
-              <include name="**/*.html" />
-          </srcfiles>
-          <mapper type="merge" to="${build.javadoc}/index.html" />
-      </uptodate>
+    <uptodate property="javadoc.is.uptodate">
+    <srcfiles dir="${src.dir}">
+        <include name="**/*.java" />
+        <include name="**/*.html" />
+      </srcfiles>
+      <mapper type="merge" to="${build.javadoc}/index.html" />
+    </uptodate>
   </target>
 
   <target name="docs" depends="init,javadoc-uptodate,compile,compile-extern" unless="javadoc.is.uptodate"
@@ -331,9 +329,7 @@
           <packageset dir="${src.dir}">
               <include name="**" />
           </packageset>
-          <packageset dir="${extern.src.main}">
-              <include name="**" />
-          </packageset>
+          <link href="${extern.bld}" />
           <classpath>
             <path        refid="${name}.common.classpath"        />
             <pathelement location="${ivy.artifact.retrieve.dir}" />
@@ -344,10 +340,10 @@
   <target name="docsjar" depends="docs"
       description="Create the documentation jar">
     <mkdir dir="${build.dir}/javadocs"  />
-    <zip destfile="${build.dir}/javadocs/${docsjarname}-${version}.zip" duplicate="preserve">
+    <jar destfile="${build.dir}/javadocs/${name}-${version}.jar">
         <fileset dir="${build.javadoc}" />
         <fileset dir="${extern.bld}"    />
-    </zip>
+    </jar>
   </target>
 
   <!-- =======================================
