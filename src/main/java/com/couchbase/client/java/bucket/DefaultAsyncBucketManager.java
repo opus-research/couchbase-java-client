@@ -19,7 +19,6 @@ import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
-import static com.couchbase.client.java.util.OnSubscribeDeferAndWatch.deferAndWatch;
 import static com.couchbase.client.java.util.retry.RetryBuilder.anyOf;
 
 import java.util.ArrayList;
@@ -183,7 +182,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<DesignDocument> getDesignDocument(final String name, final boolean development) {
-        return deferAndWatch(new Func0<Observable<GetDesignDocumentResponse>>() {
+        return Observable.defer(new Func0<Observable<GetDesignDocumentResponse>>() {
             @Override
             public Observable<GetDesignDocumentResponse> call() {
                 return core.send(new GetDesignDocumentRequest(name, development, bucket, password));
@@ -255,7 +254,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }
 
         final String b = body;
-        return deferAndWatch(new Func0<Observable<UpsertDesignDocumentResponse>>() {
+        return Observable.defer(new Func0<Observable<UpsertDesignDocumentResponse>>() {
             @Override
             public Observable<UpsertDesignDocumentResponse> call() {
                 return core.send(new UpsertDesignDocumentRequest(designDocument.name(), b, development, bucket, password));
@@ -285,7 +284,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<Boolean> removeDesignDocument(final String name, final boolean development) {
-        return deferAndWatch(new Func0<Observable<RemoveDesignDocumentResponse>>() {
+        return Observable.defer(new Func0<Observable<RemoveDesignDocumentResponse>>() {
             @Override
             public Observable<RemoveDesignDocumentResponse> call() {
                 return core.send(new RemoveDesignDocumentRequest(name, development, bucket, password));
