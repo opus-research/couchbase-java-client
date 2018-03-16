@@ -140,14 +140,14 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
 
                     return new CouchbaseAsyncBucket(core, name, password, trans);
                 }
-            }).onErrorResumeNext(new Func1<Throwable, Observable<AsyncBucket>>() {
+            }).onErrorReturn(new Func1<Throwable, AsyncBucket>() {
                 @Override
-                public Observable<AsyncBucket> call(final Throwable throwable) {
+                public AsyncBucket call(Throwable throwable) {
                     if (throwable instanceof CouchbaseException) {
-                        return Observable.error(throwable);
+                        throw (CouchbaseException) throwable;
                     }
 
-                    return Observable.error(new CouchbaseException(throwable));
+                    throw new CouchbaseException(throwable);
                 }
             });
     }
