@@ -51,7 +51,7 @@ public class JacksonJsonConverterTest {
     ByteBuf buf = Unpooled.copiedBuffer("{\"array\":[]}", CharsetUtil.UTF_8);
     JsonObject object = converter.decode(buf);
     assertFalse(object.isEmpty());
-    assertTrue(object.getArray("array") instanceof JsonArray);
+    assertTrue(object.getArray("array") != null);
     assertTrue(object.getArray("array").isEmpty());
   }
 
