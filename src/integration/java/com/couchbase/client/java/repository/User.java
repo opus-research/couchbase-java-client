@@ -38,7 +38,7 @@ public class User {
     @Field
     private String nullField = null;
 
-    @Field("num")
+    @Field
     private int someNumber;
 
     @Field
