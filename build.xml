@@ -72,9 +72,7 @@
   <property name="build.test.classes" location="${build.test}/classes" />
 
   <!-- maven -->
-  <property name="mvn.build.dir" value="${build.dir}/m2" />
-  <property name="couchbase-client.pom" value="${mvn.build.dir}/couchbase-client.pom" />
-  <property name="couchbase-client-test.pom" value="${mvn.build.dir}/couchbase-client-test.pom" />
+  <property name="mvn.build.dir" value="${build.dir}" />
 
   <!-- compilation -->
   <property name="javac.deprecation" value="off"/>
@@ -439,6 +437,8 @@
   <target name="mvn-prep" depends="gen-version, ivy-init"
       description="Creates maven files">
 
+    <property name="couchbase-client.pom" value="${mvn.build.dir}/couchbase-client-${version}.pom" />
+    <property name="couchbase-client-test.pom" value="${mvn.build.dir}/couchbase-client-test-${version}.pom" />
     <!-- Download maven -->
     <mkdir dir="${build.dir}" />
     <get src="${mvn_repo_url}" dest="${mvn.jar}" usetimestamp="true" />
@@ -491,11 +491,14 @@
     </artifact:install>
   </target>
 
-<target name="ivy-mpub" depends="jar,ivy-init,mvn-prep" description="publish jar/source to maven repo mounted at ~/repo">
-  <ivy:publish resolver="share-m2" forcedeliver="true" overwrite="true" publishivy="false">
-    <artifacts pattern="build/[artifact]-[revision].[ext]" />
-  </ivy:publish>
-</target>
+  <!-- ======================================
+        Section: Stage Maven locally
+       ====================================== -->
+  <target name="mvn-stage" depends="package,ivy-init,mvn-prep" description="publish jar/source to maven repo mounted at ~/repo">
+    <ivy:publish resolver="share-m2" forcedeliver="true" overwrite="true" publishivy="false">
+      <artifacts pattern="build/[artifact]-[revision].[ext]" />
+    </ivy:publish>
+  </target>
 
 
   <!-- ======================================

@@ -42,7 +42,7 @@
   <resolvers>
 
     <filesystem name="share-m2" m2compatible="true">
-      <artifact pattern="${user.home}/repo/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"/>
+      <artifact pattern="${user.home}/mvn-stage/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"/>
     </filesystem>
 
     <chain name="default">
