@@ -64,13 +64,50 @@ public class BinaryTest extends ClusterDependentTest {
     }
 
     @Test
-    public void shouldUpsertAndGet() {
+    public void shouldUpsertAndGetAndRemove() {
         JsonObject content = JsonObject.empty().put("hello", "world");
         final JsonDocument doc = JsonDocument.create("upsert", content);
 
         bucket().upsert(doc);
         JsonDocument response = bucket().get("upsert");
         assertEquals(content.getString("hello"), response.content().getString("hello"));
+
+        JsonDocument removed = bucket().remove(doc);
+        assertEquals(doc.id(), removed.id());
+        assertNull(removed.content());
+        assertEquals(0, removed.expiry());
+        assertTrue(removed.cas() != 0);
+
+        assertNull(bucket().get("upsert"));
+    }
+
+    @Test
+    public void shouldRespectCASOnRemove() {
+        String id = "removeWithCAS";
+        JsonObject content = JsonObject.empty().put("hello", "world");
+        final JsonDocument doc = JsonDocument.create(id, content);
+
+        bucket().upsert(doc);
+        JsonDocument response = bucket().get(id);
+        assertEquals(content.getString("hello"), response.content().getString("hello"));
+
+        try {
+            bucket().remove(JsonDocument.create(id, null, 1231435L));
+            assertTrue(false);
+        } catch(CASMismatchException ex) {
+            assertTrue(true);
+        }
+
+        response = bucket().get(id);
+        assertEquals(content.getString("hello"), response.content().getString("hello"));
+
+        JsonDocument removed = bucket().remove(response);
+        assertEquals(removed.id(), response.id());
+        assertNull(removed.content());
+        assertTrue(removed.cas() != 0);
+        assertNotEquals(response.cas(), removed.cas());
+
+        assertNull(bucket().get(id));
     }
 
   @Test
@@ -99,7 +136,8 @@ public class BinaryTest extends ClusterDependentTest {
         assertEquals(20L, (long) doc3.content());
 
         assertTrue(doc1.cas() != doc2.cas());
-        assertTrue(doc2.cas() != doc1.cas());
+        assertTrue(doc1.cas() != doc3.cas());
+        assertTrue(doc2.cas() != doc3.cas());
     }
 
     @Test
@@ -114,14 +152,15 @@ public class BinaryTest extends ClusterDependentTest {
         assertEquals(80L, (long) doc3.content());
 
         assertTrue(doc1.cas() != doc2.cas());
-        assertTrue(doc2.cas() != doc1.cas());
+        assertTrue(doc1.cas() != doc3.cas());
+        assertTrue(doc2.cas() != doc3.cas());
     }
 
     @Test
     public void shouldGetAndTouch() throws Exception {
         String id = "get-and-touch";
 
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(id, JsonObject.empty().put("k", "v"), 3));
+        JsonDocument upsert = bucket().upsert(JsonDocument.create(id, 3, JsonObject.empty().put("k", "v")));
         assertNotNull(upsert);
         assertEquals(id, upsert.id());
 
@@ -187,7 +226,7 @@ public class BinaryTest extends ClusterDependentTest {
     public void shouldTouch() throws Exception {
         String key = "touch";
 
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v"), 3));
+        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, 3, JsonObject.empty().put("k", "v")));
 
         Thread.sleep(2000);
 
@@ -238,7 +277,11 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        bucket().append(LegacyDocument.create(id, "bar"));
+        LegacyDocument stored = bucket().append(LegacyDocument.create(id, "bar"));
+        assertEquals(id, stored.id());
+        assertNull(stored.content());
+        assertTrue(stored.cas() != 0);
+        assertTrue(stored.expiry() == 0);
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -252,7 +295,11 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        bucket().prepend(LegacyDocument.create(id, "foo"));
+        LegacyDocument stored = bucket().prepend(LegacyDocument.create(id, "foo"));
+        assertEquals(id, stored.id());
+        assertNull(stored.content());
+        assertTrue(stored.cas() != 0);
+        assertTrue(stored.expiry() == 0);
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -262,6 +309,12 @@ public class BinaryTest extends ClusterDependentTest {
     public void shouldFailOnNonExistingAppend() {
         LegacyDocument doc = LegacyDocument.create("appendfail", "fail");
         bucket().append(doc);
+    }
+
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldFailOnNonExistingPrepend() {
+        LegacyDocument doc = LegacyDocument.create("prependfail", "fail");
+        bucket().prepend(doc);
     }
 
     @Test
