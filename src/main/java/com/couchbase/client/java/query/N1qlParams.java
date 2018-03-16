@@ -21,6 +21,8 @@
  */
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 
@@ -48,6 +50,8 @@ public class N1qlParams implements Serializable {
     private String scanWait;
     private String clientContextId;
     private Integer maxParallelism;
+
+    private MutationToken[] mutationTokens;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -79,6 +83,28 @@ public class N1qlParams implements Serializable {
         }
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
+        }
+        if (this.mutationTokens != null) {
+            if (this.consistency != null) {
+                throw new IllegalArgumentException("`consistency(...)` cannot be used "
+                    + "together with `consistentWith(...)`");
+            }
+            JsonObject vectors = JsonObject.create();
+            for (MutationToken token : this.mutationTokens) {
+                JsonObject bucket = vectors.getObject(token.bucket());
+                if (bucket == null) {
+                    bucket = JsonObject.create();
+                    vectors.put(token.bucket(), bucket);
+                }
+                bucket.put(
+                    String.valueOf(token.vbucketID()),
+                    JsonObject.create()
+                        .put("guard", String.valueOf(token.vbucketUUID()))
+                        .put("value", token.sequenceNumber())
+                );
+            }
+            queryJson.put("scan_vector", vectors);
+            queryJson.put("scan_consistency", "at_plus");
         }
     }
 
@@ -147,6 +173,19 @@ public class N1qlParams implements Serializable {
         if (consistency == ScanConsistency.NOT_BOUNDED) {
             this.scanWait = null;
         }
+        return this;
+    }
+
+    /**
+     * Sets the {@link MutationToken}s this query should be consistent with.
+     *
+     * @param mutationTokens the tokens which should be supplied as a lower index bound.
+     *
+     * @return this {@link N1qlParams} for chaining.
+     */
+    @InterfaceStability.Experimental
+    public N1qlParams consistentWith(MutationToken... mutationTokens) {
+        this.mutationTokens = mutationTokens;
         return this;
     }
 
