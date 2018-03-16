@@ -295,18 +295,6 @@ public class CouchbaseTestContext {
          * (see {@link #adhoc(boolean)}, {@link #flushOnInit(boolean)}, ...).
          */
         public CouchbaseTestContext build() {
-            CouchbaseEnvironment env = envBuilder.build();
-
-            Cluster cluster = CouchbaseCluster.create(env, seedNode);
-            return buildWithCluster(cluster, env);
-        }
-
-        /**
-         * Build the {@link CouchbaseTestContext}, triggering potential creation of a bucket, flush of a bucket, etc...
-         * (see {@link #adhoc(boolean)}, {@link #flushOnInit(boolean)}, ...), but re-using a previously existing
-         * {@link Cluster} and {@link CouchbaseEnvironment}.
-         */
-        public CouchbaseTestContext buildWithCluster(Cluster cluster, CouchbaseEnvironment env) {
             if (createAdhocBucket) {
                 this.bucketName = AD_HOC + this.bucketName + System.nanoTime();
             }
@@ -314,6 +302,9 @@ public class CouchbaseTestContext {
             this.bucketSettingsBuilder = bucketSettingsBuilder.name(this.bucketName)
                     .password(this.bucketPassword);
 
+            CouchbaseEnvironment env = envBuilder.build();
+
+            Cluster cluster = CouchbaseCluster.create(env, seedNode);
             ClusterManager clusterManager = cluster.clusterManager(adminName, adminPassword);
 
             boolean existing = clusterManager.hasBucket(bucketName);
@@ -367,22 +358,15 @@ public class CouchbaseTestContext {
     }
 
     /**
-     * Remove the bucket (if it was adhoc).
+     * Remove the bucket (if it was adhoc) and disconnect from the cluster.
      */
-    public void destroyBucket() {
+    public void destroyBucketAndDisconnect() {
         if (isAdHoc) {
             if (!bucket.isClosed()) {
                 bucket.close();
             }
             clusterManager.removeBucket(bucketName);
         }
-    }
-
-    /**
-     * Remove the bucket (if it was adhoc) and disconnect from the cluster.
-     */
-    public void destroyBucketAndDisconnect() {
-        destroyBucket();
         disconnect();
     }
 
