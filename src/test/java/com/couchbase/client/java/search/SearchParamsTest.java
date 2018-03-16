@@ -19,6 +19,7 @@ import static com.couchbase.client.java.search.sort.SearchSort.sortField;
 import static com.couchbase.client.java.search.sort.SearchSort.sortGeo;
 import static com.couchbase.client.java.search.sort.SearchSort.sortId;
 import static com.couchbase.client.java.search.sort.SearchSort.sortScore;
+import static com.googlecode.catchexception.CatchException.verifyException;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Calendar;
