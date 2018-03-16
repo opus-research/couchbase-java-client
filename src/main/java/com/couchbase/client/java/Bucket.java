@@ -418,7 +418,4 @@ public interface Bucket {
 
     Observable<BucketManager> bucketManager();
 
-    <D extends Document<?>> Observable<D> append(D document);
-    <D extends Document<?>> Observable<D> prepend(D document);
-
 }
