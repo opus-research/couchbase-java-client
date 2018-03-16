@@ -54,14 +54,4 @@ public class BinaryTranscoder extends AbstractTranscoder<BinaryDocument, ByteBuf
     public Class<BinaryDocument> documentType() {
         return BinaryDocument.class;
     }
-
-    @Override
-    protected boolean shouldAutoReleaseOnDecode() {
-        return false;
-    }
-
-    @Override
-    protected boolean shouldAutoReleaseOnError() {
-        return true;
-    }
 }

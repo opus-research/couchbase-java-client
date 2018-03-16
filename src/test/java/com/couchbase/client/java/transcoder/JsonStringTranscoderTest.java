@@ -27,8 +27,6 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.JsonStringDocument;
-import com.couchbase.client.java.error.TranscodingException;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -88,22 +86,4 @@ public class JsonStringTranscoderTest {
         assertEquals("value", decoded.content());
     }
 
-    @Test
-    public void shouldReleaseBufferWhenDecoded() {
-        ByteBuf content = Unpooled.copiedBuffer("\"value\"", CharsetUtil.UTF_8);
-        JsonStringDocument decoded = converter.decode("id", content, 0, 0, TranscoderUtils.JSON_COMPAT_FLAGS,
-            ResponseStatus.SUCCESS);
-        assertEquals(0, content.refCnt());
-    }
-
-    @Test(expected = TranscodingException.class)
-    public void shouldReleaseBufferWhenError() {
-        ByteBuf content = Unpooled.copiedBuffer("[]", CharsetUtil.UTF_8);
-        int wrongFlags = 1234;
-        try {
-            converter.decode("id", content, 0, 0, wrongFlags, ResponseStatus.SUCCESS);
-        } finally {
-            assertEquals(0, content.refCnt());
-        }
-    }
 }
