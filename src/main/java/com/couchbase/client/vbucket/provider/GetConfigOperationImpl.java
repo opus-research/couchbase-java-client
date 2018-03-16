@@ -20,23 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.http;
+package com.couchbase.client.vbucket.provider;
 
-import com.couchbase.client.ViewConnection;
-import com.couchbase.client.protocol.views.HttpOperation;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.protocol.binary.OperationImpl;
 
-/**
- * A callack to requeue a http operation.
- */
-public class RequeueOpCallback {
+public class GetConfigOperationImpl extends OperationImpl {
 
-  private final ViewConnection conn;
+  private static final byte CMD = (byte) 0xb5;
 
-  public RequeueOpCallback(ViewConnection vc) {
-    conn = vc;
+  public GetConfigOperationImpl(OperationCallback cb) {
+    super(CMD, 0, cb);
   }
 
-  public void invoke(HttpOperation op) {
-    conn.addOp(op);
+  @Override
+  public void initialize() {
+    prepareBuffer("", 0, EMPTY_BYTES);
   }
+
+  @Override
+  protected void decodePayload(byte[] pl) {
+    getCallback().receivedStatus(new OperationStatus(true, new String(pl)));
+  }
+
 }
