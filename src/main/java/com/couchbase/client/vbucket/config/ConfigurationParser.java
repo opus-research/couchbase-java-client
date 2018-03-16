@@ -34,8 +34,6 @@ public interface ConfigurationParser {
   Map<String, Bucket> parseBuckets(String buckets) throws ParseException;
 
   Bucket parseBucket(String sBucket) throws ParseException;
-  Bucket updateBucket(String bucketJson, Bucket currentBucket)
-    throws ParseException;
 
   void parsePool(Pool pool, String sPool) throws ParseException;
 }
