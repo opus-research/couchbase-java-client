@@ -1,72 +1,65 @@
-# Official Couchbase Java SDK
+# Couchbase Java Client Library
 
-This project is the official driver for Couchbase when working with Java (or on the JVM). It provides management, CRUD and query facilities through both asynchronous and synchronous APIs.
-
-## Features ##
-
-* High-Performance Key/Value and Query (N1QL, Views) operations
-* Cluster-Awareness and automatic rebalance and failover handling
-* Asynchronous (through [RxJava](https://github.com/ReactiveX/RxJava)) and Synchronous APIs
-* Transparent Encryption Support
-* Cluster and Bucket level management facilities
-* Complete non-blocking stack through [RxJava](https://github.com/ReactiveX/RxJava) and [Netty](http://netty.io)
-
-## Getting Help ##
-This README, as well as the [reference documentation](http://developer.couchbase.com/documentation/server/4.5/sdk/java/start-using-sdk.html) are the best places to get started and dig deeper into the Couchbase SDK. In addition, you might want to look at our [travel-sample application](https://github.com/couchbaselabs/try-cb-java).
-
-The primary way to ask questions is through our official [Forums](http://forums.couchbase.com), although there is also a [stackoverflow tag](http://stackoverflow.com/questions/tagged/couchbase). You can also ask questions on `#couchbase` or `#libcouchbase` on IRC (freenode). Please file any issues you find or enhancements you want to request against our [JIRA](http://issues.couchbase.com/browse/JCBC) which we use for universal issue tracking.
-
-## Quick Start ##
-The easiest way is to download the jar as well as its transitive dependencies (only 2) through maven:
+This is the official Java Client Library for [Couchbase Server](http://www.couchbase.com/).
 
 
-```xml
-<dependency>
-    <groupId>com.couchbase.client</groupId>
-    <artifactId>java-client</artifactId>
-    <version>2.4.6</version>
-</dependency>
-```
+## Install
 
-You can find information to older versions as well as alternative downloads [here](http://developer.couchbase.com/server/other-products/release-notes-archives/java-sdk).
+The library may be installed either through Apache Maven or through standalone Jar files (download the JAR from the [main website](http://www.couchbase.com/develop/java/current) ).
 
-The following code connects to the `Cluster`, opens a `Bucket`, stores a `Document`, retrieves it and prints out parts of the content.
+If you are using Apache Maven, add the following repository and depencendy in to your *pom.xml* file.
 
-```java
-// Create a cluster reference
-CouchbaseCluster cluster = CouchbaseCluster.create("127.0.0.1");
+	<repositories>
+    	<repository>
+      		<id>couchbase</id>
+      		<name>Couchbase Maven Repository</name>
+      		<layout>default</layout>
+      		<url>http://files.couchbase.com/maven2/</url>
+      		<snapshots>
+        		<enabled>false</enabled>
+      		</snapshots>
+    	</repository>
+  	</repositories>
+  	
+  	<dependencies>
+  		<dependency>
+  			<groupId>couchbase</groupId>
+			<artifactId>couchbase-client</artifactId>
+			<version>1.1.7</version>
+			<type>jar</type>
+		</dependency>
+    </dependencies>
 
-// Connect to the bucket and open it
-Bucket bucket = cluster.openBucket("default");
 
-// Create a JSON document and store it with the ID "helloworld"
-JsonObject content = JsonObject.create().put("hello", "world");
-JsonDocument inserted = bucket.upsert(JsonDocument.create("helloworld", content));
 
-// Read the document and print the "hello" field
-JsonDocument found = bucket.get("helloworld");
-System.out.println("Couchbase is the best database in the " + found.content().getString("hello"));
+See the [main website](http://www.couchbase.com/develop/java/current) for details.
 
-// Close all buckets and disconnect
-cluster.disconnect();
-```
+## Using
 
-If you want to perform a N1QL query against [Couchbase Server 4.0](http://www.couchbase.com/nosql-databases/couchbase-server) or later, you can do it like this:
+A simple creation of a client may be done like so:
 
-```java
-N1qlQueryResult result = bucket.query(N1qlQuery.simple("SELECT DISTINCT(country) FROM `travel-sample` WHERE type = 'airline' LIMIT 10"));
+    List<URI> baseList = Arrays.asList(
+      URI.create("http://192.168.0.1:8091/pools"),
+      URI.create("http://192.168.0.2:8091/pools"));
 
-for (N1qlQueryRow row : result) {
-    System.out.println(row.value());
-}
-```
+    CouchbaseClient client = new CouchbaseClient(baseList, "default", "");
+    
+    OperationFuture<Boolean> setOp = client.set("key", "{\"name\":\"Couchbase\"}");
+    
+    client.shutdown(3, TimeUnit.SECONDS);
 
-This prints out the distinct countries for all airlines stored in the `travel-sample` bucket that comes with the server.
 
-If you want to learn more, check out the [Start Using the SDK](http://developer.couchbase.com/documentation/server/4.5/sdk/java/start-using-sdk.html) section in the official documentation.
+See the [documentation](http://www.couchbase.com/docs/couchbase-sdk-java-1.0/index.html) on the site for more usage details, including a getting started guide and a tutorial.
 
-## Contributing ##
+## Getting Help
 
-We use Gerrit for our code review system. Please have a look at the extensive [`CONTRIBUTING.md`](CONTRIBUTING.md) for more details.
+For help with the Couchbase Java Client Library see the [Couchbase SDK Forums](http://www.couchbase.com/forums/sdks/sdks). Also you are
+always welcome on `#libcouchbase` channel at [freenode.net IRC servers](http://freenode.net/irc_servers.shtml).
 
-Feel free to reach out to the maintainers over the forums, IRC or email if you have further questions on contributing or get stuck along the way. We love contributions and want to help you get your change over the finish line - and you mentioned in the release notes!
+If you found an issue, please file it in our [JIRA](http://couchbase.com/issues/browse/JCBC).
+
+
+Documentation: [http://www.couchbase.com/docs/](http://www.couchbase.com/docs/)
+
+## Contributing
+Contributions are welcome, see the [contributor guide](http://www.couchbase.com/wiki/display/couchbase/Contributing+Changes).
