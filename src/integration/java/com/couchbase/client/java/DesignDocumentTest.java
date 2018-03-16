@@ -1,19 +1,32 @@
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.ClusterFacade;
+import com.couchbase.client.core.CouchbaseCore;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.java.document.Document;
+import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DesignDocumentException;
+import com.couchbase.client.java.error.ViewQueryException;
+import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.view.DefaultView;
-import com.couchbase.client.java.view.DesignDocument;
-import com.couchbase.client.java.view.View;
+import com.couchbase.client.java.view.*;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
+import rx.Observable;
+import rx.Observer;
+import rx.functions.Action1;
+import rx.functions.Func1;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 /**
  * Verifies the functionality of the Design Document management facilities.
@@ -192,4 +205,26 @@ public class DesignDocumentTest extends ClusterDependentTest {
         manager.publishDesignDocument("pub2");
     }
 
+    @Test
+    public void shouldRaiseErrorWhenQueryingMissingDesignDocument() {
+        ViewQuery viewQuery = ViewQuery.from("test", "dummy");
+        boolean errorRaised = false;
+        try {
+            bucket().query(viewQuery);
+        } catch (ViewQueryException ex) {
+            errorRaised = true;
+            assertEquals(1, ex.errors().size());
+            assertEquals("not_found", ex.errors().get(0).error());
+        }
+        assertTrue("Should raise ViewQueryException when View is missing", errorRaised);
+    }
+
+    @Test
+    public void shouldReturnErrorInResultObjectWhenQueryingMissingDesignDocumentAndOnErrorSetToContinue() {
+        ViewQuery viewQuery = ViewQuery.from("test", "dummy");
+        viewQuery.stale(Stale.FALSE).onError(OnError.CONTINUE);
+        ViewResult result = bucket().query(viewQuery);
+        assertFalse(result.success());
+        assertEquals("not_found", result.error().getString("error"));
+    }
 }
