@@ -30,7 +30,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-
 /**
  * Test the creation of complex keys for views.
  */
@@ -198,7 +197,7 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Tests making complex keys from null object.
+   * Tests making complex keys from array of null object.
    *
    * @pre Work with ComplexKeys to create simple JSON
    * objects from null object.
@@ -208,6 +207,22 @@ public class ComplexKeyTest {
   @Test
   public void testNullSingleValues() {
     Object[] expResult = new Object[] {null};
+    ComplexKey singleNull = ComplexKey.of(expResult);
+    String aNullJsonString = singleNull.toJson();
+    assertEquals("null", aNullJsonString);
+  }
+
+  /**
+   * Tests making complex keys from only null value.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects from null value.
+   * @post Asserts true if json string of the
+   * complex key is equal to null.
+   */
+  @Test
+  public void testOnlyNullValue() {
+    Object expResult = null;
     ComplexKey singleNull = ComplexKey.of(expResult);
     String aNullJsonString = singleNull.toJson();
     assertEquals("null", aNullJsonString);
