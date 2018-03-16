@@ -67,9 +67,5 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
           String value, PersistTo persist);
   OperationFuture<Boolean> set(String key, int exp,
           String value, PersistTo persist, ReplicateTo replicate);
-  Future<Boolean> delete(String key, PersistTo persist);
-  Future<Boolean> delete(String key, PersistTo persist,
-          ReplicateTo replicate);
-
   int getNumVBuckets();
 }
