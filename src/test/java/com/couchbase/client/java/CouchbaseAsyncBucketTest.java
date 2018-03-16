@@ -22,7 +22,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.CouchbaseCore;
-import com.couchbase.client.core.endpoint.kv.KeyValueStatus;
 import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -61,11 +60,11 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnInsertWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
+            core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(InsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new InsertResponse(
-                ResponseStatus.SUCCESS, KeyValueStatus.SUCCESS.code(), 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -79,11 +78,11 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnUpsertWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
+            core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(UpsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new UpsertResponse(
-                ResponseStatus.SUCCESS, KeyValueStatus.SUCCESS.code(), 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -97,11 +96,11 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnReplaceWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
+            core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(ReplaceRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new ReplaceResponse(
-                ResponseStatus.SUCCESS, KeyValueStatus.SUCCESS.code(), 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -115,11 +114,11 @@ public class CouchbaseAsyncBucketTest {
     public void shouldNotCallIntoObserveOnRemoveWhenNotNeeded() {
         CouchbaseCore core = mock(CouchbaseCore.class);
         CouchbaseAsyncBucket bucket = new CouchbaseAsyncBucket(
-                core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
+            core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
         when(core.send(any(RemoveRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new RemoveResponse(
-                ResponseStatus.SUCCESS, KeyValueStatus.SUCCESS.code(), 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");

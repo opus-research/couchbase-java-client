@@ -24,8 +24,8 @@ package com.couchbase.client.java.transcoder;
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.JsonStringDocument;
 import com.couchbase.client.java.error.TranscodingException;
@@ -58,21 +58,13 @@ public class JsonStringTranscoder extends AbstractTranscoder<JsonStringDocument,
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(JsonStringDocument document) throws Exception {
-        return Tuple.create(
-            TranscoderUtils.encodeStringAsUtf8("\"" + document.content() + "\""),
-            TranscoderUtils.JSON_COMPAT_FLAGS
-        );
+        String content = "\"" + document.content() + "\"";
+        return Tuple.create(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8), TranscoderUtils.JSON_COMPAT_FLAGS);
     }
 
     @Override
     public JsonStringDocument newDocument(String id, int expiry, String content, long cas) {
         return JsonStringDocument.create(id, expiry, content, cas);
-    }
-
-    @Override
-    public JsonStringDocument newDocument(String id, int expiry, String content, long cas,
-        MutationToken mutationToken) {
-        return JsonStringDocument.create(id, expiry, content, cas, mutationToken);
     }
 
     @Override

@@ -21,6 +21,7 @@
  */
 package com.couchbase.client.java.view;
 
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
@@ -42,8 +43,8 @@ public class DefaultSpatialViewRow implements SpatialViewRow {
     private final AsyncSpatialViewRow asyncViewRow;
     private final long timeout;
 
-    public DefaultSpatialViewRow(CouchbaseEnvironment env, AsyncSpatialViewRow asyncViewRow) {
-        this.asyncViewRow = asyncViewRow;
+    public DefaultSpatialViewRow(CouchbaseEnvironment env, Bucket bucket, String id, JsonArray key, Object value, JsonObject geometry) {
+        this.asyncViewRow = new DefaultAsyncSpatialViewRow(bucket.async(), id, key, value, geometry);
         this.timeout = env.kvTimeout();
     }
 

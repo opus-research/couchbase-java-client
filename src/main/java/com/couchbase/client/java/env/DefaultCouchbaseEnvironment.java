@@ -24,12 +24,8 @@ package com.couchbase.client.java.env;
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
 import com.couchbase.client.core.env.resources.ShutdownHook;
 import com.couchbase.client.core.event.EventBus;
-import com.couchbase.client.core.event.consumers.LoggingConsumer;
-import com.couchbase.client.core.logging.CouchbaseLogLevel;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.metrics.LatencyMetricsCollectorConfig;
-import com.couchbase.client.core.metrics.MetricsCollectorConfig;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
@@ -62,7 +58,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private static final long MANAGEMENT_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long QUERY_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long VIEW_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
-    private static final long SEARCH_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long KV_TIMEOUT = 2500;
     private static final long CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
     private static final long DISCONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(25);
@@ -71,7 +66,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private final long managementTimeout;
     private final long queryTimeout;
     private final long viewTimeout;
-    private final long searchTimeout;
     private final long kvTimeout;
     private final long connectTimeout;
     private final long disconnectTimeout;
@@ -125,14 +119,13 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private DefaultCouchbaseEnvironment(final Builder builder) {
        super(builder);
 
-        managementTimeout = longPropertyOr("managementTimeout", builder.managementTimeout);
-        queryTimeout = longPropertyOr("queryTimeout", builder.queryTimeout);
-        viewTimeout = longPropertyOr("viewTimeout", builder.viewTimeout);
-        kvTimeout = longPropertyOr("kvTimeout", builder.kvTimeout);
-        searchTimeout = longPropertyOr("searchTimeout", builder.searchTimeout);
-        connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout);
-        disconnectTimeout = longPropertyOr("disconnectTimeout", builder.disconnectTimeout);
-        dnsSrvEnabled = booleanPropertyOr("dnsSrvEnabled", builder.dnsSrvEnabled);
+        managementTimeout = longPropertyOr("managementTimeout", builder.managementTimeout());
+        queryTimeout = longPropertyOr("queryTimeout", builder.queryTimeout());
+        viewTimeout = longPropertyOr("viewTimeout", builder.viewTimeout());
+        kvTimeout = longPropertyOr("kvTimeout", builder.kvTimeout());
+        connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout());
+        disconnectTimeout = longPropertyOr("disconnectTimeout", builder.disconnectTimeout());
+        dnsSrvEnabled = booleanPropertyOr("dnsSrvEnabled", builder.dnsSrvEnabled());
 
         if (queryTimeout > maxRequestLifetime()) {
             LOGGER.warn("The configured query timeout is greater than the maximum request lifetime. " +
@@ -170,13 +163,12 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         return new Builder();
     }
 
-    public static class Builder extends DefaultCoreEnvironment.Builder {
+    public static class Builder extends DefaultCoreEnvironment.Builder implements CouchbaseEnvironment {
 
         private long managementTimeout = MANAGEMENT_TIMEOUT;
         private long queryTimeout = QUERY_TIMEOUT;
         private long viewTimeout = VIEW_TIMEOUT;
         private long kvTimeout = KV_TIMEOUT;
-        private long searchTimeout = SEARCH_TIMEOUT;
         private long connectTimeout = CONNECT_TIMEOUT;
         private long disconnectTimeout = DISCONNECT_TIMEOUT;
         private boolean dnsSrvEnabled = DNS_SRV_ENABLED;
@@ -184,9 +176,19 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         private String userAgent = USER_AGENT; //this is from Core
         private String packageNameAndVersion = SDK_PACKAGE_NAME_AND_VERSION;
 
+        @Override
+        public long managementTimeout() {
+            return managementTimeout;
+        }
+
         public Builder managementTimeout(long managementTimeout) {
             this.managementTimeout = managementTimeout;
             return this;
+        }
+
+        @Override
+        public long queryTimeout() {
+            return queryTimeout;
         }
 
         public Builder queryTimeout(long queryTimeout) {
@@ -194,9 +196,19 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             return this;
         }
 
+        @Override
+        public long viewTimeout() {
+            return viewTimeout;
+        }
+
         public Builder viewTimeout(long viewTimeout) {
             this.viewTimeout = viewTimeout;
             return this;
+        }
+
+        @Override
+        public long kvTimeout() {
+            return kvTimeout;
         }
 
         public Builder kvTimeout(long kvTimeout) {
@@ -204,14 +216,19 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             return this;
         }
 
-        public Builder searchTimeout(long searchTimeout) {
-            this.searchTimeout = searchTimeout;
-            return this;
+        @Override
+        public long connectTimeout() {
+            return connectTimeout;
         }
 
         public Builder connectTimeout(long connectTimeout) {
             this.connectTimeout = connectTimeout;
             return this;
+        }
+
+        @Override
+        public long disconnectTimeout() {
+            return disconnectTimeout;
         }
 
         public Builder disconnectTimeout(long disconnectTimeout) {
@@ -365,6 +382,10 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         @Override
         public Builder dcpEnabled(boolean dcpEnabled) {
+            if (dcpEnabled) {
+                throw new IllegalArgumentException("DCP is not supported from the Java SDK.");
+            }
+
             super.dcpEnabled(dcpEnabled);
             return this;
         }
@@ -418,67 +439,34 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
+        public Builder socketConnectTimeout(int socketConnectTimeout) {
+            super.socketConnectTimeout(socketConnectTimeout);
+            return this;
+        }
+
+        @Override
+        public String packageNameAndVersion() {
+            return packageNameAndVersion;
+        }
+
+        @Override
         public Builder userAgent(final String userAgent) {
             super.userAgent(userAgent);
             return this;
         }
 
+        @Override
+        public String userAgent() {
+            return userAgent;
+        }
+
+        @Override
+        public boolean dnsSrvEnabled() {
+            return dnsSrvEnabled;
+        }
+
         public Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
             this.dnsSrvEnabled = dnsSrvEnabled;
-            return this;
-        }
-
-        @Override
-        public Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
-            super.mutationTokensEnabled(mutationTokensEnabled);
-            return this;
-        }
-
-        @Override
-        public Builder tcpNodelayEnabled(boolean tcpNodelayEnabled) {
-            super.tcpNodelayEnabled(tcpNodelayEnabled);
-            return this;
-        }
-
-        @Override
-        public Builder runtimeMetricsCollectorConfig(MetricsCollectorConfig metricsCollectorConfig) {
-            super.runtimeMetricsCollectorConfig(metricsCollectorConfig);
-            return this;
-        }
-
-        @Override
-        public Builder networkLatencyMetricsCollectorConfig(LatencyMetricsCollectorConfig metricsCollectorConfig) {
-            super.networkLatencyMetricsCollectorConfig(metricsCollectorConfig);
-            return this;
-        }
-
-        @Override
-        public Builder defaultMetricsLoggingConsumer(boolean enabled, CouchbaseLogLevel level, LoggingConsumer.OutputFormat format) {
-            super.defaultMetricsLoggingConsumer(enabled, level, format);
-            return this;
-        }
-
-        @Override
-        public Builder defaultMetricsLoggingConsumer(boolean enabled, CouchbaseLogLevel level) {
-            super.defaultMetricsLoggingConsumer(enabled, level);
-            return this;
-        }
-
-        @Override
-        public Builder dcpConnectionBufferSize(int dcpConnectionBufferSize) {
-            super.dcpConnectionBufferSize(dcpConnectionBufferSize);
-            return this;
-        }
-
-        @Override
-        public Builder dcpConnectionBufferAckThreshold(int dcpConnectionBufferAckThreshold) {
-            super.dcpConnectionBufferAckThreshold(dcpConnectionBufferAckThreshold);
-            return this;
-        }
-
-        @Override
-        public Builder socketConnectTimeout(int socketConnectTimeout) {
-            super.socketConnectTimeout(socketConnectTimeout);
             return this;
         }
 
@@ -501,11 +489,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     @Override
     public long viewTimeout() {
         return viewTimeout;
-    }
-
-    @Override
-    public long searchTimeout() {
-        return searchTimeout;
     }
 
     @Override

@@ -67,7 +67,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
     }
 
     public static DefaultAsyncClusterManager create(final String username, final String password,
-                                                    final ConnectionString connectionString, final CouchbaseEnvironment environment, final ClusterFacade core) {
+        final ConnectionString connectionString, final CouchbaseEnvironment environment, final ClusterFacade core) {
         return new DefaultAsyncClusterManager(username, password, connectionString, environment, core);
     }
 
@@ -133,26 +133,22 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                         List<BucketSettings> settings = new ArrayList<BucketSettings>();
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;
-                            JsonObject controllers = bucket.getObject("controllers");
-                            boolean enableFlush = controllers != null && controllers.getString("flush") != null;
-                            Boolean replicaIndex = bucket.getBoolean("replicaIndex");
-                            boolean indexReplicas = replicaIndex != null ? replicaIndex : false;
+
                             int ramQuota = 0;
                             if (bucket.getObject("quota").get("ram") instanceof Long) {
                                 ramQuota = (int) (bucket.getObject("quota").getLong("ram") / 1024 / 1024);
                             } else {
                                 ramQuota = bucket.getObject("quota").getInt("ram") / 1024 / 1024;
                             }
-                            BucketType bucketType = "membase".equalsIgnoreCase(bucket.getString("bucketType")) ?
-                                BucketType.COUCHBASE : BucketType.MEMCACHED;
 
                             settings.add(DefaultBucketSettings.builder()
                                 .name(bucket.getString("name"))
-                                .enableFlush(enableFlush)
-                                .type(bucketType)
+                                .enableFlush(bucket.getObject("controllers").getString("flush") != null)
+                                .type(bucket.getString("bucketType").equals("membase")
+                                    ? BucketType.COUCHBASE : BucketType.MEMCACHED)
                                 .replicas(bucket.getInt("replicaNumber"))
                                 .quota(ramQuota)
-                                .indexReplicas(indexReplicas)
+                                .indexReplicas(bucket.getBoolean("replicaIndex"))
                                 .port(bucket.getInt("proxyPort"))
                                 .password(bucket.getString("saslPassword"))
                                 .build());
@@ -191,12 +187,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
     public Observable<Boolean> removeBucket(final String name) {
         return
             ensureServiceEnabled()
-                .flatMap(new Func1<Boolean, Observable<RemoveBucketResponse>>() {
-                    @Override
-                    public Observable<RemoveBucketResponse> call(Boolean aBoolean) {
-                        return core.send(new RemoveBucketRequest(name, username, password));
-                    }
-                }).map(new Func1<RemoveBucketResponse, Boolean>() {
+            .flatMap(new Func1<Boolean, Observable<RemoveBucketResponse>>() {
+                @Override
+                public Observable<RemoveBucketResponse> call(Boolean aBoolean) {
+                    return core.send(new RemoveBucketRequest(name, username, password));
+                }
+            }).map(new Func1<RemoveBucketResponse, Boolean>() {
                 @Override
                 public Boolean call(RemoveBucketResponse response) {
                     return response.status().isSuccess();

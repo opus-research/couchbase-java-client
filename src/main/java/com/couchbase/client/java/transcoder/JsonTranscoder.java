@@ -21,10 +21,15 @@
  */
 package com.couchbase.client.java.transcoder;
 
+import java.util.List;
+import java.util.Map;
+
+import com.couchbase.client.core.endpoint.util.WhitespaceSkipper;
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
+import com.couchbase.client.core.logging.CouchbaseLogger;
+import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.document.JsonDocument;
@@ -39,6 +44,8 @@ import com.couchbase.client.java.error.TranscodingException;
  * @since 2.0
  */
 public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject> {
+
+    private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(JsonTranscoder.class);
 
     public JsonTranscoder() {
     }
@@ -68,12 +75,6 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         return JsonDocument.create(id, expiry, content, cas);
     }
 
-    @Override
-    public JsonDocument newDocument(String id, int expiry, JsonObject content, long cas,
-        MutationToken mutationToken) {
-        return JsonDocument.create(id, expiry, content, cas, mutationToken);
-    }
-
     public String jsonObjectToString(JsonObject input) throws Exception {
         return JacksonTransformers.MAPPER.writeValueAsString(input);
     }
@@ -86,6 +87,20 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         return JacksonTransformers.MAPPER.readValue(input, JsonObject.class);
     }
 
+    private <T> T byteBufToClass(ByteBuf input, Class<? extends T> clazz) throws Exception {
+        byte[] inputBytes;
+        int offset = 0;
+        int length = input.readableBytes();
+        if (input.hasArray()) {
+            inputBytes = input.array();
+            offset = input.arrayOffset() + input.readerIndex();
+        } else {
+            inputBytes = new byte[length];
+            input.getBytes(input.readerIndex(), inputBytes);
+        }
+        return JacksonTransformers.MAPPER.readValue(inputBytes, offset, length, clazz);
+    }
+
     /**
      * Converts a {@link ByteBuf} to a {@link JsonObject}, <b>without releasing the buffer</b>
      *
@@ -94,7 +109,7 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
      * @throws Exception
      */
     public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
-        return TranscoderUtils.byteBufToClass(input, JsonObject.class, JacksonTransformers.MAPPER);
+        return byteBufToClass(input, JsonObject.class);
     }
 
     /**
@@ -112,7 +127,35 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
      * @throws Exception
      */
     public Object byteBufJsonValueToObject(ByteBuf input) throws Exception {
-        return TranscoderUtils.byteBufToGenericObject(input, JacksonTransformers.MAPPER);
+        //skip leading whitespaces
+        int toSkip = input.forEachByte(new WhitespaceSkipper());
+        if (toSkip > 0) {
+            input.skipBytes(toSkip);
+        }
+        //peek into the buffer for quick detection of objects and arrays
+        input.markReaderIndex();
+        byte first = input.readByte();
+        input.resetReaderIndex();
+
+        switch (first) {
+            case '{':
+                return byteBufToJsonObject(input);
+            case '[':
+                return byteBufToClass(input, JsonArray.class);
+        }
+
+        //we couldn't fast detect the type, we'll have to unmarshall to object and make sure maps and lists
+        //are converted to JsonObject/JsonArray.
+        Object value = byteBufToClass(input, Object.class);
+        if (value instanceof Map) {
+            LOGGER.warn("A JSON object could not be fast detected (first byte '" + (char) first + "')");
+            return JsonObject.from((Map<String, ?>) value);
+        } else if (value instanceof List) {
+            LOGGER.warn("A JSON array could not be fast detected (first byte '" + (char) first + "')");
+            return JsonArray.from((List<?>) value);
+        } else {
+            return value;
+        }
     }
 
 }

@@ -24,7 +24,6 @@ package com.couchbase.client.java.transcoder;
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.document.JsonArrayDocument;
@@ -65,12 +64,6 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
         return JsonArrayDocument.create(id, expiry, content, cas);
     }
 
-    @Override
-    public JsonArrayDocument newDocument(String id, int expiry, JsonArray content, long cas,
-        MutationToken mutationToken) {
-        return JsonArrayDocument.create(id, expiry, content, cas, mutationToken);
-    }
-
     public String jsonArrayToString(JsonArray input) throws Exception {
         return JacksonTransformers.MAPPER.writeValueAsString(input);
     }
@@ -84,7 +77,17 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
     }
 
     public JsonArray byteBufToJsonArray(ByteBuf input) throws Exception {
-        return TranscoderUtils.byteBufToClass(input, JsonArray.class, JacksonTransformers.MAPPER);
+        byte[] inputBytes;
+        int offset = 0;
+        int length = input.readableBytes();
+        if (input.hasArray()) {
+            inputBytes = input.array();
+            offset = input.arrayOffset() + input.readerIndex();
+        } else {
+            inputBytes = new byte[length];
+            input.getBytes(input.readerIndex(), inputBytes);
+        }
+        return JacksonTransformers.MAPPER.readValue(inputBytes, offset, length, JsonArray.class);
     }
 
 }
