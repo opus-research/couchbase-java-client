@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
@@ -34,6 +33,10 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
+import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
+import com.couchbase.client.java.subdoc.LookupInBuilder;
+import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
@@ -46,11 +49,6 @@ import com.couchbase.client.java.repository.CouchbaseRepository;
 import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.search.query.SearchQuery;
-import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
-import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
-import com.couchbase.client.java.subdoc.DocumentFragment;
-import com.couchbase.client.java.subdoc.LookupInBuilder;
-import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -944,20 +942,6 @@ public class CouchbaseBucket implements Bucket {
     public LookupInBuilder lookupIn(String docId) {
         AsyncLookupInBuilder asyncBuilder = asyncBucket.lookupIn(docId);
         return new LookupInBuilder(asyncBuilder, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public DocumentFragment<Lookup> retrieveIn(String docId, String... paths) {
-        return Blocking.blockForSingle(asyncBucket.retrieveIn(docId, paths), kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public DocumentFragment<Lookup> retrieveIn(String docId, List<String> paths) {
-        return retrieveIn(docId, paths, kvTimeout, TIMEOUT_UNIT);
-    }
-    @Override
-    public DocumentFragment<Lookup> retrieveIn(String docId, List<String> paths, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.retrieveIn(docId, paths), timeout, timeUnit);
     }
 
     @Override

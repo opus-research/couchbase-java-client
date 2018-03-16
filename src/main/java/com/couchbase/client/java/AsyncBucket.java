@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.BackpressureException;
@@ -31,7 +29,6 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
@@ -58,7 +55,6 @@ import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
-import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -2031,50 +2027,6 @@ public interface AsyncBucket {
     @InterfaceStability.Experimental
     @InterfaceAudience.Public
     AsyncLookupInBuilder lookupIn(String docId);
-
-    /**
-     * This is a convenience method over a call to {@link #lookupIn(String)}, multiple {@link AsyncLookupInBuilder#get(String)}
-     * then a final {@link AsyncLookupInBuilder#doLookup()} execution.
-     *
-     * Performs several lookups through a {@link AsyncLookupInBuilder builder API}, retrieving all the path that have
-     * been provided from inside an existing {@link JsonDocument}. The lookup is executed asynchronously by calling
-     * the {@link AsyncLookupInBuilder#doLookup()} method.
-     *
-     * Only the paths that you looked up inside the document will be transferred over the wire, limiting the network
-     * overhead for large documents.
-     *
-     * @param docId the id of the JSON document to lookup in.
-     * @param paths the paths to be retrieved from inside the document.
-     * @return an {@link Observable} of a single {@link DocumentFragment} representing the desired data (see
-     * {@link AsyncLookupInBuilder#doLookup()} for details on usage, error cases, etc...).
-     * @see AsyncLookupInBuilder#get(String)
-     * @see AsyncLookupInBuilder#doLookup()
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    Observable<DocumentFragment<Lookup>> retrieveIn(String docId, String... paths);
-
-    /**
-     * This is a convenience method over a call to {@link #lookupIn(String)}, multiple {@link AsyncLookupInBuilder#get(String)}
-     * then a final {@link AsyncLookupInBuilder#doLookup()} execution.
-     *
-     * Performs several lookups through a {@link AsyncLookupInBuilder builder API}, retrieving all the path that have
-     * been provided from inside an existing {@link JsonDocument}. The lookup is executed asynchronously by calling
-     * the {@link AsyncLookupInBuilder#doLookup()} method.
-     *
-     * Only the paths that you looked up inside the document will be transferred over the wire, limiting the network
-     * overhead for large documents.
-     *
-     * @param docId the id of the JSON document to lookup in.
-     * @param paths the paths to be retrieved from inside the document, as an {@link Iterable}, eg. a {@link Collection}.
-     * @return an {@link Observable} of a single {@link DocumentFragment} representing the desired data (see
-     * {@link AsyncLookupInBuilder#doLookup()} for details on usage, error cases, etc...).
-     * @see AsyncLookupInBuilder#get(String)
-     * @see AsyncLookupInBuilder#doLookup()
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    Observable<DocumentFragment<Lookup>> retrieveIn(String docId, List<String> paths);
 
     /**
      * Prepare a sub-document mutation through a {@link AsyncMutateInBuilder builder API}. You can use the builder to
