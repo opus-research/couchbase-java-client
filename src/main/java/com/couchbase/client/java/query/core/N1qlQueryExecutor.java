@@ -27,11 +27,8 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
-import com.couchbase.client.core.message.cluster.GetClusterConfigResponse;
 import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.utils.Buffers;
@@ -53,6 +50,7 @@ import com.couchbase.client.java.query.PreparedN1qlQuery;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.SimpleN1qlQuery;
 import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.util.LRUCache;
 import rx.Observable;
@@ -60,8 +58,6 @@ import rx.exceptions.CompositeException;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
-
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,8 +85,6 @@ public class N1qlQueryExecutor {
     private static final String ERROR_FIELD_CODE = "code";
     private static final String ERROR_FIELD_MSG = "msg";
     protected static final String ERROR_5000_SPECIFIC_MESSAGE = "queryport.indexNotFound";
-
-    private static final java.lang.String BANDWIDTH_OPTIMIZATION_PROPERTY = "com.couchbase.query.preparedOptimBandwidth";
 
     private final ClusterFacade core;
     private final String bucket;
@@ -145,7 +139,7 @@ public class N1qlQueryExecutor {
         return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
             @Override
             public Observable<GenericQueryResponse> call() {
-                return core.send(createN1qlRequest(query, bucket, password, null));
+                return core.send(createN1qlRequest(query, bucket, password));
             }
         }).flatMap(new Func1<GenericQueryResponse, Observable<AsyncN1qlQueryResult>>() {
             @Override
@@ -331,20 +325,20 @@ public class N1qlQueryExecutor {
      * Issues a proper N1QL EXECUTE, detecting if parameters must be added to it.
      */
     protected Observable<AsyncN1qlQueryResult> executePrepared(final N1qlQuery query, PreparedPayload payload) {
-        PreparedN1qlQuery preparedQuery;
         if (query instanceof ParameterizedN1qlQuery) {
             ParameterizedN1qlQuery pq = (ParameterizedN1qlQuery) query;
             if (pq.isPositional()) {
-                preparedQuery = new PreparedN1qlQuery(payload, (JsonArray) pq.statementParameters(), query.params());
+                return executeQuery(
+                    new PreparedN1qlQuery(payload, (JsonArray) pq.statementParameters(), query.params())
+                );
             } else {
-                preparedQuery = new PreparedN1qlQuery(payload, (JsonObject) pq.statementParameters(), query.params());
+                return executeQuery(
+                    new PreparedN1qlQuery(payload, (JsonObject) pq.statementParameters(), query.params())
+                );
             }
         } else {
-            preparedQuery = new PreparedN1qlQuery(payload, query.params());
+            return executeQuery(new PreparedN1qlQuery(payload, query.params()));
         }
-        preparedQuery.setEncodedPlanEnabled(!isBandwidthOptimizationOn());
-
-        return executeQuery(preparedQuery);
     }
 
     /**
@@ -366,45 +360,16 @@ public class N1qlQueryExecutor {
         if (statement instanceof PrepareStatement) {
             prepared = (PrepareStatement) statement;
         } else {
-            //not including an explicit name here will produce a hash as explicit name
-            //null would have let the server generate a name
-            prepared = PrepareStatement.prepare(statement);
+            prepared = PrepareStatement.prepare(statement, null);
         }
         final SimpleN1qlQuery query = N1qlQuery.simple(prepared);
 
-        Observable<GenericQueryResponse> source;
-
-
-        if (isBandwidthOptimizationOn()) {
-            source = Observable.defer(new Func0<Observable<GetClusterConfigResponse>>() {
-                @Override
-                public Observable<GetClusterConfigResponse> call() {
-                    return core.send(new GetClusterConfigRequest());
-                }
-            }).flatMap(new Func1<GetClusterConfigResponse, Observable<NodeInfo>>() {
-                @Override
-                public Observable<NodeInfo> call(GetClusterConfigResponse getClusterConfigResponse) {
-                    return Observable.from(getClusterConfigResponse.config()
-                            .bucketConfig(bucket)
-                            .nodes());
-                }
-            }).flatMap(new Func1<NodeInfo, Observable<GenericQueryResponse>>() {
-                @Override
-                public Observable<GenericQueryResponse> call(NodeInfo nodeInfo) {
-                    GenericQueryRequest req = createN1qlRequest(query, bucket, password, nodeInfo.hostname());
-                    return core.send(req);
-                }
-            });
-        } else {
-            source = Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
-                @Override
-                public Observable<GenericQueryResponse> call() {
-                    return core.send(createN1qlRequest(query, bucket, password, null));
-                }
-            });
-        }
-
-        return source.flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
+        return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
+            @Override
+            public Observable<GenericQueryResponse> call() {
+                return core.send(createN1qlRequest(query, bucket, password));
+            }
+        }).flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
             @Override
             public Observable<PreparedPayload> call(GenericQueryResponse r) {
                 if (r.status().isSuccess()) {
@@ -464,24 +429,19 @@ public class N1qlQueryExecutor {
                         });
                 }
             }
-        }).last();
+        });
     }
 
-    /**
-     * Creates the core query request and performs centralized string substitution.
-     */
-    private GenericQueryRequest createN1qlRequest(final N1qlQuery query, String bucket, String password,
-            InetAddress targetNode) {
+  /**
+   * Creates the core query request and performs centralized string substitution.
+   */
+    private GenericQueryRequest createN1qlRequest(final N1qlQuery query, String bucket, String password) {
         String rawQuery = query.n1ql().toString();
         rawQuery = rawQuery.replaceAll(
           CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER,
           "`" + bucket + "`"
         );
-        if (targetNode != null) {
-            return GenericQueryRequest.jsonQuery(rawQuery, bucket, password, targetNode);
-        } else {
-            return GenericQueryRequest.jsonQuery(rawQuery, bucket, password);
-        }
+        return GenericQueryRequest.jsonQuery(rawQuery, bucket, password);
     }
 
     /**
@@ -502,10 +462,6 @@ public class N1qlQueryExecutor {
         int oldSize = queryCache.size();
         queryCache.clear();
         return oldSize;
-    }
-
-    protected static boolean isBandwidthOptimizationOn() {
-        return "true".equalsIgnoreCase(System.getProperty(BANDWIDTH_OPTIMIZATION_PROPERTY, "false"));
     }
 
 }
