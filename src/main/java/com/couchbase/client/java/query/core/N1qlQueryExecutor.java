@@ -184,7 +184,12 @@ public class N1qlQueryExecutor {
                         return new N1qlMetrics(jsonObject);
                     }
                 });
-                final Observable<String> finalStatus = response.queryStatus();
+                final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
+                    @Override
+                    public Boolean call(String s) {
+                        return "success".equalsIgnoreCase(s) || "completed".equalsIgnoreCase(s);
+                    }
+                });
                 final Observable<JsonObject> errors = response.errors().map(new Func1<ByteBuf, JsonObject>() {
                     @Override
                     public JsonObject call(ByteBuf byteBuf) {
@@ -202,7 +207,7 @@ public class N1qlQueryExecutor {
                 String requestId = response.requestId();
 
                 AsyncN1qlQueryResult r = new DefaultAsyncN1qlQueryResult(rows, signature, info, errors,
-                        finalStatus, parseSuccess, requestId, contextId);
+                        finalSuccess, parseSuccess, requestId, contextId);
                 return Observable.just(r);
             }
         });
@@ -255,7 +260,7 @@ public class N1qlQueryExecutor {
                                 AsyncN1qlQueryResult copyResult = new DefaultAsyncN1qlQueryResult(
                                         aqr.rows(), aqr.signature(), aqr.info(),
                                         cachedErrors,
-                                        aqr.status(), aqr.parseSuccess(), aqr.requestId(),
+                                        aqr.finalSuccess(), aqr.parseSuccess(), aqr.requestId(),
                                         aqr.clientContextId());
                                 return Observable.just(copyResult);
                             } else {
