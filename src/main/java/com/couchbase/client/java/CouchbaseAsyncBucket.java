@@ -85,8 +85,9 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.SimpleQuery;
 import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.repository.AsyncRepository;
+import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
-import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
 import com.couchbase.client.java.transcoder.JsonBooleanTranscoder;
 import com.couchbase.client.java.transcoder.JsonDoubleTranscoder;
@@ -173,6 +174,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<ClusterFacade> core() {
         return Observable.just(core);
+    }
+
+    @Override
+    public Observable<AsyncRepository> repository() {
+        return Observable.just((AsyncRepository) new CouchbaseAsyncRepository(this));
     }
 
     @Override
