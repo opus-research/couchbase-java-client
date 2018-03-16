@@ -25,7 +25,6 @@ package com.couchbase.client;
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
@@ -33,10 +32,7 @@ import com.couchbase.client.vbucket.config.ConfigType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -80,26 +76,18 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    */
   public static final int DEFAULT_OP_QUEUE_LEN = 16384;
 
-  private volatile ConfigurationProvider configurationProvider;
+  private final ConfigurationProvider configurationProvider;
   private final String bucket;
   private final String pass;
-  private final List<URI> storedBaseList;
-  private static final Logger LOGGER =
-    Logger.getLogger(CouchbaseConnectionFactory.class.getName());
-  private boolean needsReconnect;
-  private volatile long thresholdLastCheck = System.nanoTime();
-  private volatile int configThresholdCount = 0;
-  private final int MAX_CONFIG_CHECK = 100; //maximum config checks in a second
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, final String password)
     throws IOException {
-    storedBaseList = new ArrayList<URI>();
+    // ConnectionFactoryBuilder cfb = new ConnectionFactoryBuilder(cf);
     for (URI bu : baseList) {
       if (!bu.isAbsolute()) {
         throw new IllegalArgumentException("The base URI must be absolute");
       }
-      storedBaseList.add(bu);
     }
     bucket = bucketName;
     pass = password;
@@ -123,7 +111,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
 
     if (config.getConfigType() == ConfigType.MEMCACHE) {
-      return new KetamaNodeLocator(nodes, getHashAlg());
+      return new KetamaNodeLocator(nodes, DefaultHashAlgorithm.KETAMA_HASH);
     } else if (config.getConfigType() == ConfigType.COUCHBASE) {
       return new VBucketNodeLocator(nodes, getVBucketConfig());
     } else {
@@ -148,16 +136,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public Config getVBucketConfig() {
     try {
-      // If we find the config provider associated with this bucket is
-      // disconnected and thus stale, we simply replace the configuration
-      // provider
-      if (configurationProvider.getBucketConfiguration(bucket)
-           .isNotUpdating()) {
-        LOGGER.warning("Noticed bucket configuration to be disconnected, "
-            + "will attempt to reconnect");
-        configurationProvider = new ConfigurationProviderHTTP(storedBaseList,
-            bucket, pass);
-      }
       return configurationProvider.getBucketConfiguration(bucket).getConfig();
     } catch (ConfigurationException e) {
       return null;
@@ -167,39 +145,4 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public ConfigurationProvider getConfigurationProvider() {
     return configurationProvider;
   }
-
-  protected void requestConfigReconnect(String bucketName, Reconfigurable rec) {
-    configurationProvider.markForResubscribe(bucketName, rec);
-    needsReconnect = true;
-  }
-
-  void checkConfigUpdate() {
-    if (needsReconnect || pastReconnThreshold()) {
-      LOGGER.log(Level.INFO,
-                 "Attempting to resubscribe for cluster config updates.");
-      configurationProvider =
-        new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
-      configurationProvider.finishResubscribe();
-    } else {
-      LOGGER.log(Level.WARNING, "No reconnect required, though check requested." 
-              + "  Current config check is {0} out of a threshold of {1}.",
-              new Object[]{configThresholdCount, MAX_CONFIG_CHECK});
-    }
-  }
-
-  private boolean pastReconnThreshold() {
-    long currentTime = System.nanoTime();
-    if (currentTime - thresholdLastCheck > 1000000000) { // if longer than 1 sec
-      configThresholdCount = 0;
-    }
-    configThresholdCount++;
-    thresholdLastCheck = currentTime;
-
-    if (configThresholdCount >= MAX_CONFIG_CHECK) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
 }
