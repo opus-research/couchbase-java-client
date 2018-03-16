@@ -916,11 +916,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public boolean isClosed() {
-        return asyncBucket.isClosed();
-    }
-
-    @Override
     public String toString() {
         return "Bucket[" + name() + "]";
     }
