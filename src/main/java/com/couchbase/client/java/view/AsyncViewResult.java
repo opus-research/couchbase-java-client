@@ -21,64 +21,49 @@
  */
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import rx.Observable;
 
-import java.util.concurrent.TimeUnit;
-
 /**
- * Represents a {@link ViewRow} fetched from the View.
+ * Represents a view result loaded from the index.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-public interface ViewRow {
+public interface AsyncViewResult {
 
     /**
-     * The id of the document, if not reduced.
+     * All the rows emitted.
      *
-     * @return the id of the document.
+     * @return an observable containing view rows.
      */
-    String id();
+    Observable<AsyncViewRow> rows();
 
     /**
-     * The key of the row index.
+     * The total number of rows.
      *
-     * The object can be any valid JSON object, including {@link JsonArray} or {@link JsonObject}.
-     *
-     * @return the key.
+     * @return number of rows.
      */
-    Object key();
+    int totalRows();
 
     /**
-     * The value of the row index.
+     * If the query was successful.
      *
-     * The object can be any valid JSON object, including {@link JsonArray} or {@link JsonObject}.
-     *
-     * @return the value.
+     * @return true if it was, false otherwise.
      */
-    Object value();
+    boolean success();
 
     /**
-     * Load the underlying document, if not reduced.
+     * If it was not successful, an error is contained here.
      *
-     * @return a {@link Observable} containing the document once loaded.
+     * @return the potential error.
      */
-    JsonDocument document();
-
-    JsonDocument document(long timeout, TimeUnit timeUnit);
+    JsonObject error();
 
     /**
-     * Load the underlying document, if not reduced.
+     * If debug was enabled on the query, it is contained here.
      *
-     * @param target class to use a different {@link Document}.
-     * @return a {@link Observable} containing the document once loaded.
+     * @return the debug info.
      */
-    <D extends Document<?>> D document(final Class<D> target);
-
-    <D extends Document<?>> D document(final Class<D> target, long timeout, TimeUnit timeUnit);
-
+    JsonObject debug();
 }
