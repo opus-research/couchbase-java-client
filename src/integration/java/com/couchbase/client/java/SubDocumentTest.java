@@ -1542,7 +1542,9 @@ public class SubDocumentTest {
         String path3 = "sub";
         DocumentFragment<Lookup> results = ctx.bucket()
                 .lookupIn(key)
-                .exists(path1, path2, path3)
+                .exists(path1)
+                .exists(path2)
+                .exists(path3)
                 .execute();
 
         assertNotNull(results);
@@ -1578,7 +1580,9 @@ public class SubDocumentTest {
     public void testMultiLookupGetDoesNotFailOnBadPath() {
         DocumentFragment<Lookup> results = ctx.bucket()
                 .lookupIn(key)
-                .get("sub", "sub[1]", "badPath")
+                .get("sub")
+                .get("sub[1]")
+                .get("badPath")
                 .execute();
 
         assertNotNull(results);
