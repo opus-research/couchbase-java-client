@@ -38,7 +38,7 @@ import java.io.Serializable;
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class N1qlMetrics implements Serializable{
+public class QueryMetrics implements Serializable{
 
     private static final long serialVersionUID = -1955101433653293743L;
 
@@ -46,7 +46,7 @@ public class N1qlMetrics implements Serializable{
      * The empty metrics object. All numerical values will be 0 and human-readable times
      * will be {@link #NO_TIME}.
      */
-    public static final N1qlMetrics EMPTY_METRICS = new N1qlMetrics();
+    public static final QueryMetrics EMPTY_METRICS = new QueryMetrics();
 
     /**
      * Human-readable representation of the absence of duration, as "0s".
@@ -64,11 +64,11 @@ public class N1qlMetrics implements Serializable{
     private final String elapsedTime;
     private final String executionTime;
 
-    private N1qlMetrics() {
+    private QueryMetrics() {
         this(JsonObject.empty());
     }
 
-    public N1qlMetrics(JsonObject rawMetrics) {
+    public QueryMetrics(JsonObject rawMetrics) {
         this.rawMetrics = rawMetrics;
 
         if (rawMetrics.getString("elapsedTime") == null) {
@@ -176,7 +176,7 @@ public class N1qlMetrics implements Serializable{
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("N1qlMetrics{");
+        final StringBuilder sb = new StringBuilder("QueryMetrics{");
         sb.append(", resultCount=").append(resultCount);
         sb.append(", errorCount=").append(errorCount);
         sb.append(", warningCount=").append(warningCount);

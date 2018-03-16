@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Couchbase, Inc.
+ * Copyright (C) 2014 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,33 +19,34 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.query;
 
-import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.document.json.JsonValue;
 
 /**
- * A {@link CouchbaseException} representing various errors during N1QL querying, when an
- * actual Exception wrapping a {@link JsonObject} is needed.
+ * The simplest form of N1QL {@link Query} with a plain un-parameterized {@link Statement}.
  *
  * @author Simon Baslé
- * @since 2.2
+ * @since 2.1
  */
-public class QueryExecutionException extends CouchbaseException {
+public class SimpleQuery extends AbstractQuery {
 
-    private final JsonObject n1qlError;
-
-    public QueryExecutionException(String message, JsonObject n1qlError) {
-        super(message);
-        this.n1qlError = n1qlError == null ? JsonObject.empty() : n1qlError;
+    /* package */ SimpleQuery(Statement statement, QueryParams params) {
+        super(statement, params);
     }
 
-    public QueryExecutionException(String message, JsonObject n1qlError, Throwable cause) {
-        super(message, cause);
-        this.n1qlError = n1qlError == null ? JsonObject.empty() : n1qlError;
+    @Override
+    protected String statementType() {
+        return "statement";
     }
 
-    public JsonObject getN1qlError() {
-        return this.n1qlError;
+    @Override
+    protected Object statementValue() {
+        return statement().toString();
+    }
+
+    @Override
+    protected JsonValue statementParameters() {
+        return null;
     }
 }
