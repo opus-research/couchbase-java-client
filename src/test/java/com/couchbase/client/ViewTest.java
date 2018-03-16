@@ -26,7 +26,6 @@ package com.couchbase.client;
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.protocol.views.ComplexKey;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
-import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.protocol.views.InvalidViewException;
 import com.couchbase.client.protocol.views.NoDocsOperationImpl;
 import com.couchbase.client.protocol.views.OnError;
@@ -39,6 +38,10 @@ import com.couchbase.client.protocol.views.View;
 import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
+import com.couchbase.client.protocol.views.ViewRowNoDocsSpatial;
+import com.couchbase.client.protocol.views.ViewRowReduced;
+import com.couchbase.client.protocol.views.ViewRowWithDocsSpatial;
+import com.couchbase.client.protocol.views.ViewType;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -57,13 +60,13 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * A CouchbaseClientTest.
@@ -79,6 +82,7 @@ public class ViewTest {
   public static final String VIEW_NAME_W_REDUCE = "view_with_reduce";
   public static final String VIEW_NAME_WO_REDUCE = "view_without_reduce";
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
+  public static final String VIEW_NAME_SPATIAL_ALL = "view_spatial_all";
 
   static {
     ITEMS = new HashMap<String, Object>();
@@ -127,7 +131,10 @@ public class ViewTest {
         + DESIGN_DOC_WO_REDUCE;
     String view2 = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_FOR_DATED + "\":{\"map\":\"function (doc) {  "
-        + "emit(doc.type, 1)}\"}}}";
+        + "emit(doc.type, 1)}\"}}, \"spatial\":{\"" + VIEW_NAME_SPATIAL_ALL
+        + "\":\"function (doc) {if(doc.loc) {emit({type: \\\"Point\\\", "
+        + "coordinates: doc.loc}, null);}}\"}}";
+
     for (Entry<String, Object> item : ITEMS.entrySet()) {
       assert c.set(item.getKey(), 0,
           (String) item.getValue()).get().booleanValue();
@@ -171,13 +178,13 @@ public class ViewTest {
     c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_W_REDUCE).get();
 
-    c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
-        + DESIGN_DOC_WO_REDUCE).get();
+    //c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
+    //    + DESIGN_DOC_WO_REDUCE).get();
   }
 
   private static String generateDoc(String type, String small, String large) {
     return "{\"type\":\"" + type + "\"" + ",\"small range\":\"" + small + "\","
-        + "\"large range\":\"" + large + "\"}";
+      + "\"large range\":\"" + large + "\", \"loc\": [-117.0, 32.77]}";
   }
 
   private static String generateDatedDoc(int year, int month, int day) {
@@ -257,7 +264,7 @@ public class ViewTest {
 
     Iterator<ViewRow> itr = reduce.iterator();
     while (itr.hasNext()) {
-      ViewRow row = itr.next();
+      ViewRowReduced row = (ViewRowReduced) itr.next();
       assert row.getKey() == null;
       assert Integer.valueOf(row.getValue()) == ITEMS.size()
           : future.getStatus();
@@ -477,25 +484,26 @@ public class ViewTest {
 
   @Test
   public void testViewDocsWithErrors() throws Exception {
-    HttpOperation op = new DocsOperationImpl(null, new ViewCallback() {
-      @Override
-      public void receivedStatus(OperationStatus status) {
-        assert status.isSuccess();
-      }
+    DocsOperationImpl op = new DocsOperationImpl(null, ViewType.MAPREDUCE,
+      new ViewCallback() {
+        @Override
+        public void receivedStatus(OperationStatus status) {
+          assert status.isSuccess();
+        }
 
-      @Override
-      public void complete() {
-        // Do nothing
-      }
+        @Override
+        public void complete() {
+          // Do nothing
+        }
 
-      @Override
-      public void gotData(ViewResponse response) {
-        assert response.getErrors().size() == 2;
-        Iterator<RowError> row = response.getErrors().iterator();
-        assert row.next().getFrom().equals("127.0.0.1:5984");
-        assert response.size() == 0;
-      }
-    });
+        @Override
+        public void gotData(ViewResponse response) {
+          assert response.getErrors().size() == 2;
+          Iterator<RowError> row = response.getErrors().iterator();
+          assert row.next().getFrom().equals("127.0.0.1:5984");
+          assert response.size() == 0;
+        }
+      });
     HttpResponse response =
         new BasicHttpResponse(HttpVersion.HTTP_1_1, 200, "");
     String entityString = "{\"total_rows\":0,\"rows\":[],\"errors\": [{\"from"
@@ -510,25 +518,26 @@ public class ViewTest {
 
   @Test
   public void testViewNoDocsWithErrors() throws Exception {
-    HttpOperation op = new NoDocsOperationImpl(null, new ViewCallback() {
-      @Override
-      public void receivedStatus(OperationStatus status) {
-        assert status.isSuccess();
-      }
+    NoDocsOperationImpl op = new NoDocsOperationImpl(null, ViewType.MAPREDUCE,
+      new ViewCallback() {
+        @Override
+        public void receivedStatus(OperationStatus status) {
+          assert status.isSuccess();
+        }
 
-      @Override
-      public void complete() {
-        // Do nothing
-      }
+        @Override
+        public void complete() {
+          // Do nothing
+        }
 
-      @Override
-      public void gotData(ViewResponse response) {
-        assert response.getErrors().size() == 2;
-        Iterator<RowError> row = response.getErrors().iterator();
-        assert row.next().getFrom().equals("127.0.0.1:5984");
-        assert response.size() == 0;
-      }
-    });
+        @Override
+        public void gotData(ViewResponse response) {
+          assert response.getErrors().size() == 2;
+          Iterator<RowError> row = response.getErrors().iterator();
+          assert row.next().getFrom().equals("127.0.0.1:5984");
+          assert response.size() == 0;
+        }
+      });
     HttpResponse response =
         new BasicHttpResponse(HttpVersion.HTTP_1_1, 200, "");
     String entityString = "{\"total_rows\":0,\"rows\":[],\"errors\": [{\"from"
@@ -543,25 +552,26 @@ public class ViewTest {
 
   @Test
   public void testViewReducedWithErrors() throws Exception {
-    HttpOperation op = new ReducedOperationImpl(null, new ViewCallback() {
-      @Override
-      public void receivedStatus(OperationStatus status) {
-        assert status.isSuccess();
-      }
+    ReducedOperationImpl op = new ReducedOperationImpl(null, ViewType.MAPREDUCE,
+      new ViewCallback() {
+        @Override
+        public void receivedStatus(OperationStatus status) {
+          assert status.isSuccess();
+        }
 
-      @Override
-      public void complete() {
-        // Do nothing
-      }
+        @Override
+        public void complete() {
+          // Do nothing
+        }
 
-      @Override
-      public void gotData(ViewResponse response) {
-        assert response.getErrors().size() == 2;
-        Iterator<RowError> row = response.getErrors().iterator();
-        assert row.next().getFrom().equals("127.0.0.1:5984");
-        assert response.size() == 0;
-      }
-    });
+        @Override
+        public void gotData(ViewResponse response) {
+          assert response.getErrors().size() == 2;
+          Iterator<RowError> row = response.getErrors().iterator();
+          assert row.next().getFrom().equals("127.0.0.1:5984");
+          assert response.size() == 0;
+        }
+      });
     HttpResponse response =
         new BasicHttpResponse(HttpVersion.HTTP_1_1, 200, "");
     String entityString = "{\"total_rows\":0,\"rows\":[],\"errors\": [{\"from"
@@ -698,6 +708,64 @@ public class ViewTest {
     String designDoc = "invalid_design";
     List<View> views = client.getViews(designDoc);
     assertNull(views);
+  }
+
+  @Test
+  public void testGetSpatialNoDocsView() {
+    View view = client.getSpatialView(DESIGN_DOC_WO_REDUCE,
+      VIEW_NAME_SPATIAL_ALL);
+    Query query = new Query();
+    query.setStale(Stale.FALSE);
+
+    ViewResponse response = client.query(view, query);
+    Iterator<ViewRow> iterator = response.iterator();
+    assertEquals(ITEMS.size(), response.size());
+
+    while(iterator.hasNext()) {
+      ViewRowNoDocsSpatial row = (ViewRowNoDocsSpatial) iterator.next();
+      assertNotNull(row.getBbox());
+      assertNotNull(row.getGeometry());
+      break;
+    }
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testInvalidGetSpatialNoDocsView() {
+    View view = client.getSpatialView(DESIGN_DOC_WO_REDUCE,
+      VIEW_NAME_SPATIAL_ALL);
+    Query query = new Query();
+    query.setStale(Stale.FALSE);
+
+    ViewResponse response = client.query(view, query);
+    Iterator<ViewRow> iterator = response.iterator();
+    assertEquals(ITEMS.size(), response.size());
+
+    while(iterator.hasNext()) {
+      ViewRowNoDocsSpatial row = (ViewRowNoDocsSpatial) iterator.next();
+      Object document = row.getDocument();
+      break;
+    }
+  }
+
+  @Test
+  public void testGetSpatialDocsView() {
+    View view = client.getSpatialView(DESIGN_DOC_WO_REDUCE,
+      VIEW_NAME_SPATIAL_ALL);
+    Query query = new Query();
+    query.setStale(Stale.FALSE);
+    query.setIncludeDocs(true);
+
+    ViewResponse response = client.query(view, query);
+    Iterator<ViewRow> iterator = response.iterator();
+    assertEquals(ITEMS.size(), response.size());
+
+    while(iterator.hasNext()) {
+      ViewRowWithDocsSpatial row = (ViewRowWithDocsSpatial) iterator.next();
+      assertNotNull(row.getBbox());
+      assertNotNull(row.getGeometry());
+      assertNotNull(row.getDocument());
+      break;
+    }
   }
 
 }

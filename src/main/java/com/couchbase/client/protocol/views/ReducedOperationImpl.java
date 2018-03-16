@@ -37,8 +37,8 @@ import org.codehaus.jettison.json.JSONObject;
  */
 public class ReducedOperationImpl extends ViewOperationImpl {
 
-  public ReducedOperationImpl(HttpRequest r, ViewCallback cb) {
-    super(r, cb);
+  public ReducedOperationImpl(HttpRequest r, ViewType type, ViewCallback cb) {
+    super(r, type, cb);
   }
 
   protected ViewResponseReduced parseResult(String json)
@@ -70,7 +70,7 @@ public class ReducedOperationImpl extends ViewOperationImpl {
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseReduced(rows, errors);
+    return new ViewResponseReduced(rows, errors, getViewType());
   }
 
   @Override

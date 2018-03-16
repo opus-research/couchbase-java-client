@@ -37,8 +37,8 @@ import org.codehaus.jettison.json.JSONObject;
  */
 public class NoDocsOperationImpl extends ViewOperationImpl{
 
-  public NoDocsOperationImpl(HttpRequest r, ViewCallback cb) {
-    super(r, cb);
+  public NoDocsOperationImpl(HttpRequest r, ViewType type, ViewCallback cb) {
+    super(r, type, cb);
   }
 
   protected ViewResponseNoDocs parseResult(String json)
@@ -53,9 +53,15 @@ public class NoDocsOperationImpl extends ViewOperationImpl{
           for (int i = 0; i < ids.length(); i++) {
             JSONObject elem = ids.getJSONObject(i);
             String id = elem.getString("id");
-            String key = elem.getString("key");
-            String value = elem.getString("value");
-            rows.add(new ViewRowNoDocs(id, key, value));
+            if(getViewType().equals(ViewType.MAPREDUCE)) {
+              String key = elem.getString("key");
+              String value = elem.getString("value");
+              rows.add(new ViewRowNoDocs(id, key, value));
+            } else {
+              String bbox = elem.getString("bbox");
+              String geometry = elem.getString("geometry");
+              rows.add(new ViewRowNoDocsSpatial(id, bbox, geometry));
+            }
           }
         }
         if (base.has("errors")) {
@@ -71,7 +77,7 @@ public class NoDocsOperationImpl extends ViewOperationImpl{
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseNoDocs(rows, errors);
+    return new ViewResponseNoDocs(rows, errors, getViewType());
   }
 
   @Override

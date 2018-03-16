@@ -37,8 +37,8 @@ public class ViewResponseWithDocs extends ViewResponse {
   private Map<String, Object> map;
 
   public ViewResponseWithDocs(final Collection<ViewRow> rows,
-      final Collection<RowError> errors) {
-    super(rows, errors);
+      final Collection<RowError> errors, ViewType viewType) {
+    super(rows, errors, viewType);
     map = null;
   }
 
@@ -62,10 +62,15 @@ public class ViewResponseWithDocs extends ViewResponse {
     for (ViewRow r : rows) {
       s.append(r.getId());
       s.append(" : ");
-      s.append(r.getKey());
-      s.append(" : ");
-      s.append(r.getValue());
-      s.append(" : ");
+      if(getViewType().equals(ViewType.MAPREDUCE)) {
+        s.append(((ViewRowNoDocs)r).getKey());
+        s.append(" : ");
+        s.append(((ViewRowNoDocs)r).getValue());
+      } else if(getViewType().equals(ViewType.SPATIAL)) {
+        s.append(((ViewRowNoDocsSpatial)r).getBbox());
+        s.append(" : ");
+        s.append(((ViewRowNoDocsSpatial)r).getGeometry());
+      }
       s.append(r.getDocument());
       s.append("\n");
     }
