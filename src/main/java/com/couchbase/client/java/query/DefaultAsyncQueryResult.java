@@ -16,7 +16,7 @@ import rx.functions.Func1;
 public class DefaultAsyncQueryResult implements AsyncQueryResult {
 
     private final Observable<AsyncQueryRow> rows;
-    private final Observable<Object> signature;
+    private final Observable<JsonObject> signature;
     private final Observable<QueryMetrics> info;
     private final boolean parsingSuccess;
     private final Observable<JsonObject> errors;
@@ -24,7 +24,7 @@ public class DefaultAsyncQueryResult implements AsyncQueryResult {
     private final String requestId;
     private final String clientContextId;
 
-    public DefaultAsyncQueryResult(Observable<AsyncQueryRow> rows, Observable<Object> signature,
+    public DefaultAsyncQueryResult(Observable<AsyncQueryRow> rows, Observable<JsonObject> signature,
             Observable<JsonObject> info, Observable<JsonObject> errors, Observable<Boolean> finalSuccess,
             boolean parsingSuccess, String requestId, String clientContextId) {
         this.rows = rows;
@@ -48,10 +48,9 @@ public class DefaultAsyncQueryResult implements AsyncQueryResult {
     }
 
     @Override
-    public Observable<Object> signature() {
+    public Observable<JsonObject> signature() {
         return signature;
     }
-
     @Override
     public Observable<QueryMetrics> info() {
         return info;

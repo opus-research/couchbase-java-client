@@ -559,10 +559,10 @@ public class CouchbaseBucket implements Bucket {
                                 aqr.info().singleOrDefault(QueryMetrics.EMPTY_METRICS),
                                 aqr.errors().toList(),
                                 aqr.finalSuccess().singleOrDefault(Boolean.FALSE),
-                                new Func5<List<AsyncQueryRow>, Object, QueryMetrics,
+                                new Func5<List<AsyncQueryRow>, JsonObject, QueryMetrics,
                                         List<JsonObject>, Boolean, QueryResult>() {
                                     @Override
-                                    public QueryResult call(List<AsyncQueryRow> rows, Object signature,
+                                    public QueryResult call(List<AsyncQueryRow> rows, JsonObject signature,
                                             QueryMetrics info, List<JsonObject> errors, Boolean finalSuccess) {
                                         return new DefaultQueryResult(rows, signature, info, errors, finalSuccess,
                                                 parseSuccess, requestId, clientContextId);
