@@ -48,8 +48,6 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.query.SearchQuery;
-import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
@@ -2686,13 +2684,6 @@ public interface Bucket {
      * @return a result containing all found rows and additional information.
      */
     N1qlQueryResult query(N1qlQuery query, long timeout, TimeUnit timeUnit);
-
-    SearchQueryResult search(String index, String query);
-    SearchQueryResult search(String index, String query, long timeout, TimeUnit timeUnit);
-    SearchQueryResult search(SearchQuery query);
-    SearchQueryResult search(SearchQuery query, long timeout, TimeUnit timeUnit);
-    SearchQueryResult search(SearchQuery.Builder query);
-    SearchQueryResult search(SearchQuery.Builder query, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
