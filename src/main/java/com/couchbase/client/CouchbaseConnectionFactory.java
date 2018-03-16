@@ -484,12 +484,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    * @param config
    */
   public void updateStoredBaseList(Config config) {
-    List<String> bucketServers = config.getRestEndpoints();
+    List<String> bucketServers = config.getServers();
     if (bucketServers.size() > 0) {
       List<URI> newList = new ArrayList<URI>();
       for (String bucketServer : bucketServers) {
+        String hostname = bucketServer.split(":")[0];
         try {
-          newList.add(new URI(bucketServer));
+          newList.add(new URI("http://" + hostname + ":8091/pools"));
         } catch(URISyntaxException ex) {
           getLogger().warn("Could not add node to updated bucket list because "
             + "of a parsing exception.");
