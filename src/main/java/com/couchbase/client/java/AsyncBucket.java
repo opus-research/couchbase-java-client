@@ -1191,7 +1191,7 @@ public interface AsyncBucket {
     Observable<AsyncSpatialViewResult> query(SpatialViewQuery query);
 
     /**
-     * Queries a N1QL secondary index with a simple {@link Statement}.
+     * Experimental: Queries a N1QL secondary index with a simple {@link Statement}.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -1205,7 +1205,7 @@ public interface AsyncBucket {
     Observable<AsyncN1qlQueryResult> query(Statement statement);
 
     /**
-     * Queries a N1QL secondary index.
+     * Experimental: Queries a N1QL secondary index.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -2067,7 +2067,7 @@ public interface AsyncBucket {
      * @param value value to be stored
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <V> Observable<Boolean> mapAdd(String docId, String key, V value);
 
@@ -2093,7 +2093,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <V> Observable<Boolean> mapAdd(String docId, String key, V value, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2115,7 +2115,7 @@ public interface AsyncBucket {
      * @param valueType value type class
      * @return value if found
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <V> Observable<V> mapGet(String docId, String key, Class<V> valueType);
 
@@ -2135,7 +2135,7 @@ public interface AsyncBucket {
      * @param key key to be removed
      * @return true if successful, even if the key doesn't exist
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Boolean> mapRemove(String docId, String key);
 
@@ -2159,7 +2159,7 @@ public interface AsyncBucket {
      * @param key key to be removed
      * @return true if successful, even if the key doesn't exist
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Boolean> mapRemove(String docId, String key, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2178,7 +2178,7 @@ public interface AsyncBucket {
      * @param docId document id backing the map
      * @return number of key value pairs
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Integer> mapSize(String docId);
 
@@ -2202,7 +2202,7 @@ public interface AsyncBucket {
      * @param elementType element type class
      * @return value if found
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<E> listGet(String docId, int index, Class<E> elementType);
 
@@ -2223,7 +2223,7 @@ public interface AsyncBucket {
      * @param element element to be pushed into the queue
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listAppend(String docId, E element);
 
@@ -2247,7 +2247,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listAppend(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2268,7 +2268,7 @@ public interface AsyncBucket {
      * @param index index of the element in list
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Boolean> listRemove(String docId, int index);
 
@@ -2294,7 +2294,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Boolean> listRemove(String docId, int index, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2318,7 +2318,7 @@ public interface AsyncBucket {
      * @param element element to shift as head of list
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listPrepend(String docId, E element);
 
@@ -2342,7 +2342,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listPrepend(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2363,7 +2363,7 @@ public interface AsyncBucket {
      * @param element element to be added
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listSet(String docId, int index, E element);
 
@@ -2388,7 +2388,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> listSet(String docId, int index, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2407,7 +2407,7 @@ public interface AsyncBucket {
      * @param docId document id backing the list
      * @return number of elements
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Integer> listSize(String docId);
 
@@ -2427,7 +2427,7 @@ public interface AsyncBucket {
      * @param element element to be pushed into the set
      * @return true if successful, false if the element exists in set
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> setAdd(String docId, E element);
 
@@ -2448,7 +2448,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful, false if the element exists in set
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> setAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2468,7 +2468,7 @@ public interface AsyncBucket {
      * @param element element to check for existence
      * @return true if element exists, false if the element does not exist
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> setContains(String docId, E element);
 
@@ -2488,7 +2488,7 @@ public interface AsyncBucket {
      * @param element element to be removed
      * @return element removed from set (fails silently by returning the element is not found in set)
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<E> setRemove(String docId, E element);
 
@@ -2512,7 +2512,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return element removed from set (fails silently by returning the element is not found in set)
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<E> setRemove(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2531,7 +2531,7 @@ public interface AsyncBucket {
      * @param docId document id backing the set
      * @return number of elements in set
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Integer> setSize(String docId);
 
@@ -2551,7 +2551,7 @@ public interface AsyncBucket {
      * @param element element to be pushed into the queue
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> queuePush(String docId, E element);
 
@@ -2575,7 +2575,7 @@ public interface AsyncBucket {
      * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
      * @return true if successful
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<Boolean> queuePush(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2595,7 +2595,7 @@ public interface AsyncBucket {
      * @param elementType element type class
      * @return element removed from queue
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<E> queuePop(String docId, Class<E> elementType);
 
@@ -2618,7 +2618,7 @@ public interface AsyncBucket {
      * @param elementType element type class
      * @return element removed from queue
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     <E> Observable<E> queuePop(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder);
 
@@ -2637,7 +2637,7 @@ public interface AsyncBucket {
      * @param docId document id backing the queue
      * @return number of elements
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     Observable<Integer> queueSize(String docId);
 
