@@ -36,6 +36,8 @@ import com.couchbase.client.core.message.kv.GetRequest;
 import com.couchbase.client.core.message.kv.GetResponse;
 import com.couchbase.client.core.message.kv.InsertRequest;
 import com.couchbase.client.core.message.kv.InsertResponse;
+import com.couchbase.client.core.message.kv.ObserveRequest;
+import com.couchbase.client.core.message.kv.ObserveResponse;
 import com.couchbase.client.core.message.kv.PrependRequest;
 import com.couchbase.client.core.message.kv.PrependResponse;
 import com.couchbase.client.core.message.kv.RemoveRequest;
@@ -81,8 +83,9 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.SimpleQuery;
 import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.repository.AsyncRepository;
+import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
-import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
 import com.couchbase.client.java.transcoder.JsonBooleanTranscoder;
 import com.couchbase.client.java.transcoder.JsonDoubleTranscoder;
@@ -112,6 +115,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CouchbaseAsyncBucket implements AsyncBucket {
+
+    private static final int COUNTER_NOT_EXISTS_EXPIRY = 0xffffffff;
 
     public static final JsonTranscoder JSON_OBJECT_TRANSCODER = new JsonTranscoder();
     public static final JsonArrayTranscoder JSON_ARRAY_TRANSCODER = new JsonArrayTranscoder();
@@ -172,6 +177,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
+    public Observable<AsyncRepository> repository() {
+        return Observable.just((AsyncRepository) new CouchbaseAsyncRepository(this));
+    }
+
+    @Override
     public Observable<JsonDocument> get(final String id) {
         return get(id, JsonDocument.class);
     }
@@ -219,6 +229,34 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         response.status());
                 }
             });
+    }
+
+    @Override
+    public Observable<Boolean> exists(String id) {
+        return core
+            .<ObserveResponse>send(new ObserveRequest(id, 0, true, (short) 0, bucket))
+            .map(new Func1<ObserveResponse, Boolean>() {
+                @Override
+                public Boolean call(ObserveResponse response) {
+                    ByteBuf content = response.content();
+                    if (content != null && content.refCnt() > 0) {
+                        content.release();
+                    }
+
+                    ObserveResponse.ObserveStatus foundStatus = response.observeStatus();
+                    if (foundStatus == ObserveResponse.ObserveStatus.FOUND_PERSISTED
+                        || foundStatus == ObserveResponse.ObserveStatus.FOUND_NOT_PERSISTED) {
+                        return true;
+                    }
+
+                    return false;
+                }
+            });
+    }
+
+    @Override
+    public <D extends Document<?>> Observable<Boolean> exists(D document) {
+        return exists(document.id());
     }
 
     @Override
@@ -689,6 +727,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Statement statement) {
+        if (statement instanceof QueryPlan) {
+            return query(Query.prepared((QueryPlan) statement));
+        }
         return query(Query.simple(statement));
     }
 
@@ -858,7 +899,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(String id, long delta) {
-        return counter(id, delta, 0);
+        return counter(id, delta, 0, COUNTER_NOT_EXISTS_EXPIRY);
     }
 
     @Override
@@ -878,10 +919,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     }
 
                     if (response.status().isSuccess()) {
-                        return JsonLongDocument.create(id, expiry, response.value(), response.cas());
+                        int returnedExpiry = expiry == COUNTER_NOT_EXISTS_EXPIRY ? 0 : expiry;
+                        return JsonLongDocument.create(id, returnedExpiry, response.value(), response.cas());
                     }
 
                     switch(response.status()) {
+                        case NOT_EXISTS:
+                            throw new DocumentDoesNotExistException();
                         case TEMPORARY_FAILURE:
                         case SERVER_BUSY:
                             throw new TemporaryFailureException();
