@@ -78,6 +78,7 @@ public class BucketConfigurationProvider extends SpyObject
   private final ConfigurationParser configurationParser;
   private final AtomicReference<ConfigurationProviderHTTP> httpProvider;
   private final AtomicBoolean refreshingHttp;
+  private final AtomicBoolean pollingBinary;
   private final AtomicReference<CouchbaseConnection> binaryConnection;
   private final boolean disableCarrierBootstrap;
   private final boolean disableHttpBootstrap;
@@ -92,6 +93,7 @@ public class BucketConfigurationProvider extends SpyObject
       new ConfigurationProviderHTTP(seedNodes, bucket, password)
     );
     refreshingHttp = new AtomicBoolean(false);
+    pollingBinary = new AtomicBoolean(false);
     observers = Collections.synchronizedList(new ArrayList<Reconfigurable>());
     binaryConnection = new AtomicReference<CouchbaseConnection>();
 
@@ -118,7 +120,7 @@ public class BucketConfigurationProvider extends SpyObject
     if (isBinary) {
       getLogger().info("Could bootstrap through carrier publication.");
     } else {
-      getLogger().info("Binary config not available, bootstrapped through "
+      getLogger().info("Carrier config not available, bootstrapped through "
         + "HTTP.");
     }
 
@@ -338,6 +340,28 @@ public class BucketConfigurationProvider extends SpyObject
     httpProvider.get().updateBucket(config.getName(), config);
     updateSeedNodes();
     notifyObservers();
+
+    manageTaintedConfig(config.getConfig());
+  }
+
+  /**
+   * Orchestrating method to start/stop background config fetcher for binary
+   * configs if tainted/not tainted anymore.
+   *
+   * @param config the config to check.
+   */
+  private void manageTaintedConfig(final Config config) {
+    if (!isBinary) {
+      return;
+    }
+
+    if (config.isTainted() && pollingBinary.compareAndSet(false, true)) {
+      getLogger().debug("Found tainted configuration, starting carrier "
+        + "poller.");
+      Thread thread = new Thread(new BinaryConfigPoller());
+      thread.setName("couchbase - carrier config poller");
+      thread.start();
+    }
   }
 
   /**
@@ -448,7 +472,7 @@ public class BucketConfigurationProvider extends SpyObject
         binaryConnection.get().shutdown();
       } catch (IOException e) {
         getLogger().warn("Could not shutdown carrier publication config "
-          + "connection.");
+          + "connection.", e);
       }
     }
   }
@@ -518,11 +542,54 @@ public class BucketConfigurationProvider extends SpyObject
             oldProvider.shutdown();
             return;
           } catch(Exception ex) {
+            getLogger().debug("Got exception while trying to reconnect the " +
+              "configuration provider.", ex);
             continue;
           }
         }
       } finally {
         refreshingHttp.set(false);
+      }
+    }
+  }
+
+  /**
+   * A config poller for carrier configurations.
+   */
+  class BinaryConfigPoller implements Runnable {
+
+    /**
+     * The time to wait between config poll intervals in ms.
+     */
+    private static final int waitPeriod = 1000;
+
+    /**
+     * Counter to log polling attempts for this poller.
+     */
+    private int attempt;
+
+    /**
+     * Calling {@link #signalOutdated()} against a running binary configuration
+     * will trigger a config refresh.
+     */
+    @Override
+    public void run() {
+      try {
+        while (isBinary && getConfig().getConfig().isTainted()) {
+          getLogger().debug("Polling for new carrier configuration and " +
+            "waiting " + waitPeriod + "ms (Attempt " + ++attempt + ").");
+          signalOutdated();
+          try {
+            Thread.sleep(waitPeriod);
+          } catch (InterruptedException e) {
+            getLogger().warn("Got interrupted while trying to poll for new " +
+              "carrier config.", e);
+            break;
+          }
+        }
+      } finally {
+        getLogger().debug("Finished polling for new carrier configuration.");
+        pollingBinary.set(false);
       }
     }
   }
