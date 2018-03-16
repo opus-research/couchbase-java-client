@@ -268,7 +268,6 @@ public class CouchbaseClient extends MemcachedClient
     try {
       cbConnFactory.getConfigurationProvider().updateBucket(
         cbConnFactory.getBucketName(), bucket);
-      cbConnFactory.updateStoredBaseList(bucket.getConfig());
 
       if(vconn != null) {
         vconn.reconfigure(bucket);
@@ -936,7 +935,7 @@ public class CouchbaseClient extends MemcachedClient
       int exp, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<CASValue<T>> rv =
-        new OperationFuture<CASValue<T>>(key, latch, operationTimeout);
+        new OperationFuture<CASValue<T>>(key, latch, operationTimeout, executorService);
 
     Operation op = opFact.getl(key, exp, new GetlOperation.Callback() {
       private CASValue<T> val = null;
@@ -1071,7 +1070,8 @@ public class CouchbaseClient extends MemcachedClient
     List<GetFuture<T>> futures = new ArrayList<GetFuture<T>>();
     for(int index=0; index < replicaCount; index++) {
       final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
+      final GetFuture<T> rv =
+        new GetFuture<T>(latch, operationTimeout, key, executorService);
       Operation op = opFact.replicaGet(key, index,
         new ReplicaGetOperation.Callback() {
           private Future<T> val = null;
@@ -1160,7 +1160,7 @@ public class CouchbaseClient extends MemcachedClient
           long casId, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(key,
-            latch, operationTimeout);
+            latch, operationTimeout, executorService);
     Operation op = opFact.unlock(key, casId, new OperationCallback() {
 
       @Override
@@ -2381,7 +2381,7 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Map<String, String>> getKeyStats(String key) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Map<String, String>> rv =
-        new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
+        new OperationFuture<Map<String, String>>(key, latch, operationTimeout, executorService);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
       private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
@@ -2423,7 +2423,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   @Override
   public OperationFuture<Boolean> flush(final int delay) {
-    if(((CouchbaseConnection)mconn).isShutDown()) {
+    if(connectionShutDown()) {
       throw new IllegalStateException("Flush can not be used after shutdown.");
     }
 
@@ -2431,7 +2431,8 @@ public class CouchbaseClient extends MemcachedClient
     final FlushRunner flushRunner = new FlushRunner(latch);
 
     final OperationFuture<Boolean> rv =
-      new OperationFuture<Boolean>("", latch, operationTimeout) {
+      new OperationFuture<Boolean>("", latch, operationTimeout,
+        executorService) {
         private CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
 
@@ -2531,4 +2532,14 @@ public class CouchbaseClient extends MemcachedClient
     }
   }
 
+  protected boolean connectionShutDown() {
+    if (mconn instanceof CouchbaseConnection) {
+      return ((CouchbaseConnection)mconn).isShutDown();
+    } else if (mconn instanceof CouchbaseMemcachedConnection) {
+      return ((CouchbaseMemcachedConnection)mconn).isShutDown();
+    } else {
+      throw new IllegalStateException("Unknown connection type: "
+        + mconn.getClass().getCanonicalName());
+    }
+  }
 }
