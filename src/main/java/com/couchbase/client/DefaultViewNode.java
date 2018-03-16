@@ -43,7 +43,6 @@ import org.apache.http.nio.entity.BufferingNHttpEntity;
 import org.apache.http.nio.entity.ConsumingNHttpEntity;
 import org.apache.http.nio.protocol.EventListener;
 import org.apache.http.nio.protocol.NHttpRequestExecutionHandler;
-import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.http.nio.util.HeapByteBufferAllocator;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
@@ -54,7 +53,7 @@ import org.apache.http.util.EntityUtils;
  * Based upon http://hc.apache.org/httpcomponents-core-ga/httpcore-nio/
  * examples/org/apache/http/examples/nio/NHttpClientConnManagement.java
  */
-public class ViewNode extends SpyObject {
+public class DefaultViewNode extends SpyObject {
 
   private final InetSocketAddress addr;
   private final AsyncConnectionManager connMgr;
@@ -69,9 +68,7 @@ public class ViewNode extends SpyObject {
 
   private Thread ioThread;
 
-  public ViewNode(InetSocketAddress a, AsyncConnectionManager mgr,
-      long queueLen, long maxBlockTime, long operationTimeout, String usr,
-      String pwd) {
+  public DefaultViewNode(InetSocketAddress a, AsyncConnectionManager mgr, long queueLen, long maxBlockTime, long operationTimeout, String usr, String pwd) {
     addr = a;
     connMgr = mgr;
     opQueueMaxBlockTime = maxBlockTime;
@@ -172,9 +169,9 @@ public class ViewNode extends SpyObject {
   static class MyHttpRequestExecutionHandler extends SpyObject
     implements NHttpRequestExecutionHandler  {
 
-    private final ViewConnection vconn;
+    private final DefaultViewConnection vconn;
 
-    public MyHttpRequestExecutionHandler(ViewConnection vconn) {
+    public MyHttpRequestExecutionHandler(DefaultViewConnection vconn) {
       super();
       this.vconn = vconn;
     }
