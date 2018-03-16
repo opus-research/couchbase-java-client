@@ -24,7 +24,6 @@ package com.couchbase.client.internal;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -79,11 +78,9 @@ public class ReplicaGetFuture<T extends Object>
    * @param future the future to mark as completed.
    */
   public void setCompletedFuture(GetFuture<T> future) {
-    boolean firstComplete = completedFuture.compareAndSet(null, future);
-    if (firstComplete) {
-      cancelOtherFutures(completedFuture.get());
-      notifyListeners();
-    }
+    completedFuture.set(future);
+    cancelOtherFutures(completedFuture.get());
+    notifyListeners();
   }
 
   @Override
@@ -118,13 +115,9 @@ public class ReplicaGetFuture<T extends Object>
    * @param successFuture
    */
   private void cancelOtherFutures(GetFuture successFuture) {
-    synchronized (monitoredFutures) {
-      Iterator it = monitoredFutures.iterator();
-      while (it.hasNext()) {
-        GetFuture future = (GetFuture) it.next();
-        if (!future.equals(successFuture)) {
-          future.cancel(true);
-        }
+    for(GetFuture future : monitoredFutures) {
+      if(!future.equals(successFuture)) {
+        future.cancel(true);
       }
     }
   }
@@ -133,13 +126,9 @@ public class ReplicaGetFuture<T extends Object>
   public boolean cancel(boolean ign) {
     cancelled = true;
     boolean allCancelled = true;
-    synchronized (monitoredFutures) {
-      Iterator it = monitoredFutures.iterator();
-      while (it.hasNext()) {
-        GetFuture future = (GetFuture) it.next();
-        if (!future.cancel(ign)) {
-          allCancelled = false;
-        }
+    for(GetFuture future : monitoredFutures) {
+      if(!future.cancel(ign)) {
+        allCancelled = false;
       }
     }
     notifyListeners();
@@ -154,6 +143,16 @@ public class ReplicaGetFuture<T extends Object>
   @Override
   public boolean isDone() {
     return completedFuture.get() != null && completedFuture.get().isDone();
+  }
+
+  public boolean allDone() {
+     boolean allDone = true;
+    for(GetFuture future : monitoredFutures) {
+      if(!future.isDone()) {
+        allDone = false;
+      }
+    }
+    return allDone;
   }
 
   @Override
