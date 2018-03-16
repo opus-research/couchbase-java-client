@@ -201,8 +201,10 @@ public class TapConnectionProvider extends SpyObject implements
     this.configurationProvider.subscribe(bucketName, this);
   }
 
-  void addOp(final Operation op) {
-    conn.enqueueOperation("", op);
+  Operation addOp(final Operation op) {
+    conn.checkState();
+    conn.addOperation("", op);
+    return op;
   }
 
   /**

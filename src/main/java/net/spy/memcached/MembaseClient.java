@@ -210,7 +210,7 @@ public class MembaseClient extends MemcachedClient implements MembaseClientIF,
       }
     });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    addOp(key, op);
     return rv;
   }
 
