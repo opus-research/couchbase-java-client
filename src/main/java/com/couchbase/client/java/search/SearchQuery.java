@@ -35,6 +35,8 @@ import com.couchbase.client.java.search.queries.ConjunctionQuery;
 import com.couchbase.client.java.search.queries.DateRangeQuery;
 import com.couchbase.client.java.search.queries.DisjunctionQuery;
 import com.couchbase.client.java.search.queries.DocIdQuery;
+import com.couchbase.client.java.search.queries.GeoBoundingBoxQuery;
+import com.couchbase.client.java.search.queries.GeoDistanceQuery;
 import com.couchbase.client.java.search.queries.MatchAllQuery;
 import com.couchbase.client.java.search.queries.MatchNoneQuery;
 import com.couchbase.client.java.search.queries.MatchPhraseQuery;
@@ -45,6 +47,7 @@ import com.couchbase.client.java.search.queries.PrefixQuery;
 import com.couchbase.client.java.search.queries.RegexpQuery;
 import com.couchbase.client.java.search.queries.QueryStringQuery;
 import com.couchbase.client.java.search.queries.TermQuery;
+import com.couchbase.client.java.search.queries.TermRangeQuery;
 import com.couchbase.client.java.search.queries.WildcardQuery;
 import com.couchbase.client.java.search.result.SearchQueryResult;
 import com.couchbase.client.java.search.result.SearchQueryRow;
@@ -521,6 +524,11 @@ public class SearchQuery {
         return new RegexpQuery(regexp);
     }
 
+    /** Prepare a {@link TermRangeQuery} body. */
+    public static TermRangeQuery termRange() {
+        return new TermRangeQuery();
+    }
+
     /** Prepare a {@link NumericRangeQuery} body. */
     public static NumericRangeQuery numericRange() {
         return new NumericRangeQuery();
@@ -579,5 +587,16 @@ public class SearchQuery {
     /** Prepare a {@link MatchNoneQuery} body. */
     public static MatchNoneQuery matchNone() {
         return new MatchNoneQuery();
+    }
+
+    /** Prepare a {@link GeoBoundingBoxQuery} body. */
+    public static GeoBoundingBoxQuery geoBoundingBox(double topLeftLon, double topLeftLat,
+        double bottomRightLon, double bottomRightLat) {
+        return new GeoBoundingBoxQuery(topLeftLon, topLeftLat, bottomRightLon, bottomRightLat);
+    }
+
+    /** Prepare a {@link GeoDistanceQuery} body. */
+    public static GeoDistanceQuery geoDistance(double locationLon, double locationLat, String distance) {
+        return new GeoDistanceQuery(locationLon, locationLat, distance);
     }
 }
