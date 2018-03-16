@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 Couchbase, Inc.
+ * Copyright (C) 2015 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,34 +19,20 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query.dsl;
+package com.couchbase.client.java.repository;
 
-import static com.couchbase.client.java.query.dsl.Expression.i;
-import static org.junit.Assert.assertEquals;
+import rx.Observable;
 
-import com.couchbase.client.java.query.Select;
-import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.dsl.path.AsPath;
-import org.junit.Test;
+/**
+ * The async repository abstraction for entities on top of an AsyncBucket.
+ *
+ * @author Michael Nitschinger
+ * @since 2.2.0
+ */
+public interface AsyncRepository {
 
-public class ExpressionTest {
+    <T> Observable<T> get(String id, Class<T> documentClass);
 
-    @Test
-    public void shouldEscapeOneIdentifier() {
-        Expression escaped = i("beer-sample");
-        assertEquals("`beer-sample`", escaped.toString());
-    }
-
-    @Test
-    public void shouldEscapedMultipleIdentifiers() {
-        Expression escaped = i("beer-sample", "someothersample", "third-sample");
-        assertEquals("`beer-sample`, `someothersample`, `third-sample`", escaped.toString());
-    }
-
-    @Test
-    public void shouldEscapeIdentifierInFromClause() {
-        Statement escapedFrom = Select.select("*").from(i("test"));
-        assertEquals("SELECT * FROM `test`", escapedFrom.toString());
-    }
+    <T> Observable<T> upsert(T document);
 
 }
