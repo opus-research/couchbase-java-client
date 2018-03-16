@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,23 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client;
+package com.couchbase.client.http;
+
+import com.couchbase.client.ViewConnection;
+import com.couchbase.client.protocol.views.HttpOperation;
 
 /**
- * A testConfig.
+ * A callack to requeue a http operation.
  */
-public final class CbTestConfig {
-  public static final String CLUSTER_PASS_PROP = "cluster.password";
-  public static final String CLUSTER_ADMINNAME_PROP = "cluster.adminname";
-  public static final String CLUSTER_PASS = 
-    System.getProperty(CLUSTER_PASS_PROP, "password");
-  public static final String CLUSTER_ADMINNAME =
-    System.getProperty(CLUSTER_ADMINNAME_PROP, "Administrator");
+public class RequeueOpCallback {
 
-  private CbTestConfig() {
-    // Empty
+  private final ViewConnection conn;
+
+  public RequeueOpCallback(ViewConnection vc) {
+    conn = vc;
   }
 
+  public void invoke(HttpOperation op) {
+    conn.addOp(op);
+  }
 }
