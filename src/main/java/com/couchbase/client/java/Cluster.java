@@ -24,6 +24,7 @@ import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.core.message.internal.ServicesHealth;
 import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.auth.ClassicAuthenticator;
 import com.couchbase.client.java.auth.CredentialContext;
@@ -339,4 +340,15 @@ public interface Cluster {
      * @return this Cluster instance for chaining.
      */
     Cluster authenticate(String username, String password);
+
+    /**
+     * Provides a simple health check which allows insight into the current state of
+     * services and endpoints.
+     *
+     * @param ping if proactive pings should be sent as well.
+     * @return health services in the form of {@link ServicesHealth}.
+     */
+    @InterfaceStability.Experimental
+    @InterfaceAudience.Public
+    ServicesHealth healthCheck(boolean ping);
 }
