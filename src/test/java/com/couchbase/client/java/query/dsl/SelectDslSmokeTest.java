@@ -29,8 +29,6 @@ import static com.couchbase.client.java.query.dsl.Functions.round;
 import static com.couchbase.client.java.query.dsl.functions.AggregateFunctions.avg;
 import static com.couchbase.client.java.query.dsl.functions.AggregateFunctions.count;
 import static com.couchbase.client.java.query.dsl.functions.ArrayFunctions.arrayLength;
-import static com.couchbase.client.java.query.dsl.functions.Collections.anyIn;
-import static com.couchbase.client.java.query.dsl.functions.Collections.arrayIn;
 import static com.couchbase.client.java.query.dsl.functions.MetaFunctions.meta;
 import static org.junit.Assert.assertEquals;
 
@@ -38,7 +36,6 @@ import javax.swing.plaf.nimbus.State;
 
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.dsl.functions.AggregateFunctions;
-import com.couchbase.client.java.query.dsl.functions.Collections;
 import org.junit.Test;
 
 /**
@@ -139,9 +136,10 @@ public class SelectDslSmokeTest {
     public void test12() {
         Statement statement = select("fname", "children")
             .from("tutorial")
-            .where(anyIn("child", x("tutorial.children")).satisfies(x("child.age").gt(10)));
+                //TODO implement ANY?
+            .where(x("ANY child IN tutorial.children SATISFIES child.age > 10 END"));
         assertEquals("SELECT fname, children FROM tutorial WHERE ANY child IN tutorial.children " +
-                "SATISFIES child.age > 10 END", statement.toString());
+            "SATISFIES child.age > 10 END", statement.toString());
     }
 
     @Test
@@ -223,8 +221,8 @@ public class SelectDslSmokeTest {
 
     @Test
     public void test22() {
-        Statement statement = select(arrayIn(x("child.fname"), "child", x("tutorial.children")).end()
-                .as("children_names"))
+        //TODO add ARRAY comprehension
+        Statement statement = select(x("ARRAY child.fname FOR child IN tutorial.children END").as("children_names"))
                 .from("tutorial").where(x("children").isNotNull());
         assertEquals("SELECT ARRAY child.fname FOR child IN tutorial.children END AS children_names " +
                 "FROM tutorial WHERE children IS NOT NULL", statement.toString());
@@ -260,7 +258,7 @@ public class SelectDslSmokeTest {
                 .from("users_with_orders").as("usr")
                 .useKeys("Elinor_33313792")
                 .join("orders_with_users").as("orders")
-                .onKeys(arrayIn(x("s.order_id"), "s", x("usr.shipped_order_history")).end());
+                .onKeys(x("ARRAY s.order_id FOR s IN usr.shipped_order_history END"));
         assertEquals("SELECT usr.personal_details, orders " +
                 "FROM users_with_orders AS usr " +
                 "USE KEYS \"Elinor_33313792\" " +
@@ -275,7 +273,8 @@ public class SelectDslSmokeTest {
                 .from("users_with_orders").as("usr")
                 .useKeys("Tamekia_13483660")
                 .leftJoin("orders_with_users").as("orders")
-                .onKeys(arrayIn(x("s.order_id"), "s", x("usr.shipped_order_history")).end());
+                //TODO collection ARRAY
+                .onKeys(x("ARRAY s.order_id FOR s IN usr.shipped_order_history END"));
         assertEquals("SELECT usr.personal_details, orders " +
                 "FROM users_with_orders AS usr " +
                 "USE KEYS \"Tamekia_13483660\" " +
