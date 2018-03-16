@@ -49,8 +49,6 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.SearchQueryResult;
-import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
 import com.couchbase.client.java.view.AsyncViewResult;
@@ -1210,21 +1208,6 @@ public interface AsyncBucket {
     Observable<AsyncN1qlQueryResult> query(N1qlQuery query);
 
     /**
-     * Experimental: Queries a Full-Text Index
-     *
-     * The returned {@link Observable} can error under the following conditions:
-     *
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
-     *   retrying: {@link RequestCancelledException}
-     *
-     * @param query the query builder.
-     * @return a query result containing the matches and additional information.
-     */
-    @InterfaceStability.Experimental
-    Observable<SearchQueryResult> query(SearchQuery query);
-
-    /**
      * Unlocks a write-locked {@link Document}.
      *
      * The returned {@link Observable} can error under the following conditions:
@@ -2058,4 +2041,5 @@ public interface AsyncBucket {
      * @return true if closed, false otherwise.
      */
     boolean isClosed();
+
 }

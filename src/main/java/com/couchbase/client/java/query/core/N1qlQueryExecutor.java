@@ -50,8 +50,6 @@ import com.couchbase.client.java.query.PreparedN1qlQuery;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.SimpleN1qlQuery;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.transcoder.JacksonTransformers;
-import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.util.LRUCache;
 import rx.Observable;
 import rx.exceptions.CompositeException;
@@ -59,7 +57,6 @@ import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -149,9 +146,8 @@ public class N1qlQueryExecutor {
                     @Override
                     public AsyncN1qlQueryRow call(ByteBuf byteBuf) {
                         try {
-                            TranscoderUtils.ByteBufToArray rawData = TranscoderUtils.byteBufToByteArray(byteBuf);
-                            byte[] copy = Arrays.copyOfRange(rawData.byteArray, rawData.offset, rawData.offset + rawData.length);
-                            return new DefaultAsyncN1qlQueryRow(copy);
+                            JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                            return new DefaultAsyncN1qlQueryRow(value);
                         } catch (Exception e) {
                             throw new TranscodingException("Could not decode N1QL Query Row.", e);
                         } finally {

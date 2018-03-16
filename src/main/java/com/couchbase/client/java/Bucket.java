@@ -48,8 +48,6 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.SearchQueryResult;
-import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
@@ -2710,38 +2708,6 @@ public interface Bucket {
      * @return a result containing all found rows and additional information.
      */
     N1qlQueryResult query(N1qlQuery query, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Experimental: Queries a Full-Text Index
-     *
-     * This method throws under the following conditions:
-     *
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
-     *   retrying: {@link RequestCancelledException}
-     *
-     * @param query the query builder.
-     * @return a query result containing the matches and additional information.
-     */
-    @InterfaceStability.Experimental
-    SearchQueryResult query(SearchQuery query);
-
-    /**
-     * Experimental: Queries a Full-Text Index
-     *
-     * This method throws under the following conditions:
-     *
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
-     *   retrying: {@link RequestCancelledException}
-     *
-     * @param query the query builder.
-     * @param timeout the custom full timeout, including the time to retrieve all rows, errors, etc...
-     * @param timeUnit the unit for the timeout.
-     * @return a query result containing the matches and additional information.
-     */
-    @InterfaceStability.Experimental
-    SearchQueryResult query(SearchQuery query, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
