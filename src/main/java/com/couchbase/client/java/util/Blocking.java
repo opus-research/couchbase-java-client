@@ -19,7 +19,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import rx.Observable;
 import rx.Subscriber;
-import rx.Subscription;
 import rx.observables.BlockingObservable;
 
 import java.util.concurrent.CountDownLatch;
@@ -67,11 +66,10 @@ public class Blocking {
         final CountDownLatch latch = new CountDownLatch(1);
         TrackingSubscriber<T> subscriber = new TrackingSubscriber<T>(latch);
 
-        Subscription subscription = observable.subscribe(subscriber);
+        observable.subscribe(subscriber);
 
         try {
             if (!latch.await(timeout, tu)) {
-                subscription.unsubscribe();
                 throw new RuntimeException(new TimeoutException());
             }
         } catch (InterruptedException e) {

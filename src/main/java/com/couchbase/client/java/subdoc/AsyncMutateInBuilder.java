@@ -68,7 +68,6 @@ import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -1294,9 +1293,9 @@ public class AsyncMutateInBuilder {
     private Observable<DocumentFragment<Mutation>> doSingleMutate(final MutationSpec spec,
             final Func2<MutationSpec, ByteBuf, ? extends AbstractSubdocMutationRequest> requestFactory,
             final Func3<ResponseStatus, String, String, Object> responseStatusDocIdAndPathToValueEvaluator) {
-        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call(Subscriber s) {
+            public Observable<SimpleSubdocResponse> call() {
                 ByteBuf buf;
                 try {
                     buf = subdocumentTranscoder.encodeWithMessage(spec.fragment(),
@@ -1335,12 +1334,11 @@ public class AsyncMutateInBuilder {
 
     private Observable<DocumentFragment<Mutation>> removeIn(final MutationSpec spec) {
         return deferAndWatch(
-                new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+                new Func0<Observable<SimpleSubdocResponse>>() {
                     @Override
-                    public Observable<SimpleSubdocResponse> call(Subscriber s) {
+                    public Observable<SimpleSubdocResponse> call() {
                         SubDeleteRequest request = new SubDeleteRequest(docId, spec.path(), bucketName, expiry, cas);
                         request.attributeAccess(spec.attributeAccess());
-                        request.addSubscriber(s);
                         return core.send(request);
                     }
                 })
@@ -1385,13 +1383,12 @@ public class AsyncMutateInBuilder {
         final long delta = fragment.longValue();
 
         return deferAndWatch(
-                new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+                new Func0<Observable<SimpleSubdocResponse>>() {
                     @Override
-                    public Observable<SimpleSubdocResponse> call(Subscriber s) {
+                    public Observable<SimpleSubdocResponse> call() {
                         SubCounterRequest request = new SubCounterRequest(docId, spec.path(), delta, bucketName, expiry, cas);
                         request.createIntermediaryPath(spec.createParents());
                         request.attributeAccess(spec.attributeAccess());
-                        request.addSubscriber(s);
                         return core.send(request);
                     }
                 })
