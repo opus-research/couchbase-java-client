@@ -25,6 +25,8 @@ import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.core.message.observe.PersistTo;
+import com.couchbase.client.core.message.observe.ReplicateTo;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.document.*;
 import com.couchbase.client.java.error.*;

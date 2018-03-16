@@ -21,6 +21,8 @@
  */
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.message.observe.PersistTo;
+import com.couchbase.client.core.message.observe.ReplicateTo;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.LegacyDocument;
