@@ -225,10 +225,10 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     throws IOException {
     Config config = getVBucketConfig();
     if (config.getConfigType() == ConfigType.MEMCACHE) {
-      return new CouchbaseMemcachedConnectionProxy(getReadBufSize(), this, addrs,
+      return new CouchbaseMemcachedConnection(getReadBufSize(), this, addrs,
         getInitialObservers(), getFailureMode(), getOperationFactory());
     } else if (config.getConfigType() == ConfigType.COUCHBASE) {
-      return new CouchbaseConnectionProxy(getReadBufSize(), this, addrs,
+      return new CouchbaseConnection(getReadBufSize(), this, addrs,
         getInitialObservers(), getFailureMode(), getOperationFactory());
     }
     throw new IOException("No ConnectionFactory for bucket type "
