@@ -43,12 +43,4 @@ public class SimpleN1qlQuery extends AbstractN1qlQuery {
     protected JsonValue statementParameters() {
         return null;
     }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder("SimpleN1qlQuery{");
-        sb.append("statement=").append(statement().toString());
-        sb.append('}');
-        return sb.toString();
-    }
 }
