@@ -253,15 +253,9 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     }
   }
 
-  @Override
   public void addOperations(final Map<MemcachedNode, Operation> ops) {
     for (Map.Entry<MemcachedNode, Operation> me : ops.entrySet()) {
       final MemcachedNode node = me.getKey();
-
-      if (!node.isActive()) {
-        cf.checkConfigUpdate();
-      }
-
       Operation o = me.getValue();
       // add the vbucketIndex to the operation
       if (locator instanceof VBucketNodeLocator) {
@@ -353,6 +347,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     } else {
       getLogger().warn("Problem handling Couchbase IO", e);
     }
+  }
+
+  boolean isShutDown() {
+    return shutDown;
   }
 
 }
