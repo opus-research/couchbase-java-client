@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
@@ -43,8 +41,8 @@ import com.couchbase.client.java.document.StringDocument;
 import com.couchbase.client.java.document.subdoc.DocumentFragment;
 import com.couchbase.client.java.document.subdoc.ExtendDirection;
 import com.couchbase.client.java.document.subdoc.LookupResult;
-import com.couchbase.client.java.document.subdoc.MultiLookupResult;
 import com.couchbase.client.java.document.subdoc.LookupSpec;
+import com.couchbase.client.java.document.subdoc.MultiLookupResult;
 import com.couchbase.client.java.document.subdoc.MultiMutationResult;
 import com.couchbase.client.java.document.subdoc.MutationSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -75,6 +73,8 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.Repository;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
 import com.couchbase.client.java.view.AsyncViewResult;
@@ -82,6 +82,7 @@ import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.View;
 import com.couchbase.client.java.view.ViewQuery;
 import rx.Observable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Defines operations that can be executed asynchronously against a Couchbase Server bucket.
@@ -2529,4 +2530,5 @@ public interface AsyncBucket {
      */
     boolean isClosed();
 
+    Observable<SearchQueryResult> query(SearchQuery query);
 }
