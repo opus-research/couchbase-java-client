@@ -43,7 +43,6 @@ public class ClassicAuthenticator implements Authenticator {
             case BUCKET_KV:
             case BUCKET_N1QL:
             case BUCKET_FTS:
-            case BUCKET_ANALYTICS:
             case BUCKET_VIEW:
             case BUCKET_MANAGEMENT:
                 return bucketCredentialOrEmpty(specific);
@@ -53,7 +52,6 @@ public class ClassicAuthenticator implements Authenticator {
                         : Collections.singletonList(clusterManagementCredential);
             case CLUSTER_FTS:
             case CLUSTER_N1QL:
-            case CLUSTER_ANALYTICS:
                 return new ArrayList(bucketCredentials.values());
             default:
                 throw new IllegalArgumentException("Unsupported credential context " + context + " for this Authenticator type");
