@@ -22,28 +22,24 @@
 
 package com.couchbase.client.protocol.views;
 
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONObject;
-
 import java.util.Arrays;
 import java.util.List;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONObject;
 
 /**
  * Allows simple definition of complex JSON keys for query inputs.
  *
- * <p>
  * If you use the ComplexKex class, the stored objects ultimately get converted
  * into a JSON string. As a result, make sure your custom objects implement the
  * "toString" method accordingly (unless you work with trivial types like
  * Strings or numbers).
- * </p><p>
+ *
  * Instead of using a constructor, use the static "of" method to generate your
  * objects. You can also use a special empty object or array.
- * </p><p>
- * Here are some simple examples:
- * </p>
  *
- * <pre>{@code
+ * Here are some simple examples:
+ *
  * // generated JSON: [2012,9,7]
  * ComplexKey.of(2012, 9, 7);
  *
@@ -55,7 +51,6 @@ import java.util.List;
  *
  * // generated JSON: []
  * ComplexKey.of(ComplexKey.emptyArray());
- * }</pre>
  *
  * This was inspired by the Ektorp project, which queries Apache CouchDB.
  */
