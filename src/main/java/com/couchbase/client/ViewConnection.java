@@ -22,40 +22,39 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.http.HttpResponseCallback;
-import com.couchbase.client.http.HttpUtil;
+import com.couchbase.client.ViewNode.EventLogger;
+import com.couchbase.client.ViewNode.MyHttpRequestExecutionHandler;
+import com.couchbase.client.http.AsyncConnectionManager;
+import com.couchbase.client.http.RequeueOpCallback;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.DefaultConfig;
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.compat.SpyObject;
 import org.apache.http.HttpHost;
-import org.apache.http.config.ConnectionConfig;
-import org.apache.http.impl.nio.DefaultHttpClientIODispatch;
-import org.apache.http.impl.nio.pool.BasicNIOConnPool;
-import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
-import org.apache.http.nio.protocol.BasicAsyncRequestProducer;
-import org.apache.http.nio.protocol.BasicAsyncResponseConsumer;
-import org.apache.http.nio.protocol.HttpAsyncRequestExecutor;
-import org.apache.http.nio.protocol.HttpAsyncRequester;
-import org.apache.http.nio.reactor.ConnectingIOReactor;
-import org.apache.http.nio.reactor.IOEventDispatch;
-import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.impl.DefaultConnectionReuseStrategy;
+import org.apache.http.nio.protocol.AsyncNHttpClientHandler;
+import org.apache.http.nio.util.DirectByteBufferAllocator;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpParams;
+import org.apache.http.params.SyncBasicHttpParams;
 import org.apache.http.protocol.HttpProcessor;
-import org.apache.http.protocol.HttpProcessorBuilder;
+import org.apache.http.protocol.ImmutableHttpProcessor;
 import org.apache.http.protocol.RequestConnControl;
 import org.apache.http.protocol.RequestContent;
 import org.apache.http.protocol.RequestExpectContinue;
@@ -69,90 +68,38 @@ import org.apache.http.protocol.RequestUserAgent;
  */
 public class ViewConnection extends SpyObject implements
   Reconfigurable {
+  private static final int NUM_CONNS = 1;
+  private static final int MAX_ADDOP_RETRIES = 6;
 
-  private volatile boolean shutDown;
-  protected volatile boolean reconfiguring;
+  private volatile boolean shutDown = false;
+  protected volatile boolean reconfiguring = false;
   protected volatile boolean running = true;
 
+  private final ReentrantReadWriteLock rwlock = new ReentrantReadWriteLock();
+  private final Lock rlock = rwlock.readLock();
+  private final Lock wlock = rwlock.writeLock();
+
   private final CouchbaseConnectionFactory connFactory;
-
+  private final Collection<ConnectionObserver> connObservers =
+    new ConcurrentLinkedQueue<ConnectionObserver>();
+  private List<ViewNode> couchNodes;
   private int nextNode;
-
-  private List<HttpHost> viewNodes;
-  private final String user;
-  private final String password;
-
-  private final HttpProcessor httpProc;
-  private final ConnectingIOReactor ioReactor;
-  private final BasicNIOConnPool pool;
-  private final IOEventDispatch ioEventDispatch;
-  private final HttpAsyncRequester requester;
-  private Thread ioThread;
 
   /**
    * Kickstarts the initialization and delegates the connection creation.
    *
    * @param cf the factory which contains neeeded information.
    * @param addrs the list of addresses to connect to.
+   * @param obs the connection observers.
    * @throws IOException
    */
   public ViewConnection(CouchbaseConnectionFactory cf,
-      List<InetSocketAddress> addrs, String user, String password)
+      List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
     throws IOException {
     connFactory = cf;
-    viewNodes = Collections.synchronizedList(createConnections(addrs));
+    connObservers.addAll(obs);
+    couchNodes = createConnections(addrs);
     nextNode = 0;
-    this.user = user;
-    this.password = password;
-
-    httpProc = HttpProcessorBuilder.create()
-      .add(new RequestContent())
-      .add(new RequestTargetHost())
-      .add(new RequestConnControl())
-      .add(new RequestUserAgent("JCBC/1.2"))
-      .add(new RequestExpectContinue(true)).build();
-
-    // Create client-side HTTP protocol handler
-    HttpAsyncRequestExecutor protocolHandler = new HttpAsyncRequestExecutor();
-
-    // Create client-side I/O event dispatch
-    ioEventDispatch = new DefaultHttpClientIODispatch(protocolHandler,
-      ConnectionConfig.DEFAULT);
-
-    // Create client-side I/O reactor
-    ioReactor = new DefaultConnectingIOReactor(IOReactorConfig.custom()
-      .setConnectTimeout(5000)
-      .setSoTimeout(5000)
-      .setTcpNoDelay(true)
-      .build());
-
-    // Create HTTP connection pool
-    pool = new BasicNIOConnPool(ioReactor, ConnectionConfig.DEFAULT);
-
-    // Limit total number of connections to just two
-    pool.setDefaultMaxPerRoute(2);
-    pool.setMaxTotal(2);
-
-    requester = new HttpAsyncRequester(httpProc);
-
-    init();
-  }
-
-  public void init() {
-    // Start the I/O reactor in a separate thread
-    ioThread = new Thread(new Runnable() {
-      public void run() {
-        try {
-          ioReactor.execute(ioEventDispatch);
-        } catch (InterruptedIOException ex) {
-          getLogger().error("I/O reactor Interrupted", ex);
-        } catch (IOException e) {
-          getLogger().error("I/O error: " + e.getMessage(), e);
-        }
-        getLogger().info("I/O reactor terminated for ");
-      }
-    }, "Couchbase View Thread");
-    ioThread.start();
   }
 
   /**
@@ -165,12 +112,44 @@ public class ViewConnection extends SpyObject implements
    * @return Returns a list of the ViewNodes.
    * @throws IOException
    */
-  private List<HttpHost> createConnections(List<InetSocketAddress> addrs) {
+  private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
+    throws IOException {
 
-    List<HttpHost> nodeList = new LinkedList<HttpHost>();
+    List<ViewNode> nodeList = new LinkedList<ViewNode>();
 
-    for (InetSocketAddress addr : addrs) {
-      nodeList.add(new HttpHost(addr.getHostName(), addr.getPort(), "http"));
+    for (InetSocketAddress a : addrs) {
+      HttpParams params = new SyncBasicHttpParams();
+      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
+          .setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000)
+          .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
+          .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK,
+              false)
+          .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
+          .setParameter(CoreProtocolPNames.USER_AGENT,
+              "Couchbase Java Client 1.0.2");
+
+      HttpProcessor httpproc =
+          new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
+            new RequestContent(), new RequestTargetHost(),
+            new RequestConnControl(), new RequestUserAgent(),
+            new RequestExpectContinue(), });
+
+      AsyncNHttpClientHandler protocolHandler =
+          new AsyncNHttpClientHandler(httpproc,
+              new MyHttpRequestExecutionHandler(this),
+              new DefaultConnectionReuseStrategy(),
+              new DirectByteBufferAllocator(), params);
+      protocolHandler.setEventListener(new EventLogger());
+
+      AsyncConnectionManager connMgr =
+          new AsyncConnectionManager(
+              new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
+              protocolHandler, params, new RequeueOpCallback(this));
+      getLogger().info("Added %s to connect queue", a.getHostName());
+
+      ViewNode node = connFactory.createViewNode(a, connMgr);
+      node.init();
+      nodeList.add(node);
     }
 
     return nodeList;
@@ -187,39 +166,38 @@ public class ViewConnection extends SpyObject implements
    * @param op the operation to run.
    */
   public void addOp(final HttpOperation op) {
-    HttpCoreContext coreContext = HttpCoreContext.create();
-
-    if (viewNodes.isEmpty()) {
-      getLogger().error("No server connections. Cancelling op.");
-      op.cancel();
-    } else {
-      if (!user.equals("default")) {
-        try {
-          op.addAuthHeader(HttpUtil.buildAuthHeader(user, password));
-        } catch (UnsupportedEncodingException ex) {
-          getLogger().error("Could not create auth header for request, "
-            + "could not encode credentials into base64. Canceling op."
-            + op, ex);
-          op.cancel();
-          return;
-        }
+    rlock.lock();
+    try {
+      if (couchNodes.isEmpty()) {
+        getLogger().error("No server connections. Cancelling op.");
+        op.cancel();
+      } else {
+        boolean success = false;
+        int retries = 0;
+        do {
+          if(retries >= MAX_ADDOP_RETRIES) {
+            op.cancel();
+            break;
+          }
+          ViewNode node = couchNodes.get(getNextNode());
+          if(node.isShuttingDown() || !hasActiveVBuckets(node)) {
+            continue;
+          }
+          if(retries > 0) {
+            getLogger().debug("Retrying view operation #" + op.hashCode()
+              + " on node: " + node.getSocketAddress());
+          }
+          success = node.writeOp(op);
+          if(retries > 0 && success) {
+            getLogger().debug("Successfully wrote #" + op.hashCode()
+              + " on node: " + node.getSocketAddress() + " after "
+              + retries + " retries.");
+          }
+          retries++;
+        } while(!success);
       }
-
-      HttpHost httpHost;
-      while (true) {
-        httpHost = viewNodes.get(getNextNode());
-        if (hasActiveVBuckets(httpHost)) {
-          break;
-        }
-      }
-
-      requester.execute(
-        new BasicAsyncRequestProducer(httpHost, op.getRequest()),
-        new BasicAsyncResponseConsumer(),
-        pool,
-        coreContext,
-        new HttpResponseCallback(op, this)
-      );
+    } finally {
+      rlock.unlock();
     }
   }
 
@@ -229,18 +207,18 @@ public class ViewConnection extends SpyObject implements
    * @return id of the next node.
    */
   private int getNextNode() {
-    return nextNode = (++nextNode % viewNodes.size());
+    return nextNode = (++nextNode % couchNodes.size());
   }
 
   /**
-   * Check if the a http host has active VBuckets.
+   * Check if the {@link ViewNode} has active VBuckets.
    *
    * @param node the node to check
    * @return true or false if it has active VBuckets.
    */
-  private boolean hasActiveVBuckets(HttpHost node) {
+  private boolean hasActiveVBuckets(ViewNode node) {
     DefaultConfig config = (DefaultConfig) connFactory.getVBucketConfig();
-    return config.nodeHasActiveVBuckets(new InetSocketAddress(node.getHostName(), node.getPort()));
+    return config.nodeHasActiveVBuckets(node.getSocketAddress());
   }
 
   /**
@@ -248,8 +226,8 @@ public class ViewConnection extends SpyObject implements
    *
    * @return a list of currently connected ViewNodes.
    */
-  public List<HttpHost> getConnectedNodes() {
-    return viewNodes;
+  public List<ViewNode> getConnectedNodes() {
+    return couchNodes;
   }
 
   /**
@@ -278,13 +256,26 @@ public class ViewConnection extends SpyObject implements
     shutDown = true;
     running = false;
 
-    ioReactor.shutdown();
-    try {
-      ioThread.join(0);
-    } catch (InterruptedException ex) {
-      getLogger().error("Interrupt " + ex + " received while waiting for "
-        + "view thread to shut down.");
+    List<ViewNode> nodesToRemove = new ArrayList<ViewNode>();
+    for(ViewNode node : couchNodes) {
+      if (node != null) {
+        String hostname = node.getSocketAddress().getHostName();
+        if (node.hasWriteOps()) {
+          getLogger().warn("Shutting down " + hostname
+            + " with ops waiting to be written");
+        } else {
+          getLogger().info("Node " + hostname
+            + " has no ops in the queue");
+        }
+        node.shutdown();
+        nodesToRemove.add(node);
+      }
     }
+
+    for(ViewNode node : nodesToRemove) {
+      couchNodes.remove(node);
+    }
+
     return true;
   }
 
@@ -301,32 +292,61 @@ public class ViewConnection extends SpyObject implements
   public void reconfigure(Bucket bucket) {
     reconfiguring = true;
 
-    HashSet<SocketAddress> newServerAddresses = new HashSet<SocketAddress>();
-    List<InetSocketAddress> newServers = AddrUtil.getAddressesFromURL(
-      bucket.getConfig().getCouchServers());
-    for (InetSocketAddress server : newServers) {
-      newServerAddresses.add(server);
-    }
-
-    ArrayList<InetSocketAddress> stayServers = new ArrayList<InetSocketAddress>();
-
     try {
-      synchronized (viewNodes) {
-        Iterator<HttpHost> iter = viewNodes.iterator();
-        while (iter.hasNext()) {
-          HttpHost current = iter.next();
-          if (!newServerAddresses.contains(current.getAddress())) {
-            iter.remove();
+      // get a new collection of addresses from the received config
+      HashSet<SocketAddress> newServerAddresses = new HashSet<SocketAddress>();
+      List<InetSocketAddress> newServers =
+        AddrUtil.getAddressesFromURL(bucket.getConfig().getCouchServers());
+      for (InetSocketAddress server : newServers) {
+        // add parsed address to our collections
+        newServerAddresses.add(server);
+      }
+
+      // split current nodes to "odd nodes" and "stay nodes"
+      ArrayList<ViewNode> shutdownNodes = new ArrayList<ViewNode>();
+      ArrayList<ViewNode> stayNodes = new ArrayList<ViewNode>();
+      ArrayList<InetSocketAddress> stayServers =
+          new ArrayList<InetSocketAddress>();
+
+      wlock.lock();
+      try {
+        for (ViewNode current : couchNodes) {
+          if (newServerAddresses.contains(current.getSocketAddress())) {
+            stayNodes.add(current);
+            stayServers.add(current.getSocketAddress());
+          } else {
+            shutdownNodes.add(current);
           }
+        }
+
+        // prepare a collection of addresses for new nodes
+        newServers.removeAll(stayServers);
+
+        // create a collection of new nodes
+        List<ViewNode> newNodes = createConnections(newServers);
+
+        // merge stay nodes with new nodes
+        List<ViewNode> mergedNodes = new ArrayList<ViewNode>();
+        mergedNodes.addAll(stayNodes);
+        mergedNodes.addAll(newNodes);
+
+        couchNodes = mergedNodes;
+      } finally {
+        wlock.unlock();
+      }
+
+      // shutdown for the oddNodes
+      for (ViewNode qa : shutdownNodes) {
+        try {
+          qa.shutdown();
+        } catch (IOException e) {
+          getLogger().error("Error shutting down connection to "
+              + qa.getSocketAddress());
         }
       }
 
-      // prepare a collection of addresses for new nodes
-      newServers.removeAll(stayServers);
-
-      // create a collection of new nodes
-      List<HttpHost> newNodes = createConnections(newServers);
-      viewNodes.addAll(newNodes);
+    } catch (IOException e) {
+      getLogger().error("Connection reconfiguration failed", e);
     } finally {
       reconfiguring = false;
     }
