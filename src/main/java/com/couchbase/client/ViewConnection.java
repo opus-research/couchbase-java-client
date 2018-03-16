@@ -29,7 +29,8 @@ import com.couchbase.client.http.RequeueOpCallback;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.DefaultConfig;
+import com.couchbase.client.vbucket.config.CouchbaseConfig;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -217,7 +218,7 @@ public class ViewConnection extends SpyObject implements
    * @return true or false if it has active VBuckets.
    */
   private boolean hasActiveVBuckets(ViewNode node) {
-    DefaultConfig config = (DefaultConfig) connFactory.getVBucketConfig();
+    CouchbaseConfig config = (CouchbaseConfig) connFactory.getVBucketConfig();
     return config.nodeHasActiveVBuckets(node.getSocketAddress());
   }
 
