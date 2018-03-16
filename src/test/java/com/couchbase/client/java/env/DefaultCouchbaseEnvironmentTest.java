@@ -38,7 +38,7 @@ public class DefaultCouchbaseEnvironmentTest {
     public void shouldApplyDefaultSettings() {
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.create();
 
-        assertEquals(DefaultCouchbaseEnvironment.BINARY_ENDPOINTS, env.binaryEndpoints());
+        assertEquals(DefaultCouchbaseEnvironment.BINARY_ENDPOINTS, env.binaryServiceEndpoints());
         assertNotNull(env.ioPool());
     }
 
@@ -46,22 +46,22 @@ public class DefaultCouchbaseEnvironmentTest {
     public void shouldOverrideSettings() {
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.
             builder()
-            .binaryEndpoints(5)
+            .binaryServiceEndpoints(5)
             .build();
 
-        assertEquals(5, env.binaryEndpoints());
+        assertEquals(5, env.binaryServiceEndpoints());
         assertNotNull(env.ioPool());
     }
 
     @Test
     public void systemPropertiesShouldTakePrecedence() {
-        System.setProperty("com.couchbase.binaryEndpoints", "10");
+        System.setProperty("com.couchbase.binaryServiceEndpoints", "10");
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.
             builder()
-            .binaryEndpoints(5)
+            .binaryServiceEndpoints(5)
             .build();
 
-        assertEquals(10, env.binaryEndpoints());
-        System.clearProperty("com.couchbase.binaryEndpoints");
+        assertEquals(10, env.binaryServiceEndpoints());
+        System.clearProperty("com.couchbase.binaryServiceEndpoints");
     }
 }
