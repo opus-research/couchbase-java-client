@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.repository;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicaMode;
@@ -34,8 +32,6 @@ import com.couchbase.client.java.util.Blocking;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@InterfaceAudience.Public
-@InterfaceStability.Experimental
 public class CouchbaseRepository implements Repository {
 
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;

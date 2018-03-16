@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.repository;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicaMode;
 import com.couchbase.client.java.ReplicateTo;
@@ -35,8 +33,6 @@ import rx.Observable;
  * @author Michael Nitschinger
  * @since 2.2.0
  */
-@InterfaceAudience.Public
-@InterfaceStability.Experimental
 public interface AsyncRepository {
 
     <T> Observable<EntityDocument<T>> get(String id, Class<T> entityClass);

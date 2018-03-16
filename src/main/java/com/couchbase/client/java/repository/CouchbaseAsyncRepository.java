@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.repository;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.ReplicaMode;
@@ -35,8 +33,6 @@ import com.couchbase.client.java.repository.mapping.EntityConverter;
 import rx.Observable;
 import rx.functions.Func1;
 
-@InterfaceAudience.Public
-@InterfaceStability.Experimental
 public class CouchbaseAsyncRepository implements AsyncRepository {
 
     private final EntityConverter converter;
