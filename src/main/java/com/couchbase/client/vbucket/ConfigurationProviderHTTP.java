@@ -62,7 +62,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * configuration and receiving configuration updates.
    */
   private static final String DEFAULT_POOL_NAME = "default";
-  public static final String ANONYMOUS_AUTH_BUCKET = "default";
+  private static final String ANONYMOUS_AUTH_BUCKET = "default";
   /**
    * The specification version which this client meets. This will be included in
    * requests to the server.
@@ -185,16 +185,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
   @Override
   public void updateBucket(String bucketname, Bucket newBucket) {
     this.buckets.put(bucketname, newBucket);
-  }
-
-  @Override
-  public void updateBucket(final String config) {
-    try {
-      updateBucket(getBucket(), configurationParser.parseBucket(config));
-    } catch (Exception e) {
-      getLogger().info("Got new config to update, but could not decode it. "
-        + "Staying with old one.");
-    }
   }
 
   /**

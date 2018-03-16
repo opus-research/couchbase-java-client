@@ -316,23 +316,5 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     return shutDown;
   }
 
-  /**
-   * Get NOT_MY_VBUCKET body responses into the configuration provider to
-   * update the config if needed.
-   *
-   * Note that if it is not a JSON object, it is assumed to be an "old"
-   * response that does not contain any additional information, so it is
-   * ignored.
-   *
-   * @param retryMessage the message that comes along.
-   */
-  @Override
-  protected void handleRetryInformation(final byte[] retryMessage) {
-    String message = new String(retryMessage);
-    if (message.startsWith("{")) {
-      cf.getConfigurationProvider().updateBucket(message);
-    }
-  }
-
 
 }

@@ -30,7 +30,6 @@ import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
 import com.couchbase.client.vbucket.CouchbaseNodeOrder;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
-import com.couchbase.client.vbucket.cccp.AdvancedConfigurationProvider;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
@@ -209,7 +208,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     this.bucket = bucket;
     pass = password;
     configurationProvider =
-      new AdvancedConfigurationProvider(baseList, bucket, password);
+      new ConfigurationProviderHTTP(baseList, bucket, password);
   }
 
   /**
@@ -311,7 +310,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     } else if (config.isNotUpdating()) {
       LOGGER.warning("Noticed bucket configuration to be disconnected, "
         + "will attempt to reconnect");
-      setConfigurationProvider(new AdvancedConfigurationProvider(storedBaseList,
+      setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
         bucket, pass));
     }
     return configurationProvider.getBucketConfiguration(bucket).getConfig();
@@ -461,7 +460,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
           Reconfigurable oldRec = oldConfigProvider.getReconfigurable();
 
           ConfigurationProvider newConfigProvider =
-            new AdvancedConfigurationProvider(storedBaseList, bucket, pass);
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
           newConfigProvider.subscribe(bucket, oldRec);
 
           setConfigurationProvider(newConfigProvider);

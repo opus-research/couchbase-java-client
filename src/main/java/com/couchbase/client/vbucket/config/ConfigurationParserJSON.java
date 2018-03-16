@@ -183,10 +183,7 @@ public class ConfigurationParserJSON extends SpyObject
     throws ParseException {
     try {
       String bucketName = bucketJson.getString("name");
-      URI streamingUri = null;
-      if (bucketJson.has("streamingUri")) {
-        streamingUri = new URI(bucketJson.getString("streamingUri"));
-      }
+      URI streamingUri = new URI(bucketJson.getString("streamingUri"));
       Config currentConfig = null;
       if (current != null) {
         currentConfig = current.getConfig();
@@ -197,12 +194,7 @@ public class ConfigurationParserJSON extends SpyObject
       JSONArray allNodes = bucketJson.getJSONArray("nodes");
       for (int i = 0; i < allNodes.length(); i++) {
         JSONObject currentNode = allNodes.getJSONObject(i);
-
-        Status status = null;
-        if (currentNode.has("status")) {
-          status = parseNodeStatus(currentNode.getString("status"));
-        }
-
+        Status status = parseNodeStatus(currentNode.getString("status"));
         String hostname = currentNode.getString("hostname");
         Map<Port, String> ports = extractPorts(
           currentNode.getJSONObject("ports"));
