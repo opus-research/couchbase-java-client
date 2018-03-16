@@ -87,11 +87,12 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param exp the amount of time the lock should be valid for in seconds.
    * @param tc the transcoder to serialize and unserialize value
    * @return the result from the cache (null if there is none)
-   * @throws net.spy.memcached.OperationTimeoutException if the global operation timeout is
-   *           exceeded
+   * @throws net.spy.memcached.OperationTimeoutException if the global operation
+   *    timeout is exceeded
    * @throws IllegalStateException in the rare circumstance where queue is too
    *           full to accept any more requests
-   * @throws java.util.concurrent.CancellationException if operation was canceled
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled
    */
   <T> CASValue<T> getAndLock(String key, int exp, Transcoder<T> tc);
 
@@ -103,8 +104,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param key the key to get and lock
    * @param exp the amount of time the lock should be valid for in seconds.
    * @return the result from the cache (null if there is none)
-   * @throws net.spy.memcached.OperationTimeoutException if the global operation timeout is
-   *           exceeded
+   * @throws net.spy.memcached.OperationTimeoutException if the global operation
+   *    timeout is exceeded
    * @throws IllegalStateException in the rare circumstance where queue is too
    *           full to accept any more requests
    */
@@ -145,7 +146,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @return whether or not the operation was performed
    * @throws IllegalStateException in the rare circumstance where queue is too
    *           full to accept any more requests
-   * @throws java.util.concurrent.CancellationException if operation was canceled
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled
    */
   <T> Boolean unlock(final String key,
           long casId, final Transcoder<T> tc);
@@ -1167,7 +1169,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *
    * @param doc the design document to store.
    * @return the result of the creation operation.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   Boolean createDesignDoc(final DesignDocument doc);
 
@@ -1176,7 +1179,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *
    * @param name the design document to delete.
    * @return the result of the deletion operation.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   Boolean deleteDesignDoc(final String name);
 
@@ -1187,8 +1191,10 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *
    * @param designDocumentName the name of the design document.
    * @return a DesignDocument object from the cluster.
-   * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws com.couchbase.client.protocol.views.InvalidViewException if no
+   *    design document or view was found.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   @Deprecated
   DesignDocument getDesignDocument(final String designDocumentName);
@@ -1198,8 +1204,10 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    *
    * @param designDocumentName the name of the design document.
    * @return a DesignDocument object from the cluster.
-   * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws com.couchbase.client.protocol.views.InvalidViewException if no
+   *    design document or view was found.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   DesignDocument getDesignDoc(final String designDocumentName);
 
@@ -1288,9 +1296,11 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @return a View object from the cluster.
    * @throws InterruptedException if the operation is interrupted while in
    *           flight
-   * @throws java.util.concurrent.ExecutionException if an error occurs during execution
+   * @throws java.util.concurrent.ExecutionException if an error occurs during
+   *    execution
    */
-  HttpFuture<View> asyncGetView(String designDocumentName, final String viewName);
+  HttpFuture<View> asyncGetView(String designDocumentName,
+    final String viewName);
 
   /**
    * Gets access to a spatial view contained in a design document from the
@@ -1307,7 +1317,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @return a HttpFuture<SpatialView> object from the cluster.
    * @throws InterruptedException if the operation is interrupted while in
    *           flight
-   * @throws java.util.concurrent.ExecutionException if an error occurs during execution
+   * @throws java.util.concurrent.ExecutionException if an error occurs during
+   *    execution
    */
   HttpFuture<SpatialView> asyncGetSpatialView(String designDocumentName,
       final String viewName);
@@ -1324,7 +1335,8 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param view the view to run the query against.
    * @param query the type of query to run against the view.
    * @return a ViewResponseWithDocs containing the results of the query.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   ViewResponse query(AbstractView view, Query query);
 
@@ -1357,8 +1369,10 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a View object from the cluster.
-   * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws com.couchbase.client.protocol.views.InvalidViewException if no
+   *    design document or view was found.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   View getView(final String designDocumentName, final String viewName);
 
@@ -1375,8 +1389,10 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a SpatialView object from the cluster.
-   * @throws com.couchbase.client.protocol.views.InvalidViewException if no design document or view was found.
-   * @throws java.util.concurrent.CancellationException if operation was canceled.
+   * @throws com.couchbase.client.protocol.views.InvalidViewException if no
+   *    design document or view was found.
+   * @throws java.util.concurrent.CancellationException if operation was
+   *    canceled.
    */
   SpatialView getSpatialView(final String designDocumentName,
     final String viewName);

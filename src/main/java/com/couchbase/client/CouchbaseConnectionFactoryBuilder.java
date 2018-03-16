@@ -50,7 +50,8 @@ import net.spy.memcached.transcoders.Transcoder;
  *
  */
 
-public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder {
+public class CouchbaseConnectionFactoryBuilder
+  extends ConnectionFactoryBuilder {
 
   private Config vBucketConfig;
   private long reconnThresholdTimeMsecs =
@@ -163,7 +164,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
    * @param order the ordering to use.
    * @return the builder for chaining.
    */
-  public CouchbaseConnectionFactoryBuilder setStreamingNodeOrder(CouchbaseNodeOrder order) {
+  public CouchbaseConnectionFactoryBuilder setStreamingNodeOrder(
+    CouchbaseNodeOrder order) {
     nodeOrder = order;
     return this;
   }
@@ -185,7 +187,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
    * @param collector the metric collector to use.
    */
   @Override
-  public ConnectionFactoryBuilder setMetricCollector(MetricCollector collector) {
+  public ConnectionFactoryBuilder setMetricCollector(
+    MetricCollector collector) {
     this.collector = collector;
     return this;
   }
@@ -196,7 +199,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
    * @param executorService the ExecutorService to use.
    */
   @Override
-  public ConnectionFactoryBuilder setListenerExecutorService(ExecutorService executorService) {
+  public ConnectionFactoryBuilder setListenerExecutorService(
+    ExecutorService executorService) {
     this.executorService = executorService;
     return this;
   }
@@ -366,7 +370,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
 
       @Override
       public ExecutorService getListenerExecutorService() {
-        return executorService == null ? super.getListenerExecutorService() : executorService;
+        return executorService == null
+          ? super.getListenerExecutorService() : executorService;
       }
 
       @Override
@@ -384,7 +389,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
    * @return the created factory.
    * @throws IOException
    */
-  public CouchbaseConnectionFactory buildCouchbaseConnection() throws IOException {
+  public CouchbaseConnectionFactory buildCouchbaseConnection()
+    throws IOException {
     return new CouchbaseConnectionFactory() {
 
       @Override
@@ -512,7 +518,8 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
 
       @Override
       public ExecutorService getListenerExecutorService() {
-        return executorService == null ? super.getListenerExecutorService() : executorService;
+        return executorService == null
+          ? super.getListenerExecutorService() : executorService;
       }
 
       @Override

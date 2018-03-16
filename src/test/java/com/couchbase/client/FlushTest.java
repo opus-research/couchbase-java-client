@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.spy.memcached.TestConfig;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -41,8 +40,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class FlushTest {
 
-  private static final String noflushBucket = "noflush";
-  private static final String memcachedBucket = "cache";
+  private static final String NOFLUSH_BUCKET = "noflush";
+  private static final String MEMCACHED_BUCKET = "cache";
   private static CouchbaseClient defaultClient;
   private static CouchbaseClient saslClient;
   private static CouchbaseClient memcachedClient;
@@ -56,9 +55,10 @@ public class FlushTest {
     BucketTool bucketTool = new BucketTool();
     bucketTool.deleteAllBuckets();
     bucketTool.createDefaultBucket(BucketType.COUCHBASE, 128, 0, true);
-    bucketTool.createSaslBucket(noflushBucket, BucketType.COUCHBASE, 128, 0,
+    bucketTool.createSaslBucket(NOFLUSH_BUCKET, BucketType.COUCHBASE, 128, 0,
       false);
-    bucketTool.createSaslBucket(memcachedBucket, BucketType.MEMCACHED, 128, 0, true);
+    bucketTool.createSaslBucket(MEMCACHED_BUCKET, BucketType.MEMCACHED, 128, 0,
+      true);
 
     BucketTool.FunctionCallback callback = new BucketTool.FunctionCallback() {
       @Override
@@ -67,8 +67,9 @@ public class FlushTest {
         uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
         defaultClient = new CouchbaseClient(uris, "default", "");
         saslClient = new CouchbaseClient(uris,
-          noflushBucket, noflushBucket);
-        memcachedClient = new CouchbaseClient(uris, memcachedBucket, memcachedBucket);
+          NOFLUSH_BUCKET, NOFLUSH_BUCKET);
+        memcachedClient = new CouchbaseClient(uris, MEMCACHED_BUCKET,
+          MEMCACHED_BUCKET);
       }
 
       @Override
@@ -126,7 +127,7 @@ public class FlushTest {
     List<URI> uris = new ArrayList<URI>();
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
     CouchbaseClient client = new CouchbaseClient(
-      uris, noflushBucket, noflushBucket);
+      uris, NOFLUSH_BUCKET, NOFLUSH_BUCKET);
 
     for(int i = 0; i <= 10; i++) {
       client.set("doc:"+ i, 0, "sampledocument").get();
@@ -157,7 +158,8 @@ public class FlushTest {
   public void testFlushOnMemcachedBucket() throws Exception {
     List<URI> uris = new ArrayList<URI>();
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
-    CouchbaseClient client = new CouchbaseClient(uris, memcachedBucket, memcachedBucket);
+    CouchbaseClient client = new CouchbaseClient(uris, MEMCACHED_BUCKET,
+      MEMCACHED_BUCKET);
 
     assertTrue(client.flush().get());
 

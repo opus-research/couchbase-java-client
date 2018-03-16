@@ -24,7 +24,9 @@ package com.couchbase.client.http;
 
 import com.couchbase.client.ViewConnection;
 import com.couchbase.client.protocol.views.HttpOperation;
-import net.spy.memcached.compat.SpyObject;
+
+import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 import net.spy.memcached.compat.log.Logger;
 import net.spy.memcached.compat.log.LoggerFactory;
@@ -34,9 +36,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.util.EntityUtils;
-
-import java.io.IOException;
-import java.net.SocketTimeoutException;
 
 /**
  * Describes a {@link FutureCallback} for asynchronous View responses.
@@ -76,8 +75,8 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
    * @param vconn the view connection to reference.
    * @param host the target host from the response.
    */
-  public HttpResponseCallback(final HttpOperation op,final ViewConnection vconn,
-    final HttpHost host) {
+  public HttpResponseCallback(final HttpOperation op,
+    final ViewConnection vconn, final HttpHost host) {
     this.op = op;
     this.vconn = vconn;
     this.host = host;
@@ -105,14 +104,14 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
   /**
    * Requeue the operation if it is not timed out or cancelled already.
    *
-   * @param op the operation to retry.
+   * @param operation the operation to retry.
    */
-  private void retryOperation(final HttpOperation op) {
-    if(!op.isTimedOut() && !op.isCancelled()) {
+  private void retryOperation(final HttpOperation operation) {
+    if(!operation.isTimedOut() && !operation.isCancelled()) {
       LOGGER.debug("Retrying HTTP operation from node ("
         + host.toHostString() + "), Request: "
-        + op.getRequest().getRequestLine());
-      vconn.addOp(op);
+        + operation.getRequest().getRequestLine());
+      vconn.addOp(operation);
     }
   }
 
@@ -146,30 +145,30 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
   private static boolean shouldRetry(final int statusCode,
     final HttpResponse response) {
     switch(statusCode) {
-      case 200:
-        return false;
-      case 404:
-        return analyse404Response(response);
-      case 500:
-        return analyse500Response(response);
-      case 300:
-      case 301:
-      case 302:
-      case 303:
-      case 307:
-      case 401:
-      case 408:
-      case 409:
-      case 412:
-      case 416:
-      case 417:
-      case 501:
-      case 502:
-      case 503:
-      case 504:
-        return true;
-      default:
-        return false;
+    case 200:
+      return false;
+    case 404:
+      return analyse404Response(response);
+    case 500:
+      return analyse500Response(response);
+    case 300:
+    case 301:
+    case 302:
+    case 303:
+    case 307:
+    case 401:
+    case 408:
+    case 409:
+    case 412:
+    case 416:
+    case 417:
+    case 501:
+    case 502:
+    case 503:
+    case 504:
+      return true;
+    default:
+      return false;
     }
   }
 
