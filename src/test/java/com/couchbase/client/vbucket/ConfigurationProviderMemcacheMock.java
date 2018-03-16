@@ -91,7 +91,4 @@ public class ConfigurationProviderMemcacheMock
   public void updateBaseListFromConfig(List<URI> baseList) {
     baseListUpdated = true;
   }
-
-  @Override
-  public void updateBucket(String config) { }
 }
