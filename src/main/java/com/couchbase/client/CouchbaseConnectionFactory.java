@@ -109,8 +109,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private ExecutorService resubExec = Executors.newSingleThreadExecutor();
   private long obsPollInterval = 100;
   private int obsPollMax = 400;
-  private final String modeMessage = "viewmode set to production mode";
-  private final String modePrefix = "";
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, String password)
@@ -305,21 +303,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return minReconnectInterval;
   }
 
-  public long getObsPollInterval() {
+  long getObsPollInterval() {
     return obsPollInterval;
   }
 
-  public int getObsPollMax() {
+  int getObsPollMax() {
     return obsPollMax;
   }
 
-  public String getViewModePrefix() {
-    return modePrefix;
-  }
-
-  public String getViewModeMessage() {
-    return modeMessage;
-  }
   private class Resubscriber implements Runnable {
 
     public void run() {
