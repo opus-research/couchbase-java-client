@@ -388,9 +388,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<RemoveResponse, D>() {
                 @Override
                 public D call(final RemoveResponse response) {
-                    if (response.status() == ResponseStatus.EXISTS) {
-                        throw new CASMismatchException();
-                    }
                     return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                 }
             });
@@ -579,7 +576,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas());
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                 }
             });
     }
@@ -598,7 +595,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(),  document.expiry(), document.content(), response.cas());
+                    return (D) transcoder.newDocument(document.id(),  0, null, response.cas());
                 }
             });
     }
