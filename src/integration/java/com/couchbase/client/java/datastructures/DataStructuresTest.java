@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java;
+package com.couchbase.client.java.datastructures;
 
 import static org.junit.Assert.*;
 
+import com.couchbase.client.java.PersistTo;
 import com.couchbase.client.java.error.subdoc.PathInvalidException;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.datastructures.MutationOptionBuilder;
 import com.couchbase.client.java.document.JsonArrayDocument;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
@@ -30,6 +30,7 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.RequestTooBigException;
+import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import com.couchbase.client.java.util.features.CouchbaseFeature;
 import org.junit.*;
@@ -97,8 +98,8 @@ public class DataStructuresTest {
         assertEquals(result, true);
     }
 
-    @Test(expected = CouchbaseException.class)
-    public void testMapGetInvalidKey() {
+    @Test(expected = PathNotFoundException.class)
+    public void testMapGetNonExistentKey() {
         ctx.bucket().mapGet("dsmap", "9999", String.class);
     }
 
@@ -184,7 +185,7 @@ public class DataStructuresTest {
     }
 
 
-    @Test(expected = CouchbaseException.class)
+    @Test(expected = PathNotFoundException.class)
     public void testListRemoveNonExistentIndex() {
         ctx.bucket().listGet("dslist", 2, Object.class);
     }
@@ -355,4 +356,5 @@ public class DataStructuresTest {
     public void testSetSizeOnNonExistentDocument() {
         ctx.bucket().setSize("dssetRandom");
     }
+
 }
