@@ -26,6 +26,7 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.StringDocument;
 import com.couchbase.client.java.error.TranscodingException;
@@ -50,10 +51,7 @@ public class StringTranscoder extends AbstractTranscoder<StringDocument, String>
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(StringDocument document) throws Exception {
-        return Tuple.create(
-            TranscoderUtils.encodeStringAsUtf8(document.content()),
-            TranscoderUtils.STRING_COMMON_FLAGS
-        );
+        return Tuple.create(Unpooled.copiedBuffer(document.content(), CharsetUtil.UTF_8), TranscoderUtils.STRING_COMMON_FLAGS);
     }
 
     @Override

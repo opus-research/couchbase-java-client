@@ -26,6 +26,7 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.error.TranscodingException;
@@ -40,10 +41,8 @@ public class RawJsonTranscoder extends AbstractTranscoder<RawJsonDocument, Strin
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(RawJsonDocument document) throws Exception {
-        return Tuple.create(
-            TranscoderUtils.encodeStringAsUtf8(document.content()),
-            TranscoderUtils.JSON_COMPAT_FLAGS
-        );
+        return Tuple.create(Unpooled.copiedBuffer(document.content(), CharsetUtil.UTF_8),
+            TranscoderUtils.JSON_COMPAT_FLAGS);
     }
 
     @Override
