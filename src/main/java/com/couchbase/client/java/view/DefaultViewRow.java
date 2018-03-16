@@ -4,7 +4,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.util.Blocking;
 
 import java.util.concurrent.TimeUnit;
 
@@ -41,7 +40,11 @@ public class DefaultViewRow implements ViewRow {
 
     @Override
     public JsonDocument document(long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncViewRow.document().singleOrDefault(null), timeout, timeUnit);
+        return asyncViewRow
+            .document()
+            .timeout(timeout, timeUnit)
+            .toBlocking()
+            .singleOrDefault(null);
     }
 
     @Override
@@ -51,7 +54,11 @@ public class DefaultViewRow implements ViewRow {
 
     @Override
     public <D extends Document<?>> D document(Class<D> target, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncViewRow.document(target).singleOrDefault(null), timeout, timeUnit);
+        return asyncViewRow
+            .document(target)
+            .timeout(timeout, timeUnit)
+            .toBlocking()
+            .singleOrDefault(null);
     }
 
     @Override

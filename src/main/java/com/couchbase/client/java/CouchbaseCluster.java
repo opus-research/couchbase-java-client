@@ -8,7 +8,6 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.util.Blocking;
 import rx.functions.Func1;
 
 import java.util.ArrayList;
@@ -105,14 +104,17 @@ public class CouchbaseCluster implements Cluster {
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
             ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
 
-        return Blocking.blockForSingle(couchbaseAsyncCluster
+        return couchbaseAsyncCluster
             .openBucket(name, password, transcoders)
             .map(new Func1<AsyncBucket, Bucket>() {
                 @Override
                 public Bucket call(AsyncBucket asyncBucket) {
                     return new CouchbaseBucket(environment, core(), name, password, trans);
                 }
-            }).single(), timeout, timeUnit);
+            })
+            .timeout(timeout, timeUnit)
+            .toBlocking()
+            .single();
     }
 
     @Override
@@ -136,7 +138,11 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public Boolean disconnect(long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(couchbaseAsyncCluster.disconnect().single(), timeout, timeUnit);
+        return couchbaseAsyncCluster
+            .disconnect()
+            .timeout(timeout, timeUnit)
+            .toBlocking()
+            .single();
     }
 
     @Override
