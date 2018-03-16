@@ -48,6 +48,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.compat.SpyObject;
@@ -72,11 +74,9 @@ public class ConfigurationProviderHTTP extends SpyObject implements
   private String restUsr;
   private String restPwd;
   private URI loadedBaseUri;
-  // map of <bucketname, bucket> currently loaded
-  private Map<String, Bucket> buckets = new ConcurrentHashMap<String, Bucket>();
 
-  // map of <poolname, pool> currently loaded
-  // private Map<String, Pool> pools = new ConcurrentHashMap<String, Pool>();
+  private final Map<String, Bucket> buckets = new ConcurrentHashMap<String, Bucket>();
+
   private ConfigurationParser configurationParser =
       new ConfigurationParserJSON();
   private Map<String, BucketMonitor> monitors =
@@ -140,9 +140,48 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     }
     Bucket bucket = this.buckets.get(bucketname);
     if (bucket == null) {
-      readPools(bucketname);
+      boolean warmedUp = false;
+      int maxBackoffRetries = 5;
+      int retryCount = 1;
+      while(warmedUp == false) {
+        readPools(bucketname);
+        Config config = this.buckets.get(bucketname).getConfig();
+        if(config.getVbucketsCount() == 0) {
+          if(retryCount > maxBackoffRetries) {
+            throw new ConfigurationException("Cluster is not in a warmed up "
+              + "state after " + maxBackoffRetries + " exponential retries.");
+          }
+          int backoffSeconds = new Double(
+            retryCount * Math.pow(2, retryCount++)).intValue();
+          getLogger().info("Cluster is currently warming up, waiting "
+            + backoffSeconds + " seconds for vBuckets to show up.");
+          try {
+            Thread.sleep(backoffSeconds * 1000);
+          } catch (InterruptedException ex) {
+            throw new ConfigurationException("Cluster is not in a warmed up "
+              + "state.");
+          }
+        } else {
+          warmedUp = true;
+        }
+      }
     }
     return this.buckets.get(bucketname);
+  }
+
+  /**
+   * Update the configuration provider with a new bucket.
+   *
+   * This method is usually called from the CouchbaseClient class during
+   * reconfiguration to make sure the configuration provider has the most
+   * recent bucket available (including the enclosed config).
+   *
+   * @param bucketname the name of the bucket.
+   * @param newBucket the new bucket to update.
+   */
+  @Override
+  public void updateBucket(String bucketname, Bucket newBucket) {
+    this.buckets.put(bucketname, newBucket);
   }
 
   /**
@@ -178,6 +217,8 @@ public class ConfigurationProviderHTTP extends SpyObject implements
             + "... skipping");
           continue;
         }
+
+
         // load pools
         for (Pool pool : pools.values()) {
           URLConnection poolConnection = urlConnBuilder(baseUri,
@@ -190,9 +231,9 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           Map<String, Bucket> bucketsForPool =
               configurationParser.parseBuckets(sBuckets);
           pool.replaceBuckets(bucketsForPool);
-
         }
-                // did we find our bucket?
+
+        // did we find our bucket?
         boolean bucketFound = false;
         for (Pool pool : pools.values()) {
           if (pool.hasBucket(bucketToFind)) {

@@ -452,15 +452,15 @@ public class CouchbaseClientTest extends BinaryClientTest {
    *
    * @throws Exception
    */
-   public void testPersistZeroNodes() throws Exception {
-     CouchbaseClient cb = (CouchbaseClient) client;
-     OperationFuture<Boolean> success = cb.set("something", 0,
-       "to_store", PersistTo.ZERO);
-     assertTrue(success.get());
-     String expected = "OK";
-     assertEquals(expected, success.getStatus().getMessage());
-     assertNotNull(cb.get("something"));
-   }
+  public void testPersistZeroNodes() throws Exception {
+    CouchbaseClient cb = (CouchbaseClient) client;
+    OperationFuture<Boolean> success = cb.set("something", 0,
+      "to_store", PersistTo.ZERO);
+    assertTrue(success.get());
+    String expected = "OK";
+    assertEquals(expected, success.getStatus().getMessage());
+    assertNotNull(cb.get("something"));
+  }
 
   /**
    * Tests observe and replicate with zero nodes.
@@ -495,25 +495,27 @@ public class CouchbaseClientTest extends BinaryClientTest {
     OperationFuture<Boolean> future = null;
     switch(size){
     case 0:
-    future = cb.set("something", 0,
-      "to_store", PersistTo.ONE);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", PersistTo.ONE);
+      assertFalse(future.get());
+      break;
     case 1:
-    future = cb.set("something", 0,
-      "to_store", PersistTo.TWO);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", PersistTo.TWO);
+      assertFalse(future.get());
+      break;
     case 2:
-    future = cb.set("something", 0,
-      "to_store", PersistTo.THREE);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", PersistTo.THREE);
+      assertFalse(future.get());
+      break;
     case 3:
-    future = cb.set("something", 0,
-      "to_store", PersistTo.FOUR);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", PersistTo.FOUR);
+      assertFalse(future.get());
+      break;
+    default:
+      break;
     }
     String expected = "Currently, there are less nodes in the cluster than "
       + "required to satisfy the persistence constraint.";
@@ -535,20 +537,22 @@ public class CouchbaseClientTest extends BinaryClientTest {
     OperationFuture<Boolean> future = null;
     switch(size){
     case 0:
-    future = cb.set("something", 0,
-      "to_store", ReplicateTo.ONE);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", ReplicateTo.ONE);
+      assertFalse(future.get());
+      break;
     case 1:
-    future = cb.set("something", 0,
-      "to_store", ReplicateTo.TWO);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", ReplicateTo.TWO);
+      assertFalse(future.get());
+      break;
     case 2:
-    future = cb.set("something", 0,
-      "to_store", ReplicateTo.THREE);
-    assertFalse(future.get());
-    break;
+      future = cb.set("something", 0,
+        "to_store", ReplicateTo.THREE);
+      assertFalse(future.get());
+      break;
+    default:
+      break;
     }
     String expected = "Currently, there are less nodes in the cluster than "
       + "required to satisfy the replication constraint.";
