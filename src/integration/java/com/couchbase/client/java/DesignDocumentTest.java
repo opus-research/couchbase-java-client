@@ -3,12 +3,15 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DesignDocumentException;
+import com.couchbase.client.java.error.ViewQueryException;
 import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.view.DefaultView;
-import com.couchbase.client.java.view.DesignDocument;
-import com.couchbase.client.java.view.View;
+import com.couchbase.client.java.view.*;
 import org.junit.Before;
 import org.junit.Test;
+import rx.Observable;
+import rx.Observer;
+import rx.functions.Action1;
+import rx.functions.Func1;
 
 import java.util.Arrays;
 import java.util.List;
@@ -192,4 +195,25 @@ public class DesignDocumentTest extends ClusterDependentTest {
         manager.publishDesignDocument("pub2");
     }
 
+    @Test
+    public void shouldUseOnErrorCallbackWhenQueryingMissingDesignDocumentAndOnErrorSetToStop() {
+        ViewQuery queryTemplate = ViewQuery.from("test", "dummy");
+        queryTemplate.stale(Stale.FALSE).onError(OnError.STOP);
+        boolean errorRaised = false;
+        try {
+            bucket().query(queryTemplate);
+        } catch (ViewQueryException ex) {
+            assertEquals("not_found", ex.getError());
+        }
+        assertTrue("Should raise ViewQueryException when View is missing", errorRaised);
+    }
+
+    @Test
+    public void shouldReturnErrorInResultObjectWhenQueryingMissingDesignDocumentAndOnErrorSetToContinue() {
+        ViewQuery queryTemplate = ViewQuery.from("test", "dummy");
+        queryTemplate.stale(Stale.FALSE).onError(OnError.CONTINUE);
+        ViewResult result = bucket().query(queryTemplate);
+        assertFalse(result.success());
+        assertEquals("not_found", result.error().getString("error"));
+    }
 }
