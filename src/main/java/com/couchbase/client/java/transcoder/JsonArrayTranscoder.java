@@ -26,6 +26,7 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.JsonArrayDocument;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
@@ -46,7 +47,8 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(final JsonArrayDocument document) throws Exception {
-        return Tuple.create(jsonArrayToByteBuf(document.content()), TranscoderUtils.JSON_COMMON_FLAGS);
+        String content = jsonArrayToString(document.content());
+        return Tuple.create(Unpooled.copiedBuffer(content, CharsetUtil.UTF_8), TranscoderUtils.JSON_COMMON_FLAGS);
     }
 
     @Override
@@ -56,7 +58,9 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
             throw new TranscodingException("Flags (0x" + Integer.toHexString(flags) + ") indicate non-JSON array document for "
                 + "id " + id + ", could not decode.");
         }
-        return newDocument(id, expiry, byteBufToJsonArray(content), cas);
+
+        JsonArray converted = stringToJsonArray(content.toString(CharsetUtil.UTF_8));
+        return newDocument(id, expiry, converted, cas);
     }
 
     @Override
@@ -68,23 +72,8 @@ public class JsonArrayTranscoder extends AbstractTranscoder<JsonArrayDocument, J
         return JacksonTransformers.MAPPER.writeValueAsString(input);
     }
 
-    public ByteBuf jsonArrayToByteBuf(JsonArray input) throws Exception {
-        return Unpooled.wrappedBuffer(JacksonTransformers.MAPPER.writeValueAsBytes(input));
-    }
-
     public JsonArray stringToJsonArray(String input) throws Exception {
         return JacksonTransformers.MAPPER.readValue(input, JsonArray.class);
-    }
-
-    public JsonArray byteBufToJsonArray(ByteBuf input) throws Exception {
-        byte[] inputBytes;
-        if (input.hasArray()) {
-            inputBytes = input.array();
-        } else {
-            inputBytes = new byte[input.readableBytes()];
-            input.getBytes(0, inputBytes);
-        }
-        return JacksonTransformers.MAPPER.readValue(inputBytes, JsonArray.class);
     }
 
 }
