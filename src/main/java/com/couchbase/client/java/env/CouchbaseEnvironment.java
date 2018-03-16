@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.auth.Authenticator;
 
 /**
  * The {@link CouchbaseEnvironment} which shares state across {@link Cluster}s.
@@ -102,4 +103,17 @@ public interface CouchbaseEnvironment extends CoreEnvironment {
      * @see #coreBuild() for the same information but relative to the core layer.
      */
     String clientBuild();
+
+    /**
+     * Sets the {@link Authenticator} to use for implicit credentials on the SDK.
+     *
+     * @param auth the Authenticator to use.
+     */
+    void authenticator(Authenticator auth);
+
+    /**
+     * @return the {@link Authenticator} to use when the SDK needs an implicit credential for
+     * authenticated operations where no explicit credentials have been provided.
+     */
+    Authenticator authenticator();
 }

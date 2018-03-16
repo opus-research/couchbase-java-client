@@ -31,6 +31,8 @@ import com.couchbase.client.deps.com.lmax.disruptor.WaitStrategy;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CouchbaseCluster;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.PasswordAuthenticator;
 import rx.Scheduler;
 
 import java.security.KeyStore;
@@ -71,6 +73,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private final long kvTimeout;
     private final long connectTimeout;
     private final boolean dnsSrvEnabled;
+    private Authenticator authenticator;
 
     protected static String CLIENT_VERSION;
     protected static String CLIENT_GIT_VERSION;
@@ -151,6 +154,8 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             LOGGER.warn("The configured management timeout is greater than the maximum request lifetime." +
                 "This can lead to falsely cancelled requests.");
         }
+
+        authenticator = builder.authenticator;
     }
 
     /**
@@ -180,6 +185,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         private long searchTimeout = SEARCH_TIMEOUT;
         private long connectTimeout = CONNECT_TIMEOUT;
         private boolean dnsSrvEnabled = DNS_SRV_ENABLED;
+        private Authenticator authenticator = new PasswordAuthenticator();
 
         public Builder() {
             super();
@@ -219,6 +225,14 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             return this;
         }
 
+        public Builder authenticator(Authenticator auth) {
+            if (auth != null) {
+                this.authenticator = auth;
+            }
+            return this;
+        }
+
+        @Override
         public Builder disconnectTimeout(long disconnectTimeout) {
             super.disconnectTimeout(disconnectTimeout);
             return this;
@@ -544,6 +558,16 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     @Override
     public boolean dnsSrvEnabled() {
         return dnsSrvEnabled;
+    }
+
+    @Override
+    public Authenticator authenticator() {
+        return authenticator;
+    }
+
+    @Override
+    public void authenticator(Authenticator auth) {
+        this.authenticator = auth;
     }
 
     @Override
