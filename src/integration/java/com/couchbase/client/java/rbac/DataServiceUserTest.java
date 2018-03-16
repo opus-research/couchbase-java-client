@@ -57,7 +57,7 @@ public class DataServiceUserTest {
                 .ignoreIfClusterUnder(Version.parseVersion("5.0.0"));
 
         ctx.clusterManager().upsertUser(username, UserSettings.build().password(password)
-                .roles(Arrays.asList(new UserRole("data_writer", ctx.bucketName()),new UserRole("data_reader", ctx.bucketName()))));
+                .roles(Arrays.asList(new UserRole("data_reader_writer", ctx.bucketName()))));
         ctx.clusterManager().upsertUser(roUsername, UserSettings.build().password(password)
                 .roles(Arrays.asList(new UserRole("data_reader", ctx.bucketName()))));
         Thread.sleep(100); //sleep a bit for the user to be async updated to memcached before opening bucket
@@ -117,7 +117,7 @@ public class DataServiceUserTest {
     @Test
     public void testSimpleXattrOperationsAuth() {
         bucket.insert(JsonDocument.create("fooc"));
-        bucket.mutateIn("fooc").upsert("bar", "baz", new SubdocOptionsBuilder().attributeAccess(true)).execute();
+        bucket.mutateIn("fooc").upsert("bar", "baz", new SubdocOptionsBuilder().xattr(true)).execute();
         bucket.remove(JsonDocument.create("fooc"));
     }
 
