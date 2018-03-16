@@ -6,13 +6,13 @@ import java.util.List;
 
 import com.couchbase.client.java.document.json.JsonObject;
 
-public class DefaultN1qlQueryResult implements N1qlQueryResult {
+public class DefaultQueryResult implements QueryResult {
 
     private final boolean finalSuccess;
     private final boolean parseSuccess;
-    private final List<N1qlQueryRow> allRows;
+    private final List<QueryRow> allRows;
     private final Object signature;
-    private final N1qlMetrics info;
+    private final QueryMetrics info;
     private final List<JsonObject> errors;
     private final String requestId;
     private final String clientContextId;
@@ -28,8 +28,8 @@ public class DefaultN1qlQueryResult implements N1qlQueryResult {
      * @param finalSuccess the definitive (but potentially delayed) result of the query.
      * @param parseSuccess the intermediate result of the query
      */
-    public DefaultN1qlQueryResult(List<AsyncN1qlQueryRow> rows, Object signature,
-            N1qlMetrics info, List<JsonObject> errors,
+    public DefaultQueryResult(List<AsyncQueryRow> rows, Object signature,
+            QueryMetrics info, List<JsonObject> errors,
             Boolean finalSuccess, boolean parseSuccess,
             String requestId, String clientContextId) {
 
@@ -37,9 +37,9 @@ public class DefaultN1qlQueryResult implements N1qlQueryResult {
         this.clientContextId = clientContextId;
         this.parseSuccess = parseSuccess;
         this.finalSuccess = finalSuccess != null && finalSuccess;
-        this.allRows = new ArrayList<N1qlQueryRow>(rows.size());
-        for (AsyncN1qlQueryRow row : rows) {
-            this.allRows.add(new DefaultN1qlQueryRow(row.value()));
+        this.allRows = new ArrayList<QueryRow>(rows.size());
+        for (AsyncQueryRow row : rows) {
+            this.allRows.add(new DefaultQueryRow(row.value()));
         }
         this.signature = signature;
         this.errors = errors;
@@ -47,12 +47,12 @@ public class DefaultN1qlQueryResult implements N1qlQueryResult {
     }
 
     @Override
-    public List<N1qlQueryRow> allRows() {
+    public List<QueryRow> allRows() {
         return this.allRows;
     }
 
     @Override
-    public Iterator<N1qlQueryRow> rows() {
+    public Iterator<QueryRow> rows() {
         return this.allRows.iterator();
     }
 
@@ -62,7 +62,7 @@ public class DefaultN1qlQueryResult implements N1qlQueryResult {
     }
 
     @Override
-    public N1qlMetrics info() {
+    public QueryMetrics info() {
         return this.info;
     }
 
@@ -82,7 +82,7 @@ public class DefaultN1qlQueryResult implements N1qlQueryResult {
     }
 
     @Override
-    public Iterator<N1qlQueryRow> iterator() {
+    public Iterator<QueryRow> iterator() {
         return rows();
     }
 

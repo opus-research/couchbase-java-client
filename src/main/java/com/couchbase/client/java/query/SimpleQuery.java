@@ -24,14 +24,14 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.java.document.json.JsonValue;
 
 /**
- * The simplest form of N1QL {@link N1qlQuery} with a plain un-parameterized {@link Statement}.
+ * The simplest form of N1QL {@link Query} with a plain un-parameterized {@link Statement}.
  *
  * @author Simon Baslé
  * @since 2.1
  */
-public class SimpleN1qlQuery extends AbstractN1qlQuery {
+public class SimpleQuery extends AbstractQuery {
 
-    /* package */ SimpleN1qlQuery(Statement statement, N1qlParams params) {
+    /* package */ SimpleQuery(Statement statement, QueryParams params) {
         super(statement, params);
     }
 
