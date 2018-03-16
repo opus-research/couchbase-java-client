@@ -29,14 +29,12 @@ import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.document.*;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.*;
-import com.couchbase.client.java.query.PrepareStatement;
-import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryPlan;
-import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.view.*;
+import com.couchbase.client.java.view.View;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 
 import java.util.List;
@@ -1913,21 +1911,6 @@ public interface Bucket {
     ViewResult query(ViewQuery query);
 
     /**
-     * Queries a Couchbase Server Spatial {@link View} with the default view timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the design document or view is not found: {@link ViewDoesNotExistException}
-     *
-     * @param query the query to perform.
-     * @return a result containing all the found rows and additional information.
-     */
-    SpatialViewResult query(SpatialViewQuery query);
-
-    /**
      * Queries a Couchbase Server {@link View} with a custom timeout.
      *
      * This method throws under the following conditions:
@@ -1945,23 +1928,6 @@ public interface Bucket {
     ViewResult query(ViewQuery query, long timeout, TimeUnit timeUnit);
 
     /**
-     * Queries a Couchbase Server Spatial {@link View} with a custom timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the design document or view is not found: {@link ViewDoesNotExistException}
-     *
-     * @param query the query to perform.
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return a result containing all the found rows and additional information.
-     */
-    SpatialViewResult query(SpatialViewQuery query, long timeout, TimeUnit timeUnit);
-
-    /**
      * Experimental: Queries a N1QL secondary index with the default query timeout.
      *
      * This method throws under the following conditions:
@@ -1970,37 +1936,7 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param statement the statement in a DSL form (start with a static select() import)
-     * @return a result containing all found rows and additional information.
-     */
-    QueryResult query(Statement statement);
-
-    /**
-     * Experimental: Queries a N1QL secondary index with a custom timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param statement the statement in a DSL form (start with a static select() import)
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return a result containing all found rows and additional information.
-     */
-    QueryResult query(Statement statement, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Experimental: Queries a N1QL secondary index with the default query timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param query the full {@link Query}, including statement and any other additional parameter.
+     * @param query the query in a DSL form (start with a static select() import)
      * @return a result containing all found rows and additional information.
      */
     QueryResult query(Query query);
@@ -2014,7 +1950,7 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full {@link Query}, including statement and any other additional parameter.
+     * @param query the query in a DSL form (start with a static select() import)
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
      * @return a result containing all found rows and additional information.
@@ -2030,10 +1966,10 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full N1QL string, including statement and any other additional parameter.
+     * @param query the query in a plain N1QL String
      * @return a result containing all found rows and additional information.
      */
-    QueryResult queryRaw(String query);
+    QueryResult query(String query);
 
     /**
      * Experimental: Queries a N1QL secondary index with a custom timeout.
@@ -2044,48 +1980,12 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full N1QL string including statement and any other additional parameter.
+     * @param query the query in a plain N1QL String
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
      * @return a result containing all found rows and additional information.
      */
-    QueryResult queryRaw(String query, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
-     * {@link PrepareStatement}, with the default timeout.
-     *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param prepare the {@link PrepareStatement} wrapping the statement to prepare a plan for.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
-     */
-    QueryPlan queryPrepare(PrepareStatement prepare);
-
-    /**
-     * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
-     * {@link PrepareStatement}, with a custom timeout.
-     *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param prepare the {@link PrepareStatement} wrapping the statement to prepare a plan for.
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
-     */
-    QueryPlan queryPrepare(PrepareStatement prepare, long timeout, TimeUnit timeUnit);
+    QueryResult query(String query, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
