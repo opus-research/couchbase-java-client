@@ -33,7 +33,9 @@ import com.couchbase.client.core.message.kv.subdoc.multi.MultiResult;
 import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiLookupRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SimpleSubdocResponse;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubExistRequest;
+import com.couchbase.client.core.message.kv.subdoc.simple.SubGetCountRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubGetRequest;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.deps.io.netty.util.internal.StringUtil;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.document.JsonDocument;
@@ -42,9 +44,11 @@ import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
+import com.couchbase.client.java.error.subdoc.XattrOrderingException;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Func0;
 import rx.functions.Func1;
 
@@ -303,11 +307,80 @@ public class AsyncLookupInBuilder {
         return this;
     }
 
+    /**
+     * Get the count of values inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param paths the path inside the document where to get the count from.
+     * @return this builder for chaining.
+     */
+    public AsyncLookupInBuilder getCount(String... paths) {
+        if (paths == null || paths.length == 0) {
+            throw new IllegalArgumentException("Path is mandatory for subdoc get count");
+        }
+        for (String path : paths) {
+            if (StringUtil.isNullOrEmpty(path)) {
+                throw new IllegalArgumentException("Path is mandatory for subdoc get count");
+            }
+            this.specs.add(new LookupSpec(Lookup.GET_COUNT, path));
+        }
+        return this;
+    }
+
+    /**
+     * Get the count of values inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param path the path inside the document where to get the count from.
+     * @param optionsBuilder {@link SubdocOptionsBuilder}
+     * @return this builder for chaining.
+     */
+    public AsyncLookupInBuilder getCount(String path, SubdocOptionsBuilder optionsBuilder) {
+        if (path == null) {
+            throw new IllegalArgumentException("Path is mandatory for subdoc get count");
+        }
+        if (optionsBuilder.createParents()) {
+            throw new IllegalArgumentException("Options createParents are not supported for lookup");
+        }
+        this.specs.add(new LookupSpec(Lookup.GET_COUNT, path, optionsBuilder));
+        return this;
+    }
+
+
+    /**
+     * Get a value inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param paths the path inside the document where to get the value from.
+     * @param optionsBuilder {@link SubdocOptionsBuilder}
+     * @return this builder for chaining.
+     */
+    public AsyncLookupInBuilder getCount(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
+        if (paths == null) {
+            throw new IllegalArgumentException("Path is mandatory for subdoc get count");
+        }
+        if (optionsBuilder.createParents()) {
+            throw new IllegalArgumentException("Options createParents are not supported for lookup");
+        }
+        for (String path : paths) {
+            if (StringUtil.isNullOrEmpty(path)) {
+                throw new IllegalArgumentException("Path is mandatory for subdoc get count");
+            }
+            this.specs.add(new LookupSpec(Lookup.GET_COUNT, path, optionsBuilder));
+        }
+        return this;
+    }
+
     protected Observable<DocumentFragment<Lookup>> doSingleLookup(LookupSpec spec) {
         if (spec.lookup() == Lookup.GET) {
             return getIn(docId, spec, Object.class);
         } else if (spec.lookup() == Lookup.EXIST) {
             return existsIn(docId, spec);
+        } else if (spec.lookup() == Lookup.GET_COUNT) {
+            return getCountIn(docId, spec);
         }
         return Observable.error(new UnsupportedOperationException("Lookup type " + spec.lookup() + " unknown"));
     }
@@ -320,6 +393,7 @@ public class AsyncLookupInBuilder {
             Lookup operation = lookupResult.operation();
             ResponseStatus status = lookupResult.status();
             boolean isExist = operation == Lookup.EXIST;
+            boolean isGetCount = operation == Lookup.GET_COUNT;
             boolean isSuccess = status.isSuccess();
             boolean isNotFound = status == ResponseStatus.SUBDOC_PATH_NOT_FOUND;
 
@@ -330,15 +404,20 @@ public class AsyncLookupInBuilder {
                     return SubdocOperationResult.createResult(path, operation, status, false);
                 } else if (!isExist && isSuccess) {
                     try  {
-                        byte[] raw = null;
-                        if (isIncludeRaw()) {
-                            //make a copy of the bytes
-                            TranscoderUtils.ByteBufToArray rawData = TranscoderUtils.byteBufToByteArray(lookupResult.value());
-                            raw = Arrays.copyOfRange(rawData.byteArray, rawData.offset, rawData.offset + rawData.length);
+                        if (isGetCount) {
+                            long count = subdocumentTranscoder.decode(lookupResult.value(), Long.class);
+                            return SubdocOperationResult.createResult(path, operation, status, count);
+                        } else {
+                            byte[] raw = null;
+                            if (isIncludeRaw()) {
+                                //make a copy of the bytes
+                                TranscoderUtils.ByteBufToArray rawData = TranscoderUtils.byteBufToByteArray(lookupResult.value());
+                                raw = Arrays.copyOfRange(rawData.byteArray, rawData.offset, rawData.offset + rawData.length);
+                            }
+                            //generic, so will transform dictionaries into JsonObject and arrays into JsonArray
+                            Object content = subdocumentTranscoder.decode(lookupResult.value(), Object.class);
+                            return SubdocOperationResult.createResult(path, operation, status, content, raw);
                         }
-                        //generic, so will transform dictionaries into JsonObject and arrays into JsonArray
-                        Object content = subdocumentTranscoder.decode(lookupResult.value(), Object.class);
-                        return SubdocOperationResult.createResult(path, operation, status, content, raw);
                     } catch (TranscodingException e) {
                         LOGGER.error("Couldn't decode multi-lookup " + operation + " for " + docId + "/" + path, e);
                         return SubdocOperationResult.createFatal(path, operation, e);
@@ -361,12 +440,22 @@ public class AsyncLookupInBuilder {
         if (specs.isEmpty()) {
             throw new IllegalArgumentException("At least one Lookup Command is necessary for lookupIn");
         }
+        boolean seenNonXattr = false;
+        for (LookupSpec spec : specs) {
+            if (spec.xattr() && seenNonXattr) {
+                throw new XattrOrderingException("Xattr-based commands must always come first in the builder!");
+            } else if (!spec.xattr()) {
+                seenNonXattr = true;
+            }
+        }
         final LookupSpec[] lookupSpecs = specs.toArray(new LookupSpec[specs.size()]);
 
-        return deferAndWatch(new Func0<Observable<MultiLookupResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<MultiLookupResponse>>() {
             @Override
-            public Observable<MultiLookupResponse> call() {
-                return core.send(new SubMultiLookupRequest(docId, bucketName, lookupSpecs));
+            public Observable<MultiLookupResponse> call(Subscriber s) {
+                SubMultiLookupRequest request = new SubMultiLookupRequest(docId, bucketName, lookupSpecs);
+                request.subscriber(s);
+                return core.send(request);
             }
         }).filter(new Func1<MultiLookupResponse, Boolean>() {
             @Override
@@ -399,10 +488,11 @@ public class AsyncLookupInBuilder {
 
 
     private <T> Observable<DocumentFragment<Lookup>> getIn(final String id, final LookupSpec spec, final Class<T> fragmentType) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call() {
+            public Observable<SimpleSubdocResponse> call(Subscriber s) {
                 SubGetRequest request = new SubGetRequest(id, spec.path(), bucketName);
+                request.subscriber(s);
                 request.xattr(spec.xattr());
                 return core.send(request);
             }
@@ -445,10 +535,11 @@ public class AsyncLookupInBuilder {
     }
 
     private Observable<DocumentFragment<Lookup>> existsIn(final String id, final LookupSpec spec) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
             @Override
-            public Observable<SimpleSubdocResponse> call() {
+            public Observable<SimpleSubdocResponse> call(Subscriber s) {
                 SubExistRequest request = new SubExistRequest(id, spec.path(), bucketName);
+                request.subscriber(s);
                 request.xattr(spec.xattr());
                 return core.send(request);
             }
@@ -470,6 +561,47 @@ public class AsyncLookupInBuilder {
                 }
 
                 throw SubdocHelper.commonSubdocErrors(response.status(), id, spec.path());
+            }
+        });
+    }
+
+    private <T> Observable<DocumentFragment<Lookup>> getCountIn(final String id, final LookupSpec spec) {
+        return deferAndWatch(new Func1<Subscriber, Observable<SimpleSubdocResponse>>() {
+            @Override
+            public Observable<SimpleSubdocResponse> call(Subscriber s) {
+                SubGetCountRequest request = new SubGetCountRequest(id, spec.path(), bucketName);
+                request.subscriber(s);
+                request.xattr(spec.xattr());
+                return core.send(request);
+            }
+        }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
+            @Override
+            public DocumentFragment<Lookup> call(SimpleSubdocResponse response) {
+                if (response.status().isSuccess()) {
+                    try {
+                        long count = subdocumentTranscoder.decode(response.content(), Long.class);
+                        SubdocOperationResult<Lookup> single = SubdocOperationResult
+                            .createResult(spec.path(), Lookup.GET_COUNT, response.status(), count);
+                        return new DocumentFragment<Lookup>(id, response.cas(), response.mutationToken(),
+                            Collections.singletonList(single));
+                    } finally {
+                        if (response.content() != null) {
+                            response.content().release();
+                        }
+                    }
+                } else {
+                    if (response.content() != null && response.content().refCnt() > 0) {
+                        response.content().release();
+                    }
+
+                    if (response.status() == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
+                        SubdocOperationResult<Lookup> single = SubdocOperationResult
+                            .createResult(spec.path(), Lookup.GET_COUNT, response.status(), null);
+                        return new DocumentFragment<Lookup>(id, response.cas(), response.mutationToken(), Collections.singletonList(single));
+                    } else {
+                        throw SubdocHelper.commonSubdocErrors(response.status(), id, spec.path());
+                    }
+                }
             }
         });
     }

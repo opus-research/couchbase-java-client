@@ -353,16 +353,11 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
     @Override
     public Observable<User> getUsers() {
-        return getUser("");
-    }
-
-    @Override
-    public Observable<User> getUser(final String userid) {
         return ensureServiceEnabled()
                 .flatMap(new Func1<Boolean, Observable<GetUsersResponse>>() {
                     @Override
                     public Observable<GetUsersResponse> call(Boolean aBoolean) {
-                        return core.send(new GetUsersRequest(username, password, userid));
+                        return core.send(new GetUsersRequest(username, password));
                     }
                 })
                 .retryWhen(any().delay(Delay.fixed(100, TimeUnit.MILLISECONDS)).max(Integer.MAX_VALUE).build())
@@ -382,36 +377,22 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                     @Override
                     public Observable<User> call(GetUsersResponse response) {
                         try {
-                            if (userid.compareTo("") != 0) {
-                                JsonObject decoded = CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(response.content());
-                                JsonArray rolesJsonArr = decoded.getArray("roles");
+                            JsonArray decoded = CouchbaseAsyncBucket.JSON_ARRAY_TRANSCODER.stringToJsonArray(response.content());
+                            List<User> users = new ArrayList<User>();
+                            for (Object item : decoded) {
+                                JsonObject userJsonObj = (JsonObject) item;
+                                JsonArray rolesJsonArr = userJsonObj.getArray("roles");
                                 UserRole[] userRoles = new UserRole[rolesJsonArr.size()];
                                 int i = 0;
-                                for (Object role : rolesJsonArr) {
-                                    userRoles[i] = new UserRole(((JsonObject) role).getString("role"), ((JsonObject) role).getString("bucket_name"));
+                                for (Object role:rolesJsonArr) {
+                                    userRoles[i] = new UserRole(((JsonObject)role).getString("role"), ((JsonObject)role).getString("bucket_name"));
                                     i++;
                                 }
-                                User user = new User(decoded.getString("name"), decoded.getString("id"),
-                                        decoded.getString("domain"), userRoles);
-                                return Observable.just(user);
-                            } else {
-                                JsonArray decoded = CouchbaseAsyncBucket.JSON_ARRAY_TRANSCODER.stringToJsonArray(response.content());
-                                List<User> users = new ArrayList<User>();
-                                for (Object item : decoded) {
-                                    JsonObject userJsonObj = (JsonObject) item;
-                                    JsonArray rolesJsonArr = userJsonObj.getArray("roles");
-                                    UserRole[] userRoles = new UserRole[rolesJsonArr.size()];
-                                    int i = 0;
-                                    for (Object role : rolesJsonArr) {
-                                        userRoles[i] = new UserRole(((JsonObject) role).getString("role"), ((JsonObject) role).getString("bucket_name"));
-                                        i++;
-                                    }
-                                    User user = new User(userJsonObj.getString("name"), userJsonObj.getString("id"),
-                                            userJsonObj.getString("domain"), userRoles);
-                                    users.add(user);
-                                }
-                                return Observable.from(users);
+                                User user = new User(userJsonObj.getString("name"), userJsonObj.getString("id"),
+                                        userJsonObj.getString("domain"), userRoles);
+                                users.add(user);
                             }
+                            return Observable.from(users);
                         } catch (Exception e) {
                             throw new TranscodingException("Could not decode user info.", e);
                         }
