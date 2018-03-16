@@ -30,13 +30,11 @@ import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonProcessingExcept
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.error.TranscodingException;
-import com.couchbase.client.java.subdoc.MultiValue;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 
 /**
- * A Jackson-based implementation of a {@link FragmentTranscoder}, based on {@link AbstractFragmentTranscoder}.
+ * A Jackson-based implementation of a {@link FragmentTranscoder}.
  *
  * Care should be taken to not use Jackson specific annotations if you want to be able to
  * easily swap this for another SubdocumentTranscoder implementation at a later time.
@@ -46,12 +44,17 @@ import com.couchbase.client.java.transcoder.TranscoderUtils;
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Private
-public class JacksonFragmentTranscoder extends AbstractFragmentTranscoder {
+public class JacksonFragmentTranscoder implements FragmentTranscoder {
 
     private final ObjectMapper mapper;
 
     public JacksonFragmentTranscoder(ObjectMapper mapper) {
         this.mapper = mapper;
+    }
+
+    @Override
+    public <T> T decode(ByteBuf encoded, Class<? extends T> clazz) throws TranscodingException {
+        return this.decodeWithMessage(encoded, clazz, null);
     }
 
     @Override
@@ -69,26 +72,14 @@ public class JacksonFragmentTranscoder extends AbstractFragmentTranscoder {
     }
 
     @Override
-    protected <T> ByteBuf doEncodeSingle(T value, String transcodingErrorMessage) throws TranscodingException {
-        try {
-            return Unpooled.wrappedBuffer(mapper.writeValueAsBytes(value));
-        } catch (JsonProcessingException e) {
-            throw new TranscodingException(transcodingErrorMessage, e);
-        }
+    public <T> ByteBuf encode(T value) throws TranscodingException {
+        return encodeWithMessage(value, null);
     }
 
     @Override
-    protected ByteBuf doEncodeMulti(MultiValue<?> multiValue, String transcodingErrorMessage) throws TranscodingException {
+    public <T> ByteBuf encodeWithMessage(T value, String transcodingErrorMessage) throws TranscodingException {
         try {
-            StringBuilder writer = new StringBuilder();
-            for (Object o : multiValue) {
-                writer.append(mapper.writeValueAsString(o)).append(',');
-            }
-            if (writer.length() > 0) {
-                writer.deleteCharAt(writer.length() - 1);
-            }
-
-            return Unpooled.copiedBuffer(writer.toString(), CharsetUtil.UTF_8);
+            return Unpooled.wrappedBuffer(mapper.writeValueAsBytes(value));
         } catch (JsonProcessingException e) {
             throw new TranscodingException(transcodingErrorMessage, e);
         }
