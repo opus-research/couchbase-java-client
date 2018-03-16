@@ -33,9 +33,9 @@ import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.AsyncQueryRow;
 import com.couchbase.client.java.query.DefaultQueryResult;
-import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryMetrics;
+import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.CouchbaseRepository;
@@ -54,7 +54,6 @@ import rx.Observable;
 import rx.functions.Func1;
 import rx.functions.Func5;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -176,48 +175,6 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> List<D> getFromReplica(String id, ReplicaMode type, Class<D> target, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.getFromReplica(id, type, target).toList(), timeout, timeUnit);
-    }
-
-    @Override
-    public Iterator<JsonDocument> getFromReplica(String id) {
-        return getFromReplica(id, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(D document) {
-        return getFromReplica(document, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target) {
-        return getFromReplica(id, target, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(id, ReplicaMode.ALL, target)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(D document, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(document, ReplicaMode.ALL)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
-    }
-
-    @Override
-    public Iterator<JsonDocument> getFromReplica(String id, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(id, ReplicaMode.ALL)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
     }
 
     @Override
@@ -562,11 +519,11 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public PreparedPayload prepare(String statement) {
+    public QueryPlan prepare(String statement) {
         return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
     }
     @Override
-    public PreparedPayload prepare(Statement statement) {
+    public QueryPlan prepare(Statement statement) {
         return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
@@ -610,9 +567,6 @@ public class CouchbaseBucket implements Bucket {
 
     @Override
     public QueryResult query(Statement statement, final long timeout, final TimeUnit timeUnit) {
-        if (statement instanceof PreparedPayload) {
-            return query(Query.prepared((PreparedPayload) statement), timeout, timeUnit);
-        }
         return query(Query.simple(statement), timeout, timeUnit);
     }
 
@@ -647,13 +601,13 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public PreparedPayload prepare(String statement, long timeout, TimeUnit timeUnit) {
+    public QueryPlan prepare(String statement, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
             .prepare(statement)
             .single(), timeout, timeUnit);
     }
     @Override
-    public PreparedPayload prepare(Statement statement, long timeout, TimeUnit timeUnit) {
+    public QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
             .prepare(statement)
             .single(), timeout, timeUnit);

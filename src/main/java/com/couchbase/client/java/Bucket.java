@@ -44,9 +44,9 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
-import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
@@ -57,7 +57,7 @@ import com.couchbase.client.java.view.View;
 import com.couchbase.client.java.view.ViewQuery;
 import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
-import java.util.Iterator;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -355,37 +355,6 @@ public interface Bucket {
     List<JsonDocument> getFromReplica(String id, ReplicaMode type);
 
     /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
-     * default timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param id the unique ID of the document.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    Iterator<JsonDocument> getFromReplica(String id);
-
-    /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
      * custom timeout.
      *
@@ -420,39 +389,6 @@ public interface Bucket {
     List<JsonDocument> getFromReplica(String id, ReplicaMode type, long timeout, TimeUnit timeUnit);
 
     /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
-     * custom timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param id the unique ID of the document.
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    Iterator<JsonDocument> getFromReplica(String id, long timeout, TimeUnit timeUnit);
-
-    /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
      * default timeout.
      *
@@ -483,37 +419,6 @@ public interface Bucket {
      * @return a List containing zero to N {@link JsonDocument}s.
      */
     <D extends Document<?>> List<D> getFromReplica(D document, ReplicaMode type);
-
-    /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
-     * default timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param document the document to extract the ID from.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    <D extends Document<?>> Iterator<D> getFromReplica(D document);
 
     /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
@@ -550,39 +455,6 @@ public interface Bucket {
     <D extends Document<?>> List<D> getFromReplica(D document, ReplicaMode type, long timeout, TimeUnit timeUnit);
 
     /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
-     * custom timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param document the document to extract the ID from.
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    <D extends Document<?>> Iterator<D> getFromReplica(D document, long timeout, TimeUnit timeUnit);
-
-    /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
      * default timeout.
      *
@@ -613,38 +485,6 @@ public interface Bucket {
      * @return a List containing zero to N {@link JsonDocument}s.
      */
     <D extends Document<?>> List<D> getFromReplica(String id, ReplicaMode type, Class<D> target);
-
-    /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
-     * default timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param id the unique ID of the document.
-     * @param target the target document type to use.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target);
 
     /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
@@ -680,40 +520,6 @@ public interface Bucket {
      * @return a List containing zero to N {@link JsonDocument}s.
      */
     <D extends Document<?>> List<D> getFromReplica(String id, ReplicaMode type, Class<D> target, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with a
-     * custom timeout.
-     *
-     * This method has the {@link ReplicaMode#ALL} preselected. If you are only interested in the first
-     * (or just some) values, you can iterate and then break out of the iterator loop. Documents
-     * are pushed into the iterator as they arrive, which distinguishes this method from the {@link List}
-     * equivalents which wait until all responses arrive.
-     *
-     * If the document has not been replicated yet or if the replica or master are not available (because a node has
-     * been failed over), no response is expected from these nodes.
-     *
-     * **Since data is replicated asynchronously, all data returned from this method must be considered stale. If the
-     * appropriate {@link ReplicateTo} constraints are set on write and the operation returns successfully, then the
-     * data can be considered as non-stale.**
-     *
-     * Note that the returning {@link JsonDocument} responses can come in any order.
-     *
-     * Because this method is considered to be a "last resort" call against the database if a regular get didn't
-     * succeed, most errors are swallowed (but logged) and the Observable will return all successful responses.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException}
-     *   wrapped in a {@link RuntimeException}
-     *
-     * @param id the unique ID of the document.
-     * @param target the target document type to use.
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return the Iterator containing Documents as they arrive.
-     */
-    <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target, long timeout, TimeUnit timeUnit);
 
     /**
      * Retrieve and lock a {@link JsonDocument} by its unique ID with the default key/value timeout.
@@ -2685,7 +2491,7 @@ public interface Bucket {
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link String} statement, with the default timeout. Statement can contain placeholders.
      *
-     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2695,15 +2501,15 @@ public interface Bucket {
      *   retrying: {@link RequestCancelledException}
      *
      * @param statement the statement to prepare a plan for.
-     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
      */
-    PreparedPayload prepare(String statement);
+    QueryPlan prepare(String statement);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link Statement}, with the default timeout. Statement can contain placeholders.
      *
-     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2713,15 +2519,15 @@ public interface Bucket {
      *   retrying: {@link RequestCancelledException}
      *
      * @param statement the statement to prepare a plan for.
-     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
      */
-    PreparedPayload prepare(Statement statement);
+    QueryPlan prepare(Statement statement);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link String} statement, with a custom timeout. Statement can contain placeholders.
      *
-     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2733,15 +2539,15 @@ public interface Bucket {
      * @param statement the statement to prepare a plan for.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
-     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
      */
-    PreparedPayload prepare(String statement, long timeout, TimeUnit timeUnit);
+    QueryPlan prepare(String statement, long timeout, TimeUnit timeUnit);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link Statement}, with a custom timeout. Statement can contain placeholders.
      *
-     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2753,9 +2559,9 @@ public interface Bucket {
      * @param statement the statement to prepare a plan for.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
-     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
      */
-    PreparedPayload prepare(Statement statement, long timeout, TimeUnit timeUnit);
+    QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
