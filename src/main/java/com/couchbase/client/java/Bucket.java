@@ -1358,13 +1358,10 @@ public interface Bucket {
     <D extends Document<?>> D insert(D document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
 
     /**
-     * Insert or overwrite a {@link Document} with the default key/value timeout.
+     * Insert or replace a {@link Document} with the default key/value timeout.
      *
      * If the given {@link Document} (identified by its unique ID) already exists, it will be overridden by the current
      * one. The returned {@link Document} contains original properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document)} method needs to be used.
      *
      * This operation will return successfully if the {@link Document} has been acknowledged in the managed cache layer
      * on the master server node. If increased data durability is a concern,
@@ -1387,13 +1384,10 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document);
 
     /**
-     * Insert or overwrite a {@link Document} with a custom timeout.
+     * Insert or replace a {@link Document} with a custom timeout.
      *
      * If the given {@link Document} (identified by its unique ID) already exists, it will be overridden by the current
      * one. The returned {@link Document} contains original properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, long, TimeUnit)} method needs to be used.
      *
      * This operation will return successfully if the {@link Document} has been acknowledged in the managed cache layer
      * on the master server node. If increased data durability is a concern,
@@ -1418,14 +1412,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, long timeout, TimeUnit timeUnit);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with the default key/value timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with the default key/value timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, PersistTo, ReplicateTo)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
@@ -1456,14 +1447,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, PersistTo persistTo, ReplicateTo replicateTo);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with a custom timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with a custom timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, PersistTo, ReplicateTo, long, TimeUnit)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
@@ -1496,14 +1484,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with the default key/value timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with the default key/value timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, PersistTo)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
@@ -1533,14 +1518,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, PersistTo persistTo);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with a custom timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with a custom timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, PersistTo, long, TimeUnit)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
@@ -1572,14 +1554,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, PersistTo persistTo, long timeout, TimeUnit timeUnit);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with the default key/value timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with the default key/value timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, ReplicateTo)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
@@ -1609,14 +1588,11 @@ public interface Bucket {
     <D extends Document<?>> D upsert(D document, ReplicateTo replicateTo);
 
     /**
-     * Insert or overwrite a {@link Document} and watch for durability constraints with a custom timeout.
+     * Insert or replace a {@link Document} and watch for durability constraints with a custom timeout.
      *
      * This method works exactly like {@link #upsert(Document)}, but afterwards watches the server states if the given
      * durability constraints are met. If this is the case, a new document is returned which contains the original
      * properties, but has the refreshed CAS value set.
-     *
-     * Please note that this method will not use the {@link Document#cas()} for optimistic concurrency checks. If
-     * this behavior is needed, the {@link #replace(Document, ReplicateTo, long, TimeUnit)} method needs to be used.
      *
      * This method throws under the following conditions:
      *
