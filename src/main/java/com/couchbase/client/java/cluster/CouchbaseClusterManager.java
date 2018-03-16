@@ -1,24 +1,3 @@
-/**
- * Copyright (C) 2014 Couchbase, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
- * IN THE SOFTWARE.
- */
 package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
@@ -35,8 +14,6 @@ import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.error.BucketAlreadyExistsException;
-import com.couchbase.client.java.error.BucketDoesNotExistException;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -91,7 +68,7 @@ public class CouchbaseClusterManager implements ClusterManager {
     }
 
     @Override
-    public Observable<BucketSettings> getBuckets() {
+    public Observable<ClusterBucketSettings> getBuckets() {
         return
             ensureServiceEnabled()
             .flatMap(new Func1<Boolean, Observable<BucketsConfigResponse>>() {
@@ -99,15 +76,15 @@ public class CouchbaseClusterManager implements ClusterManager {
                 public Observable<BucketsConfigResponse> call(Boolean aBoolean) {
                     return core.send(new BucketsConfigRequest(username, password));
                 }
-            }).flatMap(new Func1<BucketsConfigResponse, Observable<BucketSettings>>() {
+            }).flatMap(new Func1<BucketsConfigResponse, Observable<ClusterBucketSettings>>() {
                 @Override
-                public Observable<BucketSettings> call(BucketsConfigResponse response) {
+                public Observable<ClusterBucketSettings> call(BucketsConfigResponse response) {
                     try {
                         JsonArray decoded = CouchbaseBucket.JSON_TRANSCODER.stringTojsonArray(response.config());
-                        List<BucketSettings> settings = new ArrayList<BucketSettings>();
+                        List<ClusterBucketSettings> settings = new ArrayList<ClusterBucketSettings>();
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;
-                            settings.add(DefaultBucketSettings.builder()
+                            settings.add(DefaultClusterBucketSettings.builder()
                                 .name(bucket.getString("name"))
                                 .enableFlush(bucket.getObject("controllers").getString("flush") != null)
                                 .type(bucket.getString("bucketType").equals("membase")
@@ -128,10 +105,10 @@ public class CouchbaseClusterManager implements ClusterManager {
     }
 
     @Override
-    public Observable<BucketSettings> getBucket(final String name) {
-        return getBuckets().filter(new Func1<BucketSettings, Boolean>() {
+    public Observable<ClusterBucketSettings> getBucket(final String name) {
+        return getBuckets().filter(new Func1<ClusterBucketSettings, Boolean>() {
             @Override
-            public Boolean call(BucketSettings bucketSettings) {
+            public Boolean call(ClusterBucketSettings bucketSettings) {
                 return bucketSettings.name().equals(name);
             }
         });
@@ -167,7 +144,7 @@ public class CouchbaseClusterManager implements ClusterManager {
     }
 
     @Override
-    public Observable<BucketSettings> insertBucket(final BucketSettings settings) {
+    public Observable<ClusterBucketSettings> insertBucket(final ClusterBucketSettings settings) {
         final StringBuilder sb = new StringBuilder();
         sb.append("name=").append(settings.name());
         sb.append("&ramQuotaMB=").append(settings.quota());
@@ -183,7 +160,7 @@ public class CouchbaseClusterManager implements ClusterManager {
                 @Override
                 public void call(Boolean exists) {
                     if (exists) {
-                        throw new BucketAlreadyExistsException("Bucket " + settings.name() + " already exists!");
+                        throw new BucketExistsException("Bucket " + settings.name() + " already exists!");
                     }
                 }
             }).flatMap(new Func1<Boolean, Observable<InsertBucketResponse>>() {
@@ -192,9 +169,9 @@ public class CouchbaseClusterManager implements ClusterManager {
                     return core.send(new InsertBucketRequest(sb.toString(), username, password));
                 }
             })
-            .map(new Func1<InsertBucketResponse, BucketSettings>() {
+            .map(new Func1<InsertBucketResponse, ClusterBucketSettings>() {
                 @Override
-                public BucketSettings call(InsertBucketResponse response) {
+                public ClusterBucketSettings call(InsertBucketResponse response) {
                     if (!response.status().isSuccess()) {
                         throw new CouchbaseException("Could not insert bucket: " + response.config());
                     }
@@ -204,7 +181,7 @@ public class CouchbaseClusterManager implements ClusterManager {
     }
 
     @Override
-    public Observable<BucketSettings> updateBucket(final BucketSettings settings) {
+    public Observable<ClusterBucketSettings> updateBucket(final ClusterBucketSettings settings) {
         final StringBuilder sb = new StringBuilder();
         sb.append("ramQuotaMB=").append(settings.quota());
         sb.append("&authType=").append("sasl");
@@ -227,9 +204,9 @@ public class CouchbaseClusterManager implements ClusterManager {
                 public Observable<UpdateBucketResponse> call(Boolean exists) {
                     return core.send(new UpdateBucketRequest(settings.name(), sb.toString(), username, password));
                 }
-            }).map(new Func1<UpdateBucketResponse, BucketSettings>() {
+            }).map(new Func1<UpdateBucketResponse, ClusterBucketSettings>() {
                 @Override
-                public BucketSettings call(UpdateBucketResponse response) {
+                public ClusterBucketSettings call(UpdateBucketResponse response) {
                     if (!response.status().isSuccess()) {
                         throw new CouchbaseException("Could not update bucket: " + response.config());
                     }

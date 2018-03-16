@@ -1,9 +1,9 @@
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.cluster.BucketSettings;
+import com.couchbase.client.java.cluster.ClusterBucketSettings;
 import com.couchbase.client.java.cluster.ClusterInfo;
 import com.couchbase.client.java.cluster.ClusterManager;
-import com.couchbase.client.java.cluster.DefaultBucketSettings;
+import com.couchbase.client.java.cluster.DefaultClusterBucketSettings;
 import com.couchbase.client.java.util.TestProperties;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -33,9 +33,9 @@ public class ClusterManagerTest {
     public void clearBuckets() {
         clusterManager
             .getBuckets()
-            .flatMap(new Func1<BucketSettings, Observable<?>>() {
+            .flatMap(new Func1<ClusterBucketSettings, Observable<?>>() {
                 @Override
-                public Observable<?> call(BucketSettings bucketSettings) {
+                public Observable<?> call(ClusterBucketSettings bucketSettings) {
                     return clusterManager.removeBucket(bucketSettings.name());
                 }
             }).toBlocking().lastOrDefault(null);
@@ -51,7 +51,7 @@ public class ClusterManagerTest {
 
     @Test
     public void shouldInsertBucket() {
-        BucketSettings settings = DefaultBucketSettings
+        ClusterBucketSettings settings = DefaultClusterBucketSettings
             .builder()
             .name("insertBucket")
             .password("password")
@@ -65,10 +65,10 @@ public class ClusterManagerTest {
     public void shouldGetBuckets() {
         Observable
             .just("bucket1", "bucket2")
-            .map(new Func1<String, BucketSettings>() {
+            .map(new Func1<String, ClusterBucketSettings>() {
                 @Override
-                public BucketSettings call(final String name) {
-                    return DefaultBucketSettings
+                public ClusterBucketSettings call(final String name) {
+                    return DefaultClusterBucketSettings
                         .builder()
                         .name(name)
                         .password("password")
@@ -76,24 +76,24 @@ public class ClusterManagerTest {
                         .build();
                 }
             })
-            .flatMap(new Func1<BucketSettings, Observable<?>>() {
+            .flatMap(new Func1<ClusterBucketSettings, Observable<?>>() {
                 @Override
-                public Observable<?> call(BucketSettings settings) {
+                public Observable<?> call(ClusterBucketSettings settings) {
                     return clusterManager.insertBucket(settings);
                 }
             }).toBlocking().last();
 
 
-        List<BucketSettings> settings = clusterManager.getBuckets().toList().toBlocking().single();
+        List<ClusterBucketSettings> settings = clusterManager.getBuckets().toList().toBlocking().single();
         assertEquals(2, settings.size());
-        for (BucketSettings bucket : settings) {
+        for (ClusterBucketSettings bucket : settings) {
             assertTrue(bucket.name().equals("bucket1") || bucket.name().equals("bucket2"));
         }
     }
 
     @Test
     public void shouldRemoveBucket() {
-        BucketSettings settings = DefaultBucketSettings
+        ClusterBucketSettings settings = DefaultClusterBucketSettings
             .builder()
             .name("removeBucket")
             .password("password")
@@ -110,7 +110,7 @@ public class ClusterManagerTest {
     @Test
     @Ignore
     public void shouldUpdateBucket() {
-        BucketSettings settings = DefaultBucketSettings
+        ClusterBucketSettings settings = DefaultClusterBucketSettings
             .builder()
             .name("updateBucket")
             .password("password")
@@ -119,7 +119,7 @@ public class ClusterManagerTest {
 
         clusterManager.insertBucket(settings).toBlocking().single();
 
-        settings = DefaultBucketSettings
+        settings = DefaultClusterBucketSettings
             .builder()
             .name("updateBucket")
             .password("password")

@@ -1,8 +1,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.bucket.BucketManager;
-import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
-import com.couchbase.client.java.error.DesignDocumentException;
 import com.couchbase.client.java.util.ClusterDependentTest;
 import com.couchbase.client.java.view.*;
 import org.junit.Before;

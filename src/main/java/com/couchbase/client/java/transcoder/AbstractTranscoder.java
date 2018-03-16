@@ -4,7 +4,6 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.error.TranscodingException;
 
 /**
  * .

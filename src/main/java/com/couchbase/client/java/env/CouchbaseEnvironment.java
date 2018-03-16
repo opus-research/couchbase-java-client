@@ -22,13 +22,6 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.java.Cluster;
 
-/**
- * Environment that should be passed in and reused across {@link Cluster} objects.
- *
- * @author Michael Nitschinger
- * @since 2.0
- */
 public interface CouchbaseEnvironment extends CoreEnvironment {
 }

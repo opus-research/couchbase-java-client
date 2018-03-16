@@ -1,4 +1,4 @@
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.view;
 
 /**
  * .
