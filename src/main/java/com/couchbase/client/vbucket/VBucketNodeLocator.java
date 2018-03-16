@@ -57,8 +57,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
   public VBucketNodeLocator(List<MemcachedNode> nodes, Config jsonConfig) {
     super();
     fullConfig = new AtomicReference<TotalConfig>();
-    fullConfig.set(new TotalConfig(jsonConfig,
-            fillNodesEntries(jsonConfig, nodes)));
+    fullConfig.set(new TotalConfig(jsonConfig, fillNodesEntries(nodes)));
   }
 
   /**
@@ -125,7 +124,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     throw new UnsupportedOperationException("Must be updated with a config");
   }
 
-  public void updateLocator(final Collection<MemcachedNode> nodes,
+  public void updateLocator(final List<MemcachedNode> nodes,
       final Config newconf) {
     // we'll get a new config for various reasons we don't care about, so check
     // if we do care
@@ -134,8 +133,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     if (compareTo.isSequenceChanged() || compareTo.getVbucketsChanges() > 0) {
       getLogger().debug("Updating configuration, received updated configuration"
         + " with significant changes.");
-      fullConfig.set(new TotalConfig(newconf,
-              fillNodesEntries(newconf, nodes)));
+      fullConfig.set(new TotalConfig(newconf, fillNodesEntries(nodes)));
     } else {
       getLogger().debug("Received updated configuration with insignificant "
         + "changes.");
@@ -154,42 +152,22 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
   }
 
   private Map<String, MemcachedNode> fillNodesEntries(
-      Config newConfig, final Collection<MemcachedNode> nodes) {
+      Collection<MemcachedNode> nodes) {
     HashMap<String, MemcachedNode> vbnodesMap =
         new HashMap<String, MemcachedNode>();
     getLogger().debug("Updating nodesMap in VBucketNodeLocator.");
-    for (String server : newConfig.getServers()) {
-      vbnodesMap.put(server, null);
-    }
-
     for (MemcachedNode node : nodes) {
       InetSocketAddress addr = (InetSocketAddress) node.getSocketAddress();
       String address = addr.getAddress().getHostName() + ":" + addr.getPort();
       String hostname = addr.getAddress().getHostAddress() + ":"
         + addr.getPort();
+      getLogger().debug("Adding node with hostname %s and address %s.",
+          hostname, address);
+      getLogger().debug("Node added is %s.", node);
+      vbnodesMap.put(address, node);
+      vbnodesMap.put(hostname, node);
+    }
 
-      if (vbnodesMap.containsKey(address)) {
-        vbnodesMap.put(address, node);
-        getLogger().debug("Adding node with address %s.",
-          address);
-        getLogger().debug("Node added is %s.", node);
-      } else if (vbnodesMap.containsKey(hostname)) {
-        vbnodesMap.put(hostname, node);
-        getLogger().debug("Adding node with hostname %s.",
-          hostname);
-        getLogger().debug("Node added is %s.", node);
-      }
-    }
-    // Iterate over the map and check for entries not populated
-    for (Map.Entry<String, MemcachedNode> entry : vbnodesMap.entrySet()) {
-      if (entry.getValue() == null) {
-        getLogger().error("Critical reconfiguration error: "
-            + "Server list from Configuration and Nodes "
-            + "are out of synch. causing %s to be removed",
-                entry.getKey());
-        vbnodesMap.remove(entry.getKey());
-      }
-    }
     return Collections.unmodifiableMap(vbnodesMap);
   }
 
