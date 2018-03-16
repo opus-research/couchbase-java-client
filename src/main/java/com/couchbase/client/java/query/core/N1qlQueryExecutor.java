@@ -75,7 +75,7 @@ import static com.couchbase.client.java.CouchbaseAsyncBucket.JSON_OBJECT_TRANSCO
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Private
 public class N1qlQueryExecutor {
 
