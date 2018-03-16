@@ -59,12 +59,6 @@ import java.util.concurrent.TimeoutException;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-<<<<<<< HEAD
-=======
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpVersion;
-import org.apache.http.message.BasicHttpRequest;
->>>>>>> 7137237... Shutdown the View connections
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.CASValue;
@@ -81,8 +75,6 @@ import net.spy.memcached.transcoders.Transcoder;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
 import org.apache.http.message.BasicHttpRequest;
-
-
 
 /**
  * A client for Couchbase Server.
