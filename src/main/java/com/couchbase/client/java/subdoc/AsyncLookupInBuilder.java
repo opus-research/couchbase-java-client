@@ -184,16 +184,6 @@ public class AsyncLookupInBuilder {
         return this;
     }
 
-    /**
-     * Get the full JSON document.
-     *
-     * @return this builder for chaining.
-     */
-    @InterfaceStability.Experimental
-    public AsyncLookupInBuilder get() {
-        this.specs.add(new LookupSpec(Lookup.GETDOC, ""));
-        return this;
-    }
 
     /**
      * Get a value inside the JSON document.
@@ -403,7 +393,7 @@ public class AsyncLookupInBuilder {
             @Override
             public Observable<SimpleSubdocResponse> call() {
                 SubGetRequest request = new SubGetRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                request.xattr(spec.xattr());
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
@@ -449,7 +439,7 @@ public class AsyncLookupInBuilder {
             @Override
             public Observable<SimpleSubdocResponse> call() {
                 SubExistRequest request = new SubExistRequest(id, spec.path(), bucketName);
-                request.attributeAccess(spec.attributeAccess());
+                request.xattr(spec.xattr());
                 return core.send(request);
             }
         }).map(new Func1<SimpleSubdocResponse, DocumentFragment<Lookup>>() {
