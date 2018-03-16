@@ -41,13 +41,13 @@ public class DefaultOnPrimaryPath extends AbstractPath implements OnPrimaryPath 
     }
 
     @Override
-    public UsingWithPath on(String namespace, String keyspace) {
+    public UsingPath on(String namespace, String keyspace) {
         element(new OnElement(namespace, keyspace, null, null));
-        return new DefaultUsingWithPath(this);
+        return new DefaultUsingPath(this);
     }
 
     @Override
-    public UsingWithPath on(String keyspace) {
+    public UsingPath on(String keyspace) {
         return on(null, keyspace);
     }
 }

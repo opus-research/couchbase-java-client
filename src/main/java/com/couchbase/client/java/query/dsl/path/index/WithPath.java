@@ -29,7 +29,7 @@ import com.couchbase.client.java.query.dsl.element.WithIndexOptionElement;
 import com.couchbase.client.java.query.dsl.path.Path;
 
 /**
- * With path of the Index creation DSL (setting options).
+ * With path of the Index creation DSL.
  *
  * @author Simon Baslé
  * @since 2.2

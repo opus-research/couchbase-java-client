@@ -40,7 +40,7 @@ public interface OnPrimaryPath extends Path {
      *
      * @param keyspace the keyspace targeted (it will automatically be escaped).
      */
-    UsingWithPath on(String keyspace);
+    UsingPath on(String keyspace);
 
     /**
      * Describes on which keyspace (bucket name) to index, also prefixing the keyspace with a namespace.
@@ -48,5 +48,5 @@ public interface OnPrimaryPath extends Path {
      * @param namespace the optional namespace prefix for the keyspace (it will automatically be escaped).
      * @param keyspace the keyspace targeted (it will automatically be escaped).
      */
-    UsingWithPath on(String namespace, String keyspace);
+    UsingPath on(String namespace, String keyspace);
 }
