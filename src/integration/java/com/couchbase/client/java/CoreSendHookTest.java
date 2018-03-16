@@ -90,14 +90,10 @@ public class CoreSendHookTest {
         assertEquals(1, metrics.size());
 
         for (Map.Entry<CouchbaseRequest, Long> entry : metrics.entrySet()) {
-            assertTrue(entry.getKey() instanceof UpsertRequest);
-            UpsertRequest request = (UpsertRequest) entry.getKey();
-
-            assertNotNull(request.dispatchHostname());
+            assertNotNull(entry.getKey().dispatchHostname());
             assertTrue(entry.getValue() > 0);
-            assertTrue(request.opaque() > 0);
-            LOGGER.info("Request {}, dispatched to {} took {}µs (opaque: {})", request,
-                request.dispatchHostname(), TimeUnit.NANOSECONDS.toMicros(entry.getValue()), request.opaque());
+            LOGGER.info("Request {}, dispatched to {} took {}µs", entry.getKey(),
+                entry.getKey().dispatchHostname(), TimeUnit.NANOSECONDS.toMicros(entry.getValue()));
         }
     }
 }
