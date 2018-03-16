@@ -57,6 +57,7 @@ import com.couchbase.client.core.message.kv.UnlockRequest;
 import com.couchbase.client.core.message.kv.UnlockResponse;
 import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.core.message.observe.Observe;
 import com.couchbase.client.core.message.search.SearchQueryRequest;
 import com.couchbase.client.core.message.search.SearchQueryResponse;
@@ -91,6 +92,7 @@ import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
 import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.search.SearchQueryRow;
 import com.couchbase.client.java.search.query.SearchQuery;
+import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
 import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
@@ -1343,6 +1345,18 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public AsyncLookupInBuilder lookupIn(String docId) {
         return new AsyncLookupInBuilder(core, bucket, environment, subdocumentTranscoder, docId);
+    }
+
+    @Override
+    public Observable<DocumentFragment<Lookup>> retrieveIn(String docId, String... paths) {
+        if (paths == null || paths.length == 0) {
+            throw new IllegalArgumentException("RetrieveIn should have at least one path");
+        }
+        AsyncLookupInBuilder builder = lookupIn(docId);
+        for (String path : paths) {
+            builder.get(path);
+        }
+        return builder.doLookup();
     }
 
     @Override

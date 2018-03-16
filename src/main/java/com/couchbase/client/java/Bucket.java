@@ -32,6 +32,7 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
@@ -55,6 +56,8 @@ import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.search.query.SearchQuery;
+import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
+import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.subdoc.LookupInBuilder;
 import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -4431,6 +4434,52 @@ public interface Bucket {
     @InterfaceStability.Experimental
     @InterfaceAudience.Public
     LookupInBuilder lookupIn(String docId);
+
+    /**
+     * This is a convenience method over a call to {@link #lookupIn(String)}, multiple {@link LookupInBuilder#get(String)}
+     * then a final {@link LookupInBuilder#doLookup()} execution, with the default timeout.
+     *
+     * Performs several lookups through a {@link LookupInBuilder builder API}, retrieving all the path that have
+     * been provided from inside an existing {@link JsonDocument}. The lookup is executed synchronously by calling
+     * the {@link LookupInBuilder#doLookup()} method.
+     *
+     * Only the paths that you looked up inside the document will be transferred over the wire, limiting the network
+     * overhead for large documents.
+     *
+     * @param docId the id of the JSON document to lookup in.
+     * @param paths the paths to be retrieved from inside the document.
+     * @return a {@link DocumentFragment} representing the desired data (see {@link LookupInBuilder#doLookup()}
+     * for details on usage, error cases, etc...).
+     * @see LookupInBuilder#get(String)
+     * @see LookupInBuilder#doLookup()
+     */
+    @InterfaceStability.Experimental
+    @InterfaceAudience.Public
+    DocumentFragment<Lookup> retrieveIn(String docId, String... paths);
+
+    /**
+     * This is a convenience method over a call to {@link #lookupIn(String)}, multiple {@link LookupInBuilder#get(String)}
+     * then a final {@link LookupInBuilder#doLookup()} execution, with a custom timeout.
+     *
+     * Performs several lookups through a {@link LookupInBuilder builder API}, retrieving all the path that have
+     * been provided from inside an existing {@link JsonDocument}. The lookup is executed synchronously by calling
+     * the {@link LookupInBuilder#doLookup()} method.
+     *
+     * Only the paths that you looked up inside the document will be transferred over the wire, limiting the network
+     * overhead for large documents.
+     *
+     * @param docId the id of the JSON document to lookup in.
+     * @param timeout the custom timeout for the retrieve.
+     * @param timeUnit the time unit for the custom timeout.
+     * @param paths the paths to be retrieved from inside the document.
+     * @return a {@link DocumentFragment} representing the desired data (see {@link LookupInBuilder#doLookup()}
+     * for details on usage, error cases, etc...).
+     * @see LookupInBuilder#get(String)
+     * @see LookupInBuilder#doLookup()
+     */
+    @InterfaceStability.Experimental
+    @InterfaceAudience.Public
+    DocumentFragment<Lookup> retrieveIn(String docId, long timeout, TimeUnit timeUnit, String... paths);
 
     /**
      * Prepare a sub-document mutation through a {@link MutateInBuilder builder API}. You can use the builder to
