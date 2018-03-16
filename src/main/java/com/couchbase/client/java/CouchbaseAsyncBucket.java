@@ -500,17 +500,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<AsyncQueryResult> query(final Statement statement) {
-        return query(new SimpleQuery(statement));
-    }
-
-    @Override
     public Observable<AsyncQueryResult> query(final Query query) {
-        return queryRaw(query.toN1QL());
+        return query(query.toString());
     }
 
     @Override
-    public Observable<AsyncQueryResult> queryRaw(final String query) {
+    public Observable<AsyncQueryResult> query(final String query) {
         GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
         return core
             .<GenericQueryResponse>send(request)
