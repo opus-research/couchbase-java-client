@@ -40,6 +40,8 @@ import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryRow;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.util.ClusterDependentTest;
+import com.couchbase.client.java.util.features.Version;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -53,6 +55,9 @@ public class QueryTest extends ClusterDependentTest {
 
     @BeforeClass
     public static void init() {
+        ignoreIfClusterUnder(new Version(3, 0, 0)); //not even N1QL DP4 would be available
+        Assume.assumeTrue(env().queryEnabled());
+
         bucket().insert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
         bucket().insert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
     }
