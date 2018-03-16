@@ -20,22 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 
 /**
- * Subdocument exception thrown when the delta value is zero in a counter operation.
+ * The direction for a sub-document array extension operation.
+ * See {@link Bucket#extendIn(DocumentFragment, ExtendDirection, boolean, PersistTo, ReplicateTo)}.
  *
  * @author Simon Baslé
+ * @author Michael Nitschinger
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class ZeroDeltaException extends SubDocumentException {
-
-    public ZeroDeltaException() {
-        super();
-    }
+public enum ExtendDirection {
+    /**
+     * Extend the array by placing the value at the front of the array (index 0).
+     */
+    FRONT,
+    /**
+     * Extend the array by placing the value at the back of the array (largest index).
+     */
+    BACK
 }
