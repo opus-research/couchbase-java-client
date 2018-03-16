@@ -49,6 +49,7 @@ public class LookupInBuilder {
     private final AsyncLookupInBuilder async;
     private final long defaultTimeout;
     private final TimeUnit defaultTimeUnit;
+    private boolean accessDeleted;
 
     /**
      * Instances of this builder should be obtained through {@link Bucket#lookupIn(String)} rather than directly
@@ -59,6 +60,17 @@ public class LookupInBuilder {
         this.async = async;
         this.defaultTimeout = defaultTimeout;
         this.defaultTimeUnit = defaultTimeUnit;
+    }
+
+    /**
+     * Set accessDeleted to true, if the document has been deleted to access xattrs
+     *
+     * @param accessDeleted true to access deleted document xattrs
+     */
+    @InterfaceStability.Committed
+    public LookupInBuilder accessDeleted(boolean accessDeleted) {
+        async.accessDeleted(accessDeleted);
+        return this;
     }
 
     /**
@@ -238,6 +250,47 @@ public class LookupInBuilder {
      */
     public LookupInBuilder exists(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
         this.async.exists(paths, optionsBuilder);
+        return this;
+    }
+
+    /**
+     * Get a count of values inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param paths the paths inside the document where to get the count from.
+     * @return this builder for chaining.
+     */
+    public LookupInBuilder getCount(String... paths) {
+        this.async.getCount(paths);
+        return this;
+    }
+
+    /**
+     * Get a count of values inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param path the paths inside the document where to get the count from.
+     * @param optionsBuilder {@link SubdocOptionsBuilder}
+     * @return this builder for chaining.
+     */
+    public LookupInBuilder getCount(String path, SubdocOptionsBuilder optionsBuilder) {
+        this.async.getCount(path, optionsBuilder);
+        return this;
+    }
+
+    /**
+     * Get a count of values inside the JSON document.
+     *
+     * This method is only available with Couchbase Server 5.0 and later.
+     *
+     * @param paths the paths inside the document where to get the count from.
+     * @param optionsBuilder {@link SubdocOptionsBuilder}
+     * @return this builder for chaining.
+     */
+    public LookupInBuilder getCount(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
+        this.async.getCount(paths, optionsBuilder);
         return this;
     }
 
