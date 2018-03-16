@@ -84,7 +84,8 @@ public class N1qlQueryExecutor {
 
     private static final String ERROR_FIELD_CODE = "code";
     private static final String ERROR_FIELD_MSG = "msg";
-    protected static final String ERROR_5000_SPECIFIC_MESSAGE = "queryport.indexNotFound";
+    protected static final String ERROR_5000_SPECIFIC_MESSAGE = "index deleted or node hosting the index is down " +
+            "- cause: queryport.indexNotFound";
 
     private final ClusterFacade core;
     private final String bucket;
