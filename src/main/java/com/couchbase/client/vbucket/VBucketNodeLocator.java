@@ -95,15 +95,6 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     return pNode;
   }
 
-  public MemcachedNode getServerByIndex(int k) {
-    TotalConfig totConfig = fullConfig.get();
-    Config config = totConfig.getConfig();
-    Map<String, MemcachedNode> nodesMap = totConfig.getNodesMap();
-
-    String server = config.getServer(k);
-    // choose appropriate MemcachedNode according to config data
-    return nodesMap.get(server);
-  }
   /**
    * {@inheritDoc}
    */
@@ -225,7 +216,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     }
   }
 
-  private static class TotalConfig {
+  private class TotalConfig {
     private Config config;
     private Map<String, MemcachedNode> nodesMap;
 
@@ -243,7 +234,7 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     }
   }
 
-  private static class NullIterator<E> implements Iterator<MemcachedNode> {
+  class NullIterator<E> implements Iterator<MemcachedNode> {
 
     public boolean hasNext() {
       return false;

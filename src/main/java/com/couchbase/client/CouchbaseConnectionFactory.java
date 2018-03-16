@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,6 @@
  */
 
 package com.couchbase.client;
-
-import com.couchbase.client.http.AsyncConnectionManager;
 
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
@@ -53,6 +51,7 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
+
 
 /**
  * Couchbase implementation of ConnectionFactory.
@@ -106,8 +105,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private volatile long configProviderLastUpdateTimestamp;
   private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
   private ExecutorService resubExec = Executors.newSingleThreadExecutor();
-  private long obsPollInterval = 400;
-  private int obsPollMax = 10;
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, final String password)
@@ -125,12 +122,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         new ConfigurationProviderHTTP(baseList, bucketName, password);
   }
 
-  public ViewNode createViewNode(InetSocketAddress addr,
-      AsyncConnectionManager connMgr) {
-    return new ViewNode(addr, connMgr, opQueueLen,
-        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
-  }
-
   @Override
   public MemcachedConnection createConnection(List<InetSocketAddress> addrs)
     throws IOException {
@@ -144,12 +135,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
     throw new IOException("No ConnectionFactory for bucket type "
       + config.getConfigType());
-  }
-
-
-  public ViewConnection createViewConnection(
-      List<InetSocketAddress> addrs) throws IOException {
-    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
@@ -299,14 +284,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return minReconnectInterval;
   }
 
-  long getObsPollInterval() {
-    return obsPollInterval;
-  }
-
-  int getObsPollMax() {
-    return obsPollMax;
-  }
-
   private class Resubscriber implements Runnable {
 
     public void run() {
@@ -328,7 +305,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       if (!doingResubscribe.compareAndSet(true, false)) {
         assert false : "Could not reset from doing a resubscribe.";
       }
-      Thread.currentThread().setName(threadNameBase + "complete");
+        Thread.currentThread().setName(threadNameBase + "complete");
     }
   }
 

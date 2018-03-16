@@ -22,72 +22,28 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.internal.HttpFuture;
-import com.couchbase.client.internal.ViewFuture;
-import com.couchbase.client.protocol.views.DocsOperationImpl;
-import com.couchbase.client.protocol.views.HttpOperation;
-import com.couchbase.client.protocol.views.NoDocsOperationImpl;
-import com.couchbase.client.protocol.views.Paginator;
-import com.couchbase.client.protocol.views.Query;
-import com.couchbase.client.protocol.views.ReducedOperationImpl;
-import com.couchbase.client.protocol.views.View;
-import com.couchbase.client.protocol.views.ViewFetcherOperation;
-import com.couchbase.client.protocol.views.ViewFetcherOperationImpl;
-import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
-import com.couchbase.client.protocol.views.ViewResponse;
-import com.couchbase.client.protocol.views.ViewRow;
-import com.couchbase.client.protocol.views.ViewsFetcherOperation;
-import com.couchbase.client.protocol.views.ViewsFetcherOperationImpl;
 import com.couchbase.client.vbucket.Reconfigurable;
-import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.VBucket;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import net.spy.memcached.AddrUtil;
-import net.spy.memcached.BroadcastOpFactory;
-import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
 import net.spy.memcached.MemcachedClient;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.OperationTimeoutException;
-import net.spy.memcached.PersistTo;
-import net.spy.memcached.ReplicateTo;
-import net.spy.memcached.compat.CloseUtil;
-import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
-import net.spy.memcached.ops.ObserveOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.ops.ReplicaReadOperation;
 import net.spy.memcached.transcoders.Transcoder;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpVersion;
-import org.apache.http.message.BasicHttpRequest;
 
 /**
  * A client for Couchbase Server.
@@ -95,62 +51,7 @@ import org.apache.http.message.BasicHttpRequest;
 public class CouchbaseClient extends MemcachedClient
   implements CouchbaseClientIF, Reconfigurable {
 
-  private static final String MODE_PRODUCTION = "production";
-  private static final String MODE_DEVELOPMENT = "development";
-  private static final String DEV_PREFIX = "dev_";
-  private static final String PROD_PREFIX = "";
-  public static final String MODE_PREFIX;
-  private static final String MODE_ERROR;
-
-  private ViewConnection vconn;
   protected volatile boolean reconfiguring = false;
-  private final CouchbaseConnectionFactory cbConnFactory;
-
-  /**
-   * Properties priority from highest to lowest:
-   *
-   * 1. Property defined in user code.
-   * 2. Property defined on command line.
-   * 3. Property defined in cbclient.properties.
-   */
-  static {
-    Properties properties = new Properties(System.getProperties());
-    String viewmode = properties.getProperty("viewmode", null);
-
-    if (viewmode == null) {
-      FileInputStream fs = null;
-      try {
-        URL url =  ClassLoader.getSystemResource("cbclient.properties");
-        if (url != null) {
-          fs = new FileInputStream(new File(url.getFile()));
-          properties.load(fs);
-        }
-        viewmode = properties.getProperty("viewmode");
-      } catch (IOException e) {
-        // Properties file doesn't exist. Error logged later.
-      } finally {
-        if (fs != null) {
-          CloseUtil.close(fs);
-        }
-      }
-    }
-
-    if (viewmode == null) {
-      MODE_ERROR = "viewmode property isn't defined. Setting viewmode to"
-        + " production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    } else if (viewmode.equals(MODE_PRODUCTION)) {
-      MODE_ERROR = "viewmode set to production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    } else if (viewmode.equals(MODE_DEVELOPMENT)) {
-      MODE_ERROR = "viewmode set to development mode";
-      MODE_PREFIX = DEV_PREFIX;
-    } else {
-      MODE_ERROR = "unknown value \"" + viewmode + "\" for property viewmode"
-          + " Setting to production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    }
-  }
 
   /**
    * Get a CouchbaseClient based on the REST response from a Couchbase server.
@@ -192,12 +93,36 @@ public class CouchbaseClient extends MemcachedClient
    *          the bucket name
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by
-   *          the server has issues or is not compatible
+   * @throws ConfigurationException if the configuration provided by the server
+   *           has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
       final String usr, final String pwd) throws IOException {
     this(new CouchbaseConnectionFactory(baseList, bucketName, pwd));
+  }
+
+  /**
+   * Get a CouchbaseClient based on the REST response from a Couchbase server
+   * where the username is different than the bucket name.
+   *
+   * Note that when specifying a ConnectionFactory you must specify a
+   * BinaryConnectionFactory. Also the ConnectionFactory's protocol and locator
+   * values are always overwritten. The protocol will always be binary and the
+   * locator will be chosen based on the bucket type you are connecting to.
+   *
+   * To connect to the "default" special bucket for a given cluster, use an
+   * empty string as the password.
+   *
+   * If a password has not been assigned to the bucket, it is typically an empty
+   * string.
+   *
+   * @param cf the ConnectionFactory to use to create connections
+   * @throws IOException if connections could not be made
+   * @throws ConfigurationException if the configuration provided by the server
+   *           has issues or is not compatible
+   */
+  public CouchbaseClient(CouchbaseConnectionFactory cf) throws IOException {
+    this(cf, true);
   }
 
   /**
@@ -221,20 +146,17 @@ public class CouchbaseClient extends MemcachedClient
    * want to start the changes feed later.
    *
    * @param cf the ConnectionFactory to use to create connections
+   * @param subscribe whether or not to subscribe to config changes
    * @throws IOException if connections could not be made
    * @throws ConfigurationException if the configuration provided by the server
    *           has issues or is not compatible
    */
-  public CouchbaseClient(CouchbaseConnectionFactory cf)
+  protected CouchbaseClient(CouchbaseConnectionFactory cf, boolean subscribe)
     throws IOException {
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
-    cbConnFactory = cf;
-    List<InetSocketAddress> addrs =
-      AddrUtil.getAddressesFromURL(cf.getVBucketConfig().getCouchServers());
-
-    getLogger().info(MODE_ERROR);
-    vconn = cf.createViewConnection(addrs);
-    cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
+    if (subscribe) {
+      cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
+    }
   }
 
   /**
@@ -251,372 +173,21 @@ public class CouchbaseClient extends MemcachedClient
       cbcf.requestConfigReconnect(cbcf.getBucketName(), this);
     }
     try {
-      vconn.reconfigure(bucket);
       if (mconn instanceof CouchbaseConnection) {
         CouchbaseConnection cbConn = (CouchbaseConnection) mconn;
         cbConn.reconfigure(bucket);
       } else {
-        CouchbaseMemcachedConnection cbMConn =
-          (CouchbaseMemcachedConnection) mconn;
+        CouchbaseMemcachedConnection cbMConn= (CouchbaseMemcachedConnection) mconn;
         cbMConn.reconfigure(bucket);
       }
     } catch (IllegalArgumentException ex) {
-      getLogger().warn("Failed to reconfigure client, staying with "
-          + "previous configuration.", ex);
+      getLogger().warn(
+          "Failed to reconfigure client, staying with previous configuration.",
+          ex);
     } finally {
       reconfiguring = false;
     }
   }
-
-
-
-  /**
-   * Gets access to a view contained in a design document from the cluster.
-   *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
-   * @param designDocumentName the name of the design document.
-   * @param viewName the name of the view to get.
-   * @return a View object from the cluster.
-   * @throws InterruptedException if the operation is interrupted while in
-   *           flight
-   * @throws ExecutionException if an error occurs during execution
-   */
-  public HttpFuture<View> asyncGetView(String designDocumentName,
-      final String viewName) {
-    designDocumentName = MODE_PREFIX + designDocumentName;
-    String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
-    String uri = "/" + bucket + "/_design/" + designDocumentName;
-    final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<View> crv = new HttpFuture<View>(couchLatch, 60000);
-
-    final HttpRequest request =
-        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op =
-        new ViewFetcherOperationImpl(request, bucket, designDocumentName,
-            viewName, new ViewFetcherOperation.ViewFetcherCallback() {
-              private View view = null;
-
-              @Override
-              public void receivedStatus(OperationStatus status) {
-                crv.set(view, status);
-              }
-
-              @Override
-              public void complete() {
-                couchLatch.countDown();
-              }
-
-              @Override
-              public void gotData(View v) {
-                view = v;
-              }
-            });
-    crv.setOperation(op);
-    addOp(op);
-    assert crv != null : "Problem retrieving view";
-    return crv;
-  }
-
-  /**
-   * Gets a future with a list of views for a given design document from the
-   * cluster.
-   *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
-   * @param designDocumentName the name of the design document.
-   * @return a future containing a List of View objects from the cluster.
-   */
-  public HttpFuture<List<View>> asyncGetViews(String designDocumentName) {
-    designDocumentName = MODE_PREFIX + designDocumentName;
-    String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
-    String uri = "/" + bucket + "/_design/" + designDocumentName;
-    final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<List<View>> crv =
-        new HttpFuture<List<View>>(couchLatch, 60000);
-
-    final HttpRequest request =
-        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op = new ViewsFetcherOperationImpl(request, bucket,
-        designDocumentName, new ViewsFetcherOperation.ViewsFetcherCallback() {
-          private List<View> views = null;
-
-          @Override
-          public void receivedStatus(OperationStatus status) {
-            crv.set(views, status);
-          }
-
-          @Override
-          public void complete() {
-            couchLatch.countDown();
-          }
-
-          @Override
-          public void gotData(List<View> v) {
-            views = v;
-          }
-        });
-    crv.setOperation(op);
-    addOp(op);
-    return crv;
-  }
-
-  /**
-   * Gets access to a view contained in a design document from the cluster.
-   *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
-   * @param designDocumentName the name of the design document.
-   * @param viewName the name of the view to get.
-   * @return a View object from the cluster.
-   */
-  public View getView(final String designDocumentName, final String viewName) {
-    try {
-      return asyncGetView(designDocumentName, viewName).get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted getting views", e);
-    } catch (ExecutionException e) {
-      throw new RuntimeException("Failed getting views", e);
-    }
-  }
-
-  /**
-   * Gets a list of views for a given design document from the cluster.
-   *
-   * @param designDocumentName the name of the design document.
-   * @return a list of View objects from the cluster.
-   */
-  public List<View> getViews(final String designDocumentName) {
-    try {
-      return asyncGetViews(designDocumentName).get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted getting views", e);
-    } catch (ExecutionException e) {
-      throw new RuntimeException("Failed getting views", e);
-    }
-  }
-
-  public HttpFuture<ViewResponse> asyncQuery(View view, Query query) {
-    if (query.willReduce()) {
-      return asyncQueryAndReduce(view, query);
-    } else if (query.willIncludeDocs()) {
-      return asyncQueryAndIncludeDocs(view, query);
-    } else {
-      return asyncQueryAndExcludeDocs(view, query);
-    }
-  }
-
-  /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator. This
-   * type of query will return the view result along with all of the documents
-   * for each row in the query.
-   *
-   * @param view the view to run the query against.
-   * @param query the type of query to run against the view.
-   * @return a Future containing the results of the query.
-   */
-  private HttpFuture<ViewResponse> asyncQueryAndIncludeDocs(View view,
-      Query query) {
-    assert view != null : "Who passed me a null view";
-    assert query != null : "who passed me a null query";
-    String viewUri = view.getURI();
-    String queryToRun = query.toString();
-    assert viewUri != null : "view URI seems to be null";
-    assert queryToRun != null  : "query seems to be null";
-    String uri = viewUri + queryToRun;
-    getLogger().info("lookin for:" + uri);
-    final CountDownLatch couchLatch = new CountDownLatch(1);
-    final ViewFuture crv = new ViewFuture(couchLatch, 60000);
-
-    final HttpRequest request =
-        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op = new DocsOperationImpl(request, new ViewCallback() {
-      private ViewResponse vr = null;
-
-      @Override
-      public void receivedStatus(OperationStatus status) {
-        if (vr != null) {
-          Collection<String> ids = new LinkedList<String>();
-          Iterator<ViewRow> itr = vr.iterator();
-          while (itr.hasNext()) {
-            ids.add(itr.next().getId());
-          }
-          crv.set(vr, asyncGetBulk(ids), status);
-        } else {
-          crv.set(null, null, status);
-        }
-      }
-
-      @Override
-      public void complete() {
-        couchLatch.countDown();
-      }
-
-      @Override
-      public void gotData(ViewResponse response) {
-        vr = response;
-      }
-    });
-    crv.setOperation(op);
-    addOp(op);
-    return crv;
-  }
-
-  /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator. This
-   * type of query will return the view result but will not
-   * get the documents associated with each row of the query.
-   *
-   * @param view the view to run the query against.
-   * @param query the type of query to run against the view.
-   * @return a Future containing the results of the query.
-   */
-  private HttpFuture<ViewResponse> asyncQueryAndExcludeDocs(View view,
-      Query query) {
-    String uri = view.getURI() + query.toString();
-    final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, 60000);
-
-    final HttpRequest request =
-        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op =
-        new NoDocsOperationImpl(request, new ViewCallback() {
-          private ViewResponse vr = null;
-
-          @Override
-          public void receivedStatus(OperationStatus status) {
-            crv.set(vr, status);
-          }
-
-          @Override
-          public void complete() {
-            couchLatch.countDown();
-          }
-
-          @Override
-          public void gotData(ViewResponse response) {
-            vr = response;
-          }
-        });
-    crv.setOperation(op);
-    addOp(op);
-    return crv;
-  }
-
-  /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator.
-   *
-   * @param view the view to run the query against.
-   * @param query the type of query to run against the view.
-   * @return a Future containing the results of the query.
-   */
-  private HttpFuture<ViewResponse> asyncQueryAndReduce(final View view,
-      final Query query) {
-    if (!view.hasReduce()) {
-      throw new RuntimeException("This view doesn't contain a reduce function");
-    }
-    String uri = view.getURI() + query.toString();
-    final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, 60000);
-
-    final HttpRequest request =
-        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op =
-        new ReducedOperationImpl(request, new ViewCallback() {
-          private ViewResponse vr = null;
-
-          @Override
-          public void receivedStatus(OperationStatus status) {
-            crv.set(vr, status);
-          }
-
-          @Override
-          public void complete() {
-            couchLatch.countDown();
-          }
-
-          @Override
-          public void gotData(ViewResponse response) {
-            vr = response;
-          }
-        });
-    crv.setOperation(op);
-    addOp(op);
-    return crv;
-  }
-
-  /**
-   * Queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator.
-   * This type of query will return the view result along
-   * with all of the documents for each row in
-   * the query.
-   *
-   * @param view the view to run the query against.
-   * @param query the type of query to run against the view.
-   * @return a ViewResponseWithDocs containing the results of the query.
-   */
-  public ViewResponse query(View view, Query query) {
-    try {
-      return asyncQuery(view, query).get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted while accessing the view", e);
-    } catch (ExecutionException e) {
-      throw new RuntimeException("Failed to access the view", e);
-    }
-  }
-
-  /**
-   * A paginated query allows the user to get the results of a large query in
-   * small chunks allowing for better performance. The result allows you
-   * to iterate through the results of the query and when you get to the end
-   * of the current result set the client will automatically fetch the next set
-   * of results.
-   *
-   * @param view the view to query against.
-   * @param query the query for this request.
-   * @param docsPerPage the amount of documents per page.
-   * @return A Paginator (iterator) to use for reading the results of the query.
-   */
-  public Paginator paginatedQuery(View view, Query query, int docsPerPage) {
-    return new Paginator(this, view, query, docsPerPage);
-  }
-
-  /**
-   * Adds an operation to the queue where it waits to be sent to Couchbase. This
-   * function is for internal use only.
-   */
-  public void addOp(final HttpOperation op) {
-    vconn.checkState();
-    vconn.addOp(op);
-  }
-
 
   /**
    * Gets and locks the given key asynchronously. By default the maximum allowed
@@ -810,465 +381,6 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Delete a value and Observe.
-   *
-   * @param key the key to set
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> delete(String key,
-          PersistTo req, ReplicateTo rep) {
-
-    OperationFuture<Boolean> deleteOp = delete(key);
-    boolean deleteStatus = false;
-
-    try {
-      deleteStatus = deleteOp.get();
-    } catch (InterruptedException e) {
-      deleteOp.set(false, new OperationStatus(false, "Delete get timed out"));
-    } catch (ExecutionException e) {
-      deleteOp.set(false, new OperationStatus(false, "Delete get "
-              + "execution exception "));
-    }
-    if (!deleteStatus) {
-      return deleteOp;
-    }
-    try {
-      observePoll(key, 0x0L, req, rep);
-      deleteOp.set(true, deleteOp.getStatus());
-    } catch (ObservedException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return deleteOp;
-  }
-/**
-   * Delete a value with Observe.
-   *
-   * @param key the key to set
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> delete(String key, PersistTo req) {
-    return delete(key, req, ReplicateTo.ZERO);
-  }
-
-  /**
-   * Set a value and Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> set(String key, int exp,
-          String value, PersistTo req, ReplicateTo rep) {
-
-    OperationFuture<Boolean> setOp = set(key, exp, value);
-
-    boolean setStatus = false;
-
-    try {
-      setStatus = setOp.get();
-    } catch (InterruptedException e) {
-      setOp.set(false, new OperationStatus(false, "Set get timed out"));
-    } catch (ExecutionException e) {
-      setOp.set(false, new OperationStatus(false, "Set get "
-              + "execution exception "));
-    }
-    if (!setStatus) {
-      return setOp;
-    }
-    try {
-      observePoll(key, 0x0L, req, rep);
-      setOp.set(true, setOp.getStatus());
-    } catch (ObservedException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return setOp;
-  }
-/**
-   * Set a value with Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> set(String key, int exp,
-          String value, PersistTo req) {
-    return set(key, exp, value, req, ReplicateTo.ZERO);
-  }
-  /**
-   * Add a value and Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> add(String key, int exp,
-          String value, PersistTo req, ReplicateTo rep) {
-
-    OperationFuture<Boolean> addOp = add(key, exp, value);
-
-    boolean addStatus = false;
-
-    try {
-      addStatus = addOp.get();
-    } catch (InterruptedException e) {
-      addOp.set(false, new OperationStatus(false, "Add get timed out"));
-    } catch (ExecutionException e) {
-      addOp.set(false, new OperationStatus(false, "Add get "
-              + "execution exception "));
-    }
-    if (!addStatus) {
-      return addOp;
-    }
-    try {
-      observePoll(key, 0x0L, req, rep);
-      addOp.set(true, addOp.getStatus());
-    } catch (ObservedException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return addOp;
-  }
-
-/**
-   * Add a value with Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> add(String key, int exp,
-          String value, PersistTo req) {
-    return add(key, exp, value, req, ReplicateTo.ZERO);
-  }
-
-  /**
-   * Replace a value and Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> replace(String key, int exp,
-          String value, PersistTo req, ReplicateTo rep) {
-
-    OperationFuture<Boolean> replaceOp = replace(key, exp, value);
-
-    boolean replaceStatus = false;
-
-    try {
-      replaceStatus = replaceOp.get();
-    } catch (InterruptedException e) {
-      replaceOp.set(false, new OperationStatus(false, "Replace get timed out"));
-    } catch (ExecutionException e) {
-      replaceOp.set(false, new OperationStatus(false, "Replace get "
-              + "execution exception "));
-    }
-    if (!replaceStatus) {
-      return replaceOp;
-    }
-    try {
-      observePoll(key, 0x0L, req, rep);
-      replaceOp.set(true, replaceOp.getStatus());
-    } catch (ObservedException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return replaceOp;
-
-  }
-/**
-   * Replace a value with Observe.
-   *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
-   *
-   */
-  public OperationFuture<Boolean> replace(String key, int exp,
-          String value, PersistTo req) {
-    return replace(key, exp, value, req, ReplicateTo.ZERO);
-  }
-
-  /**
-   * Set a value with a CAS and Observe.
-   *
-   * @param key the key to set
-   * @param cas the CAS value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
-   *
-   */
-  public CASResponse cas(String key, long cas,
-          String value, PersistTo req, ReplicateTo rep) {
-
-    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, value);
-    CASResponse casr = null;
-    try {
-      casr = casOp.get();
-    } catch (InterruptedException e) {
-      casr = CASResponse.EXISTS;
-    } catch (ExecutionException e) {
-      casr = CASResponse.EXISTS;
-    }
-    if (casr != CASResponse.OK) {
-      return casr;
-    }
-    try {
-      observePoll(key, casOp.getCas(), req, rep);
-    } catch (ObservedException e) {
-      casr = CASResponse.OBSERVE_ERROR_IN_ARGS;
-    } catch (ObservedTimeoutException e) {
-      casr = CASResponse.OBSERVE_TIMEOUT;
-    } catch (ObservedModifiedException e) {
-      casr = CASResponse.OBSERVE_MODIFIED;
-    }
-    return casr;
-  }
-/**
-   * Set a value with a CAS and Observe.
-   *
-   * @param key the key to set
-   * @param casv the CAS value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
-   *
-   */
-  public CASResponse cas(String key, long casv,
-          String value, PersistTo req) {
-    return cas(key, casv, value, req, ReplicateTo.ZERO);
-  }
-
-  /**
-   * Read a key from the Replicas.
-   *
-   * @param key the Key
-   * @return OperationFuture
-   * @throws IllegalStateException in the rare circumstance where queue is too
-   *           full to accept any more requests
-   */
-  public <T> GetFuture<T> asyncReplicaGet(final String key,
-          final Transcoder<T> tc) {
-
-    final int vb = ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator()).getVBucketIndex(key);
-
-    int replicas;
-
-    replicas = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplicasCount();
-
-    List<MemcachedNode> replicaList = new
-            ArrayList<MemcachedNode>(replicas);
-
-    VBucketNodeLocator vbNodeLocator =
-      ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator());
-
-    for (int i=0; i < replicas; i++) {
-      int replica = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplica(vb, i);
-      if (replica >= 0) { // Replica count is updated, not enough servers
-        replicaList.add(vbNodeLocator.getServerByIndex(replica));
-      }
-    }
-
-    for (MemcachedNode node : replicaList) {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
-      Operation op = opFact.replica(key, new ReplicaReadOperation.Callback() {
-
-        private Future<T> val = null;
-
-        public void receivedStatus(OperationStatus status) {
-          rv.set(val, status);
-        }
-
-        public void gotData(int flags, byte[] data) {
-          val = tcService.decode(tc,
-                  new CachedData(flags, data, tc.getMaxSize()));
-        }
-
-        public void complete() {
-          latch.countDown();
-        }
-      });
-      rv.setOperation(op);
-      ((CouchbaseConnection) mconn).addOperation(key, op, node);
-      return rv;
-    }
-    CountDownLatch latch = new CountDownLatch(0);
-    GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
-    rv.set(null, new OperationStatus(false, "Could not read "
-            + "from replica(s). Replica Count = " + replicas));
-    return rv;
-  }
-
-  public GetFuture<Object> asyncReplicaGet(final String key) {
-    return asyncReplicaGet(key, transcoder);
-  }
-  /**
-   * Observe a key with a CAS.
-   *
-   * @param key the Key
-   * @param cas the CAS of the key. A value of
-   * zero means it will be ignored.
-   * @return ObserveReponse the Response on master and replicas
-   * @throws IllegalStateException in the rare circumstance where queue is too
-   *           full to accept any more requests
-   */
-  public ObserveResponse[] observe(final String key, final long cas) {
-    final ObserveResponse[] ora = new
-            ObserveResponse[VBucket.MAX_REPLICAS];
-    for (int i=0; i < VBucket.MAX_REPLICAS; i++) {
-      ora[i] = ObserveResponse.UNINITIALIZED;
-    }
-    final int vb = ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator()).getVBucketIndex(key);
-
-    final int master, replicas;
-
-    master = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getMaster(vb);
-    replicas = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplicasCount();
-
-    List<MemcachedNode> masterList = new
-            ArrayList<MemcachedNode>(1);
-    List<MemcachedNode> replicaList = new
-            ArrayList<MemcachedNode>(replicas);
-
-    VBucketNodeLocator vbNodeLocator =
-      ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator());
-
-    masterList.add((MemcachedNode)
-            vbNodeLocator.getServerByIndex(master));
-
-    for (int i=0; i < replicas; i++) {
-      int replica = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplica(vb, i);
-      if (replica >= 0) { // Replica count is updated, not enough servers
-        replicaList.add(vbNodeLocator.getServerByIndex(replica));
-      }
-
-    }
-    // Issue a Broadcast Op on the Master
-    CountDownLatch blatch = broadcastOp(new BroadcastOpFactory() {
-      public Operation newOp(final MemcachedNode n,
-          final CountDownLatch latch) {
-        return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
-
-          public void receivedStatus(OperationStatus s) {
-          }
-
-          public void gotData(String key, long retCas,
-                  ObserveResponse or) {
-            ora[0] = or;
-            // If cas != 0 and cas modified set to modified
-            if (((or == ObserveResponse.FOUND_PERSISTED)
-                    || (or == ObserveResponse.FOUND_NOT_PERSISTED))
-                    && cas != 0
-                    && retCas != cas) {
-              ora[0] = ObserveResponse.MODIFIED;
-            }
-          }
-          public void complete() {
-            latch.countDown();
-          }
-        });
-      }
-    }, masterList);
-    try {
-      blatch.await(operationTimeout, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted waiting for value", e);
-    }
-
-    // Now issue a broadcast on the Replicas
-
-    blatch = broadcastOp(new BroadcastOpFactory() {
-
-      public Operation newOp(final MemcachedNode n,
-              final CountDownLatch latch) {
-        return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
-
-          public void receivedStatus(OperationStatus s) {
-          }
-
-          public void gotData(String key, long retCas,
-                  ObserveResponse or) {
-            for (int i = 1; i <= replicas; i++) {
-              // If cas != 0 and cas modified set to modified
-              if (ora[i] == ObserveResponse.UNINITIALIZED) {
-                ora[i] = or;
-                if (((or == ObserveResponse.FOUND_PERSISTED)
-                        || (or == ObserveResponse.FOUND_NOT_PERSISTED))
-                        && cas != 0
-                        && retCas != cas) {
-                  ora[i] = ObserveResponse.MODIFIED;
-                }
-                break;
-              }
-            }
-          }
-
-          public void complete() {
-            latch.countDown();
-          }
-        });
-      }
-    }, replicaList);
-    try {
-      blatch.await(operationTimeout, TimeUnit.MILLISECONDS);
-      return ora;
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted waiting for value", e);
-    }
-  }
-
-  /**
    * Gets the number of vBuckets that are contained in the cluster. This
    * function is for internal use only and should rarely be since there
    * are few use cases in which it is necessary.
@@ -1281,114 +393,9 @@ public class CouchbaseClient extends MemcachedClient
 
   @Override
   public boolean shutdown(long timeout, TimeUnit unit) {
-    boolean shutdownResult = false;
-    try {
-      shutdownResult = super.shutdown(timeout, unit);
-      CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
-      cf.getConfigurationProvider().shutdown();
-      vconn.shutdown();
-    } catch (IOException ex) {
-      Logger.getLogger(
-         CouchbaseClient.class.getName()).log(Level.SEVERE,
-            "Unexpected IOException in shutdown", ex);
-      throw new RuntimeException(null, ex);
-    }
+    boolean shutdownResult = super.shutdown(timeout, unit);
+    CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
+    cf.getConfigurationProvider().shutdown();
     return shutdownResult;
-  }
-
-  private void observePoll(String key, long cas,
-          PersistTo persist, ReplicateTo replicate) {
-    int persists, replicates;
-    int totPersists, totReplicas;
-    boolean masterPersisted;
-    int loop = 0;
-    long obsPollInt = cbConnFactory.getObsPollInterval();
-    int obsPollMax = cbConnFactory.getObsPollMax();
-
-
-    int replicas = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplicasCount();
-
-    // Other than Master
-    switch (persist) {
-    case MASTER:
-    case ONE:
-      persists=0;
-      break;
-    case TWO:
-      persists=1;
-      break;
-    case THREE:
-      persists=2;
-      break;
-    case FOUR:
-    default:
-      persists=3;
-    }
-    switch (replicate) {
-    case ZERO:
-      replicates=0;
-      break;
-    case ONE:
-      replicates=1;
-      break;
-    case TWO:
-      replicates=2;
-      break;
-    case THREE:
-    default:
-      replicates=3;
-    }
-
-    if (replicates > replicas
-            || persists > replicas) {
-      throw new ObservedException("Requested Persists and "
-              + "Requested Replicates exceed number of replicas =  "
-              + replicas);
-    }
-
-    ObserveResponse[] or;
-
-    do {
-      masterPersisted = false;
-      totPersists = totReplicas = 0;
-
-      or = observe(key, cas);
-
-      // Assume Persisted for all cases unless modified
-      if ((or[0] != ObserveResponse.FOUND_NOT_PERSISTED)
-              && (or[0] != ObserveResponse.NOT_FOUND_NOT_PERSISTED)) {
-        masterPersisted = true;
-      }
-      if ((or[0]) == ObserveResponse.MODIFIED) { // Master
-        throw new ObservedModifiedException("Observe - the key was modified on "
-                + key);
-      }
-
-      for (int i=1; i < or.length; i++) {
-        if (or[i] == ObserveResponse.UNINITIALIZED) {
-          continue; // Skip to the next entry
-        }
-        if ((or[i] != ObserveResponse.FOUND_NOT_PERSISTED)
-                && or[i] != ObserveResponse.NOT_FOUND_NOT_PERSISTED) {
-          totPersists++;
-          totReplicas++;
-        }
-      }
-      // Completed the durability requirement
-      if (masterPersisted && (totPersists >= persists)
-              && (totReplicas >= replicates)) {
-        return;
-      }
-      try {
-        Thread.sleep(obsPollInt);
-      } catch (InterruptedException e) {
-        getLogger().error("Interrupted while in observe loop.", e);
-        throw new ObservedException("Observe was Interrupted ");
-      }
-    } while (loop++ < obsPollMax);
-
-    throw new ObservedTimeoutException("Observe Timeout - Polled"
-            + " Unsuccessfully for over 4 seconds");
   }
 }

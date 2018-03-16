@@ -22,7 +22,6 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.http.HttpUtil;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigurationParser;
@@ -51,6 +50,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.compat.SpyObject;
+
+import org.apache.commons.codec.binary.Base64;
 
 /**
  * A configuration provider.
@@ -235,8 +236,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     /* @TODO: refactor all of this bucket and subscription behind the
      *        node locator
      */
-    if (null == bucketName || (null != reSubBucket
-      && !bucketName.equals(reSubBucket))) {
+    if (null == bucketName || (null != reSubBucket && !bucketName.equals(reSubBucket))) {
       throw new IllegalArgumentException("Bucket name cannot be null and must"
         + " never be re-set to a new object.");
     }
@@ -319,7 +319,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     if (restUsr != null) {
       try {
         connection.setRequestProperty("Authorization",
-            HttpUtil.buildAuthHeader(restUsr, restPwd));
+            buildAuthHeader(restUsr, restPwd));
       } catch (UnsupportedEncodingException ex) {
         throw new IOException("Could not encode specified credentials for "
           + "HTTP request.", ex);
@@ -372,5 +372,30 @@ public class ConfigurationProviderHTTP extends SpyObject implements
         reader.close();
       }
     }
+  }
+
+  /**
+   * Oddly, lots of things that do HTTP seem to not know how to do this and
+   * Authenticator caches for the process. Since we only need Basic at the
+   * moment simply, add the header.
+   *
+   * @return a value for an HTTP Basic Auth Header
+   */
+  protected static String buildAuthHeader(String username, String password)
+    throws UnsupportedEncodingException {
+    // apparently netty isn't familiar with HTTP Basic Auth
+    StringBuilder clearText = new StringBuilder(username);
+    clearText.append(':');
+    if (password != null) {
+      clearText.append(password);
+    }
+    String headerResult;
+    headerResult ="Basic "
+      + Base64.encodeBase64String(clearText.toString().getBytes("UTF-8"));
+
+    if (headerResult.endsWith("\r\n")) {
+      headerResult = headerResult.substring(0, headerResult.length() - 2);
+    }
+    return headerResult;
   }
 }
