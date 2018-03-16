@@ -245,11 +245,6 @@ public interface Bucket {
      */
     <D extends Document<?>> D get(String id, Class<D> target, long timeout, TimeUnit timeUnit);
 
-    boolean exists(String id);
-    boolean exists(String id, long timeout, TimeUnit timeUnit);
-    <D extends Document<?>> boolean exists(D document);
-    <D extends Document<?>> boolean exists(D document, long timeout, TimeUnit timeUnit);
-
     /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
      * default timeout.
