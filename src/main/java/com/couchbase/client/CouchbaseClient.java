@@ -268,7 +268,6 @@ public class CouchbaseClient extends MemcachedClient
     try {
       cbConnFactory.getConfigurationProvider().updateBucket(
         cbConnFactory.getBucketName(), bucket);
-      cbConnFactory.updateStoredBaseList(bucket.getConfig());
 
       if(vconn != null) {
         vconn.reconfigure(bucket);
