@@ -37,22 +37,10 @@ import net.spy.memcached.TestConfig;
 public class ConfigurationProviderMemcacheMock
   implements ConfigurationProvider {
 
-  private List<String> nodeList;
-  public boolean baseListUpdated;
-
-  public ConfigurationProviderMemcacheMock(List<String> nodeList) {
-    this.nodeList = nodeList;
-    baseListUpdated = false;
-  }
-
-  public ConfigurationProviderMemcacheMock() {
-    this(Arrays.asList(TestConfig.IPV4_ADDR+":8091"));
-  }
-
   public Bucket getBucketConfiguration(String bucketname) {
 
     CacheConfig config = new CacheConfig(1);
-    config.setServers(nodeList);
+    config.setServers(Arrays.asList(TestConfig.IPV4_ADDR+":8091"));
     URI streamingURI = URI.create("http://"+TestConfig.IPV4_ADDR+":8091");
     List<Node> nodes = new ArrayList<Node>();
 
@@ -84,8 +72,4 @@ public class ConfigurationProviderMemcacheMock
   @Override
   public void updateBucket(String string, Bucket bucket) { }
 
-  @Override
-  public void updateBaseListFromConfig(List<URI> baseList) {
-    baseListUpdated = true;
-  }
 }
