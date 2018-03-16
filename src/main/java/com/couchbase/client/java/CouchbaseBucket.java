@@ -21,7 +21,12 @@
  */
 package com.couchbase.client.java;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import com.couchbase.client.core.ClusterFacade;
+import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
@@ -29,6 +34,8 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.document.subdoc.DocumentFragment;
+import com.couchbase.client.java.document.subdoc.LookupSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
@@ -52,10 +59,6 @@ import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 import rx.functions.Func1;
 import rx.functions.Func6;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class CouchbaseBucket implements Bucket {
 
@@ -916,6 +919,58 @@ public class CouchbaseBucket implements Bucket {
     public <D extends Document<?>> D prepend(D document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.prepend(document, persistTo, replicateTo), timeout, timeUnit);
     }
+
+    /*---------------------------*
+     * START OF SUB-DOCUMENT API *
+     *---------------------------*/
+    @Override
+    public <T> DocumentFragment<T> getIn(String id, String path, Class<T> fragmentType) {
+        return getIn(id, path, fragmentType, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> getIn(String id, String path, Class<T> fragmentType, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.getIn(id, path, fragmentType).singleOrDefault(null)
+                , timeout, timeUnit);
+    }
+
+    @Override
+    public boolean existsIn(String id, String path) {
+        return existsIn(id, path, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public boolean existsIn(String id, String path, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.existsIn(id, path).singleOrDefault(null)
+                , timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+            ReplicateTo replicateTo) {
+        return upsertIn(fragment, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+            ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.upsertIn(fragment, createParents, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public List<DocumentFragment<Object>> lookupIn(String id, LookupSpec... lookupSpecs) {
+        return lookupIn(id, kvTimeout, TIMEOUT_UNIT, lookupSpecs);
+    }
+
+    @Override
+    public List<DocumentFragment<Object>> lookupIn(String id, long timeout, TimeUnit timeUnit, LookupSpec... lookupSpecs) {
+        return Blocking.blockForSingle(asyncBucket.lookupIn(id, lookupSpecs).toList(), timeout, timeUnit);
+    }
+
+    /*-------------------------*
+     * END OF SUB-DOCUMENT API *
+     *-------------------------*/
+
 
     @Override
     public Boolean close() {
