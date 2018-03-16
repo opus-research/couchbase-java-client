@@ -85,13 +85,8 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         return JacksonTransformers.MAPPER.writeValueAsString(input);
     }
 
-    public ByteBuf objectToByteBuf(Object o) throws Exception {
-        return Unpooled.wrappedBuffer(JacksonTransformers.MAPPER.writeValueAsBytes(o));
-
-    }
-
     public ByteBuf jsonObjectToByteBuf(JsonObject input) throws Exception {
-        return objectToByteBuf(input);
+        return Unpooled.wrappedBuffer(JacksonTransformers.MAPPER.writeValueAsBytes(input));
     }
 
     public JsonObject stringToJsonObject(String input) throws Exception {
