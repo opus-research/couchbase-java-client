@@ -49,7 +49,7 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
 
 /**
- * Couchbase implementation of CouchbaseConnection.
+ * Maintains connections to each node in a cluster of Couchbase Nodes.
  *
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
@@ -64,7 +64,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     super(bufSize, f, a, obs, fm, opfactory);
     this.cf = f;
   }
-
 
   public void reconfigure(Bucket bucket) {
     reconfiguring = true;

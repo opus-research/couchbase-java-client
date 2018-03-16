@@ -22,6 +22,7 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.http.HttpUtil;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.ConfigurationParser;
 
@@ -224,7 +225,7 @@ public class BucketMonitor extends Observable {
       String basicAuthHeader;
       try {
         basicAuthHeader =
-          ConfigurationProviderHTTP.buildAuthHeader(getHttpUser(),
+          HttpUtil.buildAuthHeader(getHttpUser(),
             getHttpPass());
         headers.setHeader(request, HttpHeaders.Names.AUTHORIZATION,
           basicAuthHeader);

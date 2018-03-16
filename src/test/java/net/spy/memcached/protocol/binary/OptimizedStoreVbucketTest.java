@@ -23,6 +23,7 @@
 
 package net.spy.memcached.protocol.binary;
 
+import com.couchbase.client.CouchbaseClientBaseCase;
 import com.couchbase.client.CouchbaseConnectionFactory;
 import com.couchbase.client.FailInjectingCouchbaseConnectionFactory;
 import com.couchbase.client.TestingCouchbaseClient;
@@ -31,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import net.spy.memcached.BuildInfo;
-import net.spy.memcached.ClientBaseCase;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.internal.OperationFuture;
@@ -45,7 +45,7 @@ import net.spy.memcached.ops.StoreType;
  * This should generate an optimized set of sets, with one set destined for the
  * wrong vbucket in the middle of the group.  This wrong
  */
-public class OptimizedStoreVbucketTest extends ClientBaseCase {
+public class OptimizedStoreVbucketTest extends CouchbaseClientBaseCase {
   private TestingCouchbaseClient tclient;
   @Override
   protected void initClient() throws Exception {

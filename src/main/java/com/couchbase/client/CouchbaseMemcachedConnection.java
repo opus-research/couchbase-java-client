@@ -53,17 +53,15 @@ import net.spy.memcached.OperationFactory;
  * This class provides that functionality by extending the MemcachedConnection
  * and adding a method to handle reconfiguration of a bucket.
  */
-public class CouchbaseMemcachedConnection extends MemcachedConnection  implements
+public class CouchbaseMemcachedConnection extends MemcachedConnection implements
   Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
-  private final CouchbaseConnectionFactory cf;
 
   public CouchbaseMemcachedConnection(int bufSize, CouchbaseConnectionFactory f,
       List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
       FailureMode fm, OperationFactory opfactory) throws IOException {
     super(bufSize, f, a, obs, fm, opfactory);
-    this.cf = f;
   }
 
 
@@ -121,14 +119,12 @@ public class CouchbaseMemcachedConnection extends MemcachedConnection  implement
         ((VBucketNodeLocator)locator).updateLocator(mergedNodes,
             bucket.getConfig());
       } else {
-        // We update the locator with the merged nodes
-        // before initiating a reconnect on the queue
-        locator.updateLocator(mergedNodes);
         for (MemcachedNode node : mergedNodes) {
           if (!node.isActive()) {
             queueReconnect(node);
           }
         }
+        locator.updateLocator(mergedNodes);
       }
 
       // schedule shutdown for the oddNodes

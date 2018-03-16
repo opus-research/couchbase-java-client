@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.http.AsyncConnectionManager;
+
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,7 +54,6 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
-
 
 /**
  * Couchbase implementation of ConnectionFactory.
@@ -99,12 +101,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private volatile boolean needsReconnect;
   private AtomicBoolean doingResubscribe = new AtomicBoolean(false);
   private volatile long thresholdLastCheck = System.nanoTime();
-  private volatile int configThresholdCount = 0;
+  private AtomicInteger configThresholdCount = new AtomicInteger(0);
   private final int maxConfigCheck = 10; //maximum allowed checks before we
                                          // reconnect in a 10 sec interval
   private volatile long configProviderLastUpdateTimestamp;
   private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
   private ExecutorService resubExec = Executors.newSingleThreadExecutor();
+  private long obsPollInterval = 100;
+  private int obsPollMax = 400;
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, final String password)
@@ -122,6 +126,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         new ConfigurationProviderHTTP(baseList, bucketName, password);
   }
 
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
+        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
+  }
+
   @Override
   public MemcachedConnection createConnection(List<InetSocketAddress> addrs)
     throws IOException {
@@ -135,6 +145,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
     throw new IOException("No ConnectionFactory for bucket type "
       + config.getConfigType());
+  }
+
+
+  public ViewConnection createViewConnection(
+      List<InetSocketAddress> addrs) throws IOException {
+    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
@@ -263,13 +279,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private boolean pastReconnThreshold() {
     long currentTime = System.nanoTime();
     if (currentTime - thresholdLastCheck > 100000000) { //if longer than 10 sec
-      configThresholdCount = 0; // it's been more than 10 sec since last
+      configThresholdCount.set(0); // it's been more than 10 sec since last
                                 // tried, so don't try again just yet.
     }
-    configThresholdCount++;
+    configThresholdCount.incrementAndGet();
     thresholdLastCheck = currentTime;
 
-    if (configThresholdCount >= maxConfigCheck) {
+    if (configThresholdCount.get() >= maxConfigCheck) {
       return true;
     }
     return false;
@@ -282,6 +298,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    */
   public long getMinReconnectInterval() {
     return minReconnectInterval;
+  }
+
+  long getObsPollInterval() {
+    return obsPollInterval;
+  }
+
+  int getObsPollMax() {
+    return obsPollMax;
   }
 
   private class Resubscriber implements Runnable {
@@ -305,7 +329,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       if (!doingResubscribe.compareAndSet(true, false)) {
         assert false : "Could not reset from doing a resubscribe.";
       }
-        Thread.currentThread().setName(threadNameBase + "complete");
+      Thread.currentThread().setName(threadNameBase + "complete");
     }
   }
 
