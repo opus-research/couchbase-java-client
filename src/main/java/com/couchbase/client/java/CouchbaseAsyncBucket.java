@@ -78,7 +78,6 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.subdoc.MultiMutationException;
-import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
@@ -1309,11 +1308,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 if (status == ResponseStatus.SUCCESS) {
                     return (V) documentFragment.content(0);
                 } else {
-                    if (status == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
-                        throw new PathNotFoundException("Key not found in map");
-                    } else {
-                        throw new CouchbaseException(status.toString());
-                    }
+                    throw new CouchbaseException(status.toString());
                 }
             }
         };
@@ -1443,11 +1438,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         if (status == ResponseStatus.SUCCESS) {
                             return (E) documentFragment.content(0);
                         } else {
-                            if (status == ResponseStatus.SUBDOC_PATH_NOT_FOUND) {
-                                throw new PathNotFoundException("Index not found in list");
-                            } else {
-                                throw new CouchbaseException(status.toString());
-                            }
+                            throw new CouchbaseException(status.toString());
                         }
                     }
                 };
