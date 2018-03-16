@@ -1,4 +1,4 @@
-package com.couchbase.client.java.bucket;
+package com.couchbase.client.java.util;
 
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.java.convert.Converter;

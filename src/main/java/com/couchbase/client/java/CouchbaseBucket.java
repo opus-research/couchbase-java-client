@@ -11,9 +11,11 @@ import com.couchbase.client.core.message.config.FlushRequest;
 import com.couchbase.client.core.message.config.FlushResponse;
 import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
+import com.couchbase.client.core.message.view.GetDesignDocumentRequest;
+import com.couchbase.client.core.message.view.GetDesignDocumentResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
-import com.couchbase.client.java.bucket.ViewQueryMapper;
+import com.couchbase.client.java.util.ViewQueryMapper;
 import com.couchbase.client.java.convert.Converter;
 import com.couchbase.client.java.convert.JacksonJsonConverter;
 import com.couchbase.client.java.document.Document;
@@ -22,8 +24,9 @@ import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.ViewQuery;
-import com.couchbase.client.java.query.ViewResult;
+import com.couchbase.client.java.view.DesignDocument;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewResult;
 import com.couchbase.client.java.util.Observe;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -435,5 +438,74 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> Observable<Boolean> touch(D document) {
         return touch(document.id(), document.expiry());
+    }
+
+    @Override
+    public Observable<Boolean> removeDesignDocument(DesignDocument designDocument) {
+        return removeDesignDocument(designDocument.name(), designDocument.development());
+    }
+
+    @Override
+    public Observable<Boolean> removeDesignDocument(final String name) {
+        return Observable
+            .from(true, false)
+            .flatMap(new Func1<Boolean, Observable<? extends Boolean>>() {
+                @Override
+                public Observable<? extends Boolean> call(Boolean development) {
+                    return removeDesignDocument(name, development);
+                }
+            }).last();
+    }
+
+    @Override
+    public Observable<Boolean> removeDesignDocument(String name, boolean development) {
+        /*return core
+            .<RemoveDesignDocumentResponse>send(new RemoveDesignDocumentRequest(name, development))
+            .map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
+                @Override
+                public Boolean call(RemoveDesignDocumentResponse response) {
+                    return true;
+                }
+            });*/
+        return null;
+    }
+
+    @Override
+    public Observable<DesignDocument> updateDesignDocument(DesignDocument designDocument) {
+        return null;
+    }
+
+    @Override
+    public Observable<DesignDocument> insertDesignDocument(DesignDocument designDocument) {
+        return null;
+    }
+
+    @Override
+    public Observable<DesignDocument> listDesignDocuments() {
+
+        return null;
+    }
+
+    @Override
+    public Observable<DesignDocument> getDesignDocument(final String name) {
+        return Observable.from(true, false)
+            .flatMap(new Func1<Boolean, Observable<GetDesignDocumentResponse>>() {
+                @Override
+                public Observable<GetDesignDocumentResponse> call(Boolean development) {
+                    return core.send(new GetDesignDocumentRequest(name, development, bucket, password));
+                }
+            })
+            .filter(new Func1<GetDesignDocumentResponse, Boolean>() {
+                @Override
+                public Boolean call(GetDesignDocumentResponse response) {
+                    return response.status().isSuccess();
+                }
+            })
+            .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
+                @Override
+                public DesignDocument call(GetDesignDocumentResponse response) {
+                    return DesignDocument.from(name, response.development(), response.content().toString(CharsetUtil.UTF_8));
+                }
+            });
     }
 }
