@@ -24,7 +24,6 @@ package com.couchbase.client.java.transcoder;
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
@@ -38,13 +37,6 @@ import com.couchbase.client.java.error.TranscodingException;
  * @since 2.0
  */
 public class JsonBooleanTranscoder extends AbstractTranscoder<JsonBooleanDocument, Boolean> {
-
-    private static final ByteBuf TRUE = Unpooled.unreleasableBuffer(
-        Unpooled.wrappedBuffer("true".getBytes(CharsetUtil.UTF_8))
-    );
-    private static final ByteBuf FALSE = Unpooled.unreleasableBuffer(
-        Unpooled.wrappedBuffer("false".getBytes(CharsetUtil.UTF_8))
-    );
 
     @Override
     protected JsonBooleanDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status)
@@ -66,21 +58,13 @@ public class JsonBooleanTranscoder extends AbstractTranscoder<JsonBooleanDocumen
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(final JsonBooleanDocument document) throws Exception {
-        return Tuple.create(
-            document.content() ? TRUE : FALSE,
-            TranscoderUtils.BOOLEAN_COMPAT_FLAGS
-        );
+        ByteBuf encoded = Unpooled.copiedBuffer(document.content() ? "true" : "false", CharsetUtil.UTF_8);
+        return Tuple.create(encoded, TranscoderUtils.BOOLEAN_COMPAT_FLAGS);
     }
 
     @Override
     public JsonBooleanDocument newDocument(String id, int expiry, Boolean content, long cas) {
         return JsonBooleanDocument.create(id, expiry, content, cas);
-    }
-
-    @Override
-    public JsonBooleanDocument newDocument(String id, int expiry, Boolean content, long cas,
-        MutationToken mutationToken) {
-        return JsonBooleanDocument.create(id, expiry, content, cas, mutationToken);
     }
 
     @Override
