@@ -69,14 +69,14 @@ public class CouchbaseConnection extends MemcachedConnection  implements
    * The amount in seconds after which a op broadcast is forced to detect
    * dead connections.
    */
-  protected static final int ALLOWED_IDLE_TIME = 5;
+  private static final int ALLOWED_IDLE_TIME = 5;
 
   protected volatile boolean reconfiguring = false;
-  protected final CouchbaseConnectionFactory cf;
+  private final CouchbaseConnectionFactory cf;
   private final ThrottleManager throttleManager;
   private final boolean enableThrottling;
 
-  protected volatile long lastWrite;
+  private volatile long lastWrite;
 
   public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
       List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
@@ -412,7 +412,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   /**
    * Helper method to centralize updating the last write timestamp.
    */
-  protected void updateLastWrite() {
+  private void updateLastWrite() {
     long now = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime());
     if (lastWrite != now) {
       lastWrite = now;
