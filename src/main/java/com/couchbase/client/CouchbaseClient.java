@@ -294,7 +294,9 @@ public class CouchbaseClient extends MemcachedClient
   public boolean shutdown(long timeout, TimeUnit unit) {
     boolean shutdownResult = super.shutdown(timeout, unit);
     CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
-    cf.getConfigurationProvider().shutdown();
+    if (cf.getConfigurationProvider() != null) {
+      cf.getConfigurationProvider().shutdown();
+    }
     return shutdownResult;
   }
 }
