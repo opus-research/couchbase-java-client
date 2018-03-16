@@ -379,12 +379,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder dcpEnabled(boolean dcpEnabled) {
-            super.dcpEnabled(dcpEnabled);
-            return this;
-        }
-
-        @Override
         public Builder retryDelay(Delay retryDelay) {
             super.retryDelay(retryDelay);
             return this;
@@ -480,18 +474,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder dcpConnectionBufferSize(int dcpConnectionBufferSize) {
-            super.dcpConnectionBufferSize(dcpConnectionBufferSize);
-            return this;
-        }
-
-        @Override
-        public Builder dcpConnectionBufferAckThreshold(double dcpConnectionBufferAckThreshold) {
-            super.dcpConnectionBufferAckThreshold(dcpConnectionBufferAckThreshold);
-            return this;
-        }
-
-        @Override
         public Builder socketConnectTimeout(int socketConnectTimeout) {
             super.socketConnectTimeout(socketConnectTimeout);
             return this;
@@ -512,12 +494,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         @Override
         public Builder sslKeystore(KeyStore sslKeystore) {
             super.sslKeystore(sslKeystore);
-            return this;
-        }
-
-        @Override
-        public Builder dcpConnectionName(String dcpConnectionName) {
-            super.dcpConnectionName(dcpConnectionName);
             return this;
         }
 
@@ -590,6 +566,24 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         @Override
         public Builder certAuthEnabled(boolean certAuthEnabled) {
             super.certAuthEnabled(certAuthEnabled);
+            return this;
+        }
+
+        @Override
+        public Builder continuousKeepAliveEnabled(boolean continuousKeepAliveEnabled) {
+            super.continuousKeepAliveEnabled(continuousKeepAliveEnabled);
+            return this;
+        }
+
+        @Override
+        public Builder keepAliveErrorThreshold(long keepAliveErrorThreshold) {
+            super.keepAliveErrorThreshold(keepAliveErrorThreshold);
+            return this;
+        }
+
+        @Override
+        public Builder keepAliveTimeout(long keepAliveTimeout) {
+            super.keepAliveTimeout(keepAliveTimeout);
             return this;
         }
 
