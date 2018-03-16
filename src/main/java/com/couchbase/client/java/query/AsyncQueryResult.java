@@ -14,10 +14,8 @@ public interface AsyncQueryResult {
 
     Observable<JsonObject> info();
 
-    boolean parseSuccess();
+    boolean success();
 
-    Observable<Boolean> finalSuccess();
-
-    Observable<JsonObject> errors();
+    JsonObject error();
 
 }

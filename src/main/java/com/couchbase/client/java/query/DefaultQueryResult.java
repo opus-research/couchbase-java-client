@@ -17,9 +17,8 @@ public class DefaultQueryResult implements QueryResult {
     private final long timeout;
 
     public DefaultQueryResult(CouchbaseEnvironment environment, Observable<AsyncQueryRow> rows,
-            Observable<JsonObject> info, Observable<JsonObject> errors,
-            Observable<Boolean> finalSuccess, boolean parseSuccess) {
-        this.asyncQueryResult = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess);
+        Observable<JsonObject> info, JsonObject error, boolean success) {
+        this.asyncQueryResult = new DefaultAsyncQueryResult(rows, info, error, success);
         this.timeout = environment.managementTimeout();
     }
 
@@ -72,18 +71,12 @@ public class DefaultQueryResult implements QueryResult {
     }
 
     @Override
-    public boolean parseSuccess() {
-        return asyncQueryResult.parseSuccess();
+    public boolean success() {
+        return asyncQueryResult.success();
     }
 
     @Override
-    public List<JsonObject> errors() {
-        return Blocking.blockForSingle(
-                asyncQueryResult.errors().toList(), timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public boolean finalSuccess() {
-        return Blocking.blockForSingle(asyncQueryResult.finalSuccess().single(), timeout, TIMEOUT_UNIT);
+    public JsonObject error() {
+        return asyncQueryResult.error();
     }
 }
