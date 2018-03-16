@@ -40,15 +40,15 @@ import com.couchbase.client.java.document.json.JsonObject;
  */
 public class PreparedQuery extends ParametrizedQuery {
 
-    /* package */ PreparedQuery(PreparedPayload plan, JsonArray positionalParams, QueryParams params) {
+    /* package */ PreparedQuery(QueryPlan plan, JsonArray positionalParams, QueryParams params) {
         super(plan, positionalParams, params);
     }
 
-    /* package */ PreparedQuery(PreparedPayload plan, JsonObject namedParams, QueryParams params) {
+    /* package */ PreparedQuery(QueryPlan plan, JsonObject namedParams, QueryParams params) {
        super(plan, namedParams, params);
     }
 
-    /* package */ PreparedQuery(PreparedPayload plan, QueryParams params) {
+    /* package */ PreparedQuery(QueryPlan plan, QueryParams params) {
         super(plan, (JsonArray) null, params);
     }
 
@@ -59,11 +59,11 @@ public class PreparedQuery extends ParametrizedQuery {
 
     @Override
     protected Object statementValue() {
-        return statement().payload();
+        return statement().plan();
     }
 
     @Override
-    public PreparedPayload statement() {
-        return (PreparedPayload) super.statement();
+    public QueryPlan statement() {
+        return (QueryPlan) super.statement();
     }
 }

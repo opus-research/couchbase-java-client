@@ -23,6 +23,7 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.java.SerializationHelper;
 import com.couchbase.client.java.document.json.JsonArray;
+import com.couchbase.client.java.document.json.JsonObject;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -65,7 +66,7 @@ public class QueryTest {
 
     @Test
     public void preparedShouldSupportSerialization() throws Exception {
-        PreparedPayload plan = new PreparedPayload(select("*"), "planName");
+        QueryPlan plan = new QueryPlan(JsonObject.empty());
         Query source = Query.prepared(plan, JsonArray.from("a", "b"), params);
 
         byte[] serialized = SerializationHelper.serializeToBytes(source);
