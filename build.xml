@@ -417,9 +417,7 @@
 
   <target name="jar" depends="compile,compile-test" description="Creates a jar file for the library">
     <mkdir dir="${build.dir}/jars" />
-    <taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask"
-      classpath="lib/jarjar-1.4.jar"/>
-    <jarjar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
+    <jar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
       <manifest>
         <attribute name="Implementation-Title" value="java memcached client" />
         <attribute name="Implementation-Version" value="${version}" />
@@ -427,15 +425,8 @@
         <attribute name="Copyright" value="${copyright}" />
         <attribute name="Main-Class" value="com.couchbase.client.BuildInfo" />
       </manifest>
-      <zipfileset src="lib/httpcore-4.3.jar"/>
-      <zipfileset src="lib/httpcore-nio-4.3.jar"/>
-      <rule pattern="org.apache.http.**" result="com.couchbase.repackage.httpcore.@1"/>
-    </jarjar>
-    <jarjar jarfile="${build.dir}/jars/${name}-test-${version}.jar" basedir="${build.test.classes}">
-      <zipfileset src="lib/httpcore-4.3.jar"/>
-      <zipfileset src="lib/httpcore-nio-4.3.jar"/>
-      <rule pattern="org.apache.http.**" result="com.couchbase.repackage.httpcore.@1"/>
-    </jarjar>
+    </jar>
+    <jar jarfile="${build.dir}/jars/${name}-test-${version}.jar" basedir="${build.test.classes}"/>
   </target>
 
   <target name="package" depends="jar,srcjar,docsjar"
@@ -643,8 +634,6 @@
         <exclude name="ivy/**" />
         <exclude name="etc/**" />
         <exclude name="lib/ant*" />
-        <exclude name="lib/httpcore*" />
-        <exclude name="lib/jarjar*" />
         <exclude name="xdocs/**" />
         <exclude name="build.xml" />
         <exclude name="config.properties" />
