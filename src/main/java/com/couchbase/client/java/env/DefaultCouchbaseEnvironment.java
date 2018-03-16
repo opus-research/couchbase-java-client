@@ -483,18 +483,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder callbacksOnIoPool(boolean callbacksOnIoPool) {
-            super.callbacksOnIoPool(callbacksOnIoPool);
-            return this;
-        }
-
-        @Override
-        public Builder searchEndpoints(int searchEndpoints) {
-            super.searchEndpoints(searchEndpoints);
-            return this;
-        }
-
-        @Override
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }
