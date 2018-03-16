@@ -19,60 +19,51 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.bucket;
+package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.json.JsonObject;
+import rx.Observable;
 
 /**
- * Provides information about a {@link Bucket}.
- *
- * Selected bucket properties are available through explicit getters, the full (raw JSON) response from the server
- * is accessible through the {@link #raw()} method. Note that the response is subject to change across server
- * versions and therefore should be properly checked before being used.
+ * Represents a view result loaded from the index.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-@InterfaceStability.Committed
-@InterfaceAudience.Public
-public interface BucketInfo {
+public interface AsyncViewResult {
 
     /**
-     * The name of the bucket.
+     * All the rows emitted.
      *
-     * @return the bucket name.
+     * @return an observable containing view rows.
      */
-    String name();
+    Observable<AsyncViewRow> rows();
 
     /**
-     * The type of the bucket.
+     * The total number of rows.
      *
-     * @return the bucket type.
+     * @return number of rows.
      */
-    BucketType type();
+    int totalRows();
 
     /**
-     * The number of nodes on the bucket.
+     * If the query was successful.
      *
-     * @return number of nodes.
+     * @return true if it was, false otherwise.
      */
-    int nodeCount();
+    boolean success();
 
     /**
-     * The number of replicas configured.
+     * If it was not successful, an error is contained here.
      *
-     * @return number of replicas configured.
+     * @return the potential error.
      */
-    int replicaCount();
+    JsonObject error();
 
     /**
-     * Raw JSON server response for advanced analysis.
+     * If debug was enabled on the query, it is contained here.
      *
-     * @return the raw JSON bucket info.
+     * @return the debug info.
      */
-    JsonObject raw();
-
+    JsonObject debug();
 }

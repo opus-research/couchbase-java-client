@@ -19,60 +19,60 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.bucket;
+package com.couchbase.client.java.view;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.document.Document;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import rx.Observable;
 
 /**
- * Provides information about a {@link Bucket}.
- *
- * Selected bucket properties are available through explicit getters, the full (raw JSON) response from the server
- * is accessible through the {@link #raw()} method. Note that the response is subject to change across server
- * versions and therefore should be properly checked before being used.
+ * Represents a {@link AsyncViewRow} fetched from the View.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-@InterfaceStability.Committed
-@InterfaceAudience.Public
-public interface BucketInfo {
+public interface AsyncViewRow {
 
     /**
-     * The name of the bucket.
+     * The id of the document, if not reduced.
      *
-     * @return the bucket name.
+     * @return the id of the document.
      */
-    String name();
+    String id();
 
     /**
-     * The type of the bucket.
+     * The key of the row index.
      *
-     * @return the bucket type.
+     * The object can be any valid JSON object, including {@link JsonArray} or {@link JsonObject}.
+     *
+     * @return the key.
      */
-    BucketType type();
+    Object key();
 
     /**
-     * The number of nodes on the bucket.
+     * The value of the row index.
      *
-     * @return number of nodes.
+     * The object can be any valid JSON object, including {@link JsonArray} or {@link JsonObject}.
+     *
+     * @return the value.
      */
-    int nodeCount();
+    Object value();
 
     /**
-     * The number of replicas configured.
+     * Load the underlying document, if not reduced.
      *
-     * @return number of replicas configured.
+     * @return a {@link Observable} containing the document once loaded.
      */
-    int replicaCount();
+    Observable<JsonDocument> document();
 
     /**
-     * Raw JSON server response for advanced analysis.
+     * Load the underlying document, if not reduced.
      *
-     * @return the raw JSON bucket info.
+     * @param target class to use a different {@link Document}.
+     * @return a {@link Observable} containing the document once loaded.
      */
-    JsonObject raw();
+    <D extends Document<?>> Observable<D> document(final Class<D> target);
 
 }

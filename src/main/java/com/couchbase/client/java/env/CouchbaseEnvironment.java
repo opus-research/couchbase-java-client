@@ -22,13 +22,25 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.AsyncCluster;
 
 /**
- * Environment that should be passed in and reused across {@link Cluster} objects.
+ * Environment that should be passed in and reused across {@link AsyncCluster} objects.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
 public interface CouchbaseEnvironment extends CoreEnvironment {
+
+    long managementTimeout();
+
+    long queryTimeout();
+
+    long viewTimeout();
+
+    long binaryTimeout();
+
+    long connectTimeout();
+
+    long disconnectTimeout();
 }
