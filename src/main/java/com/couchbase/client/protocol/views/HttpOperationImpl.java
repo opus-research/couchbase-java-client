@@ -45,9 +45,9 @@ public abstract class HttpOperationImpl implements HttpOperation {
   private final HttpRequest request;
   protected final OperationCallback callback;
   protected OperationException exception;
-  private volatile boolean cancelled;
-  private volatile boolean errored;
-  private volatile boolean timedOut;
+  private boolean cancelled;
+  private boolean errored;
+  private boolean timedOut;
 
   public HttpOperationImpl(HttpRequest r, OperationCallback cb) {
     request = r;
@@ -93,6 +93,10 @@ public abstract class HttpOperationImpl implements HttpOperation {
   public void setException(OperationException e) {
     errored = true;
     exception = e;
+  }
+
+  public void addAuthHeader(String authzn) {
+    request.addHeader("Authorization", authzn);
   }
 
   public abstract void handleResponse(HttpResponse response);
