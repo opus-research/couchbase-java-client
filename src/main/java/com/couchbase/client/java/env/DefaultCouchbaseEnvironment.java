@@ -22,7 +22,6 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
-import com.couchbase.client.core.event.EventBus;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -398,24 +397,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         @Override
         public Builder keepAliveInterval(long keepAliveIntervalMilliseconds) {
             super.keepAliveInterval(keepAliveIntervalMilliseconds);
-            return this;
-        }
-
-        @Override
-        public Builder autoreleaseAfter(long autoreleaseAfter) {
-            super.autoreleaseAfter(autoreleaseAfter);
-            return this;
-        }
-
-        @Override
-        public Builder eventBus(EventBus eventBus) {
-            super.eventBus(eventBus);
-            return this;
-        }
-
-        @Override
-        public Builder bufferPoolingEnabled(boolean bufferPoolingEnabled) {
-            super.bufferPoolingEnabled(bufferPoolingEnabled);
             return this;
         }
 
