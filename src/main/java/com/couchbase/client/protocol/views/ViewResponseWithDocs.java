@@ -42,12 +42,6 @@ public class ViewResponseWithDocs extends ViewResponse {
     map = null;
   }
 
-  public ViewResponseWithDocs(final Collection<ViewRow> rows,
-      final Collection<RowError> errors, long totalViewRows) {
-    super(rows, errors, totalViewRows);
-    map = null;
-  }
-
   @Override
   public Map<String, Object> getMap() {
     if (map == null) {
