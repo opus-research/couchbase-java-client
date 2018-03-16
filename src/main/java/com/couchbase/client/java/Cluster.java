@@ -22,20 +22,19 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.transcoder.Transcoder;
 import rx.Observable;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 /**
  * Represents a Couchbase Server {@link Cluster}.
  *
- * A {@link Cluster} is able to open many {@link AsyncBucket}s while sharing the underlying resources (like sockets)
- * very efficiently. In addition, a {@link AsyncClusterManager} is available to perform cluster-wide operations.
+ * A {@link Cluster} is able to open many {@link Bucket}s while sharing the underlying resources (like sockets)
+ * very efficiently. In addition, a {@link ClusterManager} is available to perform cluster-wide operations.
  *
  * @author Michael Nitschinger
  * @since 2.0
@@ -43,69 +42,58 @@ import java.util.concurrent.TimeUnit;
 public interface Cluster {
 
     /**
-     * Open the default {@link AsyncBucket}.
+     * Open the default {@link Bucket}.
      *
-     * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
+     * @return a {@link Observable} containing the {@link Bucket} reference once opened.
      */
-    Bucket openBucket();
-
-    Bucket openBucket(long timeout, TimeUnit timeUnit);
+    Observable<Bucket> openBucket();
 
     /**
-     * Open the given {@link AsyncBucket} without a password (if not set during creation).
+     * Open the given {@link Bucket} without a password (if not set during creation).
      *
      * @param name the name of the bucket.
-     * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
+     * @return a {@link Observable} containing the {@link Bucket} reference once opened.
      */
-    Bucket openBucket(String name);
-
-    Bucket openBucket(String name, long timeout, TimeUnit timeUnit);
+    Observable<Bucket> openBucket(String name);
 
     /**
-     * Open the given {@link AsyncBucket} with a password (set during creation).
+     * Open the given {@link Bucket} with a password (set during creation).
      *
      * @param name the name of the bucket.
      * @param password the password of the bucket, can be an empty string.
-     * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
+     * @return a {@link Observable} containing the {@link Bucket} reference once opened.
      */
-    Bucket openBucket(String name, String password);
-
-    Bucket openBucket(String name, String password, long timeout, TimeUnit timeUnit);
+    Observable<Bucket> openBucket(String name, String password);
 
     /**
-     * Open the given {@link AsyncBucket} with a password and a custom list of transcoders.
+     * Open the given {@link Bucket} with a password and a custom list of transcoders.
      *
      * @param name the name of the bucket.
      * @param password the password of the bucket, can be an empty string.
      * @param transcoders a list of custom transcoders.
-     * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
+     * @return a {@link Observable} containing the {@link Bucket} reference once opened.
      */
-    Bucket openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders);
-
-    Bucket openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders,
-        long timeout, TimeUnit timeUnit);
+    Observable<Bucket> openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders);
 
     /**
-     * Returns a reference to the {@link AsyncClusterManager}.
+     * Returns a reference to the {@link ClusterManager}.
      *
-     * The {@link AsyncClusterManager} allows to perform cluster level management operations. It requires administrative
+     * The {@link ClusterManager} allows to perform cluster level management operations. It requires administrative
      * credentials, which have been set during cluster configuration. Bucket level credentials are not enough to perform
      * cluster-level operations.
      *
      * @param username privileged username.
      * @param password privileged password.
-     * @return a {@link Observable} containing the {@link AsyncClusterManager}.
+     * @return a {@link Observable} containing the {@link ClusterManager}.
      */
-    ClusterManager clusterManager(String username, String password);
+    Observable<ClusterManager> clusterManager(String username, String password);
 
     /**
-     * Disconnects from the {@link Cluster} and closes all open {@link AsyncBucket}s.
+     * Disconnects from the {@link Cluster} and closes all open {@link Bucket}s.
      *
      * @return a {@link Observable} containing true if successful and failing the {@link Observable} otherwise.
      */
-    Boolean disconnect();
-
-    Boolean disconnect(long timeout, TimeUnit timeUnit);
+    Observable<Boolean> disconnect();
 
     /**
      * Returns a reference to the underlying core engine.
@@ -115,6 +103,6 @@ public interface Cluster {
      *
      * @return a {@link Observable} containing the core engine.
      */
-    ClusterFacade core();
+    Observable<ClusterFacade> core();
 
 }

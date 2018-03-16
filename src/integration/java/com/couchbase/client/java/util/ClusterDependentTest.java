@@ -24,6 +24,7 @@ package com.couchbase.client.java.util;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
+
 import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
@@ -50,9 +51,8 @@ public class ClusterDependentTest {
     @BeforeClass
     public static void connect() {
         cluster = CouchbaseCluster.create(seedNode);
-        clusterManager = cluster.clusterManager(adminName, adminPassword);
-        boolean exists = clusterManager.hasBucket(bucketName);
-
+        clusterManager = cluster.clusterManager(adminName, adminPassword).toBlocking().single();
+        boolean exists = clusterManager.hasBucket(bucketName).toBlocking().single();
         if (!exists) {
             clusterManager.insertBucket(DefaultBucketSettings
                 .builder()
@@ -61,16 +61,16 @@ public class ClusterDependentTest {
                 .password("")
                 .enableFlush(true)
                 .type(BucketType.COUCHBASE)
-                .build());
+                .build()).toBlocking().single();
         }
 
-        bucket = cluster.openBucket(bucketName, password);
-        bucket.bucketManager().flush();
+        bucket = cluster.openBucket(bucketName, password).toBlocking().single();
+        bucket.bucketManager().toBlocking().single().flush().toBlocking().single();
     }
 
     @AfterClass
     public static void disconnect() throws InterruptedException {
-        cluster.disconnect();
+        cluster.disconnect().toBlocking().single();
     }
 
     public static String password() {
