@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2014 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,16 @@
 
 package com.couchbase.client.protocol.views;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
+
+import net.spy.memcached.util.StringUtils;
 
 /**
  * The Query class allows custom view-queries to the Couchbase cluster.
@@ -52,92 +55,73 @@ import java.util.regex.Pattern;
  */
 public class Query {
 
-  private static final int PARAM_REDUCE_OFFSET = 0;
-  private static final int PARAM_LIMIT_OFFSET = 2;
-  private static final int PARAM_SKIP_OFFSET = 4;
-  private static final int PARAM_STALE_OFFSET = 6;
-  private static final int PARAM_GROUPLEVEL_OFFSET = 8;
-  private static final int PARAM_GROUP_OFFSET = 10;
-  private static final int PARAM_ONERROR_OFFSET = 12;
-  private static final int PARAM_DEBUG_OFFSET = 14;
-  private static final int PARAM_DESCENDING_OFFSET = 16;
-  private static final int PARAM_INCLUSIVEEND_OFFSET = 18;
-  private static final int PARAM_STARTKEY_OFFSET = 20;
-  private static final int PARAM_STARTKEYDOCID_OFFSET = 22;
-  private static final int PARAM_ENDKEY_OFFSET = 24;
-  private static final int PARAM_ENDKEYDOCID_OFFSET = 26;
-  private static final int PARAM_KEYS_OFFSET = 28;
-  private static final int PARAM_KEY_OFFSET = 30;
-  private static final int PARAM_BBOX_OFFSET = 32;
+  private static final Pattern bboxSplit = Pattern.compile(",");
+  private static final String DESCENDING = "descending";
+  private static final String ENDKEY = "endkey";
+  private static final String ENDKEYDOCID = "endkey_docid";
+  private static final String GROUP = "group";
+  private static final String GROUPLEVEL = "group_level";
+  private static final String INCLUSIVEEND = "inclusive_end";
+  private static final String KEY = "key";
+  private static final String KEYS = "keys";
+  private static final String LIMIT = "limit";
+  private static final String REDUCE = "reduce";
+  private static final String SKIP = "skip";
+  private static final String STALE = "stale";
+  private static final String STARTKEY = "startkey";
+  private static final String STARTKEYDOCID = "startkey_docid";
+  private static final String ONERROR = "on_error";
+  private static final String BBOX = "bbox";
+  private static final String DEBUG = "debug";
+  private boolean includedocs;
+
+  private final Map<String, Object> args;
 
   /**
-   * Number of supported possible params for a query.
-   */
-  private static final int NUM_PARAMS = 17;
-
-  /**
-   * Contains all stored params.
-   */
-  private final String[] params;
-
-  /**
-   * The include docs param is not sent across the wire.
-   */
-  private boolean includeDocs;
-
-  /**
-   * The pattern identifying if the string should be quoted or not.
-   */
-  private static final Pattern quotePattern =
-    Pattern.compile("^(\".*|\\{.*|\\[.*|true|false|null|-?[\\d,]*([.Ee]\\d+)?)$");
-
-  /**
-   * A pre allocated matcher for the quote pattern match.
-   */
-  private final Matcher quoteMatcher = quotePattern.matcher("");
-
-  /**
-   * Number format to use to find matching numbers.
-   */
-  private final NumberFormat numberFormat = NumberFormat.getInstance();
-
-  /**
-   * Create a new {@link Query}.
+   * Creates a new Query object with default settings.
    */
   public Query() {
-    this(new String[NUM_PARAMS * 2]);
+    args = new HashMap<String, Object>();
   }
 
   /**
-   * Private constructor used for copying.
+   * Read if reduce is enabled or not.
    *
-   * @param params the params to assign immediately.
+   * @return Whether reduce is enabled or not.
    */
-  Query(String[] params) {
-    this.params = params;
+  public boolean willReduce() {
+    return args.containsKey(REDUCE)
+      ? ((Boolean)args.get(REDUCE)).booleanValue() : false;
   }
 
   /**
-   * Explicitly enable/disable the reduce function on the query.
+   * Read if full documents will be included on the query.
    *
-   * @param reduce if reduce should be enabled or not.
-   * @return the {@link Query} object for proper chaining.
+   * @return Whether the full documents will be included or not.
    */
-  public Query setReduce(final boolean reduce) {
-    params[PARAM_REDUCE_OFFSET] = "reduce";
-    params[PARAM_REDUCE_OFFSET+1] = Boolean.toString(reduce);
+  public boolean willIncludeDocs() {
+    return includedocs;
+  }
+
+  /**
+   * Return the documents in descending by key order.
+   *
+   * @param descending True if the sort-order should be descending.
+   * @return The Query instance.
+   */
+  public Query setDescending(boolean descending) {
+    args.put(DESCENDING, Boolean.valueOf(descending));
     return this;
   }
 
   /**
-   * Limit the number of the returned documents to the specified number.
+   * Stop returning records when the specified document ID is reached.
    *
-   * @param limit the number of documents to return.
-   * @return the {@link Query} object for proper chaining.
+   * @param endkeydocid The document ID that should be used.
+   * @return The Query instance.
    */
-  public Query setLimit(final int limit) {
-    params[PARAM_LIMIT_OFFSET] = "limit";
-    params[PARAM_LIMIT_OFFSET+1] = Integer.toString(limit);
+  public Query setEndkeyDocID(String endkeydocid) {
+    args.put(ENDKEYDOCID, endkeydocid);
     return this;
   }
 
@@ -150,11 +134,10 @@ public class Query {
    * highest group level implictly.
    *
    * @param group True when grouping should be enabled.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setGroup(final boolean group) {
-    params[PARAM_GROUP_OFFSET] = "group";
-    params[PARAM_GROUP_OFFSET+1] = Boolean.toString(group);
+  public Query setGroup(boolean group) {
+    args.put(GROUP, Boolean.valueOf(group));
     return this;
   }
 
@@ -167,11 +150,10 @@ public class Query {
    * the highest group level implictly.
    *
    * @param grouplevel How deep the grouping level should be.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setGroupLevel(final int grouplevel) {
-    params[PARAM_GROUPLEVEL_OFFSET] = "group_level";
-    params[PARAM_GROUPLEVEL_OFFSET+1] = Integer.toString(grouplevel);
+  public Query setGroupLevel(int grouplevel) {
+    args.put(GROUPLEVEL, Integer.valueOf(grouplevel));
     return this;
   }
 
@@ -179,10 +161,10 @@ public class Query {
    * If the full documents should be included in the result.
    *
    * @param include True when the full docs should be included in the result.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setIncludeDocs(final boolean include) {
-    includeDocs = include;
+  public Query setIncludeDocs(boolean include) {
+    includedocs = include;
     return this;
   }
 
@@ -190,78 +172,10 @@ public class Query {
    * Specifies whether the specified end key should be included in the result.
    *
    * @param inclusiveend True when the key should be included.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setInclusiveEnd(final boolean inclusiveend) {
-    params[PARAM_INCLUSIVEEND_OFFSET] = "inclusive_end";
-    params[PARAM_INCLUSIVEEND_OFFSET+1] = Boolean.toString(inclusiveend);
-    return this;
-  }
-
-
-  /**
-   * Skip this number of records before starting to return the results.
-   *
-   * @param skip The number of records to skip.
-   * @return the {@link Query} object for proper chaining.
-   */
-  public Query setSkip(final int skip) {
-    params[PARAM_SKIP_OFFSET] = "skip";
-    params[PARAM_SKIP_OFFSET+1] = Integer.toString(skip);
-    return this;
-  }
-
-  /**
-   * Allow the results from a stale view to be used.
-   *
-   * See the "Stale" enum for more information on the possible options. The
-   * default setting is "update_after"!
-   *
-   * @param stale Which stale mode should be used.
-   * @return the {@link Query} object for proper chaining.
-   */
-  public Query setStale(final Stale stale) {
-    params[PARAM_STALE_OFFSET] = "stale";
-    params[PARAM_STALE_OFFSET+1] = stale.toString();
-    return this;
-  }
-
-
-  /**
-   * Sets the response in the event of an error.
-   *
-   * See the "OnError" enum for more details on the available options.
-   *
-   * @param onError The appropriate error handling type.
-   * @return the {@link Query} object for proper chaining.
-   */
-  public Query setOnError(final OnError onError) {
-    params[PARAM_ONERROR_OFFSET] = "on_error";
-    params[PARAM_ONERROR_OFFSET+1] = onError.toString();
-    return this;
-  }
-
-  /**
-   * Enabled debugging on view queries.
-   *
-   * @param debug True when debugging should be enabled.
-   * @return the {@link Query} object for proper chaining.
-   */
-  public Query setDebug(final boolean debug) {
-    params[PARAM_DEBUG_OFFSET] = "debug";
-    params[PARAM_DEBUG_OFFSET+1] = Boolean.toString(debug);
-    return this;
-  }
-
-  /**
-   * Return the documents in descending by key order.
-   *
-   * @param descending True if the sort-order should be descending.
-   * @return the {@link Query} object for proper chaining.
-   */
-  public Query setDescending(final boolean descending) {
-    params[PARAM_DESCENDING_OFFSET] = "descending";
-    params[PARAM_DESCENDING_OFFSET+1] = Boolean.toString(descending);
+  public Query setInclusiveEnd(boolean inclusiveend) {
+    args.put(INCLUSIVEEND, Boolean.valueOf(inclusiveend));
     return this;
   }
 
@@ -273,11 +187,10 @@ public class Query {
    * ComplexKey class for more information on its usage.
    *
    * @param key The document key.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setKey(final ComplexKey key) {
-    params[PARAM_KEY_OFFSET] = "key";
-    params[PARAM_KEY_OFFSET+1] = encode(key.toJson());
+  public Query setKey(ComplexKey key) {
+    args.put(KEY, key.toJson());
     return this;
   }
 
@@ -287,11 +200,10 @@ public class Query {
    * Note that the given key string has to be valid JSON!
    *
    * @param key The document key.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
   public Query setKey(String key) {
-    params[PARAM_KEY_OFFSET] = "key";
-    params[PARAM_KEY_OFFSET+1] = encode(quote(key));
+    args.put(KEY, key);
     return this;
   }
 
@@ -306,11 +218,10 @@ public class Query {
    * Also, sorting is not applied when using this option.
    *
    * @param keys The document keys.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
   public Query setKeys(ComplexKey keys) {
-    params[PARAM_KEYS_OFFSET] = "keys";
-    params[PARAM_KEYS_OFFSET+1] = encode(keys.toJson());
+    args.put(KEYS, keys.toJson());
     return this;
   }
 
@@ -322,38 +233,36 @@ public class Query {
    * applied when using this option.
    *
    * @param keys The document keys.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
   public Query setKeys(String keys) {
-    params[PARAM_KEYS_OFFSET] = "keys";
-    params[PARAM_KEYS_OFFSET+1] = encode(quote(keys));
+    args.put(KEYS, keys);
     return this;
   }
 
   /**
-   * Return records starting with the specified document ID.
+   * Limit the number of the returned documents to the specified number.
    *
-   * @param startkeydocid The document ID to match.
-   * @return the {@link Query} object for proper chaining.
+   * @param limit The number of documents to return.
+   * @return The Query instance.
    */
-  public Query setStartkeyDocID(final String startkeydocid) {
-    params[PARAM_STARTKEYDOCID_OFFSET] = "startkey_docid";
-    params[PARAM_STARTKEYDOCID_OFFSET+1] = encode(startkeydocid);
+  public Query setLimit(int limit) {
+    args.put(LIMIT, Integer.valueOf(limit));
     return this;
   }
 
   /**
-   * Stop returning records when the specified document ID is reached.
+   * Returns the currently set limit.
    *
-   * @param endkeydocid The document ID that should be used.
-   * @return the {@link Query} object for proper chaining.
+   * @return The current limit (or -1 if none is set).
    */
-  public Query setEndkeyDocID(final String endkeydocid) {
-    params[PARAM_ENDKEYDOCID_OFFSET] = "endkey_docid";
-    params[PARAM_ENDKEYDOCID_OFFSET+1] = encode(endkeydocid);
-    return this;
+  public int getLimit() {
+    if (args.containsKey(LIMIT)) {
+      return ((Integer)args.get(LIMIT)).intValue();
+    } else {
+      return -1;
+    }
   }
-
 
   /**
    * Returns records in the given key range.
@@ -362,11 +271,11 @@ public class Query {
    *
    * @param startkey The start of the key range.
    * @param endkey The end of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRange(final String startkey, final String endkey) {
-    setRangeStart(startkey);
-    setRangeEnd(endkey);
+  public Query setRange(String startkey, String endkey) {
+    args.put(ENDKEY, endkey);
+    args.put(STARTKEY, startkey);
     return this;
   }
 
@@ -379,11 +288,11 @@ public class Query {
    *
    * @param startkey The start of the key range.
    * @param endkey The end of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRange(final ComplexKey startkey, final ComplexKey endkey) {
-    setRangeStart(startkey);
-    setRangeEnd(endkey);
+  public Query setRange(ComplexKey startkey, ComplexKey endkey) {
+    args.put(ENDKEY, endkey.toJson());
+    args.put(STARTKEY, startkey.toJson());
     return this;
   }
 
@@ -393,11 +302,10 @@ public class Query {
    * Note that the given key string has to be valid JSON!
    *
    * @param startkey The start of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRangeStart(final String startkey) {
-    params[PARAM_STARTKEY_OFFSET] = "startkey";
-    params[PARAM_STARTKEY_OFFSET+1] = encode(quote(startkey));
+  public Query setRangeStart(String startkey) {
+    args.put(STARTKEY, startkey);
     return this;
   }
 
@@ -409,11 +317,21 @@ public class Query {
    * ComplexKey class for more information on its usage.
    *
    * @param startkey The start of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRangeStart(final ComplexKey startkey) {
-    params[PARAM_STARTKEY_OFFSET] = "startkey";
-    params[PARAM_STARTKEY_OFFSET+1] = encode(startkey.toJson());
+  public Query setRangeStart(ComplexKey startkey) {
+    args.put(STARTKEY, startkey.toJson());
+    return this;
+  }
+
+  /**
+   * Use the reduction function.
+   *
+   * @param reduce True if the reduce phase should also be executed.
+   * @return The Query instance.
+   */
+  public Query setReduce(Boolean reduce) {
+    args.put(REDUCE, reduce);
     return this;
   }
 
@@ -423,11 +341,10 @@ public class Query {
    * Note that the given key string has to be valid JSON!
    *
    * @param endkey The end of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRangeEnd(final String endkey) {
-    params[PARAM_ENDKEY_OFFSET] = "endkey";
-    params[PARAM_ENDKEY_OFFSET+1] = encode(quote(endkey));
+  public Query setRangeEnd(String endkey) {
+    args.put(ENDKEY, endkey);
     return this;
   }
 
@@ -439,11 +356,59 @@ public class Query {
    * ComplexKey class for more information on its usage.
    *
    * @param endkey The end of the key range.
-   * @return the {@link Query} object for proper chaining.
+   * @return The Query instance.
    */
-  public Query setRangeEnd(final ComplexKey endkey) {
-    params[PARAM_ENDKEY_OFFSET] = "endkey";
-    params[PARAM_ENDKEY_OFFSET+1] = encode(endkey.toJson());
+  public Query setRangeEnd(ComplexKey endkey) {
+    args.put(ENDKEY, endkey.toJson());
+    return this;
+  }
+
+  /**
+   * Skip this number of records before starting to return the results.
+   *
+   * @param docstoskip The number of records to skip.
+   * @return The Query instance.
+   */
+  public Query setSkip(int docstoskip) {
+    args.put(SKIP, Integer.valueOf(docstoskip));
+    return this;
+  }
+
+  /**
+   * Allow the results from a stale view to be used.
+   *
+   * See the "Stale" enum for more information on the possible options. The
+   * default setting is "update_after"!
+   *
+   * @param stale Which stale mode should be used.
+   * @return The Query instance.
+   */
+  public Query setStale(Stale stale) {
+    args.put(STALE, stale);
+    return this;
+  }
+
+  /**
+   * Return records starting with the specified document ID.
+   *
+   * @param startkeydocid The document ID to match.
+   * @return The Query instance.
+   */
+  public Query setStartkeyDocID(String startkeydocid) {
+    args.put(STARTKEYDOCID, startkeydocid);
+    return this;
+  }
+
+  /**
+   * Sets the response in the event of an error.
+   *
+   * See the "OnError" enum for more details on the available options.
+   *
+   * @param opt The appropriate error handling type.
+   * @return The Query instance.
+   */
+  public Query setOnError(OnError opt) {
+    args.put(ONERROR, opt);
     return this;
   }
 
@@ -454,141 +419,174 @@ public class Query {
    * @param lowerLeftLat The latitude of the lower left corner.
    * @param upperRightLong The longitude of the upper right corner.
    * @param upperRightLat The latitude of the upper right corner.
-   * @return The bench.OldQuery instance.
+   * @return The Query instance.
    */
   public Query setBbox(double lowerLeftLong, double lowerLeftLat,
     double upperRightLong, double upperRightLat) {
     String combined = lowerLeftLong + "," + lowerLeftLat + ','
       + upperRightLong + ',' + upperRightLat;
-    params[PARAM_BBOX_OFFSET] = "bbox";
-    params[PARAM_BBOX_OFFSET+1] = encode(combined);
+    args.put(BBOX, combined);
     return this;
   }
 
   /**
-   * Read if reduce is enabled or not.
+   * Enabled debugging on view queries.
    *
-   * @return Whether reduce is enabled or not.
+   * @param debug True when debugging should be enabled.
+   * @return The Query instance.
    */
-  public boolean willReduce() {
-    String reduce = params[PARAM_REDUCE_OFFSET+1];
-    if (reduce == null) {
-      return false;
+  public Query setDebug(boolean debug) {
+    args.put(DEBUG, Boolean.valueOf(debug));
+    return this;
+  }
+
+  /**
+   * Creates a new query instance and returns it with the properties
+   * bound to the current object.
+   *
+   * @return The new Query object.
+   */
+  public Query copy() {
+    Query query = new Query();
+
+    if (args.containsKey(DESCENDING)) {
+      query.setDescending(((Boolean)args.get(DESCENDING)).booleanValue());
     }
-    return Boolean.valueOf(reduce);
-  }
-
-  /**
-   * Read if full documents will be included on the query.
-   *
-   * @return Whether the full documents will be included or not.
-   */
-  public boolean willIncludeDocs() {
-    return includeDocs;
-  }
-
-  /**
-   * Returns the currently set limit.
-   *
-   * @return The current limit (or -1 if none is set).
-   */
-  public int getLimit() {
-    String limit = params[PARAM_LIMIT_OFFSET+1];
-    if (limit == null) {
-      return -1;
+    if (args.containsKey(ENDKEY)) {
+      query.setRangeEnd((String)args.get(ENDKEY));
     }
-    return Integer.valueOf(limit);
+    if (args.containsKey(ENDKEYDOCID)) {
+      query.setEndkeyDocID((String)args.get(ENDKEYDOCID));
+    }
+    if (args.containsKey(GROUP)) {
+      query.setGroup(((Boolean)args.get(GROUP)).booleanValue());
+    }
+    if (args.containsKey(GROUPLEVEL)) {
+      query.setGroupLevel(((Integer)args.get(GROUPLEVEL)).intValue());
+    }
+    if (args.containsKey(INCLUSIVEEND)) {
+      query.setInclusiveEnd(((Boolean)args.get(INCLUSIVEEND)).booleanValue());
+    }
+    if (args.containsKey(KEY)) {
+      query.setKey((String)args.get(KEY));
+    }
+    if (args.containsKey(KEYS)) {
+      query.setKeys((String)args.get(KEYS));
+    }
+    if (args.containsKey(LIMIT)) {
+      query.setLimit(((Integer)args.get(LIMIT)).intValue());
+    }
+    if (args.containsKey(REDUCE)) {
+      query.setReduce(((Boolean)args.get(REDUCE)).booleanValue());
+    }
+    if (args.containsKey(SKIP)) {
+      query.setSkip(((Integer)args.get(SKIP)).intValue());
+    }
+    if (args.containsKey(STALE)) {
+      query.setStale((Stale)args.get(STALE));
+    }
+    if (args.containsKey(STARTKEY)) {
+      query.setRangeStart((String)args.get(STARTKEY));
+    }
+    if (args.containsKey(STARTKEYDOCID)) {
+      query.setStartkeyDocID((String)args.get(STARTKEYDOCID));
+    }
+    if (args.containsKey(ONERROR)) {
+      query.setOnError((OnError)args.get(ONERROR));
+    }
+    if (args.containsKey(BBOX)) {
+      String[] bbox = bboxSplit.split((CharSequence) args.get(BBOX));
+      query.setBbox(Double.parseDouble(bbox[0]), Double.parseDouble(bbox[1]),
+        Double.parseDouble(bbox[2]), Double.parseDouble(bbox[3]));
+    }
+    if (args.containsKey(DEBUG)) {
+      query.setDebug(((Boolean)args.get(DEBUG)).booleanValue());
+    }
+    query.setIncludeDocs(willIncludeDocs());
+
+    return query;
   }
 
   /**
-   * Returns the {@link Query} as a HTTP-compatible query string.
+   * Returns the Query object as a string, suitable for the HTTP queries.
    *
-   * @return the stringified query.
+   * @return Returns the query object as its string representation
    */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    boolean firstParam = true;
-    for (int i = 0; i < params.length; i++) {
-      if (params[i] == null) {
-        i++;
-        continue;
+    boolean first = true;
+    StringBuilder result = new StringBuilder();
+    for (Entry<String, Object> arg : args.entrySet()) {
+      if (first) {
+        result.append('?');
+        first = false;
+      } else {
+        result.append('&');
       }
-
-      boolean even = i % 2 == 0;
-      if (even) {
-        sb.append(firstParam ? "?" : "&");
+      String argument;
+      try {
+        argument = arg.getKey() + '=' + prepareValue(
+          arg.getKey(), arg.getValue()
+        );
+      } catch (Exception ex) {
+        throw new RuntimeException("Could not prepare view argument: " + ex);
       }
-      sb.append(params[i]);
-      firstParam = false;
-      if (even) {
-        sb.append('=');
-      }
+      result.append(argument);
     }
-    return sb.toString();
+    return result.toString();
   }
 
   /**
-   * Helper method which collects all currently set arguments.
+   * Takes a given object, inspects its type and returns
+   * its string representation.
    *
-   * This method is most suitable for testing and debugging.
-   * @return a map containing all args and their values.
+   * This helper method aids the toString() method so that it does
+   * not need to transform map entries to their string representations
+   * for itself. It also checks for various special cases and makes
+   * sure the correct string representation is returned.
+   *
+   * When no previous match was found, the final try is to cast it to a
+   * long value and treat it as a numeric value. If this doesn't succeed
+   * either, then it is treated as a string.
+   *
+   * @param key The key for the corresponding value.
+   * @param value The value to prepared.
+   * @return The correctly formatted and encoded value.
+   */
+  private static String prepareValue(String key, Object value)
+    throws UnsupportedEncodingException {
+    String encoded;
+
+    if (key.equals(STARTKEYDOCID) || key.equals(BBOX)) {
+      encoded = (String) value;
+    } else if (value instanceof Stale) {
+      encoded = value.toString();
+    } else if (value instanceof OnError) {
+      encoded = value.toString();
+    } else if (StringUtils.isJsonObject(value.toString())) {
+      encoded = value.toString();
+    } else if(value.toString().startsWith("\"")) {
+      encoded = value.toString();
+    } else {
+      ParsePosition pp = new ParsePosition(0);
+      NumberFormat numberFormat = NumberFormat.getInstance();
+      Number result = numberFormat.parse(value.toString(), pp);
+      if (pp.getIndex() == value.toString().length()) {
+        encoded = result.toString();
+      } else {
+        encoded = '"' + value.toString() + '"';
+      }
+    }
+
+    return URLEncoder.encode(encoded, "UTF-8");
+  }
+
+  /**
+   * Returns all current args for proper inspection.
+   *
+   * @return returns the currently stored arguments
    */
   public Map<String, Object> getArgs() {
-    Map<String, Object> args = new HashMap<String, Object>();
-    for (int i = 0; i < params.length; i++) {
-      boolean even = i % 2 == 0;
-      if (even && params[i] != null) {
-        args.put(params[i], params[i+1]);
-      }
-    }
     return args;
   }
-
-  /**
-   * Helper method to properly encode a string.
-   *
-   * This method can be overridden if a different encoding logic needs to be
-   * used.
-   *
-   * @param source source string.
-   * @return encoded target string.
-   */
-  protected String encode(final String source) {
-    try {
-      return URLEncoder.encode(source, "UTF-8");
-    } catch(Exception ex) {
-      throw new RuntimeException("Could not prepare view argument: " + ex);
-    }
-  }
-
-  /**
-   * Helper method to properly quote the string if its a JSON string.
-   *
-   * @param source source string.
-   * @return maybe quoted target string.
-   */
-  protected String quote(final String source) {
-    if (quoteMatcher.reset(source).matches()) {
-      ParsePosition parsePosition = new ParsePosition(0);
-      Number result = numberFormat.parse(source, parsePosition);
-      if (parsePosition.getIndex() == source.length()) {
-        return result.toString();
-      }
-      return source;
-    }
-    return '"' + source + '"';
-  }
-
-  /**
-   * Copy the current {@link Query} object into another one.
-   *
-   * @return an identical copy.
-   */
-  public Query copy() {
-    Query copied = new Query(params.clone());
-    copied.setIncludeDocs(willIncludeDocs());
-    return copied;
-  }
-
 }
