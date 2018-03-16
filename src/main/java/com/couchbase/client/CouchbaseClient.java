@@ -68,7 +68,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -124,7 +123,6 @@ public class CouchbaseClient extends MemcachedClient
   private ViewConnection vconn = null;
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cbConnFactory;
-  protected final ExecutorService executorService;
 
   /**
    * Try to load the cbclient.properties file and check for the viewmode.
@@ -249,8 +247,6 @@ public class CouchbaseClient extends MemcachedClient
       vconn = cf.createViewConnection(addrs);
     }
 
-    executorService = cbConnFactory.getListenerExecutorService();
-
     getLogger().info(MODE_ERROR);
     cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
@@ -272,7 +268,6 @@ public class CouchbaseClient extends MemcachedClient
     try {
       cbConnFactory.getConfigurationProvider().updateBucket(
         cbConnFactory.getBucketName(), bucket);
-      cbConnFactory.updateStoredBaseList(bucket.getConfig());
 
       if(vconn != null) {
         vconn.reconfigure(bucket);
@@ -330,7 +325,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<View> crv = new HttpFuture<View>(couchLatch,
-      factory.getViewTimeout(), executorService);
+      factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -387,7 +382,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<SpatialView> crv = new HttpFuture<SpatialView>(
-      couchLatch, factory.getViewTimeout(), executorService);
+      couchLatch, factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -434,7 +429,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<DesignDocument> crv =
-        new HttpFuture<DesignDocument>(couchLatch, 60000, executorService);
+        new HttpFuture<DesignDocument>(couchLatch, 60000);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -605,8 +600,7 @@ public class CouchbaseClient extends MemcachedClient
     final String uri = "/" + bucket + "/_design/" + MODE_PREFIX + name;
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000,
-      executorService);
+    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000);
     HttpRequest request = new BasicHttpEntityEnclosingRequest("PUT", uri,
             HttpVersion.HTTP_1_1);
     request.setHeader(new BasicHeader("Content-Type", "application/json"));
@@ -683,8 +677,7 @@ public class CouchbaseClient extends MemcachedClient
     final String uri = "/" + bucket + "/_design/" + MODE_PREFIX + name;
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000,
-      executorService);
+    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000);
     HttpRequest request = new BasicHttpEntityEnclosingRequest("DELETE", uri,
             HttpVersion.HTTP_1_1);
     request.setHeader(new BasicHeader("Content-Type", "application/json"));
@@ -744,8 +737,7 @@ public class CouchbaseClient extends MemcachedClient
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
-    final ViewFuture crv = new ViewFuture(couchLatch, timeout, view,
-      executorService);
+    final ViewFuture crv = new ViewFuture(couchLatch, timeout, view);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -798,7 +790,7 @@ public class CouchbaseClient extends MemcachedClient
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, timeout, executorService);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -843,7 +835,7 @@ public class CouchbaseClient extends MemcachedClient
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, timeout, executorService);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -943,8 +935,7 @@ public class CouchbaseClient extends MemcachedClient
       int exp, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<CASValue<T>> rv =
-        new OperationFuture<CASValue<T>>(key, latch, operationTimeout,
-          executorService);
+        new OperationFuture<CASValue<T>>(key, latch, operationTimeout);
 
     Operation op = opFact.getl(key, exp, new GetlOperation.Callback() {
       private CASValue<T> val = null;
@@ -1070,74 +1061,40 @@ public class CouchbaseClient extends MemcachedClient
   @Override
   public <T> ReplicaGetFuture<T> asyncGetFromReplica(final String key,
     final Transcoder<T> tc) {
-    int discardedOps = 0;
-
     int replicaCount = cbConnFactory.getVBucketConfig().getReplicasCount();
     if (replicaCount == 0) {
       throw new RuntimeException("Currently, there is no replica available for"
         + " the given key (\"" + key + "\").");
     }
 
-    final ReplicaGetFuture<T> replicaFuture = new ReplicaGetFuture<T>(
-      operationTimeout, executorService);
-
+    List<GetFuture<T>> futures = new ArrayList<GetFuture<T>>();
     for(int index=0; index < replicaCount; index++) {
       final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> rv =
-        new GetFuture<T>(latch, operationTimeout, key, executorService);
+      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
       Operation op = opFact.replicaGet(key, index,
         new ReplicaGetOperation.Callback() {
           private Future<T> val = null;
 
-          @Override
           public void receivedStatus(OperationStatus status) {
             rv.set(val, status);
-            if (!replicaFuture.isDone()) {
-              replicaFuture.setCompletedFuture(rv);
-            }
           }
 
-          @Override
           public void gotData(String k, int flags, byte[] data) {
             assert key.equals(k) : "Wrong key returned";
             val = tcService.decode(tc, new CachedData(flags, data,
               tc.getMaxSize()));
           }
 
-          @Override
           public void complete() {
             latch.countDown();
           }
         });
-
       rv.setOperation(op);
       mconn.enqueueOperation(key, op);
-
-      if (op.isCancelled()) {
-        discardedOps++;
-        getLogger().debug("Silently discarding replica get for key \""
-          + key + "\" (cancelled).");
-      } else {
-        replicaFuture.addFutureToMonitor(rv);
-      }
-
+      futures.add(rv);
     }
 
-    GetFuture<T> additionalActiveGet = asyncGet(key, tc);
-    if (additionalActiveGet.isCancelled()) {
-      discardedOps++;
-      getLogger().debug("Silently discarding replica (active) get for key \""
-        + key + "\" (cancelled).");
-    } else {
-      replicaFuture.addFutureToMonitor(additionalActiveGet);
-    }
-
-    if (discardedOps == replicaCount + 1) {
-      throw new IllegalStateException("No replica get operation could be "
-        + "dispatched because all operations have been cancelled.");
-    }
-
-    return replicaFuture;
+    return new ReplicaGetFuture<T>(operationTimeout, futures);
   }
 
   /**
@@ -1202,7 +1159,7 @@ public class CouchbaseClient extends MemcachedClient
           long casId, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(key,
-            latch, operationTimeout, executorService);
+            latch, operationTimeout);
     Operation op = opFact.unlock(key, casId, new OperationCallback() {
 
       @Override
@@ -2098,49 +2055,7 @@ public class CouchbaseClient extends MemcachedClient
    *            returning.
    * @return the future result of the CAS operation.
    */
-  @Override
   public CASResponse cas(String key, long cas,
-          Object value, PersistTo req, ReplicateTo rep) {
-    return cas(key, cas, 0, value, req, rep);
-  }
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * To make sure that a value is stored the way you want it to in the
-   * cluster, you can use the PersistTo and ReplicateTo arguments. The
-   * operation will block until the desired state is satisfied or
-   * otherwise an exception is raised. There are many reasons why this could
-   * happen, the more frequent ones are as follows:
-   *
-   * - The given replication settings are invalid.
-   * - The operation could not be completed within the timeout.
-   * - Something goes wrong and a cluster failover is triggered.
-   *
-   * The client does not attempt to guarantee the given durability
-   * constraints, it just reports whether the operation has been completed
-   * or not. If it is not achieved, it is the responsibility of the
-   * application code using this API to re-retrieve the items to verify
-   * desired state, redo the operation or both.
-   *
-   * Note that even if an exception during the observation is raised,
-   * this doesn't mean that the operation has failed. A normal asyncCAS()
-   * operation is initiated and after the OperationFuture has returned,
-   * the key itself is observed with the given durability options (watch
-   * out for Observed*Exceptions) in this case.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp expiration time for the key.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  @Override
-  public CASResponse cas(String key, long cas, int exp,
           Object value, PersistTo req, ReplicateTo rep) {
 
     if(mconn instanceof CouchbaseMemcachedConnection) {
@@ -2148,8 +2063,7 @@ public class CouchbaseClient extends MemcachedClient
         + " on memcached type buckets.");
     }
 
-    OperationFuture<CASResponse> casOp =
-      asyncCAS(key, cas, exp, value, transcoder);
+    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, value);
     CASResponse casr = null;
     try {
       casr = casOp.get();
@@ -2196,7 +2110,6 @@ public class CouchbaseClient extends MemcachedClient
    *            returning.
    * @return the future result of the CAS operation.
    */
-  @Override
   public CASResponse cas(String key, long cas,
           Object value, PersistTo req) {
     return cas(key, cas, value, req, ReplicateTo.ZERO);
@@ -2205,31 +2118,6 @@ public class CouchbaseClient extends MemcachedClient
   /**
    * Set a value with a CAS and durability options.
    *
-   * This is a shorthand method so that you only need to provide a
-   * PersistTo value if you don't care if the value is already replicated.
-   * A PersistTo.TWO durability setting implies a replication to at least
-   * one node.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp the TTL of the document.
-   * @param value the value of the key.
-   * @param req the amount of nodes the item should be persisted to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  @Override
-  public CASResponse cas(String key, long cas, int exp,
-          Object value, PersistTo req) {
-    return cas(key, cas, exp, value, req, ReplicateTo.ZERO);
-  }
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
    * This method allows you to express durability at the replication level
    * only and is the functional equivalent of PersistTo.ZERO.
    *
@@ -2247,37 +2135,9 @@ public class CouchbaseClient extends MemcachedClient
    *            returning.
    * @return the future result of the CAS operation.
    */
-  @Override
   public CASResponse cas(String key, long cas,
           Object value, ReplicateTo rep) {
     return cas(key, cas, value, PersistTo.ZERO, rep);
-  }
-
-  /**
-   * Set a value with a CAS and durability options.
-   *
-   * This method allows you to express durability at the replication level
-   * only and is the functional equivalent of PersistTo.ZERO.
-   *
-   * A common use case for this would be to achieve good insert-performance
-   * and at the same time making sure that the data is at least replicated
-   * to the given amount of nodes to provide a better level of data safety.
-   *
-   * For more information on how the durability options work, see the docblock
-   * for the cas() operation with both PersistTo and ReplicateTo settings.
-   *
-   * @param key the key to store.
-   * @param cas the CAS value to use.
-   * @param exp the TTL of the document.
-   * @param value the value of the key.
-   * @param rep the amount of nodes the item should be replicated to before
-   *            returning.
-   * @return the future result of the CAS operation.
-   */
-  @Override
-  public CASResponse cas(String key, long cas, int exp,
-          Object value, ReplicateTo rep) {
-    return cas(key, cas, exp, value, PersistTo.ZERO, rep);
   }
 
   /**
@@ -2303,15 +2163,11 @@ public class CouchbaseClient extends MemcachedClient
     final int vb = locator.getVBucketIndex(key);
     List<MemcachedNode> bcastNodes = new ArrayList<MemcachedNode>();
 
-    MemcachedNode primary = locator.getPrimary(key);
-    if (primary != null) {
-      bcastNodes.add(primary);
-    }
-
-    for (int i = 0; i < cfg.getReplicasCount(); i++) {
-      MemcachedNode replica = locator.getReplica(key, i);
-      if (replica != null) {
-        bcastNodes.add(replica);
+    bcastNodes.add(locator.getServerByIndex(cfg.getMaster(vb)));
+    for (int i = 1; i <= cfg.getReplicasCount(); i++) {
+      int replica = cfg.getReplica(vb, i-1);
+      if(replica >= 0) {
+        bcastNodes.add(locator.getServerByIndex(replica));
       }
     }
 
@@ -2466,7 +2322,10 @@ public class CouchbaseClient extends MemcachedClient
 
       Map<MemcachedNode, ObserveResponse> response = observe(key, cas);
 
-      MemcachedNode master = locator.getPrimary(key);
+      int vb = locator.getVBucketIndex(key);
+      int index = ((CouchbaseConnectionFactory) connFactory)
+        .getVBucketConfig().getMaster(vb);
+      MemcachedNode master = locator.getServerByIndex(index);
 
       replicaPersistedTo = 0;
       replicatedTo = 0;
@@ -2517,8 +2376,7 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Map<String, String>> getKeyStats(String key) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Map<String, String>> rv =
-        new OperationFuture<Map<String, String>>(key, latch, operationTimeout,
-          executorService);
+        new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
       private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
@@ -2560,7 +2418,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   @Override
   public OperationFuture<Boolean> flush(final int delay) {
-    if(connectionShutDown()) {
+    if(((CouchbaseConnection)mconn).isShutDown()) {
       throw new IllegalStateException("Flush can not be used after shutdown.");
     }
 
@@ -2568,8 +2426,7 @@ public class CouchbaseClient extends MemcachedClient
     final FlushRunner flushRunner = new FlushRunner(latch);
 
     final OperationFuture<Boolean> rv =
-      new OperationFuture<Boolean>("", latch, operationTimeout,
-        executorService) {
+      new OperationFuture<Boolean>("", latch, operationTimeout) {
         private CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
 
@@ -2669,14 +2526,4 @@ public class CouchbaseClient extends MemcachedClient
     }
   }
 
-  protected boolean connectionShutDown() {
-    if (mconn instanceof CouchbaseConnection) {
-      return ((CouchbaseConnection)mconn).isShutDown();
-    } else if (mconn instanceof CouchbaseMemcachedConnection) {
-      return ((CouchbaseMemcachedConnection)mconn).isShutDown();
-    } else {
-      throw new IllegalStateException("Unknown connection type: "
-        + mconn.getClass().getCanonicalName());
-    }
-  }
 }
