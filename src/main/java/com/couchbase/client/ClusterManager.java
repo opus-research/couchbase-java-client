@@ -101,8 +101,9 @@ public class ClusterManager extends SpyObject {
   /**
    * Connects to a given server if a connection has not been made to at least
    * one of the servers in the server list already.
-   * @param uri
-   * @return
+   *
+   * @param uri connect to the given URI.
+   * @return a boolean identifying the success of the connect.
    */
   private boolean connect(URI uri) {
     host = new HttpHost(uri.getHost(), uri.getPort());

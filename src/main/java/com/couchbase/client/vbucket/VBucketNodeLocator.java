@@ -51,8 +51,8 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
   /**
    * Construct a VBucketNodeLocator over the given JSON configuration string.
    *
-   * @param nodes
-   * @param jsonConfig
+   * @param nodes the list of nodes for the locator.
+   * @param jsonConfig the initial JSON config for the locator.
    */
   public VBucketNodeLocator(List<MemcachedNode> nodes, Config jsonConfig) {
     super();

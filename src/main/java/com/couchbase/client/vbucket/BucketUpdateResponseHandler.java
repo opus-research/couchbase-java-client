@@ -136,7 +136,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
   }
 
   /**
-   * @param lastResponse the lastResponse to set
+   * @param newLastResponse the lastResponse to set
    */
   private void setLastResponse(String newLastResponse) {
     this.lastResponse = newLastResponse;
@@ -155,7 +155,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
   }
 
   /**
-   * @param receivedFuture the receivedFuture to set
+   * @param newReceivedFuture the receivedFuture to set
    */
   private void setReceivedFuture(ChannelFuture newReceivedFuture) {
     this.receivedFuture = newReceivedFuture;

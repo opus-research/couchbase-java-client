@@ -45,7 +45,6 @@ public enum AuthType {
 
   /**
    * Creates an Auth instance.
-   * @param auth
    */
   AuthType(String auth) {
     this.auth = auth;

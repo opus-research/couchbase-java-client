@@ -487,7 +487,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   /**
    * Updates the stored base list with a new one based on the config.
    *
-   * @param config
+   * @param config the configuration to update.
    */
   public void updateStoredBaseList(Config config) {
     List<String> bucketServers = config.getServers();

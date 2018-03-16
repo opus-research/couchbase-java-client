@@ -172,7 +172,7 @@ public class CouchbaseClient extends MemcachedClient
    * @param bucketName the bucket name in the cluster you wish to use
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by the server
+   * @throws com.couchbase.client.vbucket.ConfigurationException if the configuration provided by the server
    *           has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
@@ -200,7 +200,7 @@ public class CouchbaseClient extends MemcachedClient
    * @param user the username for the bucket
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by the server
+   * @throws com.couchbase.client.vbucket.ConfigurationException if the configuration provided by the server
    *           has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
@@ -235,7 +235,7 @@ public class CouchbaseClient extends MemcachedClient
    *
    * @param cf the ConnectionFactory to use to create connections
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by the server
+   * @throws com.couchbase.client.vbucket.ConfigurationException if the configuration provided by the server
    *           has issues or is not compatible
    */
   public CouchbaseClient(CouchbaseConnectionFactory cf)
@@ -315,9 +315,6 @@ public class CouchbaseClient extends MemcachedClient
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a View object from the cluster.
-   * @throws InterruptedException if the operation is interrupted while in
-   *           flight
-   * @throws ExecutionException if an error occurs during execution
    */
   @Override
   public HttpFuture<View> asyncGetView(String designDocumentName,
@@ -373,9 +370,6 @@ public class CouchbaseClient extends MemcachedClient
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the spatial view to get.
    * @return a HttpFuture<SpatialView> object from the cluster.
-   * @throws InterruptedException if the operation is interrupted while in
-   *           flight
-   * @throws ExecutionException if an error occurs during execution
    */
   @Override
   public HttpFuture<SpatialView> asyncGetSpatialView(String designDocumentName,
