@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.query;
 
-import javax.swing.plaf.nimbus.State;
-
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.document.json.JsonValue;
@@ -35,9 +33,6 @@ import com.couchbase.client.java.document.json.JsonValue;
  */
 public abstract class AbstractQuery implements Query {
 
-    private QueryParams queryParameters;
-    private Statement statement;
-
     /** The type of the statement, used as JSON name in the final JSON form of the query */
     protected abstract String statementType();
 
@@ -47,29 +42,11 @@ public abstract class AbstractQuery implements Query {
     /** The parameters to inject in the query, null or empty to ignore. */
     protected abstract JsonValue statementParameters();
 
-    protected AbstractQuery(Statement statement, QueryParams params) {
-        this.statement = statement;
-        this.queryParameters = params;
-    }
-
     @Override
-    public QueryParams params() {
-        return this.queryParameters;
-    }
-
-    @Override
-    public Statement statement() {
-        return this.statement;
-    }
-
-    @Override
-    public JsonObject n1ql() {
+    public String toN1QL() {
         JsonObject query = JsonObject.create().put(statementType(), statementValue());
         populateParameters(query, statementParameters());
-        if (this.queryParameters != null) {
-            this.queryParameters.injectParams(query);
-        }
-        return query; //return json-escaped string
+        return query.toString(); //return json-escaped string
     }
 
     /**
@@ -79,7 +56,7 @@ public abstract class AbstractQuery implements Query {
      *  - If params is a {@link JsonArray}, positional parameters will be used.
      *  - If params is null or an empty json, no parameters are populated in the query object.
      *
-     * Note that the {@link JsonValue} should not be mutated until {@link #n1ql()} is called since it backs the
+     * Note that the {@link JsonValue} should not be mutated until {@link #toN1QL()} is called since it backs the
      * creation of the query string.
      *
      * Also, the {@link Statement} is expected to contain the correct placeholders (corresponding names and number).

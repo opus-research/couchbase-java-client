@@ -21,9 +21,7 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
@@ -52,7 +50,6 @@ import rx.functions.Func1;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class CouchbaseBucket implements Bucket {
 
@@ -486,6 +483,11 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
+    public QueryResult queryRaw(String query) {
+        return queryRaw(query, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
+
+    @Override
     public QueryPlan queryPrepare(PrepareStatement prepare) {
         return queryPrepare(prepare, environment.queryTimeout(), TIMEOUT_UNIT);
     }
@@ -546,6 +548,20 @@ public class CouchbaseBucket implements Bucket {
     public QueryResult query(Query query, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
             .query(query)
+            .map(new Func1<AsyncQueryResult, QueryResult>() {
+                @Override
+                public QueryResult call(AsyncQueryResult asyncQueryResult) {
+                    return new DefaultQueryResult(environment, asyncQueryResult.rows(),
+                        asyncQueryResult.info(), asyncQueryResult.error(), asyncQueryResult.success());
+                }
+            })
+            .single(), timeout, timeUnit);
+    }
+
+    @Override
+    public QueryResult queryRaw(String query, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .queryRaw(query)
             .map(new Func1<AsyncQueryResult, QueryResult>() {
                 @Override
                 public QueryResult call(AsyncQueryResult asyncQueryResult) {
