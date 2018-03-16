@@ -111,7 +111,6 @@
   <property name="server.address_v6" value="::1"/>
   <property name="server.type" value="memcached"/>
   <property name="test.type" value="unit"/>
-  <property name="obsPollInterval" value=""/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern"
@@ -130,7 +129,6 @@
 
   <path id="compile.classpath">
     <pathelement location="${build.classes}"/>
-    <pathelement location="${basedir}"/>
     <path refid="lib.path"/>
     <path refid="${name}.common.classpath"/>
   </path>
@@ -252,7 +250,6 @@
       <sysproperty key="server.address_v6" value="${server.address_v6}"/>
       <sysproperty key="server.type" value="${server.type}"/>
       <sysproperty key="test.type" value="${test.type}"/>
-      <sysproperty key="obsPollInterval" value="${obsPollInterval}"/>
       <formatter type="plain" usefile="false" />
       <classpath refid="test.classpath" />
     </junit>
@@ -278,8 +275,6 @@
   <target name="compile-test" depends="compile"
       description="Compile test classes">
     <mkdir dir="${build.test.classes}" />
-    <touch file="${build.test.classes}/cbGenerate.xml"></touch>
-    <touch file="${build.test.classes}/cfbGenerate.xml"></touch>
     <javac
         encoding="${build.encoding}"
         srcdir="${test.dir}"
