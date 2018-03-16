@@ -35,7 +35,6 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.DesignDocumentDoesNotExistException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import com.couchbase.client.java.view.AsyncViewResult;
@@ -103,12 +102,8 @@ public class ViewQueryTest {
             )
         );
 
-        try {
-            DesignDocument stored = ctx.bucketManager().getDesignDocument("users");
-            if (!stored.equals(designDoc)) {
-                ctx.bucketManager().upsertDesignDocument(designDoc);
-            }
-        } catch (DesignDocumentDoesNotExistException ex) {
+        DesignDocument stored = ctx.bucketManager().getDesignDocument("users");
+        if (stored == null || !stored.equals(designDoc)) {
             ctx.bucketManager().upsertDesignDocument(designDoc);
         }
     }
