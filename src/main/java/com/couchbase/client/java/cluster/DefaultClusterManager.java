@@ -1,31 +1,8 @@
-/**
- * Copyright (C) 2015 Couchbase, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
- * IN THE SOFTWARE.
- */
-
 package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.java.ConnectionString;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.search.IndexSettings;
 import com.couchbase.client.java.util.Blocking;
 
 import java.util.List;
@@ -122,45 +99,5 @@ public class DefaultClusterManager implements ClusterManager {
     @Override
     public Boolean removeBucket(String name, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncClusterManager.removeBucket(name).single(), timeout, timeUnit);
-    }
-
-    @Override
-    public IndexSettings insertSearchIndex(IndexSettings settings) {
-        return insertSearchIndex(settings, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public IndexSettings insertSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncClusterManager.insertSearchIndex(settings).single(), timeout, timeUnit);
-    }
-
-    @Override
-    public IndexSettings updateSearchIndex(IndexSettings settings) {
-        return updateSearchIndex(settings, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public IndexSettings updateSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncClusterManager.updateSearchIndex(settings).single(), timeout, timeUnit);
-    }
-
-    @Override
-    public Boolean hasSearchIndex(String name) {
-        return hasSearchIndex(name, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public Boolean hasSearchIndex(String name, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncClusterManager.hasSearchIndex(name).single(), timeout, timeUnit);
-    }
-
-    @Override
-    public Boolean removeSearchIndex(String name) {
-        return removeSearchIndex(name, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public Boolean removeSearchIndex(String name, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncClusterManager.removeSearchIndex(name).single(), timeout, timeUnit);
     }
 }
