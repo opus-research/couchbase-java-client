@@ -468,12 +468,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder socketConnectTimeout(int socketConnectTimeout) {
-            super.socketConnectTimeout(socketConnectTimeout);
-            return this;
-        }
-
-        @Override
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }
