@@ -156,15 +156,4 @@ public class CacheConfig implements Config {
   public List<URL> getCouchServers() {
     throw new UnsupportedOperationException("No couch port for cache buckets");
   }
-
-  @Override
-  public String toString() {
-    return "CacheConfig{" +
-      "vbucketsCount=" + vbucketsCount +
-      ", serversCount=" + serversCount +
-      ", servers=" + servers +
-      ", vbuckets=" + vbuckets +
-      ", restEndpoints=" + restEndpoints +
-      '}';
-  }
 }
