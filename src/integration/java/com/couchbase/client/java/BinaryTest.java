@@ -13,6 +13,7 @@ import rx.observables.BlockingObservable;
 import java.util.Iterator;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class BinaryTest extends ClusterDependentTest {
 
@@ -216,24 +217,13 @@ public class BinaryTest extends ClusterDependentTest {
     }
 
     @Test
-    public void shouldPersistToMaster() {
+    public void shouldPersistToMaster() throws Exception {
         String key = "persist-to-master";
 
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")),
-            PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
-        assertEquals(ResponseStatus.SUCCESS, upsert.status());
-    }
-
-    @Test
-    public void shouldRemoveFromMaster() {
-        String key = "remove-from-master";
-
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")),
-            PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
+        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")), PersistTo.MASTER, ReplicateTo.NONE)
+            .toBlocking().single();
         assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
-        JsonDocument remove = bucket().remove(key, PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
-        assertEquals(ResponseStatus.SUCCESS, remove.status());
 
     }
 
