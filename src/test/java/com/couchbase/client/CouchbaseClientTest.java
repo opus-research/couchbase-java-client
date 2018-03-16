@@ -39,8 +39,6 @@ import net.spy.memcached.BinaryClientTest;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
@@ -429,19 +427,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
               ReplicateTo.ONE));
     assertTrue("Key add was not correctly replicated: "
       + noPersistOp.getStatus().getMessage(), noPersistOp.get());
-  }
-
-  public void testObserveWithSpecialChar() throws Exception {
-    String key = "special£";
-    OperationFuture<Boolean> future = ((CouchbaseClient) client).set(key,
-      "value", PersistTo.MASTER);
-    assertTrue(future.get());
-    assertTrue(future.getStatus().isSuccess());
-
-
-    Map<MemcachedNode, ObserveResponse> nodes =
-      ((CouchbaseClient) client).observe(key, future.getCas());
-    assertFalse(nodes.isEmpty());
   }
 
   /**
