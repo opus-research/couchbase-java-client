@@ -33,12 +33,6 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.fts.SearchParams;
-import com.couchbase.client.java.fts.SearchQuery;
-import com.couchbase.client.java.fts.result.AsyncSearchQueryResult;
-import com.couchbase.client.java.fts.result.SearchQueryResult;
-import com.couchbase.client.java.fts.result.impl.DefaultAsyncSearchQueryResult;
-import com.couchbase.client.java.fts.result.impl.DefaultSearchQueryResult;
 import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.subdoc.LookupInBuilder;
@@ -53,6 +47,8 @@ import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.CouchbaseRepository;
 import com.couchbase.client.java.repository.Repository;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -587,25 +583,14 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public SearchQueryResult query(String indexName, SearchQuery query) {
-        return query(indexName, query, SearchParams.build(), environment.searchTimeout(), TIMEOUT_UNIT);
+    public SearchQueryResult query(SearchQuery query) {
+        return query(query, environment.searchTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
-    public SearchQueryResult query(String indexName, SearchQuery query, SearchParams params) {
-        return query(indexName, query, params, environment.searchTimeout(), TIMEOUT_UNIT);
-    }
-
-    @Override
-    public SearchQueryResult query(String indexName, SearchQuery query, long timeout, TimeUnit timeUnit) {
-        return query(indexName, query, SearchParams.build(), timeout, timeUnit);
-    }
-
-    @Override
-    public SearchQueryResult query(String indexName, SearchQuery query, SearchParams params, long timeout, TimeUnit timeUnit) {
+    public SearchQueryResult query(SearchQuery query, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
-            .query(indexName, query, params)
-            .flatMap(DefaultSearchQueryResult.FROM_ASYNC)
+            .query(query)
             .single(), timeout, timeUnit);
     }
 
