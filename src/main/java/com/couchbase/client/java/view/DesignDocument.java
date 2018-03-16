@@ -58,12 +58,18 @@ public class DesignDocument {
         final List<View> views = new ArrayList<View>();
         JsonObject rawViews = raw.getObject("views");
         if (rawViews != null) {
-           for(Map.Entry<String, Object> entry : rawViews.toMap().entrySet()) {
-               String viewName = entry.getKey();
-               JsonObject viewContent = (JsonObject) entry.getValue();
-               String map = viewContent.getString("map");
-               String reduce = viewContent.getString("reduce");
-               views.add(DefaultView.create(viewName, map, reduce));
+            for(String viewName: rawViews.getNames()) {
+                JsonObject viewContent = rawViews.getObject(viewName);
+                String map = viewContent.getString("map");
+                String reduce = viewContent.getString("reduce");
+                views.add(DefaultView.create(viewName, map, reduce));
+            }
+        }
+        JsonObject spatialViews = raw.getObject("spatial");
+        if (spatialViews != null) {
+            for(String viewName : spatialViews.getNames()) {
+                String map = spatialViews.getString(viewName);
+                views.add(SpatialView.create(viewName, map));
             }
         }
         return new DesignDocument(name, views);
@@ -86,17 +92,23 @@ public class DesignDocument {
     public JsonObject toJsonObject() {
         JsonObject converted = JsonObject.empty();
         JsonObject views = JsonObject.empty();
+        JsonObject spatialViews = JsonObject.empty();
 
         for (View view : this.views) {
-            JsonObject content = JsonObject.empty();
-            content.put("map", view.map());
-            if (view.hasReduce()) {
-                content.put("reduce", view.reduce());
+            if (view instanceof SpatialView) {
+                spatialViews.put(view.name(), view.map());
+            } else {
+                JsonObject content = JsonObject.empty();
+                content.put("map", view.map());
+                if (view.hasReduce()) {
+                    content.put("reduce", view.reduce());
+                }
+                views.put(view.name(), content);
             }
-            views.put(view.name(), content);
         }
 
         converted.put("views", views);
+        converted.put("spatial", spatialViews);
         return converted;
     }
 
