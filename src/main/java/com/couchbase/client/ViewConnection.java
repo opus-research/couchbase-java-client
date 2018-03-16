@@ -272,7 +272,7 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
    */
   @Override
   public void reconfigure(final Bucket bucket) {
-    CouchbaseConfig config = (CouchbaseConfig) bucket.getConfig();
+    DefaultConfig config = (DefaultConfig) bucket.getConfig();
     int sizeBeforeReconfigure = viewNodes.size();
 
     List<HttpHost> currentViewServers = new ArrayList<HttpHost>();
@@ -384,7 +384,7 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
    * @param node the node to check.
    * @return true if it has active vbuckets, false if not.
    */
-  private static boolean hasActiveVBuckets(final CouchbaseConfig config,
+  private static boolean hasActiveVBuckets(final DefaultConfig config,
     final HttpHost node) {
     return config.nodeHasActiveVBuckets(
       new InetSocketAddress(node.getHostName(), node.getPort())
