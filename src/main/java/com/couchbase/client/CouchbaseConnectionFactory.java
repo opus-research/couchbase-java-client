@@ -110,9 +110,9 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       throw new IllegalStateException("Couldn't get config");
     }
 
-    if (config.getConfigType() == ConfigType.MEMCACHE) {
+    if (config.getConfigType() == ConfigType.COUCHBASE) {
       return new KetamaNodeLocator(nodes, getHashAlg());
-    } else if (config.getConfigType() == ConfigType.COUCHBASE) {
+    } else if (config.getConfigType() == ConfigType.MEMCACHE) {
       return new VBucketNodeLocator(nodes, getVBucketConfig());
     } else {
       throw new IllegalStateException("Unhandled locator type: "
