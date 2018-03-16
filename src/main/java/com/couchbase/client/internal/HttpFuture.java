@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import net.spy.memcached.compat.SpyObject;
 import net.spy.memcached.internal.CheckedOperationTimeoutException;
+import net.spy.memcached.ops.ErrorCode;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationStatus;
 
@@ -64,7 +65,7 @@ public class HttpFuture<T> extends SpyObject implements Future<T> {
     try {
       return get(timeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
-      status = new OperationStatus(false, "Timed out");
+      status = new OperationStatus(false, "Timed out", ErrorCode.TIMED_OUT);
       throw new RuntimeException("Timed out waiting for operation", e);
     }
   }
@@ -76,22 +77,24 @@ public class HttpFuture<T> extends SpyObject implements Future<T> {
       if (op != null) {
         op.timeOut();
       }
-      status = new OperationStatus(false, "Timed out");
+      status = new OperationStatus(false, "Timed out", ErrorCode.TIMED_OUT);
       throw new TimeoutException("Timed out waiting for operation");
     }
 
     if (op != null && op.hasErrored()) {
-      status = new OperationStatus(false, op.getException().getMessage());
+      status = new OperationStatus(false, op.getException().getMessage(),
+          ErrorCode.EXCEPTION);
       throw new ExecutionException(op.getException());
     }
 
     if (op != null && op.isCancelled()) {
-      status = new OperationStatus(false, "Operation Cancelled");
+      status = new OperationStatus(false, "Operation Cancelled",
+          ErrorCode.CANCELLED);
       throw new ExecutionException(new RuntimeException("Cancelled"));
     }
 
     if (op != null && op.isTimedOut()) {
-      status = new OperationStatus(false, "Timed out");
+      status = new OperationStatus(false, "Timed out", ErrorCode.TIMED_OUT);
       throw new ExecutionException(new CheckedOperationTimeoutException(
           "Operation timed out.", (Operation)op));
     }
@@ -104,7 +107,8 @@ public class HttpFuture<T> extends SpyObject implements Future<T> {
       try {
         get();
       } catch (InterruptedException e) {
-        status = new OperationStatus(false, "Interrupted");
+        status = new OperationStatus(false, "Interrupted",
+            ErrorCode.EXCEPTION);
         Thread.currentThread().isInterrupted();
       } catch (ExecutionException e) {
         getLogger().warn("Error getting status of operation", e);

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,23 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client;
+package com.couchbase.client.http;
 
-import com.couchbase.client.protocol.views.HttpOperationImpl;
-
-import java.net.HttpURLConnection;
-
-import net.spy.memcached.ops.ErrorCode;
-import net.spy.memcached.ops.OperationStatus;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+import com.couchbase.client.ViewConnection;
+import com.couchbase.client.protocol.views.HttpOperation;
 
 /**
- * A TestOperationImpl.
+ * A callack to requeue a http operation.
  */
-public class TestOperationImpl extends HttpOperationImpl implements
-    TestOperation {
+public class RequeueOpCallback {
 
-  public TestOperationImpl(HttpRequest r, TestCallback testCallback) {
-    super(r, testCallback);
+  private final ViewConnection conn;
+
+  public RequeueOpCallback(ViewConnection vc) {
+    conn = vc;
   }
 
-  @Override
-  public void handleResponse(HttpResponse response) {
-    String json = getEntityString(response);
-    int errorcode = response.getStatusLine().getStatusCode();
-    if (errorcode == HttpURLConnection.HTTP_OK) {
-      ((TestCallback) callback).getData(json);
-      callback.receivedStatus(new OperationStatus(true, "OK",
-          ErrorCode.SUCCESS));
-    } else {
-      callback.receivedStatus(new OperationStatus(false,
-          Integer.toString(errorcode), ErrorCode.ERR_INVAL));
-    }
-    callback.complete();
+  public void invoke(HttpOperation op) {
+    conn.addOp(op);
   }
-
 }
