@@ -246,10 +246,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         throttleManager.getThrottler(
           (InetSocketAddress)placeIn.getSocketAddress()).throttle();
       }
-      if (!placeIn.isActive() || !placeIn.isAuthenticated()) {
-        System.out.println(placeIn);
-        System.out.println(placeIn.isActive() + ", " + placeIn.isAuthenticated());
-      }
       addOperation(placeIn, o);
     } else {
       assert o.isCancelled() : "No node found for " + key
@@ -321,23 +317,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         replaceConfigWildcards(message)
       );
     }
-  }
-
-  /**
-   * Only queue for reconnect if the given node is still part of the cluster.
-   *
-   * @param node the node to check.
-   */
-  @Override
-  protected void queueReconnect(final MemcachedNode node) {
-    if (isShutDown() || !locator.getAll().contains(node)) {
-      getLogger().debug("Preventing reconnect for node " + node + " because it"
-        + "is either not part of the cluster anymore or the connection is "
-        + "shutting down.");
-      return;
-    }
-
-    super.queueReconnect(node);
   }
 
   /**

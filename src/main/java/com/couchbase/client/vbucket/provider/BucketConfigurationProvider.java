@@ -35,7 +35,6 @@ import com.couchbase.client.vbucket.config.ConfigurationParser;
 import com.couchbase.client.vbucket.config.ConfigurationParserJSON;
 import net.spy.memcached.ArrayModNodeLocator;
 import net.spy.memcached.BroadcastOpFactory;
-import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthThreadMonitor;
@@ -46,11 +45,9 @@ import net.spy.memcached.ops.OperationStatus;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -79,7 +76,6 @@ public class BucketConfigurationProvider extends SpyObject
   private final ConfigurationParser configurationParser;
   private final AtomicReference<ConfigurationProviderHTTP> httpProvider;
   private final AtomicBoolean refreshingHttp;
-  private final AtomicBoolean pollingBinary;
   private final AtomicReference<CouchbaseConnection> binaryConnection;
   private final boolean disableCarrierBootstrap;
   private final boolean disableHttpBootstrap;
@@ -94,7 +90,6 @@ public class BucketConfigurationProvider extends SpyObject
       new ConfigurationProviderHTTP(seedNodes, bucket, password)
     );
     refreshingHttp = new AtomicBoolean(false);
-    pollingBinary = new AtomicBoolean(false);
     observers = Collections.synchronizedList(new ArrayList<Reconfigurable>());
     binaryConnection = new AtomicReference<CouchbaseConnection>();
 
@@ -121,7 +116,7 @@ public class BucketConfigurationProvider extends SpyObject
     if (isBinary) {
       getLogger().info("Could bootstrap through carrier publication.");
     } else {
-      getLogger().info("Carrier config not available, bootstrapped through "
+      getLogger().info("Binary config not available, bootstrapped through "
         + "HTTP.");
     }
 
@@ -183,32 +178,12 @@ public class BucketConfigurationProvider extends SpyObject
     CouchbaseConnectionFactory cf = connectionFactory;
     CouchbaseConnection connection;
 
-    List<ConnectionObserver> initialObservers = new ArrayList<ConnectionObserver>();
-    final CountDownLatch latch = new CountDownLatch(1);
-    initialObservers.add(new ConnectionObserver() {
-      @Override
-      public void connectionEstablished(SocketAddress socketAddress, int i) {
-        latch.countDown();
-      }
-
-      @Override
-      public void connectionLost(SocketAddress socketAddress) {
-        // not needed
-      }
-    });
-
     try {
        connection = new CouchbaseConfigConnection(
         cf.getReadBufSize(), fact, Collections.singletonList(node),
-        initialObservers, cf.getFailureMode(),
+        cf.getInitialObservers(), cf.getFailureMode(),
         cf.getOperationFactory()
       );
-
-      boolean result = latch.await(5, TimeUnit.SECONDS);
-      if (!result) {
-        throw new IOException("Connection could not be established to carrier"
-          + " port in the given time interval.");
-      }
     } catch (Exception ex) {
       getLogger().debug("(Carrier Publication) Could not load config from "
         + node.getHostName() + ", trying next node.", ex);
@@ -220,10 +195,8 @@ public class BucketConfigurationProvider extends SpyObject
       List<MemcachedNode> connectedNodes = new ArrayList<MemcachedNode>(
         connection.getLocator().getAll());
       for (MemcachedNode connectedNode : connectedNodes) {
-        if (connectedNode.getSocketAddress().equals(node)) {
-          monitor.authConnection(connection, cf.getOperationFactory(),
-            cf.getAuthDescriptor(), connectedNode);
-        }
+        monitor.authConnection(connection, cf.getOperationFactory(),
+          cf.getAuthDescriptor(), connectedNode);
       }
     }
 
@@ -240,24 +213,6 @@ public class BucketConfigurationProvider extends SpyObject
       configs.get(0));
     Bucket config = configurationParser.parseBucket(appliedConfig);
     setConfig(config);
-    connection.addObserver(new ConnectionObserver() {
-      @Override
-      public void connectionEstablished(SocketAddress sa, int reconnectCount) {
-        getLogger().debug("Carrier Config Connection established to " + sa);
-      }
-
-      @Override
-      public void connectionLost(SocketAddress sa) {
-        getLogger().debug("Carrier Config Connection lost from " + sa);
-        CouchbaseConnection conn = binaryConnection.getAndSet(null);
-        try {
-          conn.shutdown();
-        } catch (IOException e) {
-          getLogger().debug("Could not shut down Carrier Config Connection", e);
-        }
-        signalOutdated();
-      }
-    });
     binaryConnection.set(connection);
     return true;
   }
@@ -352,39 +307,16 @@ public class BucketConfigurationProvider extends SpyObject
 
   @Override
   public void setConfig(final Bucket config) {
-    if (config.isNotUpdating()) {
-      signalOutdated();
-      return;
-    }
     getLogger().debug("Applying new bucket config for bucket \"" + bucket
       + "\" (carrier publication: " + isBinary + "): " + config);
 
     this.config.set(config);
     httpProvider.get().updateBucket(config.getName(), config);
     updateSeedNodes();
+    if (config.isNotUpdating()) {
+      signalOutdated();
+    }
     notifyObservers();
-
-    manageTaintedConfig(config.getConfig());
-  }
-
-  /**
-   * Orchestrating method to start/stop background config fetcher for binary
-   * configs if tainted/not tainted anymore.
-   *
-   * @param config the config to check.
-   */
-  private void manageTaintedConfig(final Config config) {
-    if (!isBinary) {
-      return;
-    }
-
-    if (config.isTainted() && pollingBinary.compareAndSet(false, true)) {
-      getLogger().debug("Found tainted configuration, starting carrier "
-        + "poller.");
-      Thread thread = new Thread(new BinaryConfigPoller());
-      thread.setName("couchbase - carrier config poller");
-      thread.start();
-    }
   }
 
   /**
@@ -476,19 +408,12 @@ public class BucketConfigurationProvider extends SpyObject
       }
     } else {
       if (refreshingHttp.compareAndSet(false, true)) {
-        Thread refresherThread = new Thread(new HttpProviderRefresher());
+        Thread refresherThread = new Thread(new HttpProviderRefresher(this));
         refresherThread.setName("HttpConfigurationProvider Reloader");
         refresherThread.start();
       } else {
         getLogger().debug("Suppressing duplicate refreshing attempt.");
       }
-    }
-  }
-
-  @Override
-  public void reloadConfig() {
-    if (isBinary) {
-      signalOutdated();
     }
   }
 
@@ -502,7 +427,7 @@ public class BucketConfigurationProvider extends SpyObject
         binaryConnection.get().shutdown();
       } catch (IOException e) {
         getLogger().warn("Could not shutdown carrier publication config "
-          + "connection.", e);
+          + "connection.");
       }
     }
   }
@@ -547,6 +472,12 @@ public class BucketConfigurationProvider extends SpyObject
 
   class HttpProviderRefresher implements Runnable {
 
+    private final BucketConfigurationProvider provider;
+
+    public HttpProviderRefresher(BucketConfigurationProvider provider) {
+      this.provider = provider;
+    }
+
     @Override
     public void run() {
       try {
@@ -567,59 +498,16 @@ public class BucketConfigurationProvider extends SpyObject
             ConfigurationProviderHTTP oldProvider = httpProvider.get();
             ConfigurationProviderHTTP newProvider =
               new ConfigurationProviderHTTP(seedNodes, bucket, password);
+            newProvider.subscribe(bucket, provider);
             httpProvider.set(newProvider);
-            monitorBucket();
             oldProvider.shutdown();
             return;
           } catch(Exception ex) {
-            getLogger().debug("Got exception while trying to reconnect the " +
-              "configuration provider.", ex);
             continue;
           }
         }
       } finally {
         refreshingHttp.set(false);
-      }
-    }
-  }
-
-  /**
-   * A config poller for carrier configurations.
-   */
-  class BinaryConfigPoller implements Runnable {
-
-    /**
-     * The time to wait between config poll intervals in ms.
-     */
-    private static final int waitPeriod = 1000;
-
-    /**
-     * Counter to log polling attempts for this poller.
-     */
-    private int attempt;
-
-    /**
-     * Calling {@link #signalOutdated()} against a running binary configuration
-     * will trigger a config refresh.
-     */
-    @Override
-    public void run() {
-      try {
-        while (isBinary && getConfig().getConfig().isTainted()) {
-          getLogger().debug("Polling for new carrier configuration and " +
-            "waiting " + waitPeriod + "ms (Attempt " + ++attempt + ").");
-          signalOutdated();
-          try {
-            Thread.sleep(waitPeriod);
-          } catch (InterruptedException e) {
-            getLogger().warn("Got interrupted while trying to poll for new " +
-              "carrier config.", e);
-            break;
-          }
-        }
-      } finally {
-        getLogger().debug("Finished polling for new carrier configuration.");
-        pollingBinary.set(false);
       }
     }
   }
