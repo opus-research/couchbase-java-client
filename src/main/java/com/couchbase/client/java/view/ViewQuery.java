@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.java.document.Document;
-import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
@@ -54,12 +52,13 @@ public class ViewQuery implements Serializable {
     private static final int PARAM_STARTKEYDOCID_OFFSET = 22;
     private static final int PARAM_ENDKEY_OFFSET = 24;
     private static final int PARAM_ENDKEYDOCID_OFFSET = 26;
-    private static final int PARAM_KEY_OFFSET = 28;
+    private static final int PARAM_KEYS_OFFSET = 28;
+    private static final int PARAM_KEY_OFFSET = 30;
 
     /**
      * Number of supported possible params for a query.
      */
-    private static final int NUM_PARAMS = 15;
+    private static final int NUM_PARAMS = 16;
 
     /**
      * Contains all stored params.
@@ -70,16 +69,11 @@ public class ViewQuery implements Serializable {
     private final String view;
 
     private boolean development;
-    private boolean includeDocs;
-    private Class<? extends Document<?>> includeDocsTarget;
-    private String keysJson;
 
     private ViewQuery(String design, String view) {
         this.design = design;
         this.view = view;
         params = new String[NUM_PARAMS * 2];
-        includeDocs = false;
-        includeDocsTarget = null;
     }
 
     /**
@@ -99,52 +93,6 @@ public class ViewQuery implements Serializable {
 
     public ViewQuery development(boolean development) {
         this.development = development;
-        return this;
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs() {
-        return includeDocs(true, JsonDocument.class);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param target the custom document type target.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(Class<? extends Document<?>> target) {
-        return includeDocs(true, target);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param includeDocs if it should be enabled or not.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(boolean includeDocs) {
-        return includeDocs(includeDocs, JsonDocument.class);
-    }
-
-    /**
-     * Proactively load the full document for the row returned.
-     *
-     * This only works if reduce is false, since with reduce the original document ID is not included anymore.
-     * @param includeDocs if it should be enabled or not.
-     * @param target the custom document type target.
-     * @return the {@link ViewQuery} DSL.
-     */
-    public ViewQuery includeDocs(boolean includeDocs, Class<? extends Document<?>> target) {
-        this.includeDocs = includeDocs;
-        this.includeDocsTarget = target;
         return this;
     }
 
@@ -353,7 +301,8 @@ public class ViewQuery implements Serializable {
     }
 
     public ViewQuery keys(JsonArray keys) {
-        this.keysJson = keys.toString();
+        params[PARAM_KEYS_OFFSET] = "keys";
+        params[PARAM_KEYS_OFFSET+1] = encode(keys.toString());
         return this;
     }
 
@@ -459,8 +408,7 @@ public class ViewQuery implements Serializable {
      * Helper method to properly encode a string.
      *
      * This method can be overridden if a different encoding logic needs to be
-     * used. If so, note that {@link #keys(JsonArray) keys} is not encoded via
-     * this method, but by the core.
+     * used.
      *
      * @param source source string.
      * @return encoded target string.
@@ -499,30 +447,15 @@ public class ViewQuery implements Serializable {
     }
 
     public String getDesign() {
-        return design;
+    return design;
     }
 
     public String getView() {
-        return view;
-    }
-
-    /**
-     * @return the String JSON representation of the {@link #keys(JsonArray) keys} parameter.
-     */
-    public String getKeys() {
-        return this.keysJson;
+    return view;
     }
 
     public boolean isDevelopment() {
-        return development;
-    }
-
-    public boolean isIncludeDocs() {
-        return includeDocs;
-    }
-
-    public Class<? extends Document<?>> includeDocsTarget() {
-        return includeDocsTarget;
+    return development;
     }
 
     @Override
@@ -535,7 +468,6 @@ public class ViewQuery implements Serializable {
         if (development != viewQuery.development) return false;
         if (design != null ? !design.equals(viewQuery.design) : viewQuery.design != null) return false;
         if (!Arrays.equals(params, viewQuery.params)) return false;
-        if (keysJson != null ? !keysJson.equals(viewQuery.keysJson) : viewQuery.keysJson != null) return false;
         if (view != null ? !view.equals(viewQuery.view) : viewQuery.view != null) return false;
 
         return true;
@@ -547,7 +479,6 @@ public class ViewQuery implements Serializable {
         result = 31 * result + (design != null ? design.hashCode() : 0);
         result = 31 * result + (view != null ? view.hashCode() : 0);
         result = 31 * result + (development ? 1 : 0);
-        result = 31 * result + (keysJson != null ? keysJson.hashCode() : 0);
         return result;
     }
 }

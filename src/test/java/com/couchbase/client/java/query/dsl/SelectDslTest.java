@@ -140,9 +140,6 @@ public class SelectDslTest {
 
         statement = new DefaultOrderByPath(null).orderBy(Sort.asc("firstname"), Sort.desc("lastname"));
         assertEquals("ORDER BY firstname ASC, lastname DESC", statement.toString());
-
-        statement = new DefaultOrderByPath(null).orderBy(Sort.def("firstname"), Sort.def(x("lastname")));
-        assertEquals("ORDER BY firstname, lastname", statement.toString());
     }
 
     @Test
@@ -200,24 +197,13 @@ public class SelectDslTest {
         Statement statement = new DefaultFromPath(null)
             .from("beer-sample")
             .as("b")
-            .useKeys("a.id");
-        assertEquals("FROM beer-sample AS b USE KEYS a.id", statement.toString());
+            .keys("my-brewery");
+        assertEquals("FROM beer-sample AS b KEYS [\"my-brewery\"]", statement.toString());
 
         statement = new DefaultFromPath(null)
             .from("beer-sample")
-            .as("b")
-            .useKeysValues("my-brewery");
-        assertEquals("FROM beer-sample AS b USE KEYS \"my-brewery\"", statement.toString());
-
-        statement = new DefaultFromPath(null)
-            .from("beer-sample")
-            .useKeys(JsonArray.from("key1", "key2"));
-        assertEquals("FROM beer-sample USE KEYS [\"key1\",\"key2\"]", statement.toString());
-
-        statement = new DefaultFromPath(null)
-            .from("beer-sample")
-            .useKeysValues("key1", "key2");
-        assertEquals("FROM beer-sample USE KEYS [\"key1\",\"key2\"]", statement.toString());
+            .keys(JsonArray.from("key1", "key2"));
+        assertEquals("FROM beer-sample KEYS [\"key1\",\"key2\"]", statement.toString());
     }
 
     @Test
@@ -257,8 +243,8 @@ public class SelectDslTest {
         Statement statement = new DefaultFromPath(null)
             .from("users_with_orders").as("user")
             .nest("orders_with_users").as("orders")
-            .onKeys(x(JsonArray.from("key1", "key2")));
-        assertEquals("FROM users_with_orders AS user NEST orders_with_users AS orders ON KEYS [\"key1\",\"key2\"]",
+            .keys(x(JsonArray.from("key1", "key2")));
+        assertEquals("FROM users_with_orders AS user NEST orders_with_users AS orders KEYS [\"key1\",\"key2\"]",
             statement.toString());
     }
 
@@ -283,23 +269,9 @@ public class SelectDslTest {
         Statement statement = new DefaultFromPath(null)
             .from("users_with_orders").as("user")
             .join("orders_with_users").as("orders")
-            .onKeys(x(JsonArray.from("key1", "key2")));
-        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS [\"key1\",\"key2\"]",
+            .keys(x(JsonArray.from("key1", "key2")));
+        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders KEYS [\"key1\",\"key2\"]",
             statement.toString());
-
-        statement = new DefaultFromPath(null)
-                .from("users_with_orders").as("user")
-                .join("orders_with_users").as("orders")
-                .onKeys(JsonArray.from("key1", "key2"));
-        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS [\"key1\",\"key2\"]",
-                statement.toString());
-
-        statement = new DefaultFromPath(null)
-                .from("users_with_orders").as("user")
-                .join("orders_with_users").as("orders")
-                .onKeys("orders.id");
-        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS orders.id",
-                statement.toString());
     }
 
 }

@@ -74,7 +74,7 @@ def getVersionName() {
 }
 
 ext {
-    coreVersion = '1.2.0-SNAPSHOT'
+    coreVersion = '1.1.3'
 
     slf4jVersion = '1.7.7'
     commonsVersion = '1.1.3'
@@ -87,12 +87,7 @@ ext {
 }
 
 sourceSets {
-    integration {
-        //bug in IntelliJ prevent it from seeing resources dirs of a custom sourceSet
-        //instead, let's always use test's resource dir (which is the one seen by IntelliJ when running tests)
-        // (see https://youtrack.jetbrains.com/issue/IDEA-128966)
-        resources.srcDirs = ['src/test/resources']
-    }
+    integration
 }
 
 configurations {

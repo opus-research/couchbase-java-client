@@ -38,8 +38,6 @@ import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.repository.CouchbaseRepository;
-import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -93,11 +91,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public Repository repository() {
-        return new CouchbaseRepository(this, environment);
-    }
-
-    @Override
     public JsonDocument get(String id) {
         return get(id, kvTimeout, TIMEOUT_UNIT);
     }
@@ -125,26 +118,6 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> D get(String id, Class<D> target, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.get(id, target).singleOrDefault(null), timeout, timeUnit);
-    }
-
-    @Override
-    public boolean exists(String id) {
-        return exists(id, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public boolean exists(String id, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.exists(id), timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> boolean exists(D document) {
-        return exists(document.id());
-    }
-
-    @Override
-    public <D extends Document<?>> boolean exists(D document, long timeout, TimeUnit timeUnit) {
-        return exists(document.id(), timeout, timeUnit);
     }
 
     @Override
