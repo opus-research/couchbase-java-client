@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2014 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +24,12 @@ package com.couchbase.client.protocol.views;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Tests the various creation/modification ways of the Query class.
@@ -113,7 +115,7 @@ public class QueryTest {
     query.setGroupLevel(2);
 
     assertEquals(2, query.getArgs().size());
-    assertEquals("?group=true&group_level=2", query.toString());
+    assertEquals("?group_level=2&group=true", query.toString());
   }
 
   /**
@@ -173,7 +175,7 @@ public class QueryTest {
     // Test float with separator
     query.setKey("1,234.9");
     result = URLDecoder.decode(query.toString(), "UTF-8");
-    assertEquals("?key=\"1,234.9\"", result);
+    assertEquals("?key=1234.9", result);
 
     // Test float with zero
     query.setKey("0.123");
@@ -183,12 +185,12 @@ public class QueryTest {
     // Test float without zero
     query.setKey(".123");
     result = URLDecoder.decode(query.toString(), "UTF-8");
-    assertEquals("?key=\".123\"", result);
+    assertEquals("?key=0.123", result);
 
     // Test Exponent
     query.setKey("123E10");
     result = URLDecoder.decode(query.toString(), "UTF-8");
-    assertEquals("?key=123E10", result);
+    assertEquals("?key=1230000000000", result);
 
     // Test String
     query.setKey("\"123E10\"");
@@ -491,7 +493,7 @@ public class QueryTest {
     query.setKey(ComplexKey.of(true));
     query.setKeys(ComplexKey.of(false));
 
-    assertEquals("?key=true&keys=false", query.toString());
+    assertEquals("?keys=false&key=true", query.toString());
   }
 
 }
