@@ -30,7 +30,6 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import net.spy.memcached.HashAlgorithm;
@@ -82,7 +81,7 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
   @Override
   public Config create(final String source) {
     try {
-      return parseJSON(new JSONObject(source), null);
+      return parseJSON(new JSONObject(source));
     } catch (JSONException e) {
       throw new ConfigParsingException("Exception parsing JSON source: "
         + source, e);
@@ -98,17 +97,7 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
   @Override
   public Config create(final JSONObject source) {
     try {
-      return parseJSON(source, null);
-    } catch (JSONException e) {
-      throw new ConfigParsingException("Exception parsing JSON data: "
-        + source, e);
-    }
-  }
-
-  @Override
-  public Config create(JSONObject source, Config oldConfig) {
-    try {
-      return parseJSON(source, oldConfig);
+      return parseJSON(source);
     } catch (JSONException e) {
       throw new ConfigParsingException("Exception parsing JSON data: "
         + source, e);
@@ -122,10 +111,9 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
    * @return the populated {@link Config}.
    * @throws JSONException if parsing the JSON was not successful.
    */
-  private Config parseJSON(final JSONObject source, Config oldConfig)
-    throws JSONException {
+  private Config parseJSON(final JSONObject source) throws JSONException {
     return source.has("vBucketServerMap")
-      ? parseCouchbaseBucketJSON(source, oldConfig) : parseMemcacheBucketJSON(source);
+      ? parseCouchbaseBucketJSON(source) : parseMemcacheBucketJSON(source);
   }
 
   /**
@@ -174,11 +162,10 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
    * Parse the JSON for a couchbase type bucket.
    *
    * @param source the raw {@link JSONObject}.
-   * @param oldConfig an old config where parts can be reused.
    * @return the populated {@link Config}.
    * @throws JSONException if parsing the JSON was not successful.
    */
-  private Config parseCouchbaseBucketJSON(JSONObject source, Config oldConfig)
+  private Config parseCouchbaseBucketJSON(JSONObject source)
     throws JSONException {
     final JSONObject vBucketServerMap =
       source.getJSONObject("vBucketServerMap");
@@ -219,7 +206,7 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
 
     final List<String> populatedServers =
       populateServersForCouchbaseBucket(servers);
-    final List<VBucket> populatedVBuckets = populateVBuckets(vBuckets, oldConfig);
+    final List<VBucket> populatedVBuckets = populateVBuckets(vBuckets);
     final List<URL> populatedViewServers = populateViewServers(viewServers);
 
     return new DefaultConfig(hashAlgorithm, serversCount, replicasCount,
@@ -270,24 +257,14 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
   /**
    * Helper method to create a {@link List} of {@link VBucket} instances.
    *
-   * If an old {@link Config} object is passed in, the code checks if the
-   * VBucket is the same and if so just reuses this object instead of creating
-   * a new one with the same information.
-   *
    * @param source the raw JSON vBucket information.
-   * @param oldConfig an optional old config where the VBuckets can be reused.
    * @return a populated list of {@link VBucket} instances.
    * @throws JSONException if parsing the JSON was not successful.
    */
-  private List<VBucket> populateVBuckets(JSONArray source, Config oldConfig)
+  private List<VBucket> populateVBuckets(JSONArray source)
     throws JSONException {
     int numVBuckets = source.length();
     List<VBucket> vBuckets = new ArrayList<VBucket>(numVBuckets);
-
-    List<VBucket> oldvBuckets = null;
-    if (oldConfig != null) {
-      oldvBuckets = oldConfig.getVbuckets();
-    }
 
     for (int i = 0; i < numVBuckets; i++) {
       JSONArray rows = source.getJSONArray(i);
@@ -297,24 +274,6 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
       for (int j = 1; j < rows.length(); j++) {
         replicas[j - 1] = (short) rows.getInt(j);
       }
-
-      if (oldvBuckets != null) {
-        VBucket old = oldvBuckets.get(i);
-        if (old.getMaster() == master) {
-          boolean identicalReplicas = true;
-          for (int r = 0; r < replicaSize; r++) {
-            if (replicas[r] != old.getReplica(r)) {
-              identicalReplicas = false;
-              break;
-            }
-          }
-          if (identicalReplicas) {
-            vBuckets.add(old);
-            continue;
-          }
-        }
-      }
-
       VBucket vbucket;
       switch (replicaSize) {
         case 0:
