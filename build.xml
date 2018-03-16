@@ -233,7 +233,7 @@
     <echo>IPV4 address ${server.address_v4}</echo>
     <echo>IPV6 address ${server.address_v6}</echo>
     <echo>Test Type (unit|ci) ${test.type}</echo>
-    <echo>Testing against ${java.version}</echo>
+    <echo>Used Java version is: ${java.version}</echo>
     <delete dir="${junit.dir}"/>
     <mkdir  dir="${junit.dir}/data"/>
     <junit fork="yes" timeout="5400000" failureproperty="junit.failure" showoutput="true">
@@ -279,7 +279,9 @@
         includes="**/*.java"
         destdir="${build.test.classes}"
         debug="${javac.debug}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath>
         <path refid="test.classpath"/>
       </classpath>
@@ -327,6 +329,7 @@
 
   <target name="docsjar" depends="docs"
       description="Create the documentation jar">
+    <mkdir dir="${build.dir}/javadocs" />
     <zip destfile="${build.dir}/javadocs/${name}-${version}.jar"
         basedir="${build.javadoc}" />
   </target>
@@ -356,7 +359,7 @@
 
   <target name="compile" depends="ivy-init, gen-version, ivy-retrieve"
       description="Compile and run the project">
-    <echo>Compiling against ${java.version}</echo>
+    <echo>Used Java version is: ${java.version}</echo>
     <mkdir dir="${build.classes}" />
     <javac
         encoding="${build.encoding}"
@@ -365,7 +368,9 @@
         destdir="${build.classes}"
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath refid="${name}.common.classpath" />
     </javac>
 
@@ -376,7 +381,9 @@
         destdir="${build.classes}"
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
-        includeantruntime="false">
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
       <classpath refid="${name}.common.classpath"/>
     </javac>
     <move file="${build.src.dir}/com/couchbase/client/changelog.txt"
@@ -385,7 +392,7 @@
 
   <target name="srcjar" depends="init,jar"
       description="Create source jars">
-    <mkdir dir="${build.dir}" />
+    <mkdir dir="${build.dir}/sources" />
     <jar jarfile="${build.dir}/sources/${name}-${version}.jar">
       <fileset dir="${src.dir}" />
       <fileset dir="${build.src.dir}" />
@@ -396,6 +403,7 @@
   </target>
 
   <target name="jar" depends="compile,compile-test" description="Creates a jar file for the library">
+    <mkdir dir="${build.dir}/jars" />
     <jar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
       <manifest>
         <attribute name="Implementation-Title" value="java memcached client" />
@@ -487,7 +495,7 @@
       <attach file="${build.dir}/sources/${name}-${version}.jar"
           classifier="sources" />
     <attach file="${build.dir}/javadocs/${name}-${version}.jar"
-          classifier="javadocs" />
+          classifier="javadoc" />
     </artifact:install>
     <artifact:pom id="couchbase-client-test" file="${couchbase-client-test.pom}" />
     <artifact:install file="${build.dir}/jars/${name}-test-${version}.jar">
