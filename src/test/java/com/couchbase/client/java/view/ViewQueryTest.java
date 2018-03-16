@@ -22,6 +22,8 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.java.SerializationHelper;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.RawJsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import org.junit.Test;
@@ -276,6 +278,25 @@ public class ViewQueryTest {
 
         ViewQuery deserialized = SerializationHelper.deserializeFromBytes(serialized, ViewQuery.class);
         assertEquals(query, deserialized);
+    }
+
+    @Test
+    public void shouldIncludeDocs() {
+        ViewQuery query = ViewQuery.from("design", "view").includeDocs();
+        assertTrue(query.isIncludeDocs());
+        assertEquals(JsonDocument.class, query.includeDocsTarget());
+
+        query = ViewQuery.from("design", "view").includeDocs(JsonDocument.class);
+        assertTrue(query.isIncludeDocs());
+        assertEquals(JsonDocument.class, query.includeDocsTarget());
+
+        query = ViewQuery.from("design", "view");
+        assertFalse(query.isIncludeDocs());
+        assertNull(query.includeDocsTarget());
+
+        query = ViewQuery.from("design", "view").includeDocs(false, RawJsonDocument.class);
+        assertFalse(query.isIncludeDocs());
+        assertEquals(RawJsonDocument.class, query.includeDocsTarget());
     }
 
     @Test

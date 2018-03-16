@@ -40,6 +40,7 @@ import org.junit.Test;
 import java.io.Serializable;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -82,12 +83,15 @@ public class KeyValueTest extends ClusterDependentTest {
         JsonDocument response = bucket().get("upsert");
         assertEquals(content.getString("hello"), response.content().getString("hello"));
 
+        assertTrue(bucket().exists("upsert"));
+
         JsonDocument removed = bucket().remove(doc);
         assertEquals(doc.id(), removed.id());
         assertNull(removed.content());
         assertEquals(0, removed.expiry());
         assertTrue(removed.cas() != 0);
 
+        assertFalse(bucket().exists("upsert"));
         assertNull(bucket().get("upsert"));
     }
 
@@ -199,19 +203,16 @@ public class KeyValueTest extends ClusterDependentTest {
         assertEquals(doc6.cas(), doc5.cas());
     }
 
-    @Test
-    public void shouldHaveCounterInitialZero() throws Exception {
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldThrowIfNotExistsIncrementing() throws Exception {
         JsonLongDocument doc1 = bucket().counter("defincr-key", 10);
         assertEquals(0, (long) doc1.content());
+    }
 
-        JsonLongDocument doc2 = bucket().get("defincr-key", JsonLongDocument.class);
-        assertEquals(0, (long) doc2.content());
-
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldThrowIfNotExistsDecrementing() throws Exception {
         JsonLongDocument doc3 = bucket().counter("defdecr-key", -10);
         assertEquals(0, (long) doc3.content());
-
-        JsonLongDocument doc4 = bucket().get("defdecr-key", JsonLongDocument.class);
-        assertEquals(0, (long) doc4.content());
     }
 
     @Test
@@ -291,7 +292,7 @@ public class KeyValueTest extends ClusterDependentTest {
         JsonDocument locked = bucket().getAndLock(key, 15);
         assertEquals("v", locked.content().getString("k"));
 
-        bucket().unlock(key, locked.cas()+1);
+        bucket().unlock(key, locked.cas() + 1);
     }
 
     @Test(expected = TemporaryLockFailureException.class)
@@ -521,6 +522,18 @@ public class KeyValueTest extends ClusterDependentTest {
         bucket().replace(JsonDocument.create("removeSome", JsonObject.create()), ReplicateTo.THREE);
     }
 
+    @Test(expected = CASMismatchException.class)
+    public void shouldFailWithInvalidCASOnAppend() {
+        StringDocument stored = bucket().upsert(StringDocument.create("appendCasMismatch", "foo"));
+        bucket().append(StringDocument.from(stored, stored.cas() + 1));
+    }
+
+    @Test(expected = CASMismatchException.class)
+    public void shouldFailWithInvalidCASOnPrepend() {
+        StringDocument stored = bucket().upsert(StringDocument.create("prependCasMismatch", "foo"));
+        bucket().prepend(StringDocument.from(stored, stored.cas() + 1));
+    }
+
     @Test(expected = DocumentDoesNotExistException.class)
     public void shouldFailOnRemoveWhenNotExists() {
         bucket().remove("thisDocumentDoesNotExist");
@@ -548,6 +561,21 @@ public class KeyValueTest extends ClusterDependentTest {
         assertTrue(stored.cas() != 0);
 
         bucket().remove(JsonDocument.from(stored, stored.cas() + 1), PersistTo.MASTER);
+    }
+
+    @Test
+    public void shouldStoreAndGetKeyWithUtf16Char() {
+        String key = "utf16\uD834\uDD1E"; //a nice little musical key
+        JsonDocument toStore = JsonDocument.create(key, JsonObject.create().put("UTF8", true).put("hasUTF16", true));
+
+        JsonDocument inserted = bucket().upsert(toStore);
+        JsonDocument retrieved = bucket().get(key);
+
+        assertNotNull(inserted);
+        assertNotNull(retrieved);
+        assertEquals(key, inserted.id());
+        assertEquals(key, retrieved.id());
+        assertEquals(inserted.content(), retrieved.content());
     }
 
 }
