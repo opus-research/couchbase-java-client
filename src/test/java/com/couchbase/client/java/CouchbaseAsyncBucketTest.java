@@ -22,7 +22,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.CouchbaseCore;
-import com.couchbase.client.core.endpoint.ResponseStatusConverter;
+import com.couchbase.client.core.RequestFactory;
 import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -30,7 +30,6 @@ import com.couchbase.client.core.message.kv.InsertRequest;
 import com.couchbase.client.core.message.kv.InsertResponse;
 import com.couchbase.client.core.message.kv.RemoveRequest;
 import com.couchbase.client.core.message.kv.RemoveResponse;
-import com.couchbase.client.core.message.kv.ReplaceRequest;
 import com.couchbase.client.core.message.kv.ReplaceResponse;
 import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
@@ -39,12 +38,14 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.transcoder.Transcoder;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import rx.Observable;
 
 import java.util.Collections;
 
 import static com.couchbase.client.core.endpoint.ResponseStatusConverter.BINARY_SUCCESS;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,7 +67,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(InsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new InsertResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -84,7 +85,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(UpsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new UpsertResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -101,15 +102,15 @@ public class CouchbaseAsyncBucketTest {
             core, null, "bucket", "", Collections.<Transcoder<? extends Document, ?>>emptyList()
         );
 
-        when(core.send(any(ReplaceRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new ReplaceResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+        when(core.send(argThat(new IsRequestInFactory()))).thenReturn(Observable.just((CouchbaseResponse) new ReplaceResponse(
+            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
         Observable<JsonDocument> result = bucket.replace(doc, PersistTo.NONE, ReplicateTo.NONE);
         result.toBlocking().single();
 
-        verify(core, times(1)).send(any(CouchbaseRequest.class));
+        verify(core, times(1)).send(argThat(new IsRequestInFactory()));
     }
 
     @Test
@@ -120,7 +121,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(RemoveRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new RemoveResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, null, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -128,6 +129,13 @@ public class CouchbaseAsyncBucketTest {
         result.toBlocking().single();
 
         verify(core, times(1)).send(any(CouchbaseRequest.class));
+    }
+
+    class IsRequestInFactory extends ArgumentMatcher<RequestFactory> {
+        @Override
+        public boolean matches(Object argument) {
+            return false;
+        }
     }
 
 }
