@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -26,14 +27,13 @@ public class BooleanQueryTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldFailExportWhenNoChild() {
-        new SearchQuery("foo", SearchQuery.booleans()).export();
+        SearchQuery.booleans().export();
     }
 
     @Test
     public void shouldExportBooleanQueryWithInnerBoosts() {
         PrefixQuery inner = SearchQuery.prefix("someterm").boost(2);
-        BooleanQuery fts = SearchQuery.booleans().must(inner).mustNot(inner).should(inner);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().must(inner).mustNot(inner).should(inner);
 
         JsonObject expectedInner = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         JsonObject expectedMustNot = JsonObject.create().put("disjuncts", JsonArray.from(expectedInner));
@@ -52,8 +52,7 @@ public class BooleanQueryTest {
     public void shouldCumulateCallsToMust() {
         PrefixQuery inner1 = SearchQuery.prefix("someterm").boost(2);
         PrefixQuery inner2 = SearchQuery.prefix("otherterm");
-        BooleanQuery fts = SearchQuery.booleans().must(inner1).must(inner2);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().must(inner1).must(inner2);
 
         JsonObject expectedInner1 = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         JsonObject expectedInner2 = JsonObject.create().put("prefix", "otherterm");
@@ -69,8 +68,7 @@ public class BooleanQueryTest {
     public void shouldCumulateCallsToMustNot() {
         PrefixQuery inner1 = SearchQuery.prefix("someterm").boost(2);
         PrefixQuery inner2 = SearchQuery.prefix("otherterm");
-        BooleanQuery fts = SearchQuery.booleans().mustNot(inner1).mustNot(inner2);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().mustNot(inner1).mustNot(inner2);
 
         JsonObject expectedInner1 = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         JsonObject expectedInner2 = JsonObject.create().put("prefix", "otherterm");
@@ -86,8 +84,7 @@ public class BooleanQueryTest {
     public void shouldCumulateCallsToShould() {
         PrefixQuery inner1 = SearchQuery.prefix("someterm").boost(2);
         PrefixQuery inner2 = SearchQuery.prefix("otherterm");
-        BooleanQuery fts = SearchQuery.booleans().should(inner1).should(inner2);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().should(inner1).should(inner2);
 
         JsonObject expectedInner1 = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         JsonObject expectedInner2 = JsonObject.create().put("prefix", "otherterm");
@@ -102,8 +99,7 @@ public class BooleanQueryTest {
     @Test
     public void shouldUseMinForShould() {
         PrefixQuery inner = SearchQuery.prefix("someterm").boost(2);
-        BooleanQuery fts = SearchQuery.booleans().must(inner).mustNot(inner).should(inner, inner).shouldMin(2);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().must(inner).mustNot(inner).should(inner, inner).shouldMin(2);
 
         JsonObject expectedInner = JsonObject.create().put("prefix", "someterm").put("boost", 2.0);
         //default min from a disjunction query is omitted
@@ -127,26 +123,24 @@ public class BooleanQueryTest {
     @Test(expected = IllegalArgumentException.class)
     public void shouldFailOnShouldSectionTooSmall() {
         PrefixQuery inner = SearchQuery.prefix("someterm").boost(2);
-        BooleanQuery fts = SearchQuery.booleans().should(inner).shouldMin(2);
-        SearchQuery query = new SearchQuery("foo", fts);
+        BooleanQuery query = SearchQuery.booleans().should(inner).shouldMin(2);
 
         query.export();
     }
 
     @Test
     public void shouldExportBooleanQueryWithAllOptions() {
+        SearchParams params = SearchParams.build().explain();
         PrefixQuery innerA = SearchQuery.prefix("someterm").boost(2.0);
         PrefixQuery innerB = SearchQuery.prefix("termB");
         PrefixQuery innerC = SearchQuery.prefix("termC");
 
-        BooleanQuery fts = SearchQuery.booleans()
+        BooleanQuery query = SearchQuery.booleans()
             .boost(1.5)
             .must(innerA)
             .mustNot(innerB)
             .should(innerA, innerB, innerC)
             .shouldMin(3);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .explain();
 
         JsonObject expectedInnerA = JsonObject.create().put("prefix", "someterm").put("boost", 2d);
         JsonObject expectedInnerB = JsonObject.create().put("prefix", "termB");
@@ -166,7 +160,7 @@ public class BooleanQueryTest {
                 .put("must_not", expectedMustNot)
                 .put("should", expectedShould))
             .put("explain", true);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 
 }

@@ -19,6 +19,7 @@ import static org.junit.Assert.assertEquals;
 
 import com.couchbase.client.java.document.json.JsonNull;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.search.SearchParams;
 import com.couchbase.client.java.search.SearchQuery;
 import org.junit.Test;
 
@@ -26,8 +27,7 @@ public class MatchAllQueryTest {
 
     @Test
     public void shouldExportMatchAllQuery() throws Exception {
-        MatchAllQuery fts = SearchQuery.matchAll();
-        SearchQuery query = new SearchQuery("foo", fts);
+        MatchAllQuery query = SearchQuery.matchAll();
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
@@ -37,16 +37,15 @@ public class MatchAllQueryTest {
 
     @Test
     public void shouldExportMatchAllQueryWithAllOptions() {
-        MatchAllQuery fts = SearchQuery.matchAll()
+        SearchParams params = SearchParams.build().limit(10);
+        MatchAllQuery query = SearchQuery.matchAll()
             .boost(1.5);
-        SearchQuery query = new SearchQuery("foo", fts)
-            .limit(10);
 
         JsonObject expected = JsonObject.create()
             .put("query", JsonObject.create()
                 .put("match_all", JsonNull.INSTANCE)
                 .put("boost", 1.5))
             .put("size", 10);
-        assertEquals(expected, query.export());
+        assertEquals(expected, query.export(params));
     }
 }
