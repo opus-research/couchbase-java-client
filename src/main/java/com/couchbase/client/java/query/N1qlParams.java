@@ -17,7 +17,6 @@ package com.couchbase.client.java.query;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +71,7 @@ public class N1qlParams implements Serializable {
         adhoc = true;
         disableMetrics = false;
         pretty = true;
-        credentials = new LinkedHashMap<String, String>();
+        credentials = new HashMap<String, String>();
     }
 
     /**

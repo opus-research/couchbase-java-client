@@ -34,7 +34,7 @@ import org.junit.BeforeClass;
 @Deprecated
 public class ClusterDependentTest {
 
-    protected static CouchbaseTestContext ctx;
+    private static CouchbaseTestContext ctx;
 
     @BeforeClass
     public static void connect() throws Exception {

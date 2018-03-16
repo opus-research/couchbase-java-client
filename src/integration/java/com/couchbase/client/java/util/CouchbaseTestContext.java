@@ -79,11 +79,10 @@ public class CouchbaseTestContext {
     private final boolean isAdHoc;
     private final boolean isFlushEnabled;
     private final Repository repository;
-    private final boolean rbacEnabled;
 
     private CouchbaseTestContext(Bucket bucket, String bucketPassword,
             BucketManager bucketManager, Cluster cluster, ClusterManager clusterManager, String seedNode,
-            String adminName, String adminPassword, CouchbaseEnvironment env, boolean isAdHoc, boolean isFlushEnabled, boolean rbacEnabled) {
+            String adminName, String adminPassword, CouchbaseEnvironment env, boolean isAdHoc, boolean isFlushEnabled) {
         this.bucket = bucket;
         this.bucketName = bucket.name();
         this.bucketPassword = bucketPassword;
@@ -97,7 +96,6 @@ public class CouchbaseTestContext {
         this.isAdHoc = isAdHoc;
         this.isFlushEnabled = isFlushEnabled;
         this.repository = bucket.repository();
-        this.rbacEnabled = rbacEnabled;
     }
 
     /**
@@ -304,13 +302,7 @@ public class CouchbaseTestContext {
             CouchbaseEnvironment env = envBuilder.build();
 
             Cluster cluster = CouchbaseCluster.create(env, seedNode);
-            Version min = cluster.clusterManager(adminName, adminPassword).info().getMinVersion();
-            boolean authed = false;
-            if (min.major() >= 5) {
-                cluster.authenticate(adminName, adminPassword);
-                authed = true;
-            }
-            return buildWithCluster(cluster, env, authed);
+            return buildWithCluster(cluster, env);
         }
 
         /**
@@ -318,7 +310,7 @@ public class CouchbaseTestContext {
          * (see {@link #adhoc(boolean)}, {@link #flushOnInit(boolean)}, ...), but re-using a previously existing
          * {@link Cluster} and {@link CouchbaseEnvironment}.
          */
-        public CouchbaseTestContext buildWithCluster(Cluster cluster, CouchbaseEnvironment env, boolean authed) {
+        public CouchbaseTestContext buildWithCluster(Cluster cluster, CouchbaseEnvironment env) {
             if (createAdhocBucket) {
                 this.bucketName = AD_HOC + this.bucketName + System.nanoTime();
             }
@@ -339,8 +331,7 @@ public class CouchbaseTestContext {
 
             boolean isFlushEnabled = bucketSettingsBuilder.enableFlush();
 
-            Bucket bucket = authed ? cluster.openBucket(bucketName) :
-                cluster.openBucket(bucketName, bucketPassword);
+            Bucket bucket = cluster.openBucket(bucketName, bucketPassword);
             BucketManager bucketManager = bucket.bucketManager();
 
             if (flushOnInit && isFlushEnabled && existing) {
@@ -348,8 +339,9 @@ public class CouchbaseTestContext {
             }
 
             return new CouchbaseTestContext(bucket, bucketPassword, bucketManager, cluster, clusterManager, seedNode,
-                    adminName, adminPassword, env, createAdhocBucket, isFlushEnabled, authed);
+                    adminName, adminPassword, env, createAdhocBucket, isFlushEnabled);
         }
+
     }
 
     //==========================
@@ -577,9 +569,5 @@ public class CouchbaseTestContext {
     /** @return true if the {@link #bucket()} has flush capability enabled. */
     public boolean isFlushEnabled() {
         return isFlushEnabled;
-    }
-
-    public boolean rbacEnabled() {
-        return rbacEnabled;
     }
 }
