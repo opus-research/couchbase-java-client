@@ -21,14 +21,17 @@
  */
 package com.couchbase.client.java.bucket;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
+import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.DesignDocument;
+import rx.functions.Func1;
+
+import java.util.List;
+import java.util.Observable;
+import java.util.concurrent.TimeUnit;
 
 public class DefaultBucketManager implements BucketManager {
 
@@ -297,5 +300,15 @@ public class DefaultBucketManager implements BucketManager {
                 .toList()
                 .toBlocking()
                 .single();
+    }
+
+    @Override
+    public boolean watchIndex(String indexName, long watchTimeout, TimeUnit watchTimeUnit) {
+        Boolean isOffline = asyncBucketManager.watchIndex(indexName, watchTimeout, watchTimeUnit)
+                .isEmpty()
+                .toBlocking()
+                .single();
+
+        return !isOffline;
     }
 }
