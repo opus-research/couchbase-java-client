@@ -19,35 +19,46 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.util;
 
-import com.couchbase.client.java.document.json.JsonObject;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Formatter;
+
+import com.couchbase.client.core.annotations.InterfaceAudience;
 
 /**
- * Represents the execution plan of a prepared statement, as returned by the server after a "PREPARE ..." query.
+ * Utility methods around hashes, message digests, etc...
  *
  * @author Simon Baslé
- * @since 2.1
+ * @since 2.2
  */
-public class QueryPlan implements SerializableStatement {
+@InterfaceAudience.Private
+public class DigestUtils {
 
-    private static final long serialVersionUID = 872622310459659115L;
-
-    private final JsonObject jsonPlan;
-
-    public QueryPlan(JsonObject jsonPlan) {
-        this .jsonPlan = jsonPlan;
+    public static String digestSha1Hex(String source) {
+        String sha1 = "";
+        try {
+            MessageDigest crypt = MessageDigest.getInstance("SHA-1");
+            crypt.reset();
+            crypt.update(source.getBytes("UTF-8"));
+            sha1 = byteToHex(crypt.digest());
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return sha1;
     }
 
-    /**
-     * @return a String representation of the JSON for the execution plan.
-     */
-    @Override
-    public String toString() {
-        return jsonPlan.toString();
-    }
-
-    public JsonObject plan() {
-        return jsonPlan;
+    private static String byteToHex(final byte[] hash) {
+        Formatter formatter = new Formatter();
+        for (byte b : hash) {
+            formatter.format("%02x", b);
+        }
+        String result = formatter.toString();
+        formatter.close();
+        return result;
     }
 }
