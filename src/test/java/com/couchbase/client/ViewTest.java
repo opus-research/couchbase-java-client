@@ -118,14 +118,14 @@ public class ViewTest {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create(SERVER_URI));
     TestingClient c = new TestingClient(uris, "default", "");
-    String docUri = "/default/_design/" + TestingClient.MODE_PREFIX
+    String docUri = "/default/_design/" + c.getViewModePrefix()
         + DESIGN_DOC_W_REDUCE;
     String view = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_W_REDUCE + "\":{\"map\":\"function (doc) { "
         + "if(doc.type != \\\"dated\\\") {emit(doc.type, 1)}}\",\"reduce\":\"_sum\" }}}";
     c.asyncHttpPut(docUri, view);
 
-    docUri = "/default/_design/" + TestingClient.MODE_PREFIX
+    docUri = "/default/_design/" + c.getViewModePrefix()
         + DESIGN_DOC_WO_REDUCE;
     String view2 = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_FOR_DATED + "\":{\"map\":\"function (doc) {  "
@@ -170,10 +170,10 @@ public class ViewTest {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create(SERVER_URI));
     TestingClient c = new TestingClient(uris, "default", "");
-    c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
+    c.asyncHttpDelete("/default/_design/" + c.getViewModePrefix()
         + DESIGN_DOC_W_REDUCE).get();
 
-    c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
+    c.asyncHttpDelete("/default/_design/" + c.getViewModePrefix()
         + DESIGN_DOC_WO_REDUCE).get();
   }
 
