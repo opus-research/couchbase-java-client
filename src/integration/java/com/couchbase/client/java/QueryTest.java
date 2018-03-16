@@ -24,7 +24,6 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryParams;
@@ -40,7 +39,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.couchbase.client.java.query.Index.createPrimaryIndex;
 import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.x;
@@ -74,7 +72,7 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldAlreadyHaveCreatedIndex() {
-        QueryResult indexResult = bucket().query(Query.simple(createPrimaryIndex().on(bucketName())));
+        QueryResult indexResult = bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
         assertFalse(indexResult.finalSuccess());
         assertEquals(0, indexResult.allRows().size());
         assertNotNull(indexResult.info());
