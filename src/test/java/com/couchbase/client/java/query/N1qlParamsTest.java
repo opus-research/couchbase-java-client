@@ -25,6 +25,7 @@ import com.couchbase.client.java.query.consistency.ScanConsistency;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -321,10 +322,11 @@ public class N1qlParamsTest {
                 .withCredentials("foo", "a")
                 .withCredentials("bar", "b");
 
-        JsonObject expected = JsonObject.create().put("creds", JsonArray.from(
-                JsonObject.create().put("user", "bar").put("pass", "b"),
-                JsonObject.create().put("user", "foo").put("pass", "a")
-        ));
+        List creds = new LinkedList();
+        creds.add(JsonObject.create().put("user", "bar").put("pass", "b"));
+        creds.add(JsonObject.create().put("user", "foo").put("pass", "a"));
+
+        JsonObject expected = JsonObject.create().put("creds", JsonArray.from(creds));
         JsonObject actual = JsonObject.empty();
         source.injectParams(actual);
 
