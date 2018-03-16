@@ -21,18 +21,10 @@
  */
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.MutationToken;
-import com.couchbase.client.java.Bucket;
-import com.couchbase.client.java.document.MutatedDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -56,8 +48,6 @@ public class N1qlParams implements Serializable {
     private String scanWait;
     private String clientContextId;
     private Integer maxParallelism;
-
-    private Map<Bucket, List<MutatedDocument>> mutatedDocuments;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -89,42 +79,6 @@ public class N1qlParams implements Serializable {
         }
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
-        }
-        if (this.mutatedDocuments != null) {
-            if (this.consistency != null) {
-                throw new IllegalArgumentException("`consistency(...)` cannot be used "
-                    + "together with `consistentWith(...)`");
-            }
-            JsonObject vectors = JsonObject.create();
-            for (Map.Entry<Bucket, List<MutatedDocument>> entry : mutatedDocuments.entrySet()) {
-                JsonObject bucket = vectors.getObject(entry.getKey().name());
-
-                if (bucket == null) {
-                   bucket = JsonObject.create();
-                   vectors.put(entry.getKey().name(), bucket);
-                }
-
-                if (entry.getValue().isEmpty()) {
-                    throw new UnsupportedOperationException("Not supported (yet).");
-                }
-
-                for (MutatedDocument d : entry.getValue()) {
-                    MutationToken token = d.mutationToken();
-                    if (token == null) {
-                       throw new UnsupportedOperationException("Not supported (yet).");
-                    }
-
-                    bucket.put(
-                        String.valueOf(token.vbucketID()),
-                        JsonObject.create()
-                            .put("guard", String.valueOf(token.vbucketUUID()))
-                            .put("value", token.sequenceNumber())
-                    );
-                }
-            }
-
-            queryJson.put("scan_vectors", vectors);
-            queryJson.put("scan_consistency", "at_plus");
         }
     }
 
@@ -193,31 +147,6 @@ public class N1qlParams implements Serializable {
         if (consistency == ScanConsistency.NOT_BOUNDED) {
             this.scanWait = null;
         }
-        return this;
-    }
-
-    /**
-     * Sets the {@link MutationToken}s this query should be consistent with.
-     *
-     * @param bucket the bucket scope for the (optional) list of documents.
-     * @param mutatedDocuments the tokens which should be supplied as a lower index bound.
-     *
-     * @return this {@link N1qlParams} for chaining.
-     */
-    @InterfaceStability.Experimental
-    public N1qlParams consistentWith(Bucket bucket, MutatedDocument... mutatedDocuments) {
-        if (this.mutatedDocuments == null) {
-            this.mutatedDocuments = new HashMap<Bucket, List<MutatedDocument>>();
-        }
-
-        List<MutatedDocument> mdocs = this.mutatedDocuments.get(bucket);
-        if (mdocs == null) {
-            mdocs = new ArrayList<MutatedDocument>();
-        }
-
-        mdocs.addAll(Arrays.asList(mutatedDocuments));
-        this.mutatedDocuments.put(bucket, mdocs);
-
         return this;
     }
 
