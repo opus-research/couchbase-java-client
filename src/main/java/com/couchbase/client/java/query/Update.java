@@ -28,6 +28,7 @@ import com.couchbase.client.java.query.dsl.path.AbstractPath;
 import com.couchbase.client.java.query.dsl.path.DefaultUpdateUsePath;
 import com.couchbase.client.java.query.dsl.path.UpdateUsePath;
 
+import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 
 public class Update {
@@ -35,7 +36,7 @@ public class Update {
   private Update() {}
 
   public static UpdateUsePath update(String bucket) {
-    return new DefaultUpdateUsePath(new UpdatePath(x(bucket)));
+    return update(i(bucket));
   }
 
   public static UpdateUsePath update(Expression bucket) {
@@ -43,7 +44,7 @@ public class Update {
   }
 
   public static UpdateUsePath updateCurrentBucket() {
-    return new DefaultUpdateUsePath(new UpdatePath(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER)));
+    return update(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER));
   }
 
   private static class UpdatePath extends AbstractPath {

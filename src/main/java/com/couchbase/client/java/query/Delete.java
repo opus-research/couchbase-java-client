@@ -28,6 +28,7 @@ import com.couchbase.client.java.query.dsl.path.AbstractPath;
 import com.couchbase.client.java.query.dsl.path.DefaultDeleteUsePath;
 import com.couchbase.client.java.query.dsl.path.DeleteUsePath;
 
+import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 
 public class Delete {
@@ -35,7 +36,7 @@ public class Delete {
   private Delete() {}
 
   public static DeleteUsePath deleteFrom(String bucket) {
-    return new DefaultDeleteUsePath(new DeletePath(x(bucket)));
+    return deleteFrom(i(bucket));
   }
 
   public static DeleteUsePath deleteFrom(Expression bucket) {
@@ -43,7 +44,7 @@ public class Delete {
   }
 
   public static DeleteUsePath deleteFromCurrentBucket() {
-    return new DefaultDeleteUsePath(new DeletePath(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER)));
+    return deleteFrom(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER));
   }
 
   private static class DeletePath extends AbstractPath {

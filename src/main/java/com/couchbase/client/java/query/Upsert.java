@@ -28,6 +28,7 @@ import com.couchbase.client.java.query.dsl.path.AbstractPath;
 import com.couchbase.client.java.query.dsl.path.DefaultInitialInsertPath;
 import com.couchbase.client.java.query.dsl.path.InitialInsertPath;
 
+import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 
 public class Upsert {
@@ -35,7 +36,7 @@ public class Upsert {
   private Upsert() {}
 
   public static InitialInsertPath upsertInto(String bucket) {
-    return new DefaultInitialInsertPath(new UpsertPath(x(bucket)));
+    return upsertInto(i(bucket));
   }
 
   public static InitialInsertPath upsertInto(Expression bucket) {
@@ -43,7 +44,7 @@ public class Upsert {
   }
 
   public static InitialInsertPath upsertIntoCurrentBucket() {
-    return new DefaultInitialInsertPath(new UpsertPath(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER)));
+    return upsertInto(x(CouchbaseAsyncBucket.CURRENT_BUCKET_IDENTIFIER));
   }
 
   private static class UpsertPath extends AbstractPath {
