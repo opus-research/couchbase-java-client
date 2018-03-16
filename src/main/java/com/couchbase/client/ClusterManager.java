@@ -450,10 +450,10 @@ public class ClusterManager extends SpyObject {
 
     HttpCoreContext coreContext = HttpCoreContext.create();
 
-    request.setHeader("Authorization", "Basic "
+    request.addHeader("Authorization", "Basic "
       + Base64.encodeBase64String((username + ':' + password).getBytes()));
-    request.setHeader("Accept", "*/*");
-    request.setHeader("Content-Type", "application/x-www-form-urlencoded");
+    request.addHeader("Accept", "*/*");
+    request.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
     for (HttpHost node : clusterNodes) {
       try {

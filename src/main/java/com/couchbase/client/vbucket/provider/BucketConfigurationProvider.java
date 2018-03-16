@@ -341,7 +341,6 @@ public class BucketConfigurationProvider extends SpyObject
     }
 
     try {
-      httpProvider.get().clearBuckets();
       Bucket config = httpProvider.get().getBucketConfiguration(bucket);
       setConfig(config);
       monitorBucket();
@@ -533,7 +532,6 @@ public class BucketConfigurationProvider extends SpyObject
 
   @Override
   public void shutdown() {
-    observers.clear();
     shutdown = true;
     if (httpProvider.get() != null) {
       httpProvider.get().shutdown();

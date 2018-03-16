@@ -22,18 +22,19 @@
 
 package com.couchbase.client.protocol.views;
 
+import java.io.IOException;
+import java.text.ParseException;
+
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationErrorType;
 import net.spy.memcached.ops.OperationException;
 import net.spy.memcached.ops.OperationStatus;
+
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-
-import java.io.IOException;
-import java.text.ParseException;
 
 /**
  * An HttpOperationImpl.
@@ -94,7 +95,7 @@ public abstract class HttpOperationImpl implements HttpOperation {
   }
 
   public void addAuthHeader(String authzn) {
-    request.setHeader("Authorization", authzn);
+    request.addHeader("Authorization", authzn);
   }
 
   public abstract void handleResponse(HttpResponse response);
