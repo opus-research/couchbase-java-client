@@ -48,7 +48,7 @@ public class TermRange {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("{");
+        final StringBuffer sb = new StringBuffer("{");
         sb.append("name='").append(name).append('\'');
         sb.append(", count=").append(count);
         sb.append('}');

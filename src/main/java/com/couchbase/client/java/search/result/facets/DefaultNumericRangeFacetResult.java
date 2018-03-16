@@ -46,7 +46,7 @@ public class DefaultNumericRangeFacetResult extends AbstractFacetResult implemen
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("NumericRangeFacetResult{")
+        final StringBuffer sb = new StringBuffer("NumericRangeFacetResult{")
                 .append("name='").append(name).append('\'')
                 .append(", field='").append(field).append('\'')
                 .append(", total=").append(total)
