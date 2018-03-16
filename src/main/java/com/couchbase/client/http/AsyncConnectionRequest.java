@@ -20,37 +20,60 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.protocol.views;
+package com.couchbase.client.http;
 
-import java.util.Collection;
-import java.util.Map;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * Holds the response of a view query where the map and reduce
- * function were called.
+ * An AsyncConnectionRequest.
  */
-public class ViewResponseReduced extends ViewResponse {
+public class AsyncConnectionRequest {
 
-  public ViewResponseReduced(final Collection<ViewRow> rows,
-      final Collection<RowError> errors) {
-    super(rows, errors);
+  private volatile boolean completed;
+  private volatile NHttpClientConnection conn;
+
+  public AsyncConnectionRequest() {
+    super();
   }
 
-  @Override
-  public Map<String, Object> getMap() {
-    throw new UnsupportedOperationException("This view doesn't contain "
-        + "documents");
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  public String toString() {
-    StringBuilder s = new StringBuilder();
-    for (ViewRow r : rows) {
-      s.append(r.getKey());
-      s.append(" : ");
-      s.append(r.getValue());
-      s.append("\n");
+  public void setConnection(NHttpClientConnection newConn) {
+    if (this.completed) {
+      return;
     }
-    return s.toString();
+    this.completed = true;
+    synchronized (this) {
+      this.conn = newConn;
+      notifyAll();
+    }
+  }
+
+  public NHttpClientConnection getConnection() {
+    return this.conn;
+  }
+
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
+    }
+  }
+
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait(5000);
+        this.completed = true;
+      }
+    }
   }
 }
