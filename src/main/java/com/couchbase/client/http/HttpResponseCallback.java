@@ -26,8 +26,6 @@ import com.couchbase.client.ViewConnection;
 import com.couchbase.client.protocol.views.HttpOperation;
 import net.spy.memcached.compat.SpyObject;
 
-import net.spy.memcached.compat.log.Logger;
-import net.spy.memcached.compat.log.LoggerFactory;
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
@@ -46,13 +44,8 @@ import java.net.SocketTimeoutException;
  * actual content or decides to retry or abort, depending on the response status
  * code and values.
  */
-public class HttpResponseCallback implements FutureCallback<HttpResponse> {
-
-  /**
-   * Static logger so that logging is also enabled for static methods.
-   */
-  private static final Logger LOGGER = LoggerFactory.getLogger(
-    HttpResponseCallback.class);
+public class HttpResponseCallback extends SpyObject
+  implements FutureCallback<HttpResponse> {
 
   /**
    * The underlying HTTP request made.
@@ -94,7 +87,7 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
     int statusCode = response.getStatusLine().getStatusCode();
     boolean shouldRetry = shouldRetry(statusCode, response);
     if (shouldRetry) {
-      LOGGER.debug("Operation returned, but needs to be retried because "
+      getLogger().debug("Operation returned, but needs to be retried because "
         + "of: " + response.getStatusLine());
       retryOperation(op);
     } else {
@@ -109,7 +102,7 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
    */
   private void retryOperation(final HttpOperation op) {
     if(!op.isTimedOut() && !op.isCancelled()) {
-      LOGGER.debug("Retrying HTTP operation from node ("
+      getLogger().debug("Retrying HTTP operation from node ("
         + host.toHostString() + "), Request: "
         + op.getRequest().getRequestLine());
       vconn.addOp(op);
@@ -122,7 +115,7 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
       || e instanceof ConnectionClosedException) {
       retryOperation(op);
     } else {
-      LOGGER.info("View Operation " + op.getRequest().getRequestLine()
+      getLogger().info("View Operation " + op.getRequest().getRequestLine()
         + " failed because of: ", e);
       op.cancel();
     }
@@ -130,7 +123,7 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
 
   @Override
   public void cancelled() {
-    LOGGER.info("View Operation " + op.getRequest().getRequestLine()
+    getLogger().info("View Operation " + op.getRequest().getRequestLine()
       + " got cancelled.");
     op.cancel();
   }
@@ -185,7 +178,6 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
       // Indicates a Not Found Design Document
       if(body.contains("not_found")
         && (body.contains("missing") || body.contains("deleted"))) {
-        LOGGER.debug("Design Document not found, body: " + body);
         return false;
       }
     } catch(IOException ex) {
@@ -206,7 +198,6 @@ public class HttpResponseCallback implements FutureCallback<HttpResponse> {
       // Indicates a Not Found Design Document
       if(body.contains("error")
         && body.contains("{not_found, missing_named_view}")) {
-        LOGGER.debug("Design Document not found, body: " + body);
         return false;
       }
     } catch(IOException ex) {

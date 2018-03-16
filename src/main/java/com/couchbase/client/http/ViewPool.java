@@ -53,12 +53,12 @@ public class ViewPool extends BasicNIOConnPool {
    *
    * Since on a rebalance out, all connections to this view node need to
    * be closed, regardless if they are currently available or leased.
+   * In-flight operations will be cancelled and retried in other parts of
+   * the codebase.
    *
    * @param host the host to shutdown connections for.
    */
   public void closeConnectionsForHost(final HttpHost host) {
-    // In-flight operations will be cancelled and retried in other parts of
-    // the codebase.
     enumAvailable(new PoolEntryCallback<HttpHost, NHttpClientConnection>() {
       @Override
       public void process(PoolEntry<HttpHost, NHttpClientConnection> entry) {

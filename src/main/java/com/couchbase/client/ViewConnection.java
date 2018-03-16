@@ -329,8 +329,7 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
     if (size > 0) {
       pool.setMaxTotal(viewNodes.size() * pool.getDefaultMaxPerRoute());
     } else {
-      getLogger().warn("No View nodes are present, this could be a bug or "
-        + "no node has vBuckets attached.");
+      getLogger().warn("No View nodes are present, this could be a bug or " + "no node has vbuckets attached.");
       pool.setMaxTotal(1);
     }
   }
