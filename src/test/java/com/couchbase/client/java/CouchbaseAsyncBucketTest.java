@@ -22,7 +22,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.CouchbaseCore;
-import com.couchbase.client.core.endpoint.ResponseStatusConverter;
 import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.CouchbaseResponse;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -43,7 +42,6 @@ import rx.Observable;
 
 import java.util.Collections;
 
-import static com.couchbase.client.core.endpoint.ResponseStatusConverter.BINARY_SUCCESS;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -66,7 +64,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(InsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new InsertResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -84,7 +82,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(UpsertRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new UpsertResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -102,7 +100,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(ReplaceRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new ReplaceResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
@@ -120,7 +118,7 @@ public class CouchbaseAsyncBucketTest {
         );
 
         when(core.send(any(RemoveRequest.class))).thenReturn(Observable.just((CouchbaseResponse) new RemoveResponse(
-            ResponseStatus.SUCCESS, BINARY_SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
+            ResponseStatus.SUCCESS, 1234, "bucket", Unpooled.EMPTY_BUFFER, mock(CouchbaseRequest.class)
         )));
 
         JsonDocument doc = JsonDocument.create("foo");
