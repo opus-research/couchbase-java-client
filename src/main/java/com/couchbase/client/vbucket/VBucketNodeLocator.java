@@ -236,21 +236,16 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
         getLogger().debug("Node added is %s.", node);
       }
     }
-
     // Iterate over the map and check for entries not populated
-    Iterator<Map.Entry<String, MemcachedNode>> iterator =
-      vbnodesMap.entrySet().iterator();
-    while (iterator.hasNext()) {
-      Map.Entry<String, MemcachedNode> entry = iterator.next();
+    for (Map.Entry<String, MemcachedNode> entry : vbnodesMap.entrySet()) {
       if (entry.getValue() == null) {
         getLogger().error("Critical reconfiguration error: "
             + "Server list from Configuration and Nodes "
             + "are out of synch. causing %s to be removed",
-          entry.getKey());
-        iterator.remove();
+                entry.getKey());
+        vbnodesMap.remove(entry.getKey());
       }
     }
-
     return Collections.unmodifiableMap(vbnodesMap);
   }
 
