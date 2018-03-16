@@ -68,7 +68,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -124,7 +123,6 @@ public class CouchbaseClient extends MemcachedClient
   private ViewConnection vconn = null;
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cbConnFactory;
-  protected final ExecutorService executorService;
 
   /**
    * Try to load the cbclient.properties file and check for the viewmode.
@@ -249,8 +247,6 @@ public class CouchbaseClient extends MemcachedClient
       vconn = cf.createViewConnection(addrs);
     }
 
-    executorService = cbConnFactory.getListenerExecutorService();
-
     getLogger().info(MODE_ERROR);
     cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
@@ -330,7 +326,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<View> crv = new HttpFuture<View>(couchLatch,
-      factory.getViewTimeout(), executorService);
+      factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -387,7 +383,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<SpatialView> crv = new HttpFuture<SpatialView>(
-      couchLatch, factory.getViewTimeout(), executorService);
+      couchLatch, factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -434,7 +430,7 @@ public class CouchbaseClient extends MemcachedClient
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<DesignDocument> crv =
-        new HttpFuture<DesignDocument>(couchLatch, 60000, executorService);
+        new HttpFuture<DesignDocument>(couchLatch, 60000);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -605,8 +601,7 @@ public class CouchbaseClient extends MemcachedClient
     final String uri = "/" + bucket + "/_design/" + MODE_PREFIX + name;
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000,
-      executorService);
+    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000);
     HttpRequest request = new BasicHttpEntityEnclosingRequest("PUT", uri,
             HttpVersion.HTTP_1_1);
     request.setHeader(new BasicHeader("Content-Type", "application/json"));
@@ -683,8 +678,7 @@ public class CouchbaseClient extends MemcachedClient
     final String uri = "/" + bucket + "/_design/" + MODE_PREFIX + name;
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000,
-      executorService);
+    final HttpFuture<Boolean> crv = new HttpFuture<Boolean>(couchLatch, 60000);
     HttpRequest request = new BasicHttpEntityEnclosingRequest("DELETE", uri,
             HttpVersion.HTTP_1_1);
     request.setHeader(new BasicHeader("Content-Type", "application/json"));
@@ -744,8 +738,7 @@ public class CouchbaseClient extends MemcachedClient
 
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
-    final ViewFuture crv = new ViewFuture(couchLatch, timeout, view,
-      executorService);
+    final ViewFuture crv = new ViewFuture(couchLatch, timeout, view);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -798,7 +791,7 @@ public class CouchbaseClient extends MemcachedClient
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, timeout, executorService);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -843,7 +836,7 @@ public class CouchbaseClient extends MemcachedClient
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, timeout, executorService);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -943,8 +936,7 @@ public class CouchbaseClient extends MemcachedClient
       int exp, final Transcoder<T> tc) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<CASValue<T>> rv =
-        new OperationFuture<CASValue<T>>(key, latch, operationTimeout,
-          executorService);
+        new OperationFuture<CASValue<T>>(key, latch, operationTimeout, executorService);
 
     Operation op = opFact.getl(key, exp, new GetlOperation.Callback() {
       private CASValue<T> val = null;
@@ -1076,9 +1068,7 @@ public class CouchbaseClient extends MemcachedClient
         + " the given key (\"" + key + "\").");
     }
 
-    final ReplicaGetFuture<T> replicaFuture = new ReplicaGetFuture<T>(
-      operationTimeout, executorService);
-
+    List<GetFuture<T>> futures = new ArrayList<GetFuture<T>>();
     for(int index=0; index < replicaCount; index++) {
       final CountDownLatch latch = new CountDownLatch(1);
       final GetFuture<T> rv =
@@ -1089,9 +1079,6 @@ public class CouchbaseClient extends MemcachedClient
 
           public void receivedStatus(OperationStatus status) {
             rv.set(val, status);
-            if (!replicaFuture.isDone()) {
-              replicaFuture.setCompletedFuture(rv);
-            }
           }
 
           public void gotData(String k, int flags, byte[] data) {
@@ -1106,10 +1093,10 @@ public class CouchbaseClient extends MemcachedClient
         });
       rv.setOperation(op);
       mconn.enqueueOperation(key, op);
-      replicaFuture.addFutureToMonitor(rv);
+      futures.add(rv);
     }
 
-    return replicaFuture;
+    return new ReplicaGetFuture<T>(operationTimeout, futures);
   }
 
   /**
@@ -2392,8 +2379,7 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Map<String, String>> getKeyStats(String key) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Map<String, String>> rv =
-        new OperationFuture<Map<String, String>>(key, latch, operationTimeout,
-          executorService);
+        new OperationFuture<Map<String, String>>(key, latch, operationTimeout, executorService);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
       private Map<String, String> stats = new HashMap<String, String>();
       public void gotStat(String name, String val) {
