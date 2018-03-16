@@ -718,7 +718,7 @@ public class CouchbaseClient extends MemcachedClient
     assert viewUri != null : "view URI seems to be null";
     assert queryToRun != null  : "query seems to be null";
     String uri = viewUri + queryToRun;
-    getLogger().info("lookin for:" + uri);
+
     final CountDownLatch couchLatch = new CountDownLatch(1);
     int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final ViewFuture crv = new ViewFuture(couchLatch, timeout, view);
@@ -1117,6 +1117,11 @@ public class CouchbaseClient extends MemcachedClient
           PersistTo req, ReplicateTo rep) {
 
     OperationFuture<Boolean> deleteOp = delete(key);
+
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return deleteOp;
+    }
+
     boolean deleteStatus = false;
 
     try {
@@ -1172,6 +1177,40 @@ public class CouchbaseClient extends MemcachedClient
     return delete(key, PersistTo.ZERO, req);
   }
 
+   /**
+     * Set a value without any durability options with no TTL.
+     *
+     * To make sure that a value is stored the way you want it to in the
+     * cluster, you can use the PersistTo and ReplicateTo arguments. The
+     * operation will block until the desired state is satisfied or
+     * otherwise an exception is raised. There are many reasons why this could
+     * happen, the more frequent ones are as follows:
+     *
+     * - The given replication settings are invalid.
+     * - The operation could not be completed within the timeout.
+     * - Something goes wrong and a cluster failover is triggered.
+     *
+     * The client does not attempt to guarantee the given durability
+     * constraints, it just reports whether the operation has been completed
+     * or not. If it is not achieved, it is the responsibility of the
+     * application code using this API to re-retrieve the items to verify
+     * desired state, redo the operation or both.
+     *
+     * Note that even if an exception during the observation is raised,
+     * this doesn't mean that the operation has failed. A normal set()
+     * operation is initiated and after the OperationFuture has returned,
+     * the key itself is observed with the given durability options (watch
+     * out for Observed*Exceptions) in this case.
+     *
+     * @param key the key to store.
+     * @param value the value of the key.
+     * @return the future result of the set operation.
+     */
+    public OperationFuture<Boolean> set(String key,  Object value) {
+        return set(key, 0 ,value);
+    }
+
+
   /**
    * Set a value with durability options.
    *
@@ -1211,6 +1250,10 @@ public class CouchbaseClient extends MemcachedClient
 
     OperationFuture<Boolean> setOp = set(key, exp, value);
 
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return setOp;
+    }
+
     boolean setStatus = false;
 
     try {
@@ -1243,6 +1286,62 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
+   * Set a value with durability options and not TTL.
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal set()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the set operation.
+   */
+   public OperationFuture<Boolean> set(String key, Object value, PersistTo req, ReplicateTo rep) {
+       return set(key, 0, value, req, rep);
+   }
+
+  /**
+   * Set a value with durability options and no TTL.
+   *
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the set() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @return the future result of the set operation.
+   */
+  public OperationFuture<Boolean> add(String key, Object value) {
+    return add(key, 0, value);
+  }
+
+  /**
    * Set a value with durability options.
    *
    * This is a shorthand method so that you only need to provide a
@@ -1263,6 +1362,27 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> set(String key, int exp,
           Object value, PersistTo req) {
     return set(key, exp, value, req, ReplicateTo.ZERO);
+  }
+
+  /**
+   * Set a value with durability options with no TTL
+   *
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the set() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the set operation.
+   */
+  public OperationFuture<Boolean> set(String key, Object value, PersistTo req) {
+    return set(key, 0, value, req);
   }
 
   /**
@@ -1289,6 +1409,29 @@ public class CouchbaseClient extends MemcachedClient
           Object value, ReplicateTo rep) {
     return set(key, exp, value, PersistTo.ZERO, rep);
   }
+
+  /**
+   * Set a value with durability option and no TTL
+   *
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
+   *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the set() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the set operation.
+   */
+    public OperationFuture<Boolean> set(String key, Object value, ReplicateTo rep) {
+        return set(key, 0, value, rep);
+    }
 
   /**
    * Add a value with durability options.
@@ -1329,6 +1472,10 @@ public class CouchbaseClient extends MemcachedClient
 
     OperationFuture<Boolean> addOp = add(key, exp, value);
 
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return addOp;
+    }
+
     boolean addStatus = false;
 
     try {
@@ -1361,6 +1508,62 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
+   * Add a value with durability options with no TTL
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal add()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the add operation.
+   */
+   public OperationFuture<Boolean> add(String key, Object value, PersistTo req, ReplicateTo rep) {
+      return this.add(key, 0, value, req, rep);
+   }
+
+  /**
+   * Add a value with durability options.
+   *
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the add() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @return the future result of the add operation.
+   */
+  public OperationFuture<Boolean> replace(String key, Object value) {
+      return replace(key, 0, value);
+  }
+
+  /**
    * Add a value with durability options.
    *
    * This is a shorthand method so that you only need to provide a
@@ -1383,6 +1586,26 @@ public class CouchbaseClient extends MemcachedClient
     return add(key, exp, value, req, ReplicateTo.ZERO);
   }
 
+  /**
+   * Add a value with durability options with No TTL
+   *
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the add() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the add operation.
+   */
+  public OperationFuture<Boolean> add(String key, Object value, PersistTo req) {
+      return add(key, 0, value, req);
+  }
 
   /**
    * Add a value with durability options.
@@ -1408,6 +1631,29 @@ public class CouchbaseClient extends MemcachedClient
           Object value, ReplicateTo rep) {
     return add(key, exp, value, PersistTo.ZERO, rep);
   }
+
+  /**
+   * Add a value with durability options with no TTL
+   *
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
+   *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the add() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the add operation.
+   */
+    public OperationFuture<Boolean> add(String key, Object value, ReplicateTo rep) {
+        return add(key, 0, value, rep);
+    }
 
   /**
    * Replace a value with durability options.
@@ -1448,6 +1694,10 @@ public class CouchbaseClient extends MemcachedClient
 
     OperationFuture<Boolean> replaceOp = replace(key, exp, value);
 
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return replaceOp;
+    }
+
     boolean replaceStatus = false;
 
     try {
@@ -1481,6 +1731,43 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
+   * Replace a value with durability options with no TTL.
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal replace()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the replace operation.
+   */
+  public OperationFuture<Boolean> replace(String key, Object value, PersistTo req, ReplicateTo rep) {
+      return replace(key, 0, value, req, rep);
+  }
+
+  /**
    * Replace a value with durability options.
    *
    * This is a shorthand method so that you only need to provide a
@@ -1501,6 +1788,27 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> replace(String key, int exp,
           Object value, PersistTo req) {
     return replace(key, exp, value, req, ReplicateTo.ZERO);
+  }
+
+  /**
+   * Replace a value with durability options with no TTL
+   *
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the replace() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the replace operation.
+   */
+  public OperationFuture<Boolean> replace(String key, Object value, PersistTo req) {
+      return this.replace(key, 0, value, req);
   }
 
   /**
@@ -1526,6 +1834,29 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> replace(String key, int exp,
           Object value, ReplicateTo rep) {
     return replace(key, exp, value, PersistTo.ZERO, rep);
+  }
+
+  /**
+   * Replace a value with durability options with no TTL
+   *
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
+   *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the replace() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the replace operation.
+   */
+  public OperationFuture<Boolean> replace(String key, Object value, ReplicateTo rep) {
+      return replace(key, 0, value, rep);
   }
 
   /**
@@ -1577,6 +1908,11 @@ public class CouchbaseClient extends MemcachedClient
     if (casr != CASResponse.OK) {
       return casr;
     }
+
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return casr;
+    }
+
     try {
       observePoll(key, casOp.getCas(), req, rep, false);
     } catch (ObservedException e) {

@@ -27,7 +27,6 @@ import com.couchbase.client.http.AsyncConnectionManager;
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.ConnectionException;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -77,13 +76,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   /**
    * Default failure mode.
    */
-  public static final FailureMode DEFAULT_FAILURE_MODE = FailureMode.Retry;
+  public static final FailureMode DEFAULT_FAILURE_MODE =
+    FailureMode.Redistribute;
 
   /**
    * Default hash algorithm.
    */
   public static final HashAlgorithm DEFAULT_HASH =
-    DefaultHashAlgorithm.KETAMA_HASH;
+    DefaultHashAlgorithm.NATIVE_HASH;
 
   /**
    * Maximum length of the operation queue returned by this connection factory.
@@ -112,11 +112,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    * Default maximum amount of poll cycles before failure.
    */
   public static final int DEFAULT_OBS_POLL_MAX = 400;
-
-  /**
-   * Field for the back off time of the Resubscriber
-   */
-  public long waitTime = 0;
 
   protected volatile ConfigurationProvider configurationProvider;
   private volatile String bucket;
@@ -320,9 +315,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private synchronized void resubConfigUpdate() {
     LOGGER.log(Level.INFO, "Attempting to resubscribe for cluster config"
       + " updates.");
-    ConfigurationProvider newConfigProvider =
-      new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
-    resubExec.execute(new Resubscriber(newConfigProvider));
+    resubExec.execute(new Resubscriber());
   }
 
   /**
@@ -379,12 +372,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return maxConfigCheck;
   }
 
-  class Resubscriber implements Runnable {
-
-    ConfigurationProvider newConfigProvider;
-    Resubscriber(ConfigurationProvider newConfigProvider){
-      this.newConfigProvider=newConfigProvider;
-    }
+  private class Resubscriber implements Runnable {
 
     public void run() {
       String threadNameBase = "Couchbase/Resubscriber (Status: ";
@@ -401,18 +389,19 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
           if(reconnectAttempt >= 10) {
             waitTime = maxWaitTime;
           }
-          setWaitTime(waitTime);
           LOGGER.log(Level.INFO, "Reconnect attempt {0}, waiting {1}ms",
             new Object[]{reconnectAttempt, waitTime});
           Thread.sleep(waitTime);
 
           ConfigurationProvider oldConfigProvider = getConfigurationProvider();
 
-          if (null != oldConfigProvider &&
-            !oldConfigProvider.equals(newConfigProvider)) {
-              oldConfigProvider.shutdown();
-              setConfigurationProvider(newConfigProvider);
+          if (null != oldConfigProvider) {
+            oldConfigProvider.shutdown();
           }
+
+          ConfigurationProvider newConfigProvider =
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
+          setConfigurationProvider(newConfigProvider);
 
           newConfigProvider.subscribe(bucket,
             oldConfigProvider.getReconfigurable());
@@ -421,8 +410,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
             LOGGER.log(Level.WARNING,
               "Could not reset from doing a resubscribe.");
           }
-        } catch (ConnectionException ex) {
-          doingResubscribe.compareAndSet(false, true);
         } catch (Exception ex) {
           LOGGER.log(Level.WARNING,
             "Resubscribe attempt failed: ", ex);
@@ -444,19 +431,4 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return clusterManager;
   }
 
-  /**
-   * gets the wait time
-   * @return
-   */
-  public long getWaitTime() {
-    return waitTime;
-  }
-
-  /**
-   * sets the wait time
-   * @param waitTime
-   */
-  public void setWaitTime(long waitTime) {
-    this.waitTime = waitTime;
-  }
 }
