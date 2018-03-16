@@ -29,7 +29,6 @@ import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
-import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
 
@@ -225,6 +224,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return this.viewTimeout;
   }
 
+
   public Config getVBucketConfig() {
     try {
       // If we find the config provider associated with this bucket is
@@ -317,9 +317,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private synchronized void resubConfigUpdate() {
     LOGGER.log(Level.INFO, "Attempting to resubscribe for cluster config"
       + " updates.");
-    ConfigurationProvider newConfigProvider =
-            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
-    resubExec.execute(new Resubscriber(newConfigProvider));
+    resubExec.execute(new Resubscriber());
   }
 
   /**
@@ -376,14 +374,8 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return maxConfigCheck;
   }
 
-  class Resubscriber implements Runnable {
+  private class Resubscriber implements Runnable {
 
-    ConfigurationProvider newConfigProvider;
-    Resubscriber(ConfigurationProvider newConfigProvider){
-      this.newConfigProvider=newConfigProvider;
-    }
-
-    @Override
     public void run() {
       String threadNameBase = "couchbase cluster resubscriber - ";
       Thread.currentThread().setName(threadNameBase + "running");
@@ -394,11 +386,16 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         try {
           ConfigurationProvider oldConfigProvider = getConfigurationProvider();
 
-          if (null != oldConfigProvider && !oldConfigProvider.equals(newConfigProvider)) {
+          if (null != oldConfigProvider) {
             oldConfigProvider.shutdown();
-            setConfigurationProvider(newConfigProvider);
-            newConfigProvider.subscribe(bucket, oldConfigProvider.getReconfigurable());
           }
+
+          ConfigurationProvider newConfigProvider =
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
+          setConfigurationProvider(newConfigProvider);
+
+          newConfigProvider.subscribe(bucket,
+            oldConfigProvider.getReconfigurable());
 
           if (!doingResubscribe.compareAndSet(true, false)) {
             LOGGER.log(Level.WARNING,
@@ -424,4 +421,5 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
     return clusterManager;
   }
+
 }
