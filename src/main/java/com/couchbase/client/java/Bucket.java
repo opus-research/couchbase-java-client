@@ -42,7 +42,6 @@ import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.DurabilityException;
 import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
-import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
@@ -472,7 +471,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -499,7 +497,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -528,7 +525,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -555,7 +551,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -587,7 +582,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -618,7 +612,6 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
-     * - A transient error occurred, most probably the key was already locked: {@link TemporaryLockFailureException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -2490,7 +2483,7 @@ public interface Bucket {
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
      * - The document does not exist: {@link DocumentDoesNotExistException}
-     * - A transient error occurred, most probably the CAS value was not correct: {@link TemporaryLockFailureException}
+     * - The CAS value was not correct: {@link CASMismatchException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -2511,7 +2504,7 @@ public interface Bucket {
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
      * - The document does not exist: {@link DocumentDoesNotExistException}
-     * - A transient error occurred, most probably the CAS value was not correct: {@link TemporaryLockFailureException}
+     * - The CAS value was not correct: {@link CASMismatchException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -2534,7 +2527,7 @@ public interface Bucket {
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
      * - The document does not exist: {@link DocumentDoesNotExistException}
-     * - A transient error occurred, most probably the CAS value was not correct: {@link TemporaryLockFailureException}
+     * - The CAS value was not correct: {@link CASMismatchException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
@@ -2554,7 +2547,7 @@ public interface Bucket {
      * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
      *   retrying: {@link RequestCancelledException}
      * - The document does not exist: {@link DocumentDoesNotExistException}
-     * - A transient error occurred, most probably the CAS value was not correct: {@link TemporaryLockFailureException}
+     * - The CAS value was not correct: {@link CASMismatchException}
      * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
      * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
      * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
