@@ -557,22 +557,15 @@ public class Query {
     throws UnsupportedEncodingException {
     String encoded;
 
-    if (key.equals(STARTKEYDOCID)
-      || key.equals(BBOX)
-      || key.equals(ENDKEYDOCID)) {
+    if (key.equals(STARTKEYDOCID) || key.equals(BBOX)) {
       encoded = (String) value;
-    } else if (key.equals(DESCENDING)
-      || key.equals(GROUP)
-      || key.equals(INCLUSIVEEND)
-      || key.equals(REDUCE)
-      || key.equals(DEBUG)
-      || key.equals(GROUPLEVEL)
-      || key.equals(LIMIT)
-      || key.equals(SKIP)
-      || value instanceof Stale
-      || value instanceof OnError
-      || StringUtils.isJsonObject(value.toString())
-      || value.toString().startsWith("\"")) {
+    } else if (value instanceof Stale) {
+      encoded = value.toString();
+    } else if (value instanceof OnError) {
+      encoded = value.toString();
+    } else if (StringUtils.isJsonObject(value.toString())) {
+      encoded = value.toString();
+    } else if(value.toString().startsWith("\"")) {
       encoded = value.toString();
     } else {
       ParsePosition pp = new ParsePosition(0);
