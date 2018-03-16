@@ -29,7 +29,6 @@ import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
-import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
 
@@ -225,6 +224,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return this.viewTimeout;
   }
 
+
   public Config getVBucketConfig() {
     try {
       // If we find the config provider associated with this bucket is
@@ -317,9 +317,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private synchronized void resubConfigUpdate() {
     LOGGER.log(Level.INFO, "Attempting to resubscribe for cluster config"
       + " updates.");
-    ConfigurationProvider newConfigProvider =
-            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
-    resubExec.execute(new Resubscriber(newConfigProvider));
+    resubExec.execute(new Resubscriber());
   }
 
   /**
@@ -376,40 +374,28 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return maxConfigCheck;
   }
 
-  class Resubscriber implements Runnable {
+  private class Resubscriber implements Runnable {
 
-    ConfigurationProvider newConfigProvider;
-    Resubscriber(ConfigurationProvider newConfigProvider){
-      this.newConfigProvider=newConfigProvider;
-    }
-
-    @Override
-	public void run() {
-      String threadNameBase = "Couchbase/Resubscriber (Status: ";
-      Thread.currentThread().setName(threadNameBase + "running)");
+    public void run() {
+      String threadNameBase = "couchbase cluster resubscriber - ";
+      Thread.currentThread().setName(threadNameBase + "running");
       LOGGER.log(Level.CONFIG, "Resubscribing for {0} using base list {1}",
         new Object[]{bucket, storedBaseList});
 
-      long reconnectAttempt = 0;
-      long backoffTime = 1000;
-      long maxWaitTime = 10000;
       do {
         try {
-          long waitTime = (reconnectAttempt++)*backoffTime;
-          if(reconnectAttempt >= 10) {
-            waitTime = maxWaitTime;
-          }
-          LOGGER.log(Level.INFO, "Reconnect attempt {0}, waiting {1}ms",
-            new Object[]{reconnectAttempt, waitTime});
-          Thread.sleep(waitTime);
-
           ConfigurationProvider oldConfigProvider = getConfigurationProvider();
 
-          if (null != oldConfigProvider && !oldConfigProvider.equals(newConfigProvider)) {
+          if (null != oldConfigProvider) {
             oldConfigProvider.shutdown();
-            setConfigurationProvider(newConfigProvider);
-            newConfigProvider.subscribe(bucket, oldConfigProvider.getReconfigurable());
           }
+
+          ConfigurationProvider newConfigProvider =
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
+          setConfigurationProvider(newConfigProvider);
+
+          newConfigProvider.subscribe(bucket,
+            oldConfigProvider.getReconfigurable());
 
           if (!doingResubscribe.compareAndSet(true, false)) {
             LOGGER.log(Level.WARNING,
@@ -417,11 +403,11 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
           }
         } catch (Exception ex) {
           LOGGER.log(Level.WARNING,
-            "Resubscribe attempt failed: ", ex);
+            "Could not resubscribe because of: " + ex.getMessage(), ex);
         }
       } while(doingResubscribe.get());
 
-      Thread.currentThread().setName(threadNameBase + "complete)");
+      Thread.currentThread().setName(threadNameBase + "complete");
     }
   }
 
@@ -435,4 +421,5 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
     return clusterManager;
   }
+
 }
