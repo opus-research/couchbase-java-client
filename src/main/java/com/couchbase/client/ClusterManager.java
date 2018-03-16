@@ -25,29 +25,32 @@ package com.couchbase.client;
 import com.couchbase.client.clustermanager.AuthType;
 import com.couchbase.client.clustermanager.BucketType;
 import com.couchbase.client.clustermanager.FlushResponse;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.Socket;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
 import net.spy.memcached.compat.SpyObject;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
-import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.config.ConnectionConfig;
+import org.apache.http.HttpVersion;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.nio.DefaultHttpClientIODispatch;
-import org.apache.http.impl.nio.pool.BasicNIOConnPool;
-import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.impl.DefaultHttpClientConnection;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
-import org.apache.http.nio.protocol.BasicAsyncRequestProducer;
-import org.apache.http.nio.protocol.BasicAsyncResponseConsumer;
-import org.apache.http.nio.protocol.HttpAsyncRequestExecutor;
-import org.apache.http.nio.protocol.HttpAsyncRequester;
-import org.apache.http.nio.reactor.ConnectingIOReactor;
-import org.apache.http.nio.reactor.IOEventDispatch;
-import org.apache.http.nio.reactor.IOReactorException;
-import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.params.HttpParams;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.params.SyncBasicHttpParams;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.ExecutionContext;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpProcessor;
-import org.apache.http.protocol.HttpProcessorBuilder;
+import org.apache.http.protocol.HttpRequestExecutor;
+import org.apache.http.protocol.ImmutableHttpProcessor;
 import org.apache.http.protocol.RequestConnControl;
 import org.apache.http.protocol.RequestContent;
 import org.apache.http.protocol.RequestExpectContinue;
@@ -58,113 +61,61 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
 /**
- * A client to perform cluster-wide operations over the HTTP REST API.
+ * A client for the Couchbase REST API.
  */
 public class ClusterManager extends SpyObject {
 
-  /**
-   * The list of cluster nodes to communicate with.
-   */
-  private final List<HttpHost> clusterNodes;
+  private final DefaultHttpClientConnection conn;
+  private final HttpContext context;
+  private final HttpRequestExecutor httpexecutor;
+  private final HttpProcessor httpproc;
+
+  private final List<URI> addrs;
+  private final String user;
+  private final String pass;
 
   /**
-   * The asynchronous IO reactor which executes the requests.
-   */
-  private final ConnectingIOReactor ioReactor;
-
-  /**
-   * The connection pool manager for multiplexing connections.
-   */
-  private final BasicNIOConnPool pool;
-
-  /**
-   * A requester that helps with asynchronous request/response flow.
-   */
-  private final HttpAsyncRequester requester;
-
-  /**
-   * The REST API (admin) username.
-   */
-  private final String username;
-
-  /**
-   * The REST API (admin) password.
-   */
-  private final String password;
-
-  /**
-   * The thread where the {@link #ioReactor} executes in.
-   */
-  private volatile Thread reactorThread;
-
-  /**
-   * If the connection is running or shut down.
-   */
-  private volatile boolean running;
-
-  /**
-   * Create a new {@link ClusterManager} instance.
+   * Creates a connection to the Couchbase REST interface.
    *
-   * @param nodes the list of nodes in the cluster.
-   * @param username the admin username.
-   * @param password the admin password.
+   * @param uris A list of servers in the cluster.
+   * @param username The cluster admin user name.
+   * @param password The cluster admin password.
    */
-  public ClusterManager(final List<URI> nodes, final String username,
-    final String password) {
-    if (nodes == null || nodes.isEmpty()) {
-      throw new IllegalArgumentException("List of nodes is null or empty");
-    }
-    if (username == null || username.isEmpty()) {
-      throw new IllegalArgumentException("Username is null or empty");
-    }
-    if (password == null || password.isEmpty()) {
-      throw new IllegalArgumentException("Password is null or empty");
-    }
+  public ClusterManager(List<URI> uris, String username, String password) {
+    addrs = uris;
+    user = username;
+    pass = password;
 
-    this.username = username;
-    this.password = password;
+    httpproc = new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
+      new RequestContent(), new RequestTargetHost(),
+      new RequestConnControl(), new RequestUserAgent(),
+      new RequestExpectContinue()});
 
-    clusterNodes = Collections.synchronizedList(new ArrayList<HttpHost>());
-    for (URI node : nodes) {
-      clusterNodes.add(new HttpHost(node.getHost(), node.getPort()));
-    }
+    httpexecutor = new HttpRequestExecutor();
+    context = new BasicHttpContext(null);
+    conn = new DefaultHttpClientConnection();
+  }
 
-    HttpProcessor httpProc = HttpProcessorBuilder.create()
-      .add(new RequestContent())
-      .add(new RequestTargetHost())
-      .add(new RequestConnControl())
-      .add(new RequestUserAgent("JCBC/1.2"))
-      .add(new RequestExpectContinue(true)).build();
-
-    requester = new HttpAsyncRequester(httpProc);
-
+  /**
+   * Connects to a given server if a connection has not been made to at least
+   * one of the servers in the server list already.
+   * @param uri
+   * @return
+   */
+  private boolean connect(URI uri) {
+    HttpHost host = new HttpHost(uri.getHost(), uri.getPort());
+    context.setAttribute(ExecutionContext.HTTP_CONNECTION, conn);
+    context.setAttribute(ExecutionContext.HTTP_TARGET_HOST, host);
     try {
-    ioReactor = new DefaultConnectingIOReactor(IOReactorConfig.custom()
-      .setConnectTimeout(5000)
-      .setSoTimeout(5000)
-      .setTcpNoDelay(true)
-      .setIoThreadCount(1)
-      .build());
-    } catch (IOReactorException ex) {
-      throw new IllegalStateException("Could not create IO reactor");
+      if (!conn.isOpen()) {
+        Socket socket = new Socket(host.getHostName(), host.getPort());
+        conn.bind(socket, new SyncBasicHttpParams());
+      }
+      return true;
+    } catch (IOException e) {
+      return false;
     }
-
-    pool = new BasicNIOConnPool(ioReactor, ConnectionConfig.DEFAULT);
-    pool.setDefaultMaxPerRoute(5);
-    initializeReactorThread();
   }
 
   /**
@@ -176,9 +127,9 @@ public class ClusterManager extends SpyObject {
    * @param flushEnabled If flush should be enabled on this bucket.
    */
   public void createDefaultBucket(BucketType type, int memorySizeMB,
-    int replicas, boolean flushEnabled) {
+      int replicas, boolean flushEnabled) {
     createBucket(type, "default", memorySizeMB, AuthType.NONE, replicas,
-      11212, "", flushEnabled);
+        11212, "", flushEnabled);
   }
 
   /**
@@ -192,10 +143,10 @@ public class ClusterManager extends SpyObject {
    * @param flushEnabled If flush should be enabled on this bucket.
    */
   public void createNamedBucket(BucketType type, String name,
-    int memorySizeMB, int replicas, String authPassword,
-    boolean flushEnabled) {
+      int memorySizeMB, int replicas, String authPassword,
+      boolean flushEnabled) {
     createBucket(type, name, memorySizeMB, AuthType.SASL, replicas,
-      11212, authPassword, flushEnabled);
+        11212, authPassword, flushEnabled);
   }
 
   /**
@@ -208,9 +159,9 @@ public class ClusterManager extends SpyObject {
    * @param port The port for this bucket to listen on.
    */
   public void createPortBucket(BucketType type, String name,
-    int memorySizeMB, int replicas, int port, boolean flush) {
+      int memorySizeMB, int replicas, int port, boolean flush) {
     createBucket(type, name, memorySizeMB, AuthType.NONE, replicas,
-      port, "", flush);
+        port, "", flush);
   }
 
   /**
@@ -221,7 +172,7 @@ public class ClusterManager extends SpyObject {
   public void deleteBucket(String name) {
     String url = "/pools/default/buckets/" + name;
     BasicHttpEntityEnclosingRequest request =
-      new BasicHttpEntityEnclosingRequest("DELETE", url);
+        new BasicHttpEntityEnclosingRequest("DELETE", url);
 
     checkError(200, sendRequest(request));
   }
@@ -232,14 +183,14 @@ public class ClusterManager extends SpyObject {
   public List<String> listBuckets() {
     String url = "/pools/default/buckets/";
     BasicHttpEntityEnclosingRequest request =
-      new BasicHttpEntityEnclosingRequest("GET", url);
+        new BasicHttpEntityEnclosingRequest("GET", url);
 
     HttpResult result = sendRequest(request);
     checkError(200, result);
 
     String json = result.getBody();
     List<String> names = new LinkedList<String>();
-    if (json != null && !json.isEmpty()) {
+    if (json != null && !json.equals("")) {
       try {
         JSONArray base = new JSONArray(json);
         for (int i = 0; i < base.length(); i++) {
@@ -264,7 +215,7 @@ public class ClusterManager extends SpyObject {
   public FlushResponse flushBucket(String name) {
     String url = "/pools/default/buckets/" + name + "/controller/doFlush";
     BasicHttpEntityEnclosingRequest request =
-      new BasicHttpEntityEnclosingRequest("POST", url);
+        new BasicHttpEntityEnclosingRequest("POST", url);
 
     HttpResult result = sendRequest(request);
     if(result.getErrorCode() == 200) {
@@ -273,10 +224,47 @@ public class ClusterManager extends SpyObject {
       return FlushResponse.NOT_ENABLED;
     } else {
       throw new RuntimeException("Http Error: " + result.getErrorCode()
-        + " Reason: " + result.getErrorPhrase() + " Details: "
-        + result.getReason());
+          + " Reason: " + result.getErrorPhrase() + " Details: "
+          + result.getReason());
     }
 
+  }
+
+  private  void createBucket(BucketType type, String name,
+      int memorySizeMB, AuthType authType, int replicas, int port,
+      String authpassword, boolean flushEnabled) {
+
+      List<String> buckets = listBuckets();
+      if(buckets.contains(name)){
+        throw new RuntimeException("Bucket with given name already exists");
+      } else {
+      BasicHttpEntityEnclosingRequest request =
+        new BasicHttpEntityEnclosingRequest("POST", "/pools/default/buckets");
+
+      StringBuilder sb = new StringBuilder();
+      sb.append("name=").append(name);
+      sb.append("&ramQuotaMB=").append(memorySizeMB);
+      sb.append("&authType=").append(authType.getAuthType());
+      sb.append("&replicaNumber=").append(replicas);
+      sb.append("&bucketType=").append(type.getBucketType());
+      sb.append("&proxyPort=").append(port);
+      if (authType == AuthType.SASL) {
+        sb.append("&saslPassword=").append(authpassword);
+      }
+      if(flushEnabled) {
+        sb.append("&flushEnabled=1");
+      }
+
+      try {
+        request.setEntity(new StringEntity(sb.toString()));
+        System.out.println(request.toString());
+      } catch (UnsupportedEncodingException e) {
+        getLogger().error("Error creating request. Bad arguments");
+        throw new RuntimeException(e);
+      }
+
+      checkError(202, sendRequest(request));
+    }
   }
 
   public void updateBucket(String name, int memorySizeMB,
@@ -285,7 +273,7 @@ public class ClusterManager extends SpyObject {
 
     try {
       BasicHttpEntityEnclosingRequest request =
-        new BasicHttpEntityEnclosingRequest("POST", "/pools/default/buckets/"+name);
+      new BasicHttpEntityEnclosingRequest("POST", "/pools/default/buckets/"+name);
 
       StringBuilder sb = new StringBuilder();
       sb.append("&ramQuotaMB=").append(memorySizeMB);
@@ -307,109 +295,45 @@ public class ClusterManager extends SpyObject {
     }
   }
 
-  private  void createBucket(BucketType type, String name,
-    int memorySizeMB, AuthType authType, int replicas, int port,
-    String authpassword, boolean flushEnabled) {
-
-    List<String> buckets = listBuckets();
-    if(buckets.contains(name)){
-      throw new RuntimeException("Bucket with given name already exists");
-    } else {
-      BasicHttpEntityEnclosingRequest request =
-        new BasicHttpEntityEnclosingRequest("POST", "/pools/default/buckets");
-
-      StringBuilder sb = new StringBuilder();
-      sb.append("name=").append(name);
-      sb.append("&ramQuotaMB=").append(memorySizeMB);
-      sb.append("&authType=").append(authType.getAuthType());
-      sb.append("&replicaNumber=").append(replicas);
-      sb.append("&bucketType=").append(type.getBucketType());
-      sb.append("&proxyPort=").append(port);
-      if (authType == AuthType.SASL) {
-        sb.append("&saslPassword=").append(authpassword);
-      }
-      if(flushEnabled) {
-        sb.append("&flushEnabled=1");
-      }
-
-      try {
-        request.setEntity(new StringEntity(sb.toString()));
-      } catch (UnsupportedEncodingException e) {
-        getLogger().error("Error creating request. Bad arguments");
-        throw new RuntimeException(e);
-      }
-
-      checkError(202, sendRequest(request));
-    }
-  }
 
   private HttpResult sendRequest(HttpRequest request) {
-    HttpCoreContext coreContext = HttpCoreContext.create();
+    HttpParams params = new SyncBasicHttpParams();
+    HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
+    HttpProtocolParams.setUserAgent(params, "Couchbase Java Client/1.1");
+    HttpProtocolParams.setUseExpectContinue(params, true);
 
     request.addHeader("Authorization", "Basic "
-      + Base64.encodeBase64String((username + ':' + password).getBytes()));
+        + Base64.encodeBase64String((user + ":" + pass).getBytes()));
     request.addHeader("Accept", "*/*");
     request.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    for (HttpHost node : clusterNodes) {
+    for (int i = 0; i < addrs.size(); i++) {
       try {
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicBoolean success = new AtomicBoolean(false);
-        final AtomicReference<HttpResponse> response =
-          new AtomicReference<HttpResponse>();
-
-        requester.execute(
-          new BasicAsyncRequestProducer(node, request),
-          new BasicAsyncResponseConsumer(),
-          pool,
-          coreContext,
-          new FutureCallback<HttpResponse>() {
-            @Override
-            public void completed(final HttpResponse result) {
-              latch.countDown();
-              success.set(true);
-              response.set(result);
-            }
-
-            @Override
-            public void failed(Exception ex) {
-              getLogger().debug("Cluster Response failed with: ", ex);
-              latch.countDown();
-            }
-
-            @Override
-            public void cancelled() {
-              getLogger().debug("Cluster Response was cancelled.");
-              latch.countDown();
-            }
-          }
-        );
-
-        latch.await();
-        if (!success.get()) {
-          getLogger().debug("Could not finish request execution");
+        if (!connect(addrs.get(i))) {
           continue;
         }
+        httpexecutor.preProcess(request, httpproc, context);
+        HttpResponse response = httpexecutor.execute(request, conn, context);
+        httpexecutor.postProcess(response, httpproc, context);
 
-        int code = response.get().getStatusLine().getStatusCode();
-        String body = EntityUtils.toString(response.get().getEntity());
+        int code = response.getStatusLine().getStatusCode();
+        String body = EntityUtils.toString(response.getEntity());
         String reason = parseError(body);
-        String phrase = response.get().getStatusLine().getReasonPhrase();
+        String phrase = response.getStatusLine().getReasonPhrase();
         return new HttpResult(body, code, phrase, reason);
-      } catch (InterruptedException ex) {
-        getLogger().debug("Got interrupted while waiting for the response.");
-        continue;
+      } catch (HttpException e) {
+        getLogger().debug("Error processing http request: " + e.getMessage());
+        throw new RuntimeException(e);
       } catch (IOException e) {
-        getLogger().debug("Unable to connect to: " + node
-          + ". Trying another server");
+        getLogger().debug("Unable to connect to: " + addrs.get(i)
+            + ". Trying another server");
       }
     }
     throw new RuntimeException("Unable to connect to cluster");
   }
 
-  private static String parseError(String json) {
-    if (json != null && !json.isEmpty()) {
+  private String parseError(String json) {
+    if (json != null && !json.equals("")) {
       try {
         JSONObject base = new JSONObject(json);
         if (base.has("errors")) {
@@ -423,62 +347,24 @@ public class ClusterManager extends SpyObject {
     return "No reason given";
   }
 
-  private static void checkError(int expectedCode, HttpResult result)  {
+  private void checkError(int expectedCode, HttpResult result)  {
     if (result.getErrorCode() != expectedCode) {
       throw new RuntimeException("Http Error: " + result.getErrorCode()
-        + " Reason: " + result.getErrorPhrase() + " Details: "
-        + result.getReason());
+          + " Reason: " + result.getErrorPhrase() + " Details: "
+          + result.getReason());
     }
   }
+
   public boolean shutdown() {
-    if (!running) {
-      getLogger().info("Suppressing duplicate attempt to shut down");
+    try {
+      conn.close();
+      return true;
+    } catch (IOException e) {
       return false;
     }
-    running = false;
-
-    try {
-      ioReactor.shutdown();
-    } catch (IOException e) {
-      getLogger().info("Got exception while shutting down", e);
-    }
-    try {
-      reactorThread.join(0);
-    } catch (InterruptedException ex) {
-      getLogger().error("Interrupt " + ex + " received while waiting for "
-        + "view thread to shut down.");
-    }
-    return true;
   }
 
-  /**
-   * Initialize the reactor IO thread.
-   */
-  private void initializeReactorThread() {
-    final IOEventDispatch ioEventDispatch = new DefaultHttpClientIODispatch(
-      new HttpAsyncRequestExecutor(),
-      ConnectionConfig.DEFAULT
-    );
-
-    reactorThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try {
-          ioReactor.execute(ioEventDispatch);
-        } catch (InterruptedIOException ex) {
-          getLogger().error("I/O reactor Interrupted", ex);
-        } catch (IOException e) {
-          getLogger().error("I/O error: " + e.getMessage(), e);
-        }
-        getLogger().debug("I/O reactor terminated");
-      }
-    }, "Couchbase View Thread");
-    reactorThread.start();
-
-    running = true;
-  }
-
-  public final static class HttpResult {
+  private final class HttpResult {
     private final String body;
     private final int errorCode;
     private final String errorPhrase;
