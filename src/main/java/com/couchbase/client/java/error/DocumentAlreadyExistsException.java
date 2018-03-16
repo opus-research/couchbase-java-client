@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class DocumentAlreadyExistsException extends CouchbaseException {
 
     public DocumentAlreadyExistsException() {
-        super();
     }
 
     public DocumentAlreadyExistsException(String message) {

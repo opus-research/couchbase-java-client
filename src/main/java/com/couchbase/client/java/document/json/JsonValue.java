@@ -15,9 +15,6 @@
  */
 package com.couchbase.client.java.document.json;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-
 /**
  * Represents a JSON value (either a {@link JsonObject} or a {@link JsonArray}.
  *
@@ -62,8 +59,6 @@ public abstract class JsonValue {
             || item instanceof Long
             || item instanceof Double
             || item instanceof Boolean
-            || item instanceof BigInteger
-            || item instanceof BigDecimal
             || item instanceof JsonObject
             || item instanceof JsonArray;
     }
