@@ -776,9 +776,4 @@ public class CouchbaseBucket implements Bucket {
             .toBlocking()
             .single();
     }
-
-    @Override
-    public String toString() {
-        return "Bucket[" + name() + "]";
-    }
 }
