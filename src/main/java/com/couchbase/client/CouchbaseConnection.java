@@ -322,7 +322,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
    * @param original the raw new config string.
    * @return the potentially changed config string.
    */
-  public String replaceConfigWildcards(String original) {
+  private String replaceConfigWildcards(String original) {
     if (original.contains("$HOST")) {
       ArrayList<MemcachedNode> nodes =
         new ArrayList<MemcachedNode>(getLocator().getAll());
