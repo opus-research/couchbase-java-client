@@ -34,39 +34,47 @@ import com.couchbase.client.core.message.ResponseStatus;
  */
 public interface Document<T> {
 
-    /**
-    * The per-bucket unique ID of the document.
-    *
-    * @return the document id.
-    */
-    String id();
+  /**
+   * The per-bucket unique ID of the document.
+   *
+   * @return the document id.
+   */
+  String id();
 
-    /**
-    * The content of the document.
-    *
-    * @return the content.
-    */
-    T content();
+  /**
+   * The content of the document.
+   *
+   * @return the content.
+   */
+  T content();
 
-    /**
-    * The last-known CAS value for the document (0 if not set).
-    *
-    * @return the CAS value if set.
-    */
-    long cas();
+  /**
+   * The last-known CAS value for the document (0 if not set).
+   *
+   * @return the CAS value if set.
+   */
+  long cas();
 
-    /**
-    * The optional expiration time for the document (0 if not set).
-    *
-    * @return the expiration time.
-    */
-    int expiry();
+  /**
+   * The optional expiration time for the document (0 if not set).
+   *
+   * @return the expiration time.
+   */
+  int expiry();
 
-    /**
-     * The status of the response if a document has been retrieved or mutated.
-     *
-     * @return the status code.
-     */
-    ResponseStatus status();
+  /**
+   * The status of the response if a document has been retrieved or mutated.
+   *
+   * @return the status code.
+   */
+  ResponseStatus status();
 
+  /**
+   * Creates a new document with a new cas and response status.
+   *
+   * @param cas new cas for the document.
+   * @param status new response status for the document.
+   * @return the new document.
+   */
+  Document<T> copy(long cas, ResponseStatus status);
 }

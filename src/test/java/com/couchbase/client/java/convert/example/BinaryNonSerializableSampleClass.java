@@ -19,35 +19,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java;
 
-import com.couchbase.client.java.util.TestProperties;
-import org.junit.BeforeClass;
-import org.junit.Test;
+package com.couchbase.client.java.convert.example;
 
 /**
- * @author Michael Nitschinger
+ * Sample class to verify the functionality for the {@link com.couchbase.client.java.convert.BinaryConverter}.
+ *
+ * @author David Sondermann
  * @since 2.0
  */
-public class QueryTest {
-    private static final String seedNode = TestProperties.seedNode();
-    private static final String bucketName = TestProperties.bucket();
-    private static final String password = TestProperties.password();
-
-    private static Bucket bucket;
-
-    @BeforeClass
-    public static void connect() {
-        System.setProperty("com.couchbase.client.queryEnabled", "true");
-        CouchbaseCluster cluster = new CouchbaseCluster(seedNode);
-        bucket = cluster
-            .openBucket(bucketName, password)
-            .toBlocking()
-            .single();
-    }
-
-    @Test
-    public void shouldQueryView() throws Exception {
-        System.out.println(bucket.query("select * from default limit 5").toList().toBlocking().single());
-    }
+public class BinaryNonSerializableSampleClass {
 }

@@ -19,35 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java;
 
-import com.couchbase.client.java.util.TestProperties;
-import org.junit.BeforeClass;
-import org.junit.Test;
+package com.couchbase.client.java.convert.util;
 
-/**
- * @author Michael Nitschinger
- * @since 2.0
- */
-public class QueryTest {
-    private static final String seedNode = TestProperties.seedNode();
-    private static final String bucketName = TestProperties.bucket();
-    private static final String password = TestProperties.password();
+import java.util.regex.Pattern;
 
-    private static Bucket bucket;
+public class StringUtils {
 
-    @BeforeClass
-    public static void connect() {
-        System.setProperty("com.couchbase.client.queryEnabled", "true");
-        CouchbaseCluster cluster = new CouchbaseCluster(seedNode);
-        bucket = cluster
-            .openBucket(bucketName, password)
-            .toBlocking()
-            .single();
-    }
+  /**
+   * A pattern to match on a signed integer value.
+   */
+  private static final Pattern decimalPattern = Pattern.compile("^-?\\d+$");
 
-    @Test
-    public void shouldQueryView() throws Exception {
-        System.out.println(bucket.query("select * from default limit 5").toList().toBlocking().single());
-    }
+  /**
+   * Check if a given string is a JSON object.
+   *
+   * @param document the input string.
+   * @return true if it is a JSON object, false otherwise.
+   */
+  public static boolean isJsonObject(final String document) {
+    return (document != null && !document.isEmpty()) && (document.startsWith("{") || document.startsWith("[")
+        || "true".equals(document) || "false".equals(document)
+        || "null".equals(document) || decimalPattern.matcher(document).matches()
+    );
+  }
+
 }
