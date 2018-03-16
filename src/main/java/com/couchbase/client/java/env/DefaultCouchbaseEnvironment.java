@@ -36,7 +36,6 @@ import com.couchbase.client.deps.com.lmax.disruptor.WaitStrategy;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CouchbaseCluster;
-import org.jhiccup.HiccupMeter;
 import rx.Scheduler;
 
 import java.security.KeyStore;
@@ -70,7 +69,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private static final long KV_TIMEOUT = 2500;
     private static final long CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
     private static final boolean DNS_SRV_ENABLED = false;
-    private static final boolean J_HICCUP_ENABLED = true;
 
     private final long managementTimeout;
     private final long queryTimeout;
@@ -80,7 +78,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private final long kvTimeout;
     private final long connectTimeout;
     private final boolean dnsSrvEnabled;
-    private final boolean jHiccupEnabled;
 
     protected static String CLIENT_VERSION;
     protected static String CLIENT_GIT_VERSION;
@@ -145,7 +142,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         analyticsTimeout = longPropertyOr("analyticsTimeout", builder.analyticsTimeout);
         connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout);
         dnsSrvEnabled = booleanPropertyOr("dnsSrvEnabled", builder.dnsSrvEnabled);
-        jHiccupEnabled = booleanPropertyOr("jHiccupEnabled", builder.jHiccupEnabled);
 
         if (queryTimeout > maxRequestLifetime()) {
             LOGGER.warn("The configured query timeout is greater than the maximum request lifetime. " +
@@ -170,11 +166,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         if (managementTimeout > maxRequestLifetime()) {
             LOGGER.warn("The configured management timeout is greater than the maximum request lifetime." +
                 "This can lead to falsely cancelled requests.");
-        }
-
-        if (jHiccupEnabled) {
-            HiccupMeter meter = HiccupMeter.commonMain(new String[] {}, false);
-            meter.start();
         }
     }
 
@@ -206,7 +197,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         private long analyticsTimeout = ANALYTICS_TIMEOUT;
         private long connectTimeout = CONNECT_TIMEOUT;
         private boolean dnsSrvEnabled = DNS_SRV_ENABLED;
-        private boolean jHiccupEnabled = J_HICCUP_ENABLED;
 
         public Builder() {
             super();
@@ -248,11 +238,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         public Builder connectTimeout(long connectTimeout) {
             this.connectTimeout = connectTimeout;
-            return this;
-        }
-
-        public Builder jHiccupEnabled(boolean jHiccupEnabled) {
-            this.jHiccupEnabled = jHiccupEnabled;
             return this;
         }
 
@@ -683,11 +668,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     }
 
     @Override
-    public boolean jHiccupEnabled() {
-        return jHiccupEnabled;
-    }
-
-    @Override
     protected StringBuilder dumpParameters(StringBuilder sb) {
         //first dump core's parameters
         super.dumpParameters(sb);
@@ -699,7 +679,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         sb.append(", kvTimeout=").append(this.kvTimeout);
         sb.append(", connectTimeout=").append(this.connectTimeout);
         sb.append(", dnsSrvEnabled=").append(this.dnsSrvEnabled);
-        sb.append(", jHiccupEnabled=").append(this.jHiccupEnabled);
         return sb;
     }
 
