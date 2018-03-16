@@ -27,10 +27,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Properties;
-
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.spy.memcached.compat.CloseUtil;
-import net.spy.memcached.compat.log.Logger;
-import net.spy.memcached.compat.log.LoggerFactory;
 
 /**
  * The CouchbaseProperties class abstracts system properties and those set
@@ -50,8 +49,8 @@ public final class CouchbaseProperties {
 
   private static Properties fileProperties = new Properties();
 
-  private static final Logger LOGGER =
-    LoggerFactory.getLogger(CouchbaseProperties.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(
+    CouchbaseProperties.class.getName());
 
   private CouchbaseProperties() {}
 
@@ -82,10 +81,11 @@ public final class CouchbaseProperties {
       } else {
         throw new IOException("File not found with system classloader.");
       }
-      LOGGER.info("Successfully loaded properties file \"" + filename + "\".");
+      LOGGER.log(Level.INFO, "Successfully loaded properties file \"{0}\".",
+        filename);
     } catch (Exception e) {
-      LOGGER.debug("Could not load properties file \"" + filename + "\" because: "
-        +  e.getMessage());
+      LOGGER.log(Level.INFO, "Could not load properties file \"{0}\" "
+        + "because: {1}", new Object[]{filename, e.getMessage()});
     } finally {
       if (fs != null) {
         CloseUtil.close(fs);
