@@ -246,7 +246,8 @@ public class CouchbaseBucket implements Bucket {
                     if (response.status() == ResponseStatus.EXISTS) {
                         return Observable.error(new DocumentAlreadyExistsException());
                     }
-                    return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas()));
+                    return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas(),
+                        response.status()));
                 }
             });
     }
@@ -281,13 +282,11 @@ public class CouchbaseBucket implements Bucket {
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
         return core
             .<UpsertResponse>send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
-            .flatMap(new Func1<UpsertResponse, Observable<D>>() {
+            .map(new Func1<UpsertResponse, D>() {
                 @Override
-                public Observable<D> call(UpsertResponse response) {
-                    if (response.status() == ResponseStatus.EXISTS) {
-                        return Observable.error(new CASMismatchException());
-                    }
-                    return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas()));
+                public D call(UpsertResponse response) {
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas(),
+                        response.status());
                 }
             });
     }
@@ -325,14 +324,15 @@ public class CouchbaseBucket implements Bucket {
                 if (response.status() == ResponseStatus.EXISTS) {
                     return Observable.error(new CASMismatchException());
                 }
-                return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas()));
+                return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas(),
+                    response.status()));
             }
         });
   }
 
     @Override
     public <D extends Document<?>> Observable<D> replace(final D document, final PersistTo persistTo, final ReplicateTo replicateTo) {
-        return replace(document).flatMap(new Func1<D, Observable<D>>() {
+        return insert(document).flatMap(new Func1<D, Observable<D>>() {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
@@ -356,7 +356,8 @@ public class CouchbaseBucket implements Bucket {
         return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
             @Override
             public D call(RemoveResponse response) {
-                return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), document.cas());
+                return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), document.cas(),
+                    response.status());
             }
         });
     }
@@ -370,7 +371,7 @@ public class CouchbaseBucket implements Bucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final String id, final Class<D> target) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(target);
-        return remove((D) transcoder.newDocument(id, 0, null, 0));
+        return remove((D) transcoder.newDocument(id, 0, null, 0, null));
     }
 
     @Override
@@ -522,7 +523,7 @@ public class CouchbaseBucket implements Bucket {
             .map(new Func1<CounterResponse, LongDocument>() {
                 @Override
                 public LongDocument call(CounterResponse response) {
-                    return new LongDocument(id, expiry, response.value(), response.cas());
+                    return new LongDocument(id, expiry, response.value(), response.cas(), response.status());
                 }
             });
     }
@@ -579,7 +580,8 @@ public class CouchbaseBucket implements Bucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas());
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas(),
+                        response.status());
                 }
             });
     }
@@ -598,7 +600,8 @@ public class CouchbaseBucket implements Bucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(),  document.expiry(), document.content(), response.cas());
+                    return (D) transcoder.newDocument(document.id(),  document.expiry(), document.content(), response.cas(),
+                        response.status());
                 }
             });
     }

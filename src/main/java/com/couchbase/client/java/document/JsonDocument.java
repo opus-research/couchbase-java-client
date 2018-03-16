@@ -21,6 +21,7 @@
  */
 package com.couchbase.client.java.document;
 
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.java.document.json.JsonObject;
 
 /**
@@ -57,7 +58,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a empty {@link JsonDocument}.
      */
     public static JsonDocument empty() {
-        return new JsonDocument(null, 0, null, 0);
+        return new JsonDocument(null, 0, null, 0, null);
     }
 
     /**
@@ -67,7 +68,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id) {
-        return new JsonDocument(id, 0, null, 0);
+        return new JsonDocument(id, 0, null, 0, null);
     }
 
     /**
@@ -78,7 +79,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, JsonObject content) {
-        return new JsonDocument(id, 0, content, 0);
+        return new JsonDocument(id, 0, content, 0, null);
     }
 
     /**
@@ -90,7 +91,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, JsonObject content, long cas) {
-        return new JsonDocument(id, 0, content, cas);
+        return new JsonDocument(id, 0, content, cas, null);
     }
 
     /**
@@ -102,7 +103,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, int expiry, JsonObject content) {
-        return new JsonDocument(id, expiry, content, 0);
+        return new JsonDocument(id, expiry, content, 0, null);
     }
 
     /**
@@ -116,10 +117,11 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @param content the content of the document.
      * @param cas the CAS (compare and swap) value for optimistic concurrency.
      * @param expiry the expiration time of the document.
+     * @param status the response status as returned by the underlying infrastructure.
      * @return a {@link JsonDocument}.
      */
-    public static JsonDocument create(String id, int expiry, JsonObject content, long cas) {
-        return new JsonDocument(id, expiry, content, cas);
+    public static JsonDocument create(String id, int expiry, JsonObject content, long cas, ResponseStatus status) {
+        return new JsonDocument(id, expiry, content, cas, status);
     }
 
     /**
@@ -130,7 +132,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, String id) {
-        return JsonDocument.create(id, doc.expiry(), doc.content(), doc.cas());
+        return JsonDocument.create(id, doc.expiry(), doc.content(), doc.cas(), doc.status());
     }
 
     /**
@@ -141,7 +143,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, JsonObject content) {
-        return JsonDocument.create(doc.id(), doc.expiry(), content, doc.cas());
+        return JsonDocument.create(doc.id(), doc.expiry(), content, doc.cas(), doc.status());
     }
 
     /**
@@ -153,7 +155,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, String id, JsonObject content) {
-        return JsonDocument.create(id, doc.expiry(), content, doc.cas());
+        return JsonDocument.create(id, doc.expiry(), content, doc.cas(), doc.status());
     }
 
     /**
@@ -164,7 +166,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, long cas) {
-        return JsonDocument.create(doc.id(), doc.expiry(), doc.content(), cas);
+        return JsonDocument.create(doc.id(), doc.expiry(), doc.content(), cas, doc.status());
     }
 
     /**
@@ -174,9 +176,10 @@ public class JsonDocument extends AbstractDocument<JsonObject> {
      * @param content the content of the document.
      * @param cas the CAS (compare and swap) value for optimistic concurrency.
      * @param expiry the expiration time of the document.
+     * @param status the response status as returned by the underlying infrastructure.
      */
-    private JsonDocument(String id, int expiry, JsonObject content, long cas) {
-        super(id, expiry, content, cas);
+    private JsonDocument(String id, int expiry, JsonObject content, long cas, ResponseStatus status) {
+        super(id, expiry, content, cas, status);
     }
 
 }

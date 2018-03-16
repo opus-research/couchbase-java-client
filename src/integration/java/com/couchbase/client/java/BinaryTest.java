@@ -21,23 +21,22 @@
  */
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.LegacyDocument;
 import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.util.ClusterDependentTest;
 import org.junit.Test;
 import rx.Observable;
-import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.observables.BlockingObservable;
 
 import java.io.Serializable;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 
@@ -94,6 +93,7 @@ public class BinaryTest extends ClusterDependentTest {
       .toBlocking()
       .single();
     assertEquals(content.getString("hello"), response.content().getString("hello"));
+    assertEquals(ResponseStatus.SUCCESS, response.status());
   }
 
   @Test
@@ -124,27 +124,24 @@ public class BinaryTest extends ClusterDependentTest {
     assertEquals("replaced", response.content().getString("hello"));
   }
 
-    @Test
-    public void shouldLoadMultipleDocuments() throws Exception {
-        BlockingObservable<JsonDocument> observable = Observable
-          .from("doc1", "doc2", "doc3")
-          .flatMap(new Func1<String, Observable<JsonDocument>>() {
-              @Override
-              public Observable<JsonDocument> call(String id) {
-                  return bucket().get(id);
-              }
-          }).toBlocking();
+  @Test
+  public void shouldLoadMultipleDocuments() throws Exception {
+          BlockingObservable<JsonDocument> observable = Observable
+              .from("doc1", "doc2", "doc3")
+              .flatMap(new Func1<String, Observable<JsonDocument>>() {
+                  @Override
+                  public Observable<JsonDocument> call(String id) {
+                      return bucket().get(id);
+                  }
+              }).toBlocking();
 
-
-        final AtomicInteger counter = new AtomicInteger();
-        observable.forEach(new Action1<JsonDocument>() {
-            @Override
-            public void call(JsonDocument document) {
-                counter.incrementAndGet();
-            }
-        });
-        assertEquals(0, counter.get());
-    }
+          Iterator<JsonDocument> iterator = observable.getIterator();
+          while (iterator.hasNext()) {
+              JsonDocument doc = iterator.next();
+              assertNull(doc.content());
+              assertEquals(ResponseStatus.NOT_EXISTS, doc.status());
+          }
+  }
 
     @Test
     public void shouldIncrementFromCounter() throws Exception {
@@ -178,48 +175,46 @@ public class BinaryTest extends ClusterDependentTest {
 
     @Test
     public void shouldGetAndTouch() throws Exception {
-        String id = "get-and-touch";
+        String key = "get-and-touch";
 
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(id, JsonObject.empty().put("k", "v"), 3))
+        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v"), 3))
             .toBlocking().single();
-        assertNotNull(upsert);
-        assertEquals(id, upsert.id());
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
         Thread.sleep(2000);
 
-        JsonDocument touched = bucket().getAndTouch(id, 3).toBlocking().single();
+        JsonDocument touched = bucket().getAndTouch(key, 3).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, touched.status());
         assertEquals("v", touched.content().getString("k"));
 
         Thread.sleep(2000);
 
-        touched = bucket().get(id).toBlocking().single();
+        touched = bucket().get(key).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, touched.status());
         assertEquals("v", touched.content().getString("k"));
     }
 
     @Test
     public void shouldGetAndLock() throws Exception {
-        String id = "get-and-lock";
+        String key = "get-and-lock";
 
-        JsonDocument upsert = bucket().upsert(JsonDocument.create(id, JsonObject.empty().put("k", "v")))
+        JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
             .toBlocking().single();
-        assertNotNull(upsert);
-        assertEquals(id, upsert.id());
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
-        JsonDocument locked = bucket().getAndLock(id, 2).toBlocking().single();
+        JsonDocument locked = bucket().getAndLock(key, 2).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, locked.status());
         assertEquals("v", locked.content().getString("k"));
 
-        try {
-            bucket().upsert(JsonDocument.create(id, JsonObject.empty().put("k", "v")))
-                .toBlocking().single();
-            assertTrue(false);
-        } catch(CASMismatchException ex) {
-            assertTrue(true);
-        }
+        upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
+            .toBlocking().single();
+        assertEquals(ResponseStatus.EXISTS, upsert.status());
 
         Thread.sleep(3000);
 
-        bucket().upsert(JsonDocument.create(id, JsonObject.empty().put("k", "v")))
+        upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
             .toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
     }
 
     @Test
@@ -228,24 +223,22 @@ public class BinaryTest extends ClusterDependentTest {
 
         JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
             .toBlocking().single();
-        assertNotNull(upsert);
-        assertEquals(key, upsert.id());
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
         JsonDocument locked = bucket().getAndLock(key, 15).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, locked.status());
         assertEquals("v", locked.content().getString("k"));
 
-        try {
-            bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v"))).toBlocking().single();
-            assertTrue(false);
-        } catch(CASMismatchException ex) {
-            assertTrue(true);
-        }
+        upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
+            .toBlocking().single();
+        assertEquals(ResponseStatus.EXISTS, upsert.status());
 
         boolean unlocked = bucket().unlock(key, locked.cas()).toBlocking().single();
         assertTrue(unlocked);
 
-        bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
+        upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")))
             .toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
     }
 
     @Test
@@ -254,6 +247,7 @@ public class BinaryTest extends ClusterDependentTest {
 
         JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v"), 3))
             .toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
         Thread.sleep(2000);
 
@@ -263,6 +257,7 @@ public class BinaryTest extends ClusterDependentTest {
         Thread.sleep(2000);
 
         JsonDocument loaded = bucket().get(key).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, loaded.status());
         assertEquals("v", loaded.content().getString("k"));
     }
 
@@ -272,6 +267,7 @@ public class BinaryTest extends ClusterDependentTest {
 
         JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")),
             PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
     }
 
     @Test
@@ -280,8 +276,10 @@ public class BinaryTest extends ClusterDependentTest {
 
         JsonDocument upsert = bucket().upsert(JsonDocument.create(key, JsonObject.empty().put("k", "v")),
             PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, upsert.status());
 
         JsonDocument remove = bucket().remove(key, PersistTo.MASTER, ReplicateTo.NONE).toBlocking().single();
+        assertEquals(ResponseStatus.SUCCESS, remove.status());
     }
 
     @Test
@@ -290,6 +288,7 @@ public class BinaryTest extends ClusterDependentTest {
         User user = new User("Michael");
         LegacyDocument doc = LegacyDocument.create(id, user);
         LegacyDocument stored = bucket().upsert(doc).toBlocking().single();
+        assertTrue(stored.status().isSuccess());
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class).toBlocking().single();
         assertEquals(found.content().getClass(), user.getClass());
@@ -303,8 +302,10 @@ public class BinaryTest extends ClusterDependentTest {
 
         LegacyDocument doc = LegacyDocument.create(id, value);
         LegacyDocument stored = bucket().upsert(doc).toBlocking().single();
+        assertTrue(stored.status().isSuccess());
 
         stored = bucket().append(LegacyDocument.create(id, "bar")).toBlocking().single();
+        assertTrue(stored.status().isSuccess());
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class).toBlocking().single();
         assertEquals("foobar", found.content());
@@ -317,8 +318,10 @@ public class BinaryTest extends ClusterDependentTest {
 
         LegacyDocument doc = LegacyDocument.create(id, value);
         LegacyDocument stored = bucket().upsert(doc).toBlocking().single();
+        assertTrue(stored.status().isSuccess());
 
         stored = bucket().prepend(LegacyDocument.create(id, "foo")).toBlocking().single();
+        assertTrue(stored.status().isSuccess());
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class).toBlocking().single();
         assertEquals("foobar", found.content());
