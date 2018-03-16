@@ -427,8 +427,8 @@ public class CouchbaseClient extends MemcachedClient
     try {
       View view = asyncGetView(designDocumentName, viewName).get();
       if(view == null) {
-        throw new InvalidViewException("Could not load view \""
-          + viewName + "\" for design doc \"" + designDocumentName + "\"");
+        throw new InvalidViewException("Could not load view \"" +
+          viewName + "\" for design doc \"" + designDocumentName + "\"");
       }
       return view;
     } catch (InterruptedException e) {
@@ -1509,20 +1509,19 @@ public class CouchbaseClient extends MemcachedClient
     final OperationFuture<Map<String, String>> rv =
         new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
-      private Map<String, String> stats = new HashMap<String, String>();
+          Map<String, String> stats = new HashMap<String, String>();
+          public void gotStat(String name, String val) {
+            stats.put(name, val);
+          }
 
-      public void gotStat(String name, String val) {
-        stats.put(name, val);
-      }
+          public void receivedStatus(OperationStatus status) {
+            rv.set(stats, status);
+          }
 
-      public void receivedStatus(OperationStatus status) {
-        rv.set(stats, status);
-      }
-
-      public void complete() {
-        latch.countDown();
-      }
-    });
+          public void complete() {
+            latch.countDown();
+          }
+        });
     rv.setOperation(op);
     mconn.enqueueOperation(key, op);
     return rv;

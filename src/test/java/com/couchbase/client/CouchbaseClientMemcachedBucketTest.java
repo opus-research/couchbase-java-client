@@ -28,9 +28,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import net.spy.memcached.TestConfig;
-import static org.junit.Assert.assertTrue;
 import org.junit.Test;
+import net.spy.memcached.TestConfig;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests the correct initialization and reconfiguration of a memcache-bucket.

@@ -133,8 +133,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
   }
 
   public void testGetStats() throws Exception {
-    Map<SocketAddress, Map<String, String>> stats =
-      ((CouchbaseClient)client).getStats();
+    Map<SocketAddress, Map<String, String>> stats = ((CouchbaseClient)client).getStats();
     assertEquals(client.getAvailableServers().size(), stats.size());
     Map<String, String> oneStat = stats.values().iterator().next();
     assertTrue(oneStat.containsKey("curr_items"));
@@ -252,8 +251,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
         (((CouchbaseClient)client).set("nullcheck", 0, "value1", null, null));
       nullcheckOp.get();
       nullcheckOp =
-        (((CouchbaseClient)client).replace("nullcheck", 0, "value1", null,
-          null));
+        (((CouchbaseClient)client).replace("nullcheck", 0, "value1", null, null));
       nullcheckOp.get();
     } catch(NullPointerException ex) {
       success = false;
