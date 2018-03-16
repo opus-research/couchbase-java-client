@@ -237,6 +237,11 @@ public class CouchbaseConnection extends MemcachedConnection  implements
                     vbucketAwareOp.getNotMyVbucketNodes());
             if (alternative != null) {
               placeIn = alternative;
+            } else {
+              // no alternative node found, cancel op to avoid
+              // endless loops.
+              o.cancel();
+              return;
             }
           }
         }
