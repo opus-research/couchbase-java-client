@@ -52,9 +52,8 @@ public class BucketMonitorTest extends TestCase {
    * @throws Exception
    */
   public void testInstantiate() throws Exception {
-
     BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
-        BUCKET_NAME, USERNAME, PASSWORD, CONFIG_PARSER);
+        USERNAME, PASSWORD, CONFIG_PARSER);
     assertEquals(USERNAME, bucketMonitor.getHttpUser());
     assertEquals(PASSWORD, bucketMonitor.getHttpPass());
   }
@@ -73,7 +72,7 @@ public class BucketMonitorTest extends TestCase {
    */
   public void testObservable() throws Exception {
     BucketMonitor bucketMonitor = new BucketMonitor(new URI(STREAMING_URI),
-        BUCKET_NAME, USERNAME, PASSWORD, CONFIG_PARSER);
+        USERNAME, PASSWORD, CONFIG_PARSER);
 
     BucketObserverMock observer = new BucketObserverMock();
     bucketMonitor.addObserver(observer);

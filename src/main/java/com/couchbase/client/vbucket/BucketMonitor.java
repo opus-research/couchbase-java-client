@@ -79,13 +79,12 @@ public class BucketMonitor extends Observable {
 
   /**
    * @param cometStreamURI the URI which will stream node changes
-   * @param bucketname the bucketToMonitor name we are monitoring
    * @param username the username required for HTTP Basic Auth to the restful
    *          service
    * @param password the password required for HTTP Basic Auth to the restful
    *          service
    */
-  public BucketMonitor(URI cometStreamURI, String bucketname, String username,
+  public BucketMonitor(URI cometStreamURI, String username,
       String password, ConfigurationParser configParser) {
     super();
     if (cometStreamURI == null) {
@@ -268,7 +267,7 @@ public class BucketMonitor extends Observable {
   /**
    * Update the config if it has changed and notify our observers.
    *
-   * @param bucketToMonitor the bucketToMonitor to set
+   * @param newBucket the bucketToMonitor to set
    */
   private void setBucket(Bucket newBucket) {
     if (this.bucket == null || !this.bucket.equals(newBucket)) {
