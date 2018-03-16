@@ -24,9 +24,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryParams;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryRow;
@@ -36,12 +34,9 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static com.couchbase.client.java.query.Select.select;
-import static com.couchbase.client.java.query.dsl.Expression.i;
-import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -57,23 +52,20 @@ import static org.junit.Assert.assertTrue;
 public class QueryTest extends ClusterDependentTest {
 
     @BeforeClass
-    public static void init() throws InterruptedException {
+    public static void init() {
         Assume.assumeTrue( //skip tests unless...
                 clusterManager().info().checkAvailable(CouchbaseFeature.N1QL) //...version >= 3.5.0 (packaged)
                 || env().queryEnabled()); //... or forced in environment by user
 
-        bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
-        bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
+        bucket().insert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
+        bucket().insert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
 
-        bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
-
-        //temp fix for N1QL not implementing consistency parameters yet on current DP4 builds
-        bucket().query(Query.simple("SELECT * FROM `" + bucketName() + "`"));
+        bucket().query(Query.simple("CREATE PRIMARY INDEX ON " + bucketName()));
     }
 
     @Test
     public void shouldAlreadyHaveCreatedIndex() {
-        QueryResult indexResult = bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
+        QueryResult indexResult = bucket().query(Query.simple("CREATE PRIMARY INDEX ON " + bucketName()));
         assertFalse(indexResult.finalSuccess());
         assertEquals(0, indexResult.allRows().size());
         assertNotNull(indexResult.info());
@@ -84,90 +76,17 @@ public class QueryTest extends ClusterDependentTest {
     }
 
     @Test
-    public void shouldHaveRequestId() {
-        QueryResult result = bucket().query(Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId(null)));
-        assertNotNull(result);
-        assertTrue(result.parseSuccess());
-        assertTrue(result.finalSuccess());
-        assertNotNull(result.info());
-        assertNotNull(result.allRows());
-        assertNotNull(result.errors());
-        assertFalse(result.allRows().isEmpty());
-        assertTrue(result.errors().isEmpty());
-
-        assertEquals("", result.clientContextId());
-        assertNotNull(result.requestId());
-        assertTrue(result.requestId().length() > 0);
-    }
-
-    @Test
-    public void shouldHaveRequestIdAndContextId() {
-        Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId("TEST"));
-        System.out.println(bucket().get("test1"));
-        System.out.println(query.n1ql());
-        QueryResult result = bucket().query(query);
-        assertNotNull(result);
-        assertTrue(result.parseSuccess());
-        assertTrue(result.finalSuccess());
-        assertNotNull(result.info());
-        assertNotNull(result.allRows());
-        assertNotNull(result.errors());
-        System.out.println("AllRows " + result.allRows().size());
-        assertFalse(result.allRows().isEmpty());
-        assertTrue(result.errors().isEmpty());
-
-        assertEquals("TEST", result.clientContextId());
-        assertNotNull(result.requestId());
-        assertTrue(result.requestId().length() > 0);
-    }
-
-    @Test
-    public void shouldHaveRequestIdAndTruncatedContextId() {
-        String contextIdMoreThan64Bytes = "123456789012345678901234567890123456789012345678901234567890☃BCD";
-        String contextIdTruncatedExpected = new String(Arrays.copyOf(contextIdMoreThan64Bytes.getBytes(), 64));
-        System.out.println("contextId expected to be truncated to " + contextIdTruncatedExpected);
-
-        Query query = Query.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
-                QueryParams.build().withContextId(contextIdMoreThan64Bytes));
-        QueryResult result = bucket().query(query);
-        JsonObject params = JsonObject.create();
-        query.params().injectParams(params);
-
-        assertEquals(contextIdMoreThan64Bytes, params.getString("client_context_id"));
-        assertNotNull(result);
-        assertTrue(result.parseSuccess());
-        assertTrue(result.finalSuccess());
-        assertNotNull(result.info());
-        assertNotNull(result.allRows());
-        assertNotNull(result.errors());
-        assertFalse(result.allRows().isEmpty());
-        assertTrue(result.errors().isEmpty());
-
-        assertEquals(contextIdTruncatedExpected, result.clientContextId());
-        assertNotNull(result.requestId());
-        assertTrue(result.requestId().length() > 0);
-    }
-
-    @Test
     public void shouldProduceAndExecutePlan() {
-        QueryPlan plan = bucket().prepare(select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1"))));
-        bucket().get("test1");
+        QueryPlan plan = bucket().prepare(select(x("*")).from("default").where(x("item").eq(x("$1"))));
 
         assertNotNull(plan);
         assertTrue(plan.plan().containsKey("signature"));
         assertTrue(plan.plan().containsKey("operator"));
         assertFalse(plan.plan().getObject("operator").isEmpty());
 
-        PreparedQuery preparedQuery = Query.prepared(plan,
-                JsonArray.from(123),
-                QueryParams.build().withContextId("TEST"));
-        System.out.println(preparedQuery.n1ql());
-        QueryResult response = bucket().query(preparedQuery);
+        QueryResult response = bucket().query(Query.prepared(plan, JsonArray.from(123)));
         assertTrue(response.finalSuccess());
         List<QueryRow> rows = response.allRows();
-        assertEquals("TEST", response.clientContextId());
         assertEquals(1, rows.size());
         assertTrue(rows.get(0).value().toString().contains("123"));
     }

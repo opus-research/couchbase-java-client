@@ -533,7 +533,6 @@ public class CouchbaseBucket implements Bucket {
                 public QueryResult call(AsyncQueryResult asyncQueryResult) {
                     return new DefaultQueryResult(asyncQueryResult.rows(), asyncQueryResult.info(),
                             asyncQueryResult.errors(), asyncQueryResult.finalSuccess(), asyncQueryResult.parseSuccess(),
-                            asyncQueryResult.requestId(), asyncQueryResult.clientContextId(),
                             timeout, timeUnit);
                 }
             })
@@ -549,7 +548,6 @@ public class CouchbaseBucket implements Bucket {
                 public QueryResult call(AsyncQueryResult asyncQueryResult) {
                     return new DefaultQueryResult(asyncQueryResult.rows(), asyncQueryResult.info(),
                             asyncQueryResult.errors(), asyncQueryResult.finalSuccess(), asyncQueryResult.parseSuccess(),
-                            asyncQueryResult.requestId(), asyncQueryResult.clientContextId(),
                             timeout, timeUnit);
                 }
             })
