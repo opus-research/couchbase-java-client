@@ -468,10 +468,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         public AsyncQueryRow call(ByteBuf byteBuf) {
                             try {
                                 JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                byteBuf.release();
                                 return new DefaultAsyncQueryRow(value);
                             } catch (Exception e) {
-                                throw new TranscodingException("Could not decode N1QL Query Info.", e);
+                                throw new TranscodingException("Could not decode View Info.", e);
                             }
                         }
                     });
@@ -479,11 +478,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
                             try {
-                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                byteBuf.release();
-                                return value;
+                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
                             } catch (Exception e) {
-                                throw new TranscodingException("Could not decode N1QL Query Info.", e);
+                                throw new TranscodingException("Could not decode View Info.", e);
                             }
                         }
                     });
@@ -496,7 +493,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             public AsyncQueryResult call(ByteBuf byteBuf) {
                                 try {
                                     JsonObject error = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    byteBuf.release();
                                     return new DefaultAsyncQueryResult(rows, info, error, response.status().isSuccess());
                                 } catch (Exception e) {
                                     throw new TranscodingException("Could not decode View Info.", e);
