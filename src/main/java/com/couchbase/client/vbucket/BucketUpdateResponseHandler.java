@@ -22,28 +22,22 @@
 
 package com.couchbase.client.vbucket;
 
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelState;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.util.CharsetUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.util.CharsetUtil;
+import net.spy.memcached.compat.log.Logger;
+import net.spy.memcached.compat.log.LoggerFactory;
 
 /**
  * A BucketUpdateResponseHandler.
  */
-public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
+public class BucketUpdateResponseHandler extends ChannelInboundHandlerAdapter {
 
   private volatile boolean readingChunks;
   private String lastResponse;
@@ -51,27 +45,26 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
   private CountDownLatch latch;
   private StringBuilder partialResponse;
   private BucketMonitor monitor;
+
   private static final Logger LOGGER =
-      Logger.getLogger(BucketUpdateResponseHandler.class.getName());
+    LoggerFactory.getLogger(BucketUpdateResponseHandler.class);
+
 
   @Override
-  public void messageReceived(final ChannelHandlerContext context,
-      final MessageEvent event) {
-    ChannelFuture channelFuture = event.getFuture();
+  public void channelRead(final ChannelHandlerContext context, final Object event) {
+    /*ChannelFuture channelFuture = event.getFuture();
     setReceivedFuture(channelFuture);
+
     if (this.partialResponse == null) {
       this.partialResponse = new StringBuilder();
     }
+
     if (readingChunks) {
       HttpChunk chunk = (HttpChunk) event.getMessage();
       if (chunk.isLast()) {
         readingChunks = false;
       } else {
         String curChunk = chunk.getContent().toString(CharsetUtil.UTF_8);
-        /*
-         * Server sends four new lines in a chunk as a sentinal between
-         * responses.
-         */
         if (curChunk.matches("\n\n\n\n")) {
           setLastResponse(partialResponse.toString());
           partialResponse = null;
@@ -90,26 +83,25 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
     } else {
       HttpResponse response = (HttpResponse) event.getMessage();
       logResponse(response);
-    }
+    }*/
   }
 
   private void logResponse(HttpResponse response) {
-    finerLog("STATUS: " + response.getStatus());
-    finerLog("VERSION: " + response.getProtocolVersion());
+    LOGGER.debug("Streaming Connection - Status: " + response.getStatus()
+      + ", Version: " + response.getProtocolVersion());
 
-    if (!response.getHeaderNames().isEmpty()) {
-      for (String name : response.getHeaderNames()) {
-        for (String value : response.getHeaders(name)) {
-          finerLog("HEADER: " + name + " = " + value);
-        }
+
+    if (!response.headers().isEmpty()) {
+      for (Map.Entry<String, String> header : response.headers()) {
+        LOGGER.debug("HEADER: " + header.getKey() + " = " + header.getValue());
       }
-      finerLog(System.getProperty("line.separator"));
     }
 
-    if (response.getStatus().getCode() == 200 && response.isChunked()) {
+    /*
+    if (response.getStatus().code() == 200 && response.isChunked()) {
       readingChunks = true;
-      finerLog("CHUNKED CONTENT {");
-    } else if(response.getStatus().getCode() == 200) {
+      LOGGER.debug("CHUNKED CONTENT {");
+    } else if(response.getStatus().code() == 200) {
       ChannelBuffer content = response.getContent();
       if (content.readable()) {
         finerLog("CONTENT {");
@@ -120,6 +112,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
       throw new ConnectionException("Could not retrieve configuration chunk. "
         + "Response Code is: " + response.getStatus());
     }
+    */
   }
 
   /**
@@ -127,9 +120,10 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
    */
   protected String getLastResponse() {
     ChannelFuture channelFuture = getReceivedFuture();
+
     if (channelFuture.awaitUninterruptibly(30, TimeUnit.SECONDS)) {
       return lastResponse;
-    } else { // TODO: make this work with multiple servers
+    } else {
       throw new ConnectionException("Cannot contact any server in the pool");
     }
   }
@@ -138,7 +132,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
    * @param newLastResponse the lastResponse to set
    */
   private void setLastResponse(String newLastResponse) {
-    this.lastResponse = newLastResponse;
+    lastResponse = newLastResponse;
   }
 
   /**
@@ -148,7 +142,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
     try {
       getLatch().await();
     } catch (InterruptedException ex) {
-      finerLog("Getting received future has been interrupted.");
+      LOGGER.debug("Receiving Channel streaming future has been interrupted.");
     }
     return receivedFuture;
   }
@@ -157,73 +151,54 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
    * @param newReceivedFuture the receivedFuture to set
    */
   private void setReceivedFuture(ChannelFuture newReceivedFuture) {
-    this.receivedFuture = newReceivedFuture;
+    receivedFuture = newReceivedFuture;
   }
 
   /**
    * @return the latch
    */
   private CountDownLatch getLatch() {
-    if (this.latch == null) {
+    if (latch == null) {
       latch = new CountDownLatch(1);
     }
     return latch;
   }
 
-  private void finerLog(String message) {
-    LOGGER.log(Level.FINER, message);
+  @Override
+  public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+    LOGGER.debug("Streaming connection channel active.");
+    super.channelActive(ctx);
   }
 
   @Override
-  public void handleUpstream(ChannelHandlerContext context, ChannelEvent event)
-    throws Exception {
-    if (event instanceof ChannelStateEvent) {
-      ChannelStateEvent csEvent = (ChannelStateEvent)event;
-      LOGGER.log(Level.FINEST, "Channel state changed: {0}\n\n", csEvent);
-      if (csEvent.getValue() == null
-              && csEvent.getState() == ChannelState.CONNECTED) { // a disconnect
-        LOGGER.log(Level.FINE, "Channel has been disconnected on us, "
-          + "restarting the monitor.");
-        monitor.notifyDisconnected(); // connection has been dropped
-      } else if(csEvent.getState() == ChannelState.OPEN
-        && !Boolean.valueOf(csEvent.getValue().toString())) {
-        LOGGER.log(Level.FINE, "Channel has been closed on us, "
-          + "restarting the monitor.");
-        monitor.notifyDisconnected(); // connection has been closed
-      } else {
-        LOGGER.log(Level.FINER, "Channel state change is not a disconnect. "
-          + "Event value is {0} and Channel State is {1}.",
-          new Object[]{csEvent.getValue().toString(),
-            csEvent.getState().toString()});
-      }
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    LOGGER.debug("Streaming connection channel inactive.");
+    if (monitor != null) {
+      monitor.notifyDisconnected();
     }
-    if (event.getChannel().isConnected()) {
-      super.handleUpstream(context, event);
-    }
+    super.channelInactive(ctx);
   }
 
   protected void setBucketMonitor(BucketMonitor newMonitor) {
-    this.monitor = newMonitor;
+    monitor = newMonitor;
   }
 
-  /*
-   * @todo we need to investigate why the exception occurs, and if there is a
-   * better solution to the problem than just shutting down the connection. For
-   * now just invalidate the BucketMonitor, and we will recreate the connection.
-   */
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable e)
     throws Exception {
-    Throwable ex = e.getCause();
-    LOGGER.log(Level.WARNING, "Exception occurred: " + ex.getMessage() + "\n");
+    LOGGER.warn("Streaming connection exception caught: ", e);
+
     StringBuilder sb = new StringBuilder();
-    for (StackTraceElement one : ex.getStackTrace()) {
+    for (StackTraceElement one : e.getStackTrace()) {
       sb.append(one.toString());
       sb.append("\n");
     }
-    LOGGER.log(Level.WARNING, sb.toString());
+    LOGGER.warn(sb.toString());
+
     if (monitor != null) {
       monitor.replaceConfig();
     }
   }
+
+
 }

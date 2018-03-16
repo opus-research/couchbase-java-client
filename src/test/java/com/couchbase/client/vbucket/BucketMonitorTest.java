@@ -31,6 +31,8 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Before;
 
 /**
@@ -110,6 +112,16 @@ public class BucketMonitorTest {
     BucketMonitor monitor = new BucketMonitor(new URI("http://invalidHost:8091/"),
       USERNAME, PASSWORD, CONFIG_PARSER, configProvider);
     monitor.startMonitor();
+  }
+
+  @Test
+  public void foo() throws Exception {
+    BucketMonitor m = new BucketMonitor(URI.create(STREAMING_URI),
+      USERNAME, PASSWORD, CONFIG_PARSER, configProvider);
+
+    m.startMonitor();
+
+    Thread.sleep(TimeUnit.DAYS.toMillis(1));
   }
 
 }
