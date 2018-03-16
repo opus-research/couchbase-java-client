@@ -103,7 +103,8 @@ public class BinaryTest {
         public Observable<JsonDocument> call(String id) {
           return bucket.get(id);
         }
-      }).toBlockingObservable();
+      })
+      .toBlockingObservable();
 
     Iterator<JsonDocument> iterator = observable.getIterator();
     while (iterator.hasNext()) {
