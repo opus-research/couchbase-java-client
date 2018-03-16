@@ -135,8 +135,6 @@ public class Query {
       args.put(STALE, stale);
     } else if (stale == Stale.UPDATE_AFTER) {
       args.put(STALE, stale);
-    } else if (stale == Stale.FALSE) {
-      args.put(STALE, stale);
     }
     return this;
   }
