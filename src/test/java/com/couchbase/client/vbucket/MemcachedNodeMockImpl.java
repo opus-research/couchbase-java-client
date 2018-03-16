@@ -176,12 +176,13 @@ public class MemcachedNodeMockImpl implements MemcachedNode {
   }
 
   @Override
-  public void setConnection(MemcachedConnection memcachedConnection) {
-
-  }
-
-  @Override
   public MemcachedConnection getConnection() {
     return null;
   }
+
+  @Override
+  public void setConnection(MemcachedConnection connection) {
+
+  }
+
 }
