@@ -104,12 +104,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   /**
    * Default Observe poll interval in ms.
    */
-  public static final long DEFAULT_OBS_POLL_INTERVAL = 10;
+  public static final long DEFAULT_OBS_POLL_INTERVAL = 100;
 
   /**
    * Default maximum amount of poll cycles before failure.
    */
-  public static final int DEFAULT_OBS_POLL_MAX = 500;
+  public static final int DEFAULT_OBS_POLL_MAX = 400;
 
   protected volatile ConfigurationProvider configurationProvider;
   private volatile String bucket;
@@ -216,8 +216,8 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public AuthDescriptor getAuthDescriptor() {
     if (!configurationProvider.getAnonymousAuthBucket().equals(bucket)
         && bucket != null) {
-      return new AuthDescriptor(new String[] { "PLAIN" },
-              new PlainCallbackHandler(bucket, pass));
+      return new AuthDescriptor(new String[] {},
+        new PlainCallbackHandler(bucket, pass));
     } else {
       return null;
     }
