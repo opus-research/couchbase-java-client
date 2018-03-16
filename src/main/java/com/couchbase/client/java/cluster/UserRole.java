@@ -13,40 +13,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.auth;
 
-import java.util.Collections;
-import java.util.List;
+package com.couchbase.client.java.cluster;
+
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 
 /**
- * {@link Authenticator} for RBAC users in Couchbase
+ * Authorizing role for the user
  *
  * @author Subhashni Balakrishnan
  * @since 2.4.4
  */
 @InterfaceStability.Uncommitted
 @InterfaceAudience.Public
-public class PasswordAuthenticator implements Authenticator {
-    String username;
-    String password;
+public class UserRole {
 
-    public PasswordAuthenticator(String password) {
-        this.password = password;
+    final String role;
+
+    final String bucket;
+
+    public UserRole(String role, String bucket) {
+        this.role = role;
+        this.bucket = bucket;
     }
 
-    public PasswordAuthenticator(String username, String password) {
-        this.username = username;
-        this.password = password;
+    /**
+     * Get the role set
+     *
+     * @return role
+     */
+    public String role() {
+        return this.role;
     }
 
-    public List<Credential> getCredentials(CredentialContext context, String specific) {
-        return Collections.singletonList(new Credential(username, password));
+    /**
+     * Get the bucket for which the role is set
+     *
+     * @return bucket name
+     */
+    public String bucket() {
+        return this.bucket;
     }
 
-    public boolean isEmpty() {
-        return false;
-    }
+    @Override
+    public String toString() {
+        return "UserRole{role:" + role + ", bucket:" + bucket + "}";
 
+    }
 }
