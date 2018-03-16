@@ -34,7 +34,7 @@ import net.spy.memcached.TestConfig;
  */
 public class ConfigurationParserJSONTest extends TestCase {
 
-  private final ConfigurationParser configParser = new ConfigurationParserJSON();
+  private ConfigurationParser configParser = new ConfigurationParserJSON();
   private static final String DEFAULT_POOL_NAME = "default";
 
   /**
@@ -140,7 +140,7 @@ public class ConfigurationParserJSONTest extends TestCase {
    * @param bucket the bucket
    * @throws Exception the exception
    */
-  private void checkBucket(Bucket bucket) {
+  private void checkBucket(Bucket bucket) throws Exception {
     assertNotNull("Bucket is null", bucket);
     assertNotNull(bucket.getName());
     assertNotNull(bucket.getStreamingURI());

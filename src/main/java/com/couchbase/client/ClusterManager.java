@@ -66,11 +66,11 @@ import org.codehaus.jettison.json.JSONObject;
  */
 public class ClusterManager extends SpyObject {
 
-  private final DefaultHttpClientConnection conn;
-  private final HttpContext context;
+  private DefaultHttpClientConnection conn;
+  private HttpContext context;
   private HttpHost host;
-  private final HttpRequestExecutor httpexecutor;
-  private final HttpProcessor httpproc;
+  private HttpRequestExecutor httpexecutor;
+  private HttpProcessor httpproc;
 
   private final List<URI> addrs;
   private final String user;
