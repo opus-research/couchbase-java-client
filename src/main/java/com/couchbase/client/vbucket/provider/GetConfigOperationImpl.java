@@ -20,48 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.protocol.views;
+package com.couchbase.client.vbucket.provider;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.protocol.binary.OperationImpl;
 
-/**
- * Holds the response of a queried view.
- */
-public abstract class ViewResponse implements Iterable<ViewRow> {
-  protected final Collection<ViewRow> rows;
-  protected final Collection<RowError> errors;
-  protected final long totalRows;
+public class GetConfigOperationImpl extends OperationImpl {
 
-  public ViewResponse(final Collection<ViewRow> r,
-      final Collection<RowError> e, long t) {
-    rows = r;
-    errors = e;
-    totalRows = t;
-  }
+  private static final byte CMD = (byte) 0xb5;
 
-  public Collection<RowError> getErrors() {
-    return errors;
-  }
-
-  public long getTotalRows() {
-    return totalRows;
+  public GetConfigOperationImpl(OperationCallback cb) {
+    super(CMD, 0, cb);
   }
 
   @Override
-  public Iterator<ViewRow> iterator() {
-    return rows.iterator();
+  public void initialize() {
+    prepareBuffer("", 0, EMPTY_BYTES);
   }
 
-  public int size() {
-    return rows.size();
+  @Override
+  protected void decodePayload(byte[] pl) {
+    getCallback().receivedStatus(new OperationStatus(true, new String(pl)));
   }
 
-  public abstract Map<String, Object> getMap();
-
-  public ViewRow removeLastElement() {
-    return ((LinkedList<ViewRow>) rows).removeLast();
-  }
 }

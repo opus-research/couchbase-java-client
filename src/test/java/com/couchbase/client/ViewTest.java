@@ -55,12 +55,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
@@ -80,13 +78,6 @@ import static org.junit.Assert.assertTrue;
  * Verifies the correct functionality of views.
  */
 public class ViewTest {
-
-  /**
-   * The time to wait until persistence writing is done. This setting should
-   * be slightly higher than normal to make sure no timeouts occur, even when
-   * adding and removing design documents on slower machines.
-   */
-  private static final int PERSIST_WAIT_TIME = 60;
 
   protected static TestingClient client = null;
   private static final String SERVER_URI = "http://" + TestConfig.IPV4_ADDR
@@ -176,14 +167,9 @@ public class ViewTest {
     String view2 = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_FOR_DATED + "\":{\"map\":\"function (doc) {  "
         + "emit(doc.type, 1)}\"}}}";
-
     for (Entry<String, Object> item : ITEMS.entrySet()) {
-      OperationFuture<Boolean> future = client.set(item.getKey(),
-        item.getValue(), PersistTo.MASTER);
-      assertTrue(future.getStatus().toString(),
-        future.get(PERSIST_WAIT_TIME, TimeUnit.SECONDS));
+      assert client.set(item.getKey(), 0, item.getValue()).get().booleanValue();
     }
-
     HttpFuture<String> asyncHttpPut = client.asyncHttpPut(docUri, view2);
 
     String response = asyncHttpPut.get();
@@ -241,6 +227,17 @@ public class ViewTest {
   private static String generateDatedDoc(int year, int month, int day) {
     return "{\"type\":\"dated\",\"year\":" + year + ",\"month\":" + month + ","
         + "\"day\":" + day + "}";
+  }
+
+  @Test
+  public void testAssertions() {
+    boolean caught = false;
+    try {
+      assert false;
+    } catch (AssertionError e) {
+      caught = true;
+    }
+    assertTrue("Assertions are not enabled!", caught);
   }
 
   /**
@@ -316,7 +313,6 @@ public class ViewTest {
       client.asyncGetView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
 
     final CountDownLatch latch = new CountDownLatch(1);
-    final AtomicInteger callCount = new AtomicInteger(0);
     future.addListener(new HttpCompletionListener() {
       @Override
       public void onComplete(HttpFuture<?> f) throws Exception {
@@ -327,7 +323,6 @@ public class ViewTest {
           public void onComplete(HttpFuture<?> f) throws Exception {
             ViewResponse resp = (ViewResponse) f.get();
             if (resp.size() == ITEMS.size()) {
-              callCount.incrementAndGet();
               latch.countDown();
             }
           }
@@ -336,7 +331,6 @@ public class ViewTest {
     });
 
     assertTrue(latch.await(3, TimeUnit.SECONDS));
-    assertEquals(1, callCount.get());
   }
 
   @Test
@@ -747,13 +741,13 @@ public class ViewTest {
     final CountDownLatch latch = new CountDownLatch(1);
     client.asyncGetView(DESIGN_DOC_WO_REDUCE, VIEW_NAME_W_REDUCE).addListener(
       new HttpCompletionListener() {
-      @Override
-      public void onComplete(HttpFuture<?> httpFuture) throws Exception {
-        if (httpFuture.getStatus().isSuccess()) {
-          latch.countDown();
+        @Override
+        public void onComplete(HttpFuture<?> httpFuture) throws Exception {
+          if (httpFuture.getStatus().isSuccess()) {
+            latch.countDown();
+          }
         }
-      }
-    });
+      });
     assertTrue(latch.await(1, TimeUnit.MINUTES));
   }
 
@@ -950,12 +944,11 @@ public class ViewTest {
    */
   @Test
   public void testObserveWithStaleFalse()
-    throws Exception {
+    throws InterruptedException, ExecutionException {
     int docAmount = 500;
     for (int i = 1; i <= docAmount; i++) {
       String value = "{\"type\":\"observetest\",\"value\":"+i+"}";
-      assertTrue(client.set("observetest"+i, 0, value, PersistTo.MASTER)
-        .get(PERSIST_WAIT_TIME, TimeUnit.SECONDS));
+      assertTrue(client.set("observetest"+i, 0, value, PersistTo.MASTER).get());
     }
 
     Query query = new Query().setStale(Stale.FALSE);
@@ -987,13 +980,11 @@ public class ViewTest {
    * non-JSON data is read from the view.
    */
   @Test
-  public void testViewWithBinaryDocs() throws Exception {
+  public void testViewWithBinaryDocs() {
     // Create non-JSON documents
     Date now = new Date();
-    client.set("nonjson1", 0, now, PersistTo.MASTER)
-      .get(PERSIST_WAIT_TIME, TimeUnit.SECONDS);
-    client.set("nonjson2", 0, 42, PersistTo.MASTER)
-      .get(PERSIST_WAIT_TIME, TimeUnit.SECONDS);
+    client.set("nonjson1", 0, now);
+    client.set("nonjson2", 0, 42);
 
     View view = client.getView(DESIGN_DOC_BINARY, VIEW_NAME_BINARY);
     Query query = new Query();
@@ -1012,8 +1003,50 @@ public class ViewTest {
       }
       if(row.getKey().equals("nonjson2")) {
         assertEquals(42, row.getDocument());
-      }
     }
+    }
+  }
+
+  @Test
+  public void testTotalNumRowsWithDocs() {
+    Query query = new Query();
+    query.setReduce(false).setIncludeDocs(true).setStale(Stale.FALSE);
+
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    ViewResponse response = client.query(view, query);
+    long totalRows = response.getTotalRows();
+    assertTrue(ITEMS.size() <= totalRows);
+
+    query.setLimit(5);
+    response = client.query(view, query);
+    totalRows = response.getTotalRows();
+    assertTrue(ITEMS.size() <= totalRows);
+  }
+
+  @Test
+  public void testTotalNumRowsWithoutDocs() {
+    Query query = new Query();
+    query.setReduce(false).setIncludeDocs(false).setStale(Stale.FALSE);
+
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    ViewResponse response = client.query(view, query);
+    long totalRows = response.getTotalRows();
+    assertTrue(ITEMS.size() <= totalRows);
+
+    query.setLimit(5);
+    response = client.query(view, query);
+    totalRows = response.getTotalRows();
+    assertTrue(ITEMS.size() <= totalRows);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testTotalNumRowsReduced() {
+    Query query = new Query();
+    query.setIncludeDocs(true).setStale(Stale.FALSE);
+
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    ViewResponse response = client.query(view, query);
+    response.getTotalRows();
   }
 
   /**
