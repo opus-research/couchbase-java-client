@@ -2023,11 +2023,4 @@ public interface AsyncBucket {
      */
     Observable<Boolean> close();
 
-    /**
-     * Returns true if this bucket is already closed, false if it is still open.
-     *
-     * @return true if closed, false otherwise.
-     */
-    boolean isClosed();
-
 }
