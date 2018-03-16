@@ -30,9 +30,6 @@ package com.couchbase.client.java.query;
  */
 public class PrepareStatement implements Statement {
 
-    /** a prefix to be used in order to prepare a query plan for a statement */
-    public static final String PREPARE_PREFIX = "PREPARE ";
-
     private final Statement toPrepare;
 
     private PrepareStatement(Statement toPrepare) {
@@ -41,7 +38,7 @@ public class PrepareStatement implements Statement {
 
     @Override
     public String toString() {
-        return PREPARE_PREFIX + toPrepare.toString();
+        return "PREPARE " + toPrepare.toString();
     }
 
     /**
@@ -62,25 +59,5 @@ public class PrepareStatement implements Statement {
         } else {
             return new PrepareStatement(statement);
         }
-    }
-
-    /**
-     * Construct a {@link PrepareStatement} from a statement in {@link String} format.
-     * Statement shouldn't begin with "PREPARE", but should that be the case resulting
-     * statement will not have a double prefix.
-     *
-     * @param statement the statement to prepare.
-     * @return the prepared statement.
-     * @throws NullPointerException when statement is null.
-     */
-    public static PrepareStatement prepare(String statement) {
-        if (statement == null) {
-            throw new NullPointerException("Statement to prepare cannot be null");
-        }
-        if (statement.startsWith(PREPARE_PREFIX)) {
-            statement = statement.replaceFirst(PREPARE_PREFIX, "");
-        }
-        Statement toPrepare = new Query.RawStatement(statement);
-        return new PrepareStatement(toPrepare);
     }
 }

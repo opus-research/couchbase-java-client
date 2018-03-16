@@ -83,19 +83,11 @@ public class QueryToN1qlTest {
     }
 
     @Test
-    public void shouldNotDoublePrefixAStringPreparedStatement() {
-        String alreadyPrepare = "PREPARE SELECT *";
-        assertEquals(alreadyPrepare, PrepareStatement.prepare(alreadyPrepare).toString());
-    }
-
-    @Test
     public void shouldPrependStatementWithPrepare() {
         Statement toPrepare = select("*").from("default");
         PrepareStatement prepare = PrepareStatement.prepare(toPrepare);
-        PrepareStatement prepareFromString = PrepareStatement.prepare("SELECT * FROM default");
 
         assertEquals("PREPARE SELECT * FROM default", prepare.toString());
-        assertEquals("PREPARE SELECT * FROM default", prepareFromString.toString());
     }
 
     @Test
