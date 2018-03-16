@@ -103,19 +103,6 @@ public class MutateInBuilder {
         return execute(defaultTimeout, defaultTimeUnit);
     }
 
-    public DocumentFragment<Mutation> execute(PersistTo persistTo, ReplicateTo replicateTo) {
-        return execute(persistTo, replicateTo, defaultTimeout, defaultTimeUnit);
-    }
-
-    public DocumentFragment<Mutation> execute(PersistTo persistTo) {
-        return execute(persistTo, defaultTimeout, defaultTimeUnit);
-    }
-
-    public DocumentFragment<Mutation> execute(ReplicateTo replicateTo) {
-        return execute(replicateTo, defaultTimeout, defaultTimeUnit);
-    }
-
-
     /**
      * Perform several {@link Mutation mutation} operations inside a single existing {@link JsonDocument JSON document},
      * with a specific timeout.
@@ -153,18 +140,6 @@ public class MutateInBuilder {
      */
     public DocumentFragment<Mutation> execute(long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBuilder.execute(), timeout, timeUnit);
-    }
-
-    public DocumentFragment<Mutation> execute(PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBuilder.execute(persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    public DocumentFragment<Mutation> execute(PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBuilder.execute(persistTo), timeout, timeUnit);
-    }
-
-    public DocumentFragment<Mutation> execute(ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBuilder.execute(replicateTo), timeout, timeUnit);
     }
 
     //==== DOCUMENT level modifiers ====
