@@ -65,7 +65,6 @@ public class ViewQueryResponseMapper {
 
         return response
             .info()
-            .singleOrDefault(null)
             .map(new ByteBufToJsonObject())
             .map(new BuildViewResult(bucket, query, response));
     }
@@ -83,7 +82,6 @@ public class ViewQueryResponseMapper {
 
         return response
             .info()
-            .singleOrDefault(null)
             .map(new ByteBufToJsonObject())
             .map(new BuildSpatialViewResult(bucket, query, response));
     }
@@ -129,6 +127,7 @@ public class ViewQueryResponseMapper {
 
         @Override
         public AsyncSpatialViewResult call(JsonObject jsonInfo) {
+            JsonObject error = null;
             JsonObject debug = null;
             boolean success = response.status().isSuccess();
 
@@ -137,6 +136,8 @@ public class ViewQueryResponseMapper {
             } else if (response.status() == ResponseStatus.NOT_EXISTS) {
                 throw new ViewDoesNotExistException("View " + query.getDesign() + "/"
                     + query.getView() + " does not exist.");
+            } else {
+                error = jsonInfo;
             }
 
             Observable<AsyncSpatialViewRow> rows = response
@@ -147,19 +148,6 @@ public class ViewQueryResponseMapper {
                     public AsyncSpatialViewRow call(JsonObject row) {
                         return new DefaultAsyncSpatialViewRow(bucket, row.getString("id"), row.getArray("key"),
                             row.get("value"), row.getObject("geometry"));
-                    }
-                });
-
-            Observable<JsonObject> error = response
-                .error()
-                .map(new Func1<String, JsonObject>() {
-                    @Override
-                    public JsonObject call(String input) {
-                        try {
-                            return TRANSCODER.stringToJsonObject(input);
-                        } catch (Exception e) {
-                            throw new TranscodingException("Could not decode View JSON: " + input, e);
-                        }
                     }
                 });
 
@@ -185,6 +173,7 @@ public class ViewQueryResponseMapper {
 
         @Override
         public AsyncViewResult call(final JsonObject jsonInfo) {
+            JsonObject error = null;
             JsonObject debug = null;
             int totalRows = 0;
             boolean success = response.status().isSuccess();
@@ -198,6 +187,8 @@ public class ViewQueryResponseMapper {
             } else if (response.status() == ResponseStatus.NOT_EXISTS) {
                 throw new ViewDoesNotExistException("View " + query.getDesign() + "/"
                     + query.getView() + " does not exist.");
+            } else {
+                error = jsonInfo;
             }
 
             Observable<AsyncViewRow> rows = response
@@ -207,19 +198,6 @@ public class ViewQueryResponseMapper {
                     @Override
                     public AsyncViewRow call(JsonObject row) {
                         return new DefaultAsyncViewRow(bucket, row.getString("id"), row.get("key"), row.get("value"));
-                    }
-                });
-
-            Observable<JsonObject> error = response
-                .error()
-                .map(new Func1<String, JsonObject>() {
-                    @Override
-                    public JsonObject call(String input) {
-                        try {
-                            return TRANSCODER.stringToJsonObject(input);
-                        } catch (Exception e) {
-                            throw new TranscodingException("Could not decode View JSON: " + input, e);
-                        }
                     }
                 });
 

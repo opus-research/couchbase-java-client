@@ -101,13 +101,6 @@ public interface SpatialViewResult extends Iterable<SpatialViewRow> {
     JsonObject error();
 
     /**
-     * If it was not successful, an error is contained here.
-     *
-     * @return the potential error.
-     */
-    JsonObject error(long timeout, TimeUnit timeUnit);
-
-    /**
      * If debug was enabled on the query, it is contained here.
      *
      * @return the debug info.
