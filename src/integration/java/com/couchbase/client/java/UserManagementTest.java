@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.java.cluster.AuthDomain;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.User;
 import com.couchbase.client.java.cluster.UserRole;
@@ -79,10 +78,10 @@ public class UserManagementTest {
                 }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
             @Override
             public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(AuthDomain.LOCAL, userSettings.name(), userSettings);
+                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
             }
         }).toBlocking().single();
-        clusterManager.removeUser(AuthDomain.LOCAL, USER_1);
+        clusterManager.removeUser(USER_1);
     }
 
     @Test(expected = CouchbaseException.class)
@@ -100,7 +99,7 @@ public class UserManagementTest {
                 }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
             @Override
             public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(AuthDomain.LOCAL, userSettings.name(), userSettings);
+                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
             }
         }).toBlocking().single();
     }
@@ -121,7 +120,7 @@ public class UserManagementTest {
                 }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
             @Override
             public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(AuthDomain.LOCAL, userSettings.name(), userSettings);
+                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
             }
         }).toBlocking().single();
 
@@ -139,11 +138,11 @@ public class UserManagementTest {
                 }).flatMap(new Func1<UserSettings, Observable<Boolean>>() {
             @Override
             public Observable<Boolean> call(final UserSettings userSettings) {
-                return clusterManager.async().upsertUser(AuthDomain.LOCAL, userSettings.name(), userSettings);
+                return clusterManager.async().upsertUser(userSettings.name(), userSettings);
             }
         }).toBlocking().single();
 
-        List<User> users = clusterManager.async().getUsers(AuthDomain.LOCAL).toList().toBlocking().single();
+        List<User> users = clusterManager.async().getUsers().toList().toBlocking().single();
         int matchCount = 0;
         for (User user:users) {
             if (user.userId().contains("UserManagementTest")){
@@ -151,7 +150,7 @@ public class UserManagementTest {
             }
         }
         assertEquals("Get user list should contain users added", 2, matchCount);
-        clusterManager.removeUser(AuthDomain.LOCAL, "UserManagementTestUser1");
-        clusterManager.removeUser(AuthDomain.LOCAL, "UserManagementTestUser2");
+        clusterManager.removeUser("UserManagementTestUser1");
+        clusterManager.removeUser("UserManagementTestUser2");
     }
 }

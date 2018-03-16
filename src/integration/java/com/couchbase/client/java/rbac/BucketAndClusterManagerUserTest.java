@@ -23,8 +23,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.auth.PasswordAuthenticator;
-import com.couchbase.client.java.cluster.AuthDomain;
-import com.couchbase.client.java.cluster.User;
 import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.cluster.UserSettings;
 import com.couchbase.client.java.util.CouchbaseTestContext;
@@ -52,7 +50,7 @@ public class BucketAndClusterManagerUserTest {
                 .build()
                 .ignoreIfClusterUnder(Version.parseVersion("5.0.0"));
 
-        ctx.clusterManager().upsertUser(AuthDomain.LOCAL, username, UserSettings.build().password(password)
+        ctx.clusterManager().upsertUser(username, UserSettings.build().password(password)
                 .roles(Arrays.asList(new UserRole("ro_admin", ""))));
         cluster = CouchbaseCluster.create(ctx.seedNode());
         cluster.authenticate(new PasswordAuthenticator(username, password));
@@ -64,7 +62,7 @@ public class BucketAndClusterManagerUserTest {
     public static void cleanup() throws Exception {
         if (ctx != null) {
             cluster.disconnect();
-            ctx.clusterManager().removeUser(AuthDomain.LOCAL, username);
+            ctx.clusterManager().removeUser(username);
             ctx.destroyBucketAndDisconnect();
         }
     }
@@ -73,15 +71,12 @@ public class BucketAndClusterManagerUserTest {
     public void testGetReadOnlyClusterInfoAuth() {
         cluster.clusterManager().info();
         cluster.clusterManager().getBuckets();
-        List<User> users = cluster.clusterManager().getUsers(AuthDomain.LOCAL);
-        assert(users.size() > 0);
-        User user = cluster.clusterManager().getUser(AuthDomain.LOCAL, username);
-        assert(user.userId().compareTo(username) == 0);
+        cluster.clusterManager().getUsers();
     }
 
     @Test(expected = CouchbaseException.class)
     public void shouldFailOnUpdatingCluster() {
-        cluster.clusterManager().upsertUser(AuthDomain.LOCAL,"testUser", UserSettings.build().password("password"));
+        cluster.clusterManager().upsertUser("testUser", UserSettings.build().password("password"));
     }
 
     @Test
