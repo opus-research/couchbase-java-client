@@ -65,8 +65,8 @@ public class JacksonJsonConverterTest {
     object.put("boolean", true);
 
     ByteBuf buf = converter.encode(object);
-    String expected = "{\"integer\":1,\"string\":\"Hello World\",\"boolean\":" +
-      "true,\"double\":11.3322,\"long\":9223372036854775807}";
+    String expected = "{\"boolean\":true,\"string\":\"Hello World\",\"double\":11.3322,\"integer\":1," +
+        "\"long\":9223372036854775807}";
     assertEquals(expected, buf.toString(CharsetUtil.UTF_8));
   }
 
@@ -170,18 +170,18 @@ public class JacksonJsonConverterTest {
       .put("children", children)
       .put("active", true);
 
-    String expected = "{\"colors\":[\"red\",\"blue\"],\"active\":true," +
-      "\"children\":[{\"age\":25,\"name\":\"Jane Doe\"},{\"age\":13,\"name\":" +
-      "\"Tom Doe\"}],\"lastname\":\"Doe\",\"firstname\":\"John\"}";
+    String expected = "{\"firstname\":\"John\"," +
+        "\"children\":[{\"name\":\"Jane Doe\",\"age\":25},{\"name\":\"Tom Doe\",\"age\":13}]," +
+        "\"active\":true,\"colors\":[\"red\",\"blue\"],\"lastname\":\"Doe\"}";
     ByteBuf buf = converter.encode(user);
     assertEquals(expected, buf.toString(CharsetUtil.UTF_8));
   }
 
   @Test
   public void shouldDecodeMixedNestedJsonValues() {
-    String input = "{\"colors\":[\"red\",\"blue\"],\"active\":true," +
-      "\"children\":[{\"age\":25,\"name\":\"Jane Doe\"},{\"age\":13,\"name\":" +
-      "\"Tom Doe\"}],\"lastname\":\"Doe\",\"firstname\":\"John\"}";
+    String input = "{\"firstname\":\"John\"," +
+        "\"children\":[{\"name\":\"Jane Doe\",\"age\":25},{\"name\":\"Tom Doe\",\"age\":13}]," +
+        "\"active\":true,\"colors\":[\"red\",\"blue\"],\"lastname\":\"Doe\"}";
     ByteBuf buf = Unpooled.copiedBuffer(input, CharsetUtil.UTF_8);
     JsonObject user = converter.decode(buf);
 
