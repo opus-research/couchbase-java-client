@@ -24,7 +24,6 @@ package com.couchbase.client.java.document.json;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 /**
  * Represents a JSON array that can be stored and loaded from Couchbase Server.
@@ -36,7 +35,6 @@ import java.util.ListIterator;
  * allow to store such objects which can be represented by JSON.
  *
  * @author Michael Nitschinger
- * @author Simon Baslé
  * @since 2.0
  */
 public class JsonArray extends JsonValue implements Iterable<Object> {
@@ -82,37 +80,6 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
         JsonArray array = new JsonArray();
         for (Object item : items) {
             if (checkType(item)) {
-                array.add(item);
-            } else {
-                throw new IllegalArgumentException("Unsupported type for JsonArray: " + item.getClass());
-            }
-        }
-        return array;
-    }
-
-    /**
-     * Creates a new {@link JsonArray} and populates it with the values in the supplied {@link List}.
-     *
-     * If the type of an item is not supported, an {@link IllegalArgumentException} is thrown.
-     *
-     * @param items the list of items to be stored in the {@link JsonArray}.
-     * @return a populated {@link JsonArray}.
-     * @throws IllegalArgumentException if at least one item is of unsupported type.
-     * @throws NullPointerException if at least one item is null.
-     */
-    public static JsonArray from(List<?> items) {
-        if (items == null || items.isEmpty()) {
-            return JsonArray.empty();
-        }
-
-        JsonArray array = new JsonArray();
-        ListIterator<?> iter = items.listIterator();
-        while (iter.hasNext()) {
-            int index = iter.nextIndex();
-            Object item = iter.next();
-            if (item == null) {
-                throw new NullPointerException("Unsupported null item at index " + index);
-            } else if (checkType(item)) {
                 array.add(item);
             } else {
                 throw new IllegalArgumentException("Unsupported type for JsonArray: " + item.getClass());
