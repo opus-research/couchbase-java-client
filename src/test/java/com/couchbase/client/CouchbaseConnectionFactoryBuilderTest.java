@@ -22,14 +22,16 @@
  */
 package com.couchbase.client;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
-import net.spy.memcached.TestConfig;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import net.spy.memcached.TestConfig;
+
+import org.junit.Test;
 
 /**
  * Test for basic things in the CouchbaseConnectionFactoryBuilder.
@@ -148,25 +150,6 @@ public class CouchbaseConnectionFactoryBuilderTest {
       connFact.getFailureMode());
     assertEquals(CouchbaseConnectionFactory.DEFAULT_HASH,
       connFact.getHashAlg());
-  }
-
-  /**
-   * Make sure that the Builder produces the same default values as would
-   * a direct Factory init.
-   */
-  @Test
-  public void testIdenticalConfigs() throws Exception {
-    CouchbaseConnectionFactoryBuilder instance =
-      new CouchbaseConnectionFactoryBuilder();
-
-    CouchbaseConnectionFactory connFact =
-      instance.buildCouchbaseConnection(uris, "default", "");
-
-    CouchbaseConnectionFactory directFact =
-      new CouchbaseConnectionFactory(uris, "default", "");
-
-    assertEquals(connFact.getFailureMode(), directFact.getFailureMode());
-    assertEquals(connFact.getHashAlg(), directFact.getHashAlg());
   }
 
 }

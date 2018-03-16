@@ -26,7 +26,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.text.NumberFormat;
 import java.text.ParseException;
-import java.text.ParsePosition;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -555,14 +554,11 @@ public class Query {
     } else if(value.toString().startsWith("\"")) {
       encoded = value.toString();
     } else {
-        ParsePosition pp = new ParsePosition(0);
-        NumberFormat numberFormat = NumberFormat.getInstance();
-        Number result = numberFormat.parse(value.toString(), pp);
-        if (pp.getIndex() == value.toString().length()) {
-            encoded = result.toString();
-        } else {
-            encoded = "\"" + value.toString() + "\"";
-        }
+      try {
+        encoded = NumberFormat.getInstance().parse(value.toString()).toString();
+      } catch(ParseException ex) {
+        encoded = "\"" + value.toString() + "\"";
+      }
     }
 
     return URLEncoder.encode(encoded, "UTF-8");

@@ -25,7 +25,6 @@ package com.couchbase.client.vbucket;
 import com.couchbase.client.http.HttpUtil;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
-import com.couchbase.client.vbucket.config.ConfigType;
 import com.couchbase.client.vbucket.config.ConfigurationParser;
 import com.couchbase.client.vbucket.config.ConfigurationParserJSON;
 import com.couchbase.client.vbucket.config.Pool;
@@ -49,6 +48,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.compat.SpyObject;
@@ -74,13 +75,12 @@ public class ConfigurationProviderHTTP extends SpyObject implements
   private String restPwd;
   private URI loadedBaseUri;
 
-  private final Map<String, Bucket> buckets =
-    new ConcurrentHashMap<String, Bucket>();
+  private final Map<String, Bucket> buckets = new ConcurrentHashMap<String, Bucket>();
 
   private ConfigurationParser configurationParser =
-    new ConfigurationParserJSON();
+      new ConfigurationParserJSON();
   private Map<String, BucketMonitor> monitors =
-    new HashMap<String, BucketMonitor>();
+      new HashMap<String, BucketMonitor>();
   private volatile String reSubBucket;
   private volatile Reconfigurable reSubRec;
 
@@ -143,13 +143,9 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       boolean warmedUp = false;
       int maxBackoffRetries = 5;
       int retryCount = 1;
-      while(!warmedUp) {
+      while(warmedUp == false) {
         readPools(bucketname);
         Config config = this.buckets.get(bucketname).getConfig();
-        if(config.getConfigType().equals(ConfigType.MEMCACHE)) {
-          warmedUp = true;
-          continue;
-        }
         if(config.getVbucketsCount() == 0) {
           if(retryCount > maxBackoffRetries) {
             throw new ConfigurationException("Cluster is not in a warmed up "
