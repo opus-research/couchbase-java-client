@@ -174,7 +174,7 @@ public class TapTest {
    */
   @Test
   public void testTapBucketDoesNotExist() throws Exception {
-    TapClient tapClient;
+    TapClient tapClient = null;
     tapClient = new TapClient(Arrays.asList(new URI("http://"
       + TestConfig.IPV4_ADDR + ":8091/pools")), "abucket", "apassword");
     try {

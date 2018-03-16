@@ -49,7 +49,7 @@ public class ConfigurationParserJSON extends SpyObject implements
 
   public Map<String, Pool> parseBase(String base) throws ParseException {
     Map<String, Pool> parsedBase = new HashMap<String, Pool>();
-    JSONArray poolsJA;
+    JSONArray poolsJA = null;
     try {
       JSONObject baseJO = new JSONObject(base);
       poolsJA = baseJO.getJSONArray("pools");
