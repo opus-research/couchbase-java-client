@@ -22,9 +22,6 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.ViewNode.EventLogger;
-import com.couchbase.client.ViewNode.MyHttpRequestExecutionHandler;
-import com.couchbase.client.http.AsyncConnectionManager;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -39,37 +36,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
-
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequestInterceptor;
-import org.apache.http.impl.DefaultConnectionReuseStrategy;
-import org.apache.http.nio.protocol.AsyncNHttpClientHandler;
-import org.apache.http.nio.util.DirectByteBufferAllocator;
-import org.apache.http.params.CoreConnectionPNames;
-import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.SyncBasicHttpParams;
-import org.apache.http.protocol.HttpProcessor;
-import org.apache.http.protocol.ImmutableHttpProcessor;
-import org.apache.http.protocol.RequestConnControl;
-import org.apache.http.protocol.RequestContent;
-import org.apache.http.protocol.RequestExpectContinue;
-import org.apache.http.protocol.RequestTargetHost;
-import org.apache.http.protocol.RequestUserAgent;
-
 
 /**
  * Couchbase implementation of CouchbaseConnection.
@@ -77,64 +55,11 @@ import org.apache.http.protocol.RequestUserAgent;
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
   Reconfigurable {
-  private static final int NUM_CONNS = 1;
 
-  private final CouchbaseConnectionFactory connFactory;
-  private final ConcurrentLinkedQueue<ViewNode> nodesToShutdown;
-  private List<ViewNode> nodes;
-
-  public CouchbaseConnection(CouchbaseConnectionFactory cf,
-      List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
-    throws IOException {
-    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(),
-        cf.getOperationFactory());
-    shutDown = false;
-    connFactory = cf;
-    nodesToShutdown = new ConcurrentLinkedQueue<ViewNode>();
-    nodes = createConnections(addrs);
-  }
-
-  private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
-    throws IOException {
-    List<ViewNode> nodeList = new LinkedList<ViewNode>();
-
-    for (InetSocketAddress a : addrs) {
-      HttpParams params = new SyncBasicHttpParams();
-      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT,
-              5000).setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT,
-              5000).setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE,
-              8 * 1024).setBooleanParameter(
-              CoreConnectionPNames.STALE_CONNECTION_CHECK,
-              false).setBooleanParameter(
-              CoreConnectionPNames.TCP_NODELAY, true).setParameter(
-              CoreProtocolPNames.USER_AGENT,
-              "Spymemcached Client/1.1");
-
-      HttpProcessor httpproc =
-              new ImmutableHttpProcessor(new HttpRequestInterceptor[]{
-                new RequestContent(), new RequestTargetHost(),
-                new RequestConnControl(), new RequestUserAgent(),
-                new RequestExpectContinue(), });
-
-      AsyncNHttpClientHandler protocolHandler =
-              new AsyncNHttpClientHandler(httpproc,
-              new MyHttpRequestExecutionHandler(),
-              new DefaultConnectionReuseStrategy(),
-              new DirectByteBufferAllocator(), params);
-      protocolHandler.setEventListener(new EventLogger());
-
-      AsyncConnectionManager connMgr =
-              new AsyncConnectionManager(
-              new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
-              protocolHandler, params);
-      getLogger().info("Added %s to connect queue", a);
-
-      ViewNode node = connFactory.createViewNode(a, connMgr);
-      node.init();
-      nodeList.add(node);
-    }
-
-    return nodeList;
+  public CouchbaseConnection(int bufSize, ConnectionFactory f,
+      List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
+      FailureMode fm, OperationFactory opfactory) throws IOException {
+    super(bufSize, f, a, obs, fm, opfactory);
   }
 
   protected volatile boolean reconfiguring = false;
@@ -143,20 +68,32 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     reconfiguring = true;
     try {
       // get a new collection of addresses from the received config
+      List<String> servers = bucket.getConfig().getServers();
       HashSet<SocketAddress> newServerAddresses = new HashSet<SocketAddress>();
-      List<InetSocketAddress> newServers =
-        AddrUtil.getAddressesFromURL(bucket.getConfig().getCouchServers());
-      for (InetSocketAddress server : newServers) {
+      ArrayList<InetSocketAddress> newServers =
+          new ArrayList<InetSocketAddress>();
+      for (String server : servers) {
+        int finalColon = server.lastIndexOf(':');
+        if (finalColon < 1) {
+          throw new IllegalArgumentException("Invalid server ``" + server
+              + "'' in vbucket's server list");
+        }
+        String hostPart = server.substring(0, finalColon);
+        String portNum = server.substring(finalColon + 1);
+
+        InetSocketAddress address =
+            new InetSocketAddress(hostPart, Integer.parseInt(portNum));
         // add parsed address to our collections
-        newServerAddresses.add(server);
+        newServerAddresses.add(address);
+        newServers.add(address);
       }
 
       // split current nodes to "odd nodes" and "stay nodes"
-      ArrayList<ViewNode> oddNodes = new ArrayList<ViewNode>();
-      ArrayList<ViewNode> stayNodes = new ArrayList<ViewNode>();
+      ArrayList<MemcachedNode> oddNodes = new ArrayList<MemcachedNode>();
+      ArrayList<MemcachedNode> stayNodes = new ArrayList<MemcachedNode>();
       ArrayList<InetSocketAddress> stayServers =
           new ArrayList<InetSocketAddress>();
-      for (ViewNode current : nodes) {
+      for (MemcachedNode current : locator.getAll()) {
         if (newServerAddresses.contains(current.getSocketAddress())) {
           stayNodes.add(current);
           stayServers.add((InetSocketAddress) current.getSocketAddress());
@@ -169,15 +106,20 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       newServers.removeAll(stayServers);
 
       // create a collection of new nodes
-      List<ViewNode> newNodes = createConnections(newServers);
+      List<MemcachedNode> newNodes = createConnections(newServers);
 
       // merge stay nodes with new nodes
-      List<ViewNode> mergedNodes = new ArrayList<ViewNode>();
+      List<MemcachedNode> mergedNodes = new ArrayList<MemcachedNode>();
       mergedNodes.addAll(stayNodes);
       mergedNodes.addAll(newNodes);
 
       // call update locator with new nodes list and vbucket config
-      nodes = mergedNodes;
+      if (locator instanceof VBucketNodeLocator) {
+        ((VBucketNodeLocator)locator).updateLocator(mergedNodes,
+            bucket.getConfig());
+      } else {
+        locator.updateLocator(mergedNodes);
+      }
 
       // schedule shutdown for the oddNodes
       nodesToShutdown.addAll(oddNodes);
