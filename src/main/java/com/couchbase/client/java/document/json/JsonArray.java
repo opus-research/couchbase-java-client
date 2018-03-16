@@ -1,9 +1,10 @@
 package com.couchbase.client.java.document.json;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-public class JsonArray implements JsonValue {
+public class JsonArray implements JsonValue, Iterable<Object> {
 
       private final List<Object> content;
 
@@ -134,5 +135,10 @@ public class JsonArray implements JsonValue {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    @Override
+    public Iterator<Object> iterator() {
+        return content.iterator();
     }
 }

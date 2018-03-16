@@ -121,7 +121,9 @@ public class JsonObject implements JsonValue {
         for(Map.Entry<String, Object> entry : content.entrySet()) {
             sb.append("\"").append(entry.getKey()).append("\":");
             if (entry.getValue() instanceof String) {
-                sb.append("\"").append(entry.getValue()).append("\"");
+                String value = (String) entry.getValue();
+                value = value.replace("\"", "\\\"");
+                sb.append("\"").append(value).append("\"");
             } else {
                 if (entry.getValue() == null) {
                     sb.append("null");

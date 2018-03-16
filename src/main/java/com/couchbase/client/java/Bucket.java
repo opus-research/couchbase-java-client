@@ -5,8 +5,9 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.ViewQuery;
-import com.couchbase.client.java.query.ViewResult;
+import com.couchbase.client.java.view.DesignDocument;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 
 /**
@@ -143,4 +144,13 @@ public interface Bucket {
 
     Observable<LongDocument> counter(String id, long delta, long initial, int expiry);
 
+    Observable<DesignDocument> getDesignDocument(String name);
+    Observable<DesignDocument> getDesignDocument(String name, boolean development);
+
+    Observable<DesignDocument> listDesignDocuments();
+    Observable<DesignDocument> insertDesignDocument(DesignDocument designDocument);
+    Observable<DesignDocument> replaceDesignDocument(DesignDocument designDocument);
+
+    Observable<Boolean> removeDesignDocument(String name);
+    Observable<Boolean> removeDesignDocument(String name, boolean development);
 }
