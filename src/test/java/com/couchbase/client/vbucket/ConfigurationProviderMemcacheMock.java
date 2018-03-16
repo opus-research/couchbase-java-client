@@ -23,7 +23,7 @@
 package com.couchbase.client.vbucket;
 
 import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.CacheConfig;
+import com.couchbase.client.vbucket.config.MemcacheConfig;
 import com.couchbase.client.vbucket.config.Node;
 import java.net.URI;
 import java.util.ArrayList;
@@ -35,63 +35,72 @@ import net.spy.memcached.TestConfig;
  * Implements a stub configuration provider for testing memcache buckets.
  */
 public class ConfigurationProviderMemcacheMock
-  implements ConfigurationProvider {
+  implements com.couchbase.client.vbucket.provider.ConfigurationProvider {
 
   private final List<String> nodeList;
   public boolean baseListUpdated;
+  private final String bucket;
 
-  public ConfigurationProviderMemcacheMock(List<String> nodeList) {
+  public ConfigurationProviderMemcacheMock(List<String> nodeList, String bucket) {
     this.nodeList = nodeList;
+    this.bucket = bucket;
     baseListUpdated = false;
   }
 
-  public ConfigurationProviderMemcacheMock() {
-    this(Arrays.asList(TestConfig.IPV4_ADDR+":8091"));
+  public ConfigurationProviderMemcacheMock(String bucket) {
+    this(Arrays.asList(TestConfig.IPV4_ADDR+":8091"), bucket);
   }
 
-  public Bucket getBucketConfiguration(String bucketname) {
+  @Override
+  public Bucket bootstrap() throws ConfigurationException {
+    return null;
+  }
 
+  @Override
+  public Bucket getConfig() {
     String uri = "http://"+TestConfig.IPV4_ADDR+":8091";
     URI streamingURI = URI.create(uri);
     List<String> restEndpoints = Arrays.asList(uri + "/pools");
-    CacheConfig config = new CacheConfig(1, restEndpoints);
+    MemcacheConfig config = new MemcacheConfig(1, restEndpoints);
     config.setServers(nodeList);
 
     List<Node> nodes = new ArrayList<Node>();
 
-    return new Bucket(bucketname, config, streamingURI, nodes);
+    return new Bucket(bucket, config, streamingURI, nodes);
   }
 
-  public void subscribe(String bucketName, Reconfigurable rec) {}
+  @Override
+  public void setConfig(Bucket config) {
 
-  public void markForResubscribe(String bucketName, Reconfigurable rec) {}
+  }
 
-  public void unsubscribe(String vbucketName, Reconfigurable rec) {}
+  @Override
+  public void setConfig(String config) {
 
-  public void shutdown() {}
+  }
 
+  @Override
+  public void signalOutdated() {
+
+  }
+
+  @Override
+  public void shutdown() {
+
+  }
+
+  @Override
   public String getAnonymousAuthBucket() {
-    return "";
-  }
-
-  public void finishResubscribe() {}
-
-  public Reconfigurable getReconfigurable() {
-    throw new UnsupportedOperationException("Not needed in the mock?");
-  }
-
-  public String getBucket() {
-    throw new UnsupportedOperationException("Not needed in the mock?");
+    return "default";
   }
 
   @Override
-  public void updateBucket(String string, Bucket bucket) { }
+  public void subscribe(Reconfigurable rec) {
 
-  @Override
-  public void updateBaseListFromConfig(List<URI> baseList) {
-    baseListUpdated = true;
   }
 
   @Override
-  public void updateBucket(String config) { }
+  public void unsubscribe(Reconfigurable rec) {
+
+  }
 }
