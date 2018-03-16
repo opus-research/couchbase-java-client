@@ -33,6 +33,7 @@ import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
+import com.couchbase.client.java.search.IndexSettings;
 import com.couchbase.client.java.view.DesignDocument;
 import rx.Observable;
 
@@ -360,4 +361,10 @@ public interface AsyncBucketManager {
      */
     @InterfaceStability.Experimental
     Observable<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, long watchTimeout, TimeUnit watchTimeUnit);
+
+
+    Observable<IndexSettings> insertSearchIndex(IndexSettings settings);
+    Observable<IndexSettings> updateSearchIndex(IndexSettings settings);
+    Observable<Boolean> hasSearchIndex(String name);
+    Observable<Boolean> removeSearchIndex(String name);
 }
