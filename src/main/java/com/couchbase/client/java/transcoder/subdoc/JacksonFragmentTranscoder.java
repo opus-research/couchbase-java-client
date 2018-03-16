@@ -17,23 +17,21 @@
 package com.couchbase.client.java.transcoder.subdoc;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.util.Iterator;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.deps.io.netty.buffer.ByteBufOutputStream;
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.error.TranscodingException;
+import com.couchbase.client.java.subdoc.MultiValue;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 
 /**
- * A Jackson-based implementation of a {@link FragmentTranscoder}, based on {@link AbstractByteArrayFragmentTranscoder}.
- *
- * This implementation changes the {@link #decodeWithMessage(ByteBuf, Class, String) decodeWithMessage} behavior
- * compared to the parent strategy by attempting to deserialize JSON arrays into {@link JsonArray} and JSON
- * dictionaries into {@link JsonObject}.
+ * A Jackson-based implementation of a {@link FragmentTranscoder}, based on {@link AbstractFragmentTranscoder}.
  *
  * Care should be taken to not use Jackson specific annotations if you want to be able to
  * easily swap this for another SubdocumentTranscoder implementation at a later time.
@@ -43,7 +41,7 @@ import com.couchbase.client.java.transcoder.TranscoderUtils;
  */
 @InterfaceStability.Uncommitted
 @InterfaceAudience.Private
-public class JacksonFragmentTranscoder extends AbstractByteArrayFragmentTranscoder {
+public class JacksonFragmentTranscoder extends AbstractFragmentTranscoder {
 
     private final ObjectMapper mapper;
 
@@ -66,22 +64,31 @@ public class JacksonFragmentTranscoder extends AbstractByteArrayFragmentTranscod
     }
 
     @Override
-    protected Object byteArrayToGenericObject(byte[] byteArray, int offset, int length) throws IOException {
-        throw new UnsupportedOperationException("byteArrayToGenericObject is unused by custom decodeWithMessage");
+    protected <T> ByteBuf doEncodeSingle(T value, String transcodingErrorMessage) throws TranscodingException {
+        try {
+            return Unpooled.wrappedBuffer(mapper.writeValueAsBytes(value));
+        } catch (JsonProcessingException e) {
+            throw new TranscodingException(transcodingErrorMessage, e);
+        }
     }
 
     @Override
-    protected <T> T byteArrayToClass(byte[] byteArray, int offset, int length, Class<? extends T> clazz) throws IOException {
-        throw new UnsupportedOperationException("byteArrayToClass is unused by custom decodeWithMessage");
-    }
-
-    @Override
-    protected <T> byte[] writeValueAsBytes(T value) throws IOException {
-        return mapper.writeValueAsBytes(value);
-    }
-
-    @Override
-    protected void writeValueIntoStream(OutputStream out, Object o) throws IOException {
-        mapper.writeValue(out, o);
+    protected ByteBuf doEncodeMulti(MultiValue<?> multiValue, String transcodingErrorMessage) throws TranscodingException {
+        //initial capacity is very roughly and arbitrarily initialized (4 bytes on average per value)
+        final ByteBufOutputStream out = new ByteBufOutputStream(Unpooled.buffer(4 * multiValue.size()));
+        //Note this OutputStream implementation doesn't implement flush() nor close(), so they are left out.
+        try {
+            for (Iterator<?> iterator = multiValue.iterator(); iterator.hasNext(); ) {
+                Object o = iterator.next();
+                mapper.writeValue(out, o);
+                if (iterator.hasNext()) {
+                   out.writeBytes(",");
+                }
+            }
+            return out.buffer();
+        } catch (IOException e) {
+            throw new TranscodingException(transcodingErrorMessage, e);
+        }
+        //changing the OutputStream concrete implementation would probably require to close() in a finally block
     }
 }
