@@ -160,18 +160,11 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * This method is called when there is a topology change in the cluster.
-   *
-   * This method is intended for internal use only.
+   * This function is called when there is a topology change in the cluster.
+   * This function is intended for internal use only.
    */
   public void reconfigure(Bucket bucket) {
     reconfiguring = true;
-    if (bucket.isNotUpdating()) {
-      getLogger().info("Bucket configuration is disconnected from cluster "
-        + "configuration updates, attempting to reconnect.");
-      CouchbaseConnectionFactory cbcf = (CouchbaseConnectionFactory)connFactory;
-      cbcf.requestConfigReconnect(cbcf.getBucketName(), this);
-    }
     try {
       ((CouchbaseConnection)mconn).reconfigure(bucket);
     } catch (IllegalArgumentException ex) {
