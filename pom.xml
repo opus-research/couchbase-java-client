@@ -147,11 +147,6 @@
             <version>${guavatest.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.couchbase.mock</groupId>
-            <artifactId>CouchbaseMock</artifactId>
-            <version>1.5.8</version>
-        </dependency>
     </dependencies>
 
     <build>
