@@ -1,16 +1,16 @@
-/**
- * Copyright (C) 2015 Couchbase, Inc.
- * <p/>
+/*
+ * Copyright (C) 2016 Couchbase, Inc.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p/>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p/>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,57 +20,42 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.search.query;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.core.message.kv.MutationToken;
 
 /**
- * @author Sergey Avseyev
+ * Represents a successful multi-mutation. This object allows to retrieve the CAS
+ * and, if available, the {@link MutationToken} of the mutated document, post-mutation.
+ *
+ * @author Simon Baslé
+ * @since 2.2
  */
-@InterfaceAudience.Public
 @InterfaceStability.Experimental
-public class StringQuery extends SearchQuery {
-    private final String query;
+@InterfaceAudience.Public
+public class MultiMutationResult {
 
-    protected StringQuery(Builder builder) {
-        super(builder);
-        query = builder.query;
+    private final String docId;
+    private final long cas;
+    private final MutationToken mutationToken;
+
+    public MultiMutationResult(String docId, long cas, MutationToken mutationToken) {
+        this.docId = docId;
+        this.cas = cas;
+        this.mutationToken = mutationToken;
     }
 
-    public static Builder on(String index) {
-        return new Builder(index);
+    public String id() {
+        return docId;
     }
 
-    public String query() {
-        return query;
+    public long cas() {
+        return cas;
     }
 
-    public double boost() {
-        return boost;
-    }
-
-    @Override
-    public JsonObject queryJson() {
-        return JsonObject.create()
-                .put("query", query);
-    }
-
-    public static class Builder extends SearchQuery.Builder {
-        private String query;
-
-        protected Builder(String index) {
-            super(index);
-        }
-
-        public StringQuery build() {
-            return new StringQuery(this);
-        }
-
-        public Builder query(String query) {
-            this.query = query;
-            return this;
-        }
+    public MutationToken mutationToken() {
+        return mutationToken;
     }
 }

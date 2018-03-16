@@ -24,7 +24,6 @@ package com.couchbase.client.java.util.retry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -35,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.java.error.CannotRetryException;
 import org.junit.Test;
-import rx.functions.Func1;
 
 public class RetryBuilderTest {
 
@@ -45,7 +43,7 @@ public class RetryBuilderTest {
 
         assertEquals(1, result.handler.maxAttempts);
         assertSame(Retry.DEFAULT_DELAY, result.handler.retryDelay);
-        assertNull(result.handler.errorInterruptingPredicate);
+        assertNull(result.handler.stoppingErrorFilter);
     }
 
     @Test
@@ -54,7 +52,7 @@ public class RetryBuilderTest {
 
         assertEquals(1, result.handler.maxAttempts);
         assertSame(Retry.DEFAULT_DELAY, result.handler.retryDelay);
-        assertNull(result.handler.errorInterruptingPredicate);
+        assertNull(result.handler.stoppingErrorFilter);
     }
 
     @Test
@@ -63,7 +61,7 @@ public class RetryBuilderTest {
 
         assertEquals(10, result.handler.maxAttempts);
         assertSame(Retry.DEFAULT_DELAY, result.handler.retryDelay);
-        assertNull(result.handler.errorInterruptingPredicate);
+        assertNull(result.handler.stoppingErrorFilter);
     }
 
     @Test
@@ -79,27 +77,27 @@ public class RetryBuilderTest {
         RetryWhenFunction emptyInclusion = RetryBuilder.anyOf().build();
         RetryWhenFunction emptyExclusion = RetryBuilder.allBut().build();
 
-        assertEquals(null, neverSet.handler.errorInterruptingPredicate);
-        assertEquals(null, emptyInclusion.handler.errorInterruptingPredicate);
-        assertEquals(null, emptyExclusion.handler.errorInterruptingPredicate);
+        assertEquals(null, neverSet.handler.stoppingErrorFilter);
+        assertEquals(null, emptyInclusion.handler.stoppingErrorFilter);
+        assertEquals(null, emptyExclusion.handler.stoppingErrorFilter);
     }
 
     @Test
     public void testOnlyWhenNot() throws Exception {
         RetryWhenFunction exclusive = RetryBuilder.allBut(CannotRetryException.class).build();
 
-        assertTrue(exclusive.handler.errorInterruptingPredicate instanceof RetryBuilder.ShouldStopOnError);
-        assertTrue(exclusive.handler.errorInterruptingPredicate.call(new CannotRetryException("")));
-        assertFalse(exclusive.handler.errorInterruptingPredicate.call(new IllegalStateException()));
+        assertTrue(exclusive.handler.stoppingErrorFilter instanceof RetryBuilder.ShouldStopOnError);
+        assertTrue(exclusive.handler.stoppingErrorFilter.call(new CannotRetryException("")));
+        assertFalse(exclusive.handler.stoppingErrorFilter.call(new IllegalStateException()));
     }
 
     @Test
     public void testOnlyWhen() throws Exception {
         RetryWhenFunction inclusive = RetryBuilder.anyOf(CannotRetryException.class).build();
 
-        assertTrue(inclusive.handler.errorInterruptingPredicate instanceof RetryBuilder.ShouldStopOnError);
-        assertFalse(inclusive.handler.errorInterruptingPredicate.call(new CannotRetryException("")));
-        assertTrue(inclusive.handler.errorInterruptingPredicate.call(new IllegalStateException()));
+        assertTrue(inclusive.handler.stoppingErrorFilter instanceof RetryBuilder.ShouldStopOnError);
+        assertFalse(inclusive.handler.stoppingErrorFilter.call(new CannotRetryException("")));
+        assertTrue(inclusive.handler.stoppingErrorFilter.call(new IllegalStateException()));
     }
 
     @Test
@@ -109,26 +107,5 @@ public class RetryBuilderTest {
 
         assertNotSame(Retry.DEFAULT_DELAY, result.handler.retryDelay);
         assertEquals(linear, result.handler.retryDelay);
-    }
-
-    @Test
-    public void testErrorPredicateIsInverted() {
-        Func1<Throwable, Boolean> errorRetriesPredicate = new Func1<Throwable, Boolean>() {
-            @Override
-            public Boolean call(Throwable throwable) {
-                return "toto".equals(throwable.getMessage());
-            }
-        };
-        RetryWhenFunction fun = RetryBuilder.anyMatches(errorRetriesPredicate).build();
-
-        RuntimeException retryException = new RuntimeException("toto");
-        RuntimeException stopException = new RuntimeException("abc");
-
-        assertTrue(errorRetriesPredicate.call(retryException));
-        assertFalse(errorRetriesPredicate.call(stopException));
-
-        assertTrue(fun.handler.errorInterruptingPredicate instanceof RetryBuilder.InversePredicate);
-        assertNotEquals(errorRetriesPredicate.call(retryException), fun.handler.errorInterruptingPredicate.call(retryException));
-        assertNotEquals(errorRetriesPredicate.call(stopException), fun.handler.errorInterruptingPredicate.call(stopException));
     }
 }

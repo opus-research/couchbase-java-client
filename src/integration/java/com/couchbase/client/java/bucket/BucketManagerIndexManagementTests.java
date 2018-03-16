@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.java.Bucket;
@@ -43,12 +44,8 @@ import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
 import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.error.IndexAlreadyExistsException;
-import com.couchbase.client.java.error.IndexDoesNotExistException;
 import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.N1qlQuery;
-import com.couchbase.client.java.query.N1qlQueryResult;
-import com.couchbase.client.java.query.N1qlQueryRow;
 import com.couchbase.client.java.query.dsl.path.index.IndexType;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.util.TestProperties;
@@ -129,8 +126,8 @@ public class BucketManagerIndexManagementTests {
         assertEquals("online", first.state());
         assertEquals(JsonArray.empty(), first.indexKey());
 
-        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `bIndex` ON `" + indexedBucketName + "` (tata, toto)"));
-        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `aIndex` ON `" + indexedBucketName + "` (tata)"));
+        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `aIndex` ON `" + indexedBucketName + "` (tata, toto)"));
+        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `bIndex` ON `" + indexedBucketName + "` (tata) USING VIEW"));
         indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(indexes.toString(), 3, indexes.size());
@@ -139,52 +136,14 @@ public class BucketManagerIndexManagementTests {
         IndexInfo third = indexes.get(2);
         assertEquals("aIndex", second.name());
         assertEquals("bIndex", third.name()); //indexes are then listed alphabetically
-        assertEquals(JsonArray.create().add("`tata`"), second.indexKey());
-        assertEquals(JsonArray.create().add("`tata`").add("`toto`"), third.indexKey());
+        assertEquals(JsonArray.create().add("`tata`").add("`toto`"), second.indexKey());
+        assertEquals(JsonArray.create().add("`tata`"), third.indexKey());
         assertEquals("online", second.state());
         assertEquals("online", third.state());
         assertFalse(second.isPrimary());
         assertFalse(third.isPrimary());
         assertEquals(IndexType.GSI, second.type());
-        assertEquals(IndexType.GSI, third.type());
-    }
-
-    @Test
-    public void testListIndexesIgnoresNonGsi() {
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
-        assertEquals(indexes.toString(), 0, indexes.size());
-
-        indexedBucket.query(N1qlQuery.simple("CREATE PRIMARY INDEX ON `" + indexedBucketName + "`"));
-        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `ambiguousIndex` ON `" + indexedBucketName + "` (tata, toto)"));
-        indexedBucket.query(N1qlQuery.simple("CREATE INDEX `ambiguousIndex` ON `" + indexedBucketName + "` (tata) USING VIEW"));
-        indexes = indexedBucket.bucketManager().listIndexes();
-
-        assertEquals(indexes.toString(), 2, indexes.size());
-        IndexInfo first = indexes.get(0);
-        IndexInfo second = indexes.get(1);
-
-        //make sure the view index was created
-        N1qlQueryResult countResult = indexedBucket.query(N1qlQuery
-                .simple("SELECT COUNT(*) AS cnt FROM system:indexes WHERE keyspace_id = '" + indexedBucketName + "'"));
-        List<N1qlQueryRow> rows = countResult.allRows();
-        Long count = rows.get(0).value().getLong("cnt");
-        assertEquals("" + rows, (Long) 3L, count);
-
-        //assert found indexes
-        assertTrue(first.isPrimary());
-        assertEquals(IndexInfo.PRIMARY_DEFAULT_NAME, first.name());
-        assertEquals("gsi", first.rawType());
-        assertNotNull(first.type());
-        assertEquals(IndexType.GSI, first.type());
-        assertEquals("online", first.state());
-        assertEquals(JsonArray.empty(), first.indexKey());
-
-        assertEquals("ambiguousIndex", second.name());
-        assertEquals(JsonArray.create().add("`tata`").add("`toto`"), second.indexKey());
-        assertEquals("online", second.state());
-        assertFalse(second.isPrimary());
-        assertEquals(IndexType.GSI, second.type());
-
+        assertEquals(IndexType.VIEW, third.type());
     }
 
     @Test
@@ -213,7 +172,7 @@ public class BucketManagerIndexManagementTests {
         try {
             indexedBucket.bucketManager().createIndex(index, false, false, "tata");
             fail("expected failure of second index creation");
-        } catch (IndexAlreadyExistsException e) {
+        } catch (CouchbaseException e) {
             //OK
         }
         boolean existingAttempt = indexedBucket.bucketManager().createIndex(index, true, false, "titi");
@@ -233,18 +192,6 @@ public class BucketManagerIndexManagementTests {
         List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
 
         assertEquals(1, indexes.size());
-        assertEquals(Index.PRIMARY_NAME, indexes.get(0).name());
-        assertTrue(indexes.get(0).isPrimary());
-    }
-
-    @Test
-    public void testCreatePrimaryIndexWithCustomName() {
-        indexedBucket.bucketManager().createPrimaryIndex("def_primary", false, false);
-        List<IndexInfo> indexes = indexedBucket.bucketManager().listIndexes();
-
-        assertEquals(1, indexes.size());
-        assertEquals("def_primary", indexes.get(0).name());
-        assertTrue(indexes.get(0).isPrimary());
     }
 
     @Test
@@ -253,7 +200,7 @@ public class BucketManagerIndexManagementTests {
         try {
             indexedBucket.bucketManager().createPrimaryIndex(false, false);
             fail("expected failure of second index creation");
-        } catch (IndexAlreadyExistsException e) {
+        } catch (CouchbaseException e) {
             //OK
         }
         boolean existingAttempt = indexedBucket.bucketManager().createPrimaryIndex(true, false);
@@ -267,19 +214,6 @@ public class BucketManagerIndexManagementTests {
     }
 
     @Test
-    public void testCreatePrimaryIndexesWithDifferentNames() {
-        boolean namedAttempt1 = indexedBucket.bucketManager().createPrimaryIndex("def_primary", false, false);
-        boolean namedAttempt2 = indexedBucket.bucketManager().createPrimaryIndex("def_primary2", false, false);
-        boolean unamedAttempt = indexedBucket.bucketManager().createPrimaryIndex(false, false);
-
-        assertTrue(namedAttempt1);
-        assertTrue(namedAttempt2);
-        assertTrue(unamedAttempt);
-
-        assertEquals(3, indexedBucket.bucketManager().listIndexes().size());
-    }
-
-    @Test
     public void testDropIndex() {
         BucketManager mgr = indexedBucket.bucketManager();
         mgr.createIndex("toDrop", true, false, "field");
@@ -289,7 +223,7 @@ public class BucketManagerIndexManagementTests {
         assertEquals(0, mgr.listIndexes().size());
     }
 
-    @Test(expected = IndexDoesNotExistException.class)
+    @Test(expected = CouchbaseException.class)
     public void testDropIndexThatDoesntExistFails() {
         indexedBucket.bucketManager().dropIndex("blabla", false);
     }
@@ -299,6 +233,7 @@ public class BucketManagerIndexManagementTests {
         boolean dropped = indexedBucket.bucketManager().dropIndex("blabla", true);
         assertFalse(dropped);
     }
+
 
     @Test
     public void testDropPrimaryIndex() {
@@ -310,7 +245,7 @@ public class BucketManagerIndexManagementTests {
         assertEquals(0, mgr.listIndexes().size());
     }
 
-    @Test(expected = IndexDoesNotExistException.class)
+    @Test(expected = CouchbaseException.class)
     public void testDropPrimaryIndexThatDoesntExistFails() {
         indexedBucket.bucketManager().dropPrimaryIndex(false);
     }
@@ -318,45 +253,6 @@ public class BucketManagerIndexManagementTests {
     @Test
     public void testDropIgnorePrimaryIndexThatDoesntExistSucceeds() {
         boolean dropped = indexedBucket.bucketManager().dropPrimaryIndex(true);
-        assertFalse(dropped);
-    }
-
-    @Test
-    public void testDropNamedPrimaryIndex() {
-        BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createPrimaryIndex("def_primary", true, false);
-        assertEquals(1, mgr.listIndexes().size());
-
-        mgr.dropPrimaryIndex("def_primary", false);
-        assertEquals(0, mgr.listIndexes().size());
-    }
-
-    @Test
-    public void testDropPrimaryIndexWithNameFailsIfNameNotProvided() {
-        BucketManager mgr = indexedBucket.bucketManager();
-        mgr.createPrimaryIndex("def_primary", true, false);
-        assertEquals(1, mgr.listIndexes().size());
-
-        boolean dropped = mgr.dropPrimaryIndex(true);
-        assertEquals(false, dropped);
-        assertEquals(1, mgr.listIndexes().size());
-
-        try {
-            mgr.dropPrimaryIndex(false);
-            fail("Expected IndexDoesNotExistException");
-        } catch (IndexDoesNotExistException e) {
-            //OK
-        }
-    }
-
-    @Test(expected = IndexDoesNotExistException.class)
-    public void testDropNamedPrimaryIndexThatDoesntExistFails() {
-        indexedBucket.bucketManager().dropPrimaryIndex("invalidPrimaryIndex", false);
-    }
-
-    @Test
-    public void testDropIgnoreNamedPrimaryIndexThatDoesntExistSucceeds() {
-        boolean dropped = indexedBucket.bucketManager().dropPrimaryIndex("invalidPrimaryIndex", true);
         assertFalse(dropped);
     }
 

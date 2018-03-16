@@ -21,14 +21,17 @@
  */
 package com.couchbase.client.java.bucket;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
+import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.DesignDocument;
+import rx.functions.Func1;
+
+import java.util.List;
+import java.util.Observable;
+import java.util.concurrent.TimeUnit;
 
 public class DefaultBucketManager implements BucketManager {
 
@@ -240,16 +243,6 @@ public class DefaultBucketManager implements BucketManager {
         return Blocking.blockForSingle(asyncBucketManager.createPrimaryIndex(ignoreIfExist, defer), timeout, timeUnit);
     }
 
-    @Override
-    public boolean createPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer) {
-        return createPrimaryIndex(customName, ignoreIfExist, defer, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public boolean createPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.createPrimaryIndex(customName, ignoreIfExist, defer), timeout, timeUnit);
-    }
-
     private boolean createIndex(String indexName, boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit, Object... fields) {
         return Blocking.blockForSingle(asyncBucketManager.createIndex(indexName, ignoreIfExist, defer, fields),
                 timeout, timeUnit);
@@ -282,16 +275,6 @@ public class DefaultBucketManager implements BucketManager {
     }
 
     @Override
-    public boolean dropPrimaryIndex(String customName, boolean ignoreIfNotExist) {
-        return dropPrimaryIndex(customName, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public boolean dropPrimaryIndex(String customName, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucketManager.dropPrimaryIndex(customName, ignoreIfNotExist), timeout, timeUnit);
-    }
-
-    @Override
     public boolean dropIndex(String name, boolean ignoreIfNotExist) {
         return dropIndex(name, ignoreIfNotExist, timeout, TIMEOUT_UNIT);
     }
@@ -317,5 +300,15 @@ public class DefaultBucketManager implements BucketManager {
                 .toList()
                 .toBlocking()
                 .single();
+    }
+
+    @Override
+    public boolean watchIndex(String indexName, long watchTimeout, TimeUnit watchTimeUnit) {
+        Boolean isOffline = asyncBucketManager.watchIndex(indexName, watchTimeout, watchTimeUnit)
+                .isEmpty()
+                .toBlocking()
+                .single();
+
+        return !isOffline;
     }
 }

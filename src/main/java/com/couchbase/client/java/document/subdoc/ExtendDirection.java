@@ -20,30 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 
 /**
- * Internally represents a single lookup operation in a batch of subdocument operations.
+ * The direction for a sub-document array extension operation.
+ * See {@link Bucket#extendIn(DocumentFragment, ExtendDirection, boolean, PersistTo, ReplicateTo)}.
  *
- * @author Michael Nitschinger
  * @author Simon Baslé
+ * @author Michael Nitschinger
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
-public class LookupSpec extends LookupCommand {
-
-    public LookupSpec(Lookup type, String path) {
-        super(type, path);
-    }
-
-    @Override
-    public String toString() {
-        return "{" + lookup() + ":" + path() + "}";
-    }
+@InterfaceAudience.Public
+public enum ExtendDirection {
+    /**
+     * Extend the array by placing the value at the front of the array (index 0).
+     */
+    FRONT,
+    /**
+     * Extend the array by placing the value at the back of the array (largest index).
+     */
+    BACK
 }
