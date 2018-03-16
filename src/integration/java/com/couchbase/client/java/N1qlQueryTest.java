@@ -22,19 +22,19 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.N1qlParams;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
-import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.util.features.CouchbaseFeature;
-import org.junit.Assume;
+import com.couchbase.client.java.util.CouchbaseTestContext;
+import com.couchbase.client.java.util.features.Version;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.java.query.Index.createPrimaryIndex;
 import static com.couchbase.client.java.query.Select.select;
@@ -51,29 +51,36 @@ import static org.junit.Assert.assertTrue;
  * @author Simon Baslé
  * @since 2.1
  */
-public class N1qlQueryTest extends ClusterDependentTest {
-    //TODO once consistency/indexer/flush problems are resolved, reactivate REQUEST_PLUS and rows assertions
-    private static final ScanConsistency CONSISTENCY = ScanConsistency.NOT_BOUNDED;
+public class N1qlQueryTest {
+
+    private static CouchbaseTestContext ctx;
+
+    private static final ScanConsistency CONSISTENCY = ScanConsistency.REQUEST_PLUS;
     private static final N1qlParams WITH_CONSISTENCY = N1qlParams.build().consistency(CONSISTENCY);
 
     @BeforeClass
     public static void init() throws InterruptedException {
-        Assume.assumeTrue( //skip tests unless...
-                clusterManager().info().checkAvailable(CouchbaseFeature.N1QL) //...version >= 3.5.0 (packaged)
-                        || env().queryEnabled()); //... or forced in environment by user
+        ctx = CouchbaseTestContext.builder()
+                .bucketName("N1qlQuery")
+                .adhoc(true)
+                .bucketQuota(100)
+                .build()
+                .ignoreIfNoN1ql()
+        .ensurePrimaryIndex();
 
-        Thread.sleep(1500);//attempt to avoid GSI "indexer rollback" error after flush
-        bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
-        bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
+        ctx.bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
+        ctx.bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
+    }
 
-        bucket().query(N1qlQuery.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`",
-                N1qlParams.build().consistency(CONSISTENCY)), 2, TimeUnit.MINUTES);
+    @AfterClass
+    public static void cleanup() {
+        ctx.destroyBucketAndDisconnect();
     }
 
     @Test
     public void shouldAlreadyHaveCreatedIndex() {
-        N1qlQueryResult indexResult = bucket().query(
-                N1qlQuery.simple(createPrimaryIndex().on(bucketName()), WITH_CONSISTENCY));
+        N1qlQueryResult indexResult = ctx.bucket().query(
+                N1qlQuery.simple(createPrimaryIndex().on(ctx.bucketName()), WITH_CONSISTENCY));
         assertFalse(indexResult.finalSuccess());
         assertEquals(0, indexResult.allRows().size());
         assertNotNull(indexResult.info());
@@ -86,7 +93,7 @@ public class N1qlQueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldHaveRequestId() {
-        N1qlQueryResult result = bucket().query(N1qlQuery.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
+        N1qlQueryResult result = ctx.bucket().query(N1qlQuery.simple("SELECT * FROM `" + ctx.bucketName() + "` LIMIT 3",
                 N1qlParams.build().withContextId(null).consistency(CONSISTENCY)));
         assertNotNull(result);
         assertTrue(result.parseSuccess());
@@ -100,16 +107,15 @@ public class N1qlQueryTest extends ClusterDependentTest {
         assertNotNull(result.requestId());
         assertTrue(result.requestId().length() > 0);
 
-        //TODO once consistency/indexer/flush problems are resolved, reactivate REQUEST_PLUS and rows assertions
-//        assertFalse(result.allRows().isEmpty());
+        assertFalse(result.allRows().isEmpty());
     }
 
     @Test
     public void shouldHaveRequestIdAndContextId() {
-        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + ctx.bucketName() + "` LIMIT 3",
                 N1qlParams.build().withContextId("TEST").consistency(CONSISTENCY));
 
-        N1qlQueryResult result = bucket().query(query);
+        N1qlQueryResult result = ctx.bucket().query(query);
         assertNotNull(result);
         assertTrue(result.parseSuccess());
         assertTrue(result.finalSuccess());
@@ -122,8 +128,7 @@ public class N1qlQueryTest extends ClusterDependentTest {
         assertNotNull(result.requestId());
         assertTrue(result.requestId().length() > 0);
 
-        //TODO once consistency/indexer/flush problems are resolved, reactivate REQUEST_PLUS and rows assertions
-//        assertFalse(result.allRows().isEmpty());
+        assertFalse(result.allRows().isEmpty());
     }
 
     @Test
@@ -131,9 +136,9 @@ public class N1qlQueryTest extends ClusterDependentTest {
         String contextIdMoreThan64Bytes = "123456789012345678901234567890123456789012345678901234567890☃BCD";
         String contextIdTruncatedExpected = new String(Arrays.copyOf(contextIdMoreThan64Bytes.getBytes(), 64));
 
-        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3",
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + ctx.bucketName() + "` LIMIT 3",
                 N1qlParams.build().withContextId(contextIdMoreThan64Bytes).consistency(CONSISTENCY));
-        N1qlQueryResult result = bucket().query(query);
+        N1qlQueryResult result = ctx.bucket().query(query);
         JsonObject params = JsonObject.create();
         query.params().injectParams(params);
 
@@ -150,14 +155,13 @@ public class N1qlQueryTest extends ClusterDependentTest {
         assertNotNull(result.requestId());
         assertTrue(result.requestId().length() > 0);
 
-        //TODO once consistency/indexer/flush problems are resolved, reactivate REQUEST_PLUS and rows assertions
-//        assertFalse(result.allRows().isEmpty());
+        assertFalse(result.allRows().isEmpty());
     }
 
     @Test
     public void shouldHaveSignature() {
-        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + bucketName() + "` LIMIT 3", WITH_CONSISTENCY);
-        N1qlQueryResult result = bucket().query(query);
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM `" + ctx.bucketName() + "` LIMIT 3", WITH_CONSISTENCY);
+        N1qlQueryResult result = ctx.bucket().query(query);
 
         assertNotNull(result);
         assertTrue(result.parseSuccess());
@@ -170,34 +174,99 @@ public class N1qlQueryTest extends ClusterDependentTest {
 
         assertEquals(JsonObject.create().put("*", "*"), result.signature());
 
-        //TODO once consistency/indexer/flush problems are resolved, reactivate REQUEST_PLUS and rows assertions
-//        assertFalse(result.allRows().isEmpty());
+        assertFalse(result.allRows().isEmpty());
     }
 
     @Test
     public void testNotAdhocPopulatesCache() {
-        Statement statement = select(x("*")).from(i(bucketName())).limit(10);
+        Statement statement = select(x("*")).from(i(ctx.bucketName())).limit(10);
         N1qlQuery query = N1qlQuery.simple(statement, N1qlParams.build().adhoc(false));
-        bucket().invalidateQueryCache();
-        N1qlQueryResult response = bucket().query(query);
-        N1qlQueryResult responseFromCache = bucket().query(query);
+        ctx.bucket().invalidateQueryCache();
+        N1qlQueryResult response = ctx.bucket().query(query);
+        N1qlQueryResult responseFromCache = ctx.bucket().query(query);
 
         assertTrue(response.finalSuccess());
         assertTrue(responseFromCache.finalSuccess());
-        assertEquals(1, bucket().invalidateQueryCache());
+        assertEquals(1, ctx.bucket().invalidateQueryCache());
     }
 
     @Test
     public void testAdhocDoesntPopulateCache() {
-        Statement statement = select(x("*")).from(i(bucketName())).limit(10);
+        Statement statement = select(x("*")).from(i(ctx.bucketName())).limit(10);
         N1qlQuery query = N1qlQuery.simple(statement, N1qlParams.build().adhoc(true));
 
-        bucket().invalidateQueryCache();
-        N1qlQueryResult response = bucket().query(query);
-        N1qlQueryResult secondResponse = bucket().query(query);
+        ctx.bucket().invalidateQueryCache();
+        N1qlQueryResult response = ctx.bucket().query(query);
+        N1qlQueryResult secondResponse = ctx.bucket().query(query);
 
         assertTrue(response.finalSuccess());
         assertTrue(secondResponse.finalSuccess());
-        assertEquals(0, bucket().invalidateQueryCache());
+        assertEquals("query cache was unexpectedly populated", 0, ctx.bucket().invalidateQueryCache());
+    }
+
+    @Test
+    public void testPreparedSumWorks() {
+        ctx.ignoreIfClusterUnder(new Version(4, 1, 0));
+
+        String statement = "SELECT sum(c1) FROM `" + ctx.bucketName() + "`";
+        N1qlQuery query = N1qlQuery.simple(statement, N1qlParams.build().adhoc(false));
+
+        ctx.bucket().invalidateQueryCache();
+        N1qlQueryResult response = ctx.bucket().query(query);
+        N1qlQueryResult secondResponse = ctx.bucket().query(query);
+
+        assertTrue(response.finalSuccess());
+        assertTrue(secondResponse.finalSuccess());
+        assertEquals(1, ctx.bucket().invalidateQueryCache());
+    }
+
+    @Test
+    public void testPreparedWithPositionalPlaceholdersExecute() {
+        String statement = "SELECT * FROM `" + ctx.bucketName() + "` WHERE item = $1";
+        N1qlQuery query = N1qlQuery.parameterized(statement, JsonArray.from("value"), N1qlParams.build().adhoc(false));
+        N1qlQuery query2 = N1qlQuery.parameterized(statement, JsonArray.from(123), N1qlParams.build().adhoc(false));
+
+        ctx.bucket().invalidateQueryCache();
+        N1qlQueryResult response = ctx.bucket().query(query);
+        N1qlQueryResult secondResponse = ctx.bucket().query(query2);
+
+        assertTrue(response.finalSuccess());
+        assertTrue(secondResponse.finalSuccess());
+        assertEquals(1, ctx.bucket().invalidateQueryCache());
+
+        assertEquals(1, response.allRows().size());
+        assertEquals(1, secondResponse.allRows().size());
+    }
+
+    @Test
+    public void testPreparedWithNamedPlaceholdersExecute() {
+        String statement = "SELECT * FROM `" + ctx.bucketName() + "` WHERE item = $item";
+        N1qlQuery query = N1qlQuery
+                .parameterized(statement, JsonObject.create().put("item", "value"), N1qlParams.build().adhoc(false));
+        N1qlQuery query2 = N1qlQuery.parameterized(statement, JsonObject.create().put("item", 123), N1qlParams.build().adhoc(false));
+
+        ctx.bucket().invalidateQueryCache();
+        N1qlQueryResult response = ctx.bucket().query(query);
+        N1qlQueryResult secondResponse = ctx.bucket().query(query2);
+
+        assertTrue(response.finalSuccess());
+        assertTrue(secondResponse.finalSuccess());
+        assertEquals(1, ctx.bucket().invalidateQueryCache());
+
+        assertEquals(1, response.allRows().size());
+        assertEquals(1, secondResponse.allRows().size());
+    }
+
+    @Test
+    public void shouldSelectFromCurrentBucket() {
+        N1qlQuery query = N1qlQuery.simple(
+          select("*").fromCurrentBucket().limit(3),
+          WITH_CONSISTENCY
+        );
+
+        N1qlQueryResult result = ctx.bucket().query(query);
+        assertTrue(result.allRows().size() > 0);
+        assertTrue(result.errors().isEmpty());
+        assertTrue(result.finalSuccess());
     }
 }

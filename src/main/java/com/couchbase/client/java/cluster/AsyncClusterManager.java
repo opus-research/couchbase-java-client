@@ -25,7 +25,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.search.IndexSettings;
 import rx.Observable;
 
 /**
@@ -97,6 +96,9 @@ public interface AsyncClusterManager {
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketAlreadyExistsException: If the bucket already exists.
      *
+     * **Note:** Inserting a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param settings the bucket settings that should be applied.
      * @return the stored bucket settings if succeeded.
      */
@@ -111,6 +113,9 @@ public interface AsyncClusterManager {
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketDoesNotExistException: If the bucket does not exist.
      *
+     * **Note:** Updating a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param settings the bucket settings that should be applied.
      * @return the updated bucket settings if succeeded.
      */
@@ -124,13 +129,12 @@ public interface AsyncClusterManager {
      * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      *
+     * **Note:** Removing a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param name the name of the bucket.
      * @return true if the removal was successful, false otherwise.
      */
     Observable<Boolean> removeBucket(String name);
 
-    Observable<IndexSettings> insertSearchIndex(IndexSettings settings);
-    Observable<IndexSettings> updateSearchIndex(IndexSettings settings);
-    Observable<Boolean> hasSearchIndex(String name);
-    Observable<Boolean> removeSearchIndex(String name);
 }

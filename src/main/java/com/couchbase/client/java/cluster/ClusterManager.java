@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2014 Couchbase, Inc.
- * <p/>
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * <p/>
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * <p/>
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,7 +25,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.search.IndexSettings;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -176,6 +175,9 @@ public interface ClusterManager {
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketAlreadyExistsException: If the bucket already exists.
      *
+     * **Note:** Inserting a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param settings the bucket settings that should be applied.
      * @return the stored bucket settings if succeeded.
      */
@@ -190,6 +192,9 @@ public interface ClusterManager {
      * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketAlreadyExistsException: If the bucket already exists.
+     *
+     * **Note:** Inserting a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
      *
      * @param settings the bucket settings that should be applied.
      * @return the stored bucket settings if succeeded.
@@ -207,6 +212,9 @@ public interface ClusterManager {
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketDoesNotExistException: If the bucket does not exist.
      *
+     * **Note:** Updating a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param settings the bucket settings that should be applied.
      * @return the updated bucket settings if succeeded.
      */
@@ -221,6 +229,9 @@ public interface ClusterManager {
      * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      * - com.couchbase.client.java.error.BucketDoesNotExistException: If the bucket does not exist.
+     *
+     * **Note:** Updating a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
      *
      * @param settings the bucket settings that should be applied.
      * @param timeout the custom timeout.
@@ -238,6 +249,9 @@ public interface ClusterManager {
      * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      *
+     * **Note:** Removing a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param name the name of the bucket.
      * @return true if the removal was successful, false otherwise.
      */
@@ -252,36 +266,13 @@ public interface ClusterManager {
      * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
      *
+     * **Note:** Removing a Bucket is an asynchronous operation on the server side, so even if the
+     * response is returned there is no guarantee that the operation has finished on the server itself.
+     *
      * @param name the name of the bucket.
      * @param timeout the custom timeout.
      * @param timeUnit the time unit for the custom timeout.
      * @return true if the removal was successful, false otherwise.
      */
     Boolean removeBucket(String name, long timeout, TimeUnit timeUnit);
-
-    IndexSettings insertSearchIndex(IndexSettings settings);
-    IndexSettings insertSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit);
-
-
-    IndexSettings updateSearchIndex(IndexSettings settings);
-    IndexSettings updateSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit);
-
-    /**
-     * GET /api/index/{indexName}
-
-     Returns the definition of an index as JSON.
-
-     param: indexName: required, string, URL path parameter
-
-     The name of the index definition to be retrieved.
-
-
-     * @param name
-     * @return
-     */
-    Boolean hasSearchIndex(String name);
-    Boolean hasSearchIndex(String name, long timeout, TimeUnit timeUnit);
-
-    Boolean removeSearchIndex(String name);
-    Boolean removeSearchIndex(String name, long timeout, TimeUnit timeUnit);
 }
