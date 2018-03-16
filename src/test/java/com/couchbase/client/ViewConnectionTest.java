@@ -24,7 +24,7 @@ package com.couchbase.client;
 
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.CouchbaseConfig;
+import com.couchbase.client.vbucket.config.DefaultConfig;
 import org.apache.http.HttpHost;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +55,7 @@ public class ViewConnectionTest {
 
   private CouchbaseConnectionFactory factoryMock;
   private Bucket bucketMock;
-  private CouchbaseConfig configMock;
+  private DefaultConfig configMock;
 
   @Before
   public void setup() {
@@ -64,7 +64,7 @@ public class ViewConnectionTest {
     when(factoryMock.getViewConnsPerNode()).thenReturn(1);
 
     bucketMock = mock(Bucket.class);
-    configMock = mock(CouchbaseConfig.class);
+    configMock = mock(DefaultConfig.class);
 
     when(bucketMock.getConfig()).thenReturn(configMock);
     when(configMock.nodeHasActiveVBuckets(any(InetSocketAddress.class)))
