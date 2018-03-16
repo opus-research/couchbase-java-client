@@ -26,7 +26,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.TestConfig;
+import net.spy.memcached.auth.AuthDescriptor;
+import net.spy.memcached.auth.PlainCallbackHandler;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -76,6 +80,7 @@ public class CouchbaseConnectionFactoryBuilderTest {
    * Signals that an I/O exception has occurred.
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testSetObsPollMax() throws IOException {
     int maxPoll = 40;
     CouchbaseConnectionFactoryBuilder instance =
@@ -85,6 +90,17 @@ public class CouchbaseConnectionFactoryBuilderTest {
     assertEquals(instance, instanceResult);
     assertEquals(maxPoll, instanceResult.getObsPollMax());
     instance.buildCouchbaseConnection(uris, "default", "");
+  }
+
+  @Test
+  public void testSetAuthWaitTime() throws Exception {
+    CouchbaseConnectionFactoryBuilder instance =
+      new CouchbaseConnectionFactoryBuilder();
+    instance.setAuthWaitTime(5000);
+
+    CouchbaseConnectionFactory factory =
+      instance.buildCouchbaseConnection(uris, "default", "");
+    assertEquals(5000, factory.getAuthWaitTime());
   }
 
   /**
@@ -119,6 +135,26 @@ public class CouchbaseConnectionFactoryBuilderTest {
     instance.buildCouchbaseConnection(uris, "default", "");
   }
 
+  @Test
+  public void testSetObsTimeout() throws IOException {
+    CouchbaseConnectionFactoryBuilder instance =
+      new CouchbaseConnectionFactoryBuilder();
+
+    int timeout = 7500;
+    int interval = 40;
+    instance.setObsTimeout(timeout);
+    instance.setObsPollInterval(interval);
+
+    CouchbaseConnectionFactory connFact =
+      instance.buildCouchbaseConnection(uris, "default", "");
+
+    assertEquals(timeout, connFact.getObsTimeout());
+    assertEquals(interval, connFact.getObsPollInterval());
+
+    int expected = (timeout / interval) + 1; // rounding
+    assertEquals(expected, connFact.getObsPollMax());
+  }
+
   /**
    * Test to be sure that the default values are the expected values.
    *
@@ -128,6 +164,7 @@ public class CouchbaseConnectionFactoryBuilderTest {
    * @throws IOException
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testDefaultValues() throws IOException {
 
     CouchbaseConnectionFactoryBuilder instance =
@@ -140,14 +177,51 @@ public class CouchbaseConnectionFactoryBuilderTest {
       connFact.getViewTimeout());
     assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL,
       connFact.getObsPollInterval());
-    assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX,
-      connFact.getObsPollMax());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_TIMEOUT,
+      connFact.getObsTimeout());
     assertEquals(CouchbaseConnectionFactory.DEFAULT_MIN_RECONNECT_INTERVAL,
       connFact.getMinReconnectInterval());
     assertEquals(CouchbaseConnectionFactory.DEFAULT_FAILURE_MODE,
       connFact.getFailureMode());
     assertEquals(CouchbaseConnectionFactory.DEFAULT_HASH,
       connFact.getHashAlg());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_AUTH_WAIT_TIME,
+      connFact.getAuthWaitTime());
+
+    int obsPollMax = new Long(CouchbaseConnectionFactory.DEFAULT_OBS_TIMEOUT
+      / CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL).intValue();
+    assertEquals(obsPollMax, connFact.getObsPollMax());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX,
+      connFact.getObsPollMax());
+  }
+
+  @Test
+  public void testDefaultAuthDescriptor() throws Exception {
+    CouchbaseConnectionFactoryBuilder instance =
+      new CouchbaseConnectionFactoryBuilder();
+
+    CouchbaseConnectionFactory factory =
+      instance.buildCouchbaseConnection(uris, "foo", "bar");
+
+    AuthDescriptor descriptor = factory.getAuthDescriptor();
+    assertEquals(0, descriptor.getMechs().length);
+  }
+
+  @Test
+  public void testOverridingAuthDescriptor() throws Exception {
+    CouchbaseConnectionFactoryBuilder instance =
+      new CouchbaseConnectionFactoryBuilder();
+
+    instance.setAuthDescriptor(new AuthDescriptor(
+      new String[] {"PLAIN", "CRAM-MD5"},
+      new PlainCallbackHandler("foo", "bar")
+    ));
+
+    CouchbaseConnectionFactory factory =
+      instance.buildCouchbaseConnection(uris, "foo", "bar");
+
+    AuthDescriptor descriptor = factory.getAuthDescriptor();
+    assertEquals(2, descriptor.getMechs().length);
   }
 
   /**
