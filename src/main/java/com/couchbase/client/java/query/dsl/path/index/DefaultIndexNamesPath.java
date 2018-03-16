@@ -19,16 +19,37 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.Index;
+import com.couchbase.client.java.query.dsl.element.IndexNamesElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * See {@link IndexNamesPath}.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultIndexNamesPath extends AbstractPath implements IndexNamesPath {
 
-    D fromEntity(Object source);
+    protected DefaultIndexNamesPath(AbstractPath parent) {
+        super(parent);
+    }
 
-    <T> T toEntity(D source, Class<T> clazz);
+    @Override
+    public UsingPath indexes(String indexName, String... indexNames) {
+        element(new IndexNamesElement(indexName, indexNames));
+        return new DefaultUsingPath(this);
+    }
 
-
-
+    @Override
+    public UsingPath primary() {
+        element(new IndexNamesElement(Index.PRIMARY_NAME));
+        return new DefaultUsingPath(this);
+    }
 }

@@ -19,16 +19,37 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.element;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Element of the Index DSL to create various forms of indexes.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public class IndexElement implements Element {
 
-    D fromEntity(Object source);
+    private final String name;
 
-    <T> T toEntity(D source, Class<T> clazz);
+    public IndexElement(String indexName) {
+        this.name = indexName;
+    }
 
+    public IndexElement() {
+        this(null);
+    }
 
-
+    @Override
+    public String export() {
+        if (name == null) {
+            return "CREATE PRIMARY INDEX";
+        } else {
+            return "CREATE INDEX `" + name + "`";
+        }
+    }
 }

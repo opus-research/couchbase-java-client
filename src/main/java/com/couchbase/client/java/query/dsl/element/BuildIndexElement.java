@@ -19,16 +19,33 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.element;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Element for initial clause of a BUILD index statement.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public class BuildIndexElement implements Element {
 
-    D fromEntity(Object source);
+    private final String fullKeyspace;
 
-    <T> T toEntity(D source, Class<T> clazz);
+    public BuildIndexElement(String namespace, String keyspace) {
+        if (namespace == null) {
+            this.fullKeyspace = ESCAPE_CHAR + keyspace + ESCAPE_CHAR;
+        } else {
+            this.fullKeyspace = ESCAPE_CHAR + namespace + "`:`" + keyspace + ESCAPE_CHAR;
+        }
+    }
 
-
-
+    @Override
+    public String export() {
+        return "BUILD INDEX ON " + fullKeyspace;
+    }
 }

@@ -19,16 +19,34 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.path.Path;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * On path in the primary Index creation DSL.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface OnPrimaryPath extends Path {
 
-    D fromEntity(Object source);
+    /**
+     * Describes on which keyspace (bucket name) to index.
+     *
+     * @param keyspace the keyspace targeted (it will automatically be escaped).
+     */
+    UsingWithPath on(String keyspace);
 
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+    /**
+     * Describes on which keyspace (bucket name) to index, also prefixing the keyspace with a namespace.
+     *
+     * @param namespace the optional namespace prefix for the keyspace (it will automatically be escaped).
+     * @param keyspace the keyspace targeted (it will automatically be escaped).
+     */
+    UsingWithPath on(String namespace, String keyspace);
 }

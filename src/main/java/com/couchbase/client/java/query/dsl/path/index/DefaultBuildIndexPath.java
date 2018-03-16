@@ -19,16 +19,36 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.element.BuildIndexElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * see {@link BuildIndexPath}
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultBuildIndexPath extends AbstractPath implements BuildIndexPath {
 
-    D fromEntity(Object source);
+    public DefaultBuildIndexPath() {
+        super(null);
+    }
 
-    <T> T toEntity(D source, Class<T> clazz);
+    @Override
+    public IndexNamesPath on(String namespace, String keyspace) {
+        element(new BuildIndexElement(namespace, keyspace));
+        return new DefaultIndexNamesPath(this);
+    }
 
-
-
+    @Override
+    public IndexNamesPath on(String keyspace) {
+        element(new BuildIndexElement(null, keyspace));
+        return new DefaultIndexNamesPath(this);
+    }
 }

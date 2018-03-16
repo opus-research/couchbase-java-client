@@ -19,16 +19,35 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.element.OnElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * See {@link OnPrimaryPath}.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultOnPrimaryPath extends AbstractPath implements OnPrimaryPath {
 
-    D fromEntity(Object source);
+    public DefaultOnPrimaryPath(AbstractPath parent) {
+        super(parent);
+    }
 
-    <T> T toEntity(D source, Class<T> clazz);
+    @Override
+    public UsingWithPath on(String namespace, String keyspace) {
+        element(new OnElement(namespace, keyspace, null, null));
+        return new DefaultUsingWithPath(this);
+    }
 
-
-
+    @Override
+    public UsingWithPath on(String keyspace) {
+        return on(null, keyspace);
+    }
 }

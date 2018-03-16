@@ -19,16 +19,23 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.path.Path;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Starting path of the Index building DSL.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface BuildIndexPath extends Path {
 
-    D fromEntity(Object source);
+    IndexNamesPath on(String namespace, String keyspace);
 
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+    IndexNamesPath on(String keyspace);
 }

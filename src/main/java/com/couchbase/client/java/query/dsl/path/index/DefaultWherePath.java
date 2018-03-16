@@ -19,16 +19,38 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import static com.couchbase.client.java.query.dsl.Expression.x;
 
-public interface EntityConverter<D extends Document<?>> {
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.Expression;
+import com.couchbase.client.java.query.dsl.element.WhereElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
-    D fromEntity(Object source);
+/**
+ * See {@link WherePath}.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultWherePath extends DefaultWithPath implements WherePath {
 
-    <T> T toEntity(D source, Class<T> clazz);
+    protected DefaultWherePath(AbstractPath parent) {
+        super(parent);
+    }
 
+    @Override
+    public WithPath where(Expression filterExpression) {
+        element(new WhereElement(filterExpression));
+        return new DefaultWithPath(this);
+    }
 
-
+    @Override
+    public WithPath where(String filterExpression) {
+        return where(x(filterExpression));
+    }
 }

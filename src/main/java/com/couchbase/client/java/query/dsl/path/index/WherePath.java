@@ -19,16 +19,33 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.Expression;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Where clause in the Index creation DSL.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface WherePath extends WithPath {
 
-    D fromEntity(Object source);
+    /**
+     * Adds filtering clause to the secondary index creation.
+     *
+     * @param filterExpression the expression to use for index filtering.
+     */
+    WithPath where(Expression filterExpression);
 
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+    /**
+     * Adds filtering clause to the secondary index creation.
+     *
+     * @param filterExpression the expression to use for index filtering.
+     */
+    WithPath where(String filterExpression);
 }

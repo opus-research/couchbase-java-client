@@ -19,16 +19,36 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.element;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Element for listing index names when Building an Index.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class IndexNamesElement implements Element {
 
-    D fromEntity(Object source);
+    private final String indexName;
+    private final String[] otherNames;
 
-    <T> T toEntity(D source, Class<T> clazz);
+    public IndexNamesElement(String indexName, String... indexNames) {
+        this.indexName = indexName;
+        this.otherNames = indexNames;
+    }
 
-
-
+    @Override
+    public String export() {
+        StringBuilder sb = new StringBuilder("(`").append(indexName).append('`');
+        for (String otherName : otherNames) {
+            sb.append(", `").append(otherName).append('`');
+        }
+        sb.append(')');
+        return sb.toString();
+    }
 }

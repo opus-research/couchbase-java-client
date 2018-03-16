@@ -19,16 +19,20 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
-public interface EntityConverter<D extends Document<?>> {
-
-    D fromEntity(Object source);
-
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+/**
+ * Enum of the different types of indexes supported by N1QL.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public enum IndexType {
+    GSI,
+    VIEW
 }

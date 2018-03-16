@@ -19,16 +19,27 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.element;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.path.index.IndexType;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Element of the Index DSL that describes what kind of index to build.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+public class UsingElement implements Element {
+    private final IndexType type;
 
-    D fromEntity(Object source);
+    public UsingElement(IndexType type) {
+        this.type = type;
+    }
 
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+    @Override
+    public String export() {
+        return "USING " + type.name();
+    }
 }

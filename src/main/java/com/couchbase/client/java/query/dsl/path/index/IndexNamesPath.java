@@ -19,16 +19,33 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository.mapping;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import com.couchbase.client.java.document.Document;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.Index;
+import com.couchbase.client.java.query.dsl.path.Path;
 
-public interface EntityConverter<D extends Document<?>> {
+/**
+ * Path of the Index building DSL to specify which index(es) to build.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface IndexNamesPath extends Path {
 
-    D fromEntity(Object source);
+    /**
+     * Specify the index or indexes in a pending state that needs building.
+     *
+     * @param indexName minimum index to build (name will be escaped).
+     * @param indexNames 0-n additional indexes to also build (names will be escaped).
+     */
+    UsingPath indexes(String indexName, String... indexNames);
 
-    <T> T toEntity(D source, Class<T> clazz);
-
-
-
+    /**
+     * Build the primary index (using a name of {@link Index#PRIMARY_NAME}, must be in a pending state).
+     */
+    UsingPath primary();
 }
