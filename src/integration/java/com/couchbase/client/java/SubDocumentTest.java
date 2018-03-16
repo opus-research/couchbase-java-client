@@ -36,8 +36,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.internal.matchers.ThrowableCauseMatcher.hasCause;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.logging.CouchbaseLogger;
@@ -119,7 +117,7 @@ public class SubDocumentTest {
                 .remove("array")
                 .remove("string")
                 .remove("boolean")
-                .execute();
+                .doMutate();
 
         JsonObject expected = JsonObject.create()
                 .put("user", JsonObject.create().put("firstname", "frank"))
@@ -132,22 +130,22 @@ public class SubDocumentTest {
     @Test
     public void testGetInPathTranscodesToCorrectClasses() {
         Object objectFragment = ctx.bucket().lookupIn(key)
-                .get("sub").execute().content(0);
+                .get("sub").doLookup().content(0);
 
         Object intFragment = ctx.bucket().lookupIn(key)
-                .get("int").execute().content(0);
+                .get("int").doLookup().content(0);
 
         Object stringFragment = ctx.bucket().lookupIn(key)
-                .get("string").execute().content(0);
+                .get("string").doLookup().content(0);
 
         Object arrayFragment = ctx.bucket().lookupIn(key)
-                .get("array").execute().content(0);
+                .get("array").doLookup().content(0);
 
         Object booleanFragment = ctx.bucket().lookupIn(key)
-                .get("boolean").execute().content(0);
+                .get("boolean").doLookup().content(0);
 
         JsonObject jsonObjectFragment = ctx.bucket().lookupIn(key)
-                .get("sub").execute().content(0, JsonObject.class);
+                .get("sub").doLookup().content(0, JsonObject.class);
 
         assertNotNull(objectFragment);
         assertTrue(objectFragment.getClass().getName(), objectFragment instanceof JsonObject);
@@ -170,12 +168,12 @@ public class SubDocumentTest {
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testGetInOnUnknownDocumentThrowsException() {
-        ctx.bucket().lookupIn("blabla").get("array").execute();
+        ctx.bucket().lookupIn("blabla").get("array").doLookup();
     }
 
     @Test
     public void testGetInUnknownPathReturnsContentNull() {
-        DocumentFragment<Lookup> result = ctx.bucket().lookupIn(key).get("badPath").execute();
+        DocumentFragment<Lookup> result = ctx.bucket().lookupIn(key).get("badPath").doLookup();
 
         assertNotNull(result);
         assertEquals(null, result.content(0));
@@ -184,16 +182,16 @@ public class SubDocumentTest {
 
     @Test(expected = PathMismatchException.class)
     public void testGetInPathMismatchThrowsException() {
-        ctx.bucket().lookupIn(key).get("sub[1]").execute();
+        ctx.bucket().lookupIn(key).get("sub[1]").doLookup();
     }
 
     @Test
     public void testExistsIn() {
-        DocumentFragment<Lookup> resultSub = ctx.bucket().lookupIn(key).exists("sub").execute();
-        DocumentFragment<Lookup> resultInt = ctx.bucket().lookupIn(key).exists("int").execute();
-        DocumentFragment<Lookup> resultString = ctx.bucket().lookupIn(key).exists("string").execute();
-        DocumentFragment<Lookup> resultArray = ctx.bucket().lookupIn(key).exists("array").execute();
-        DocumentFragment<Lookup> resultBoolean = ctx.bucket().lookupIn(key).exists("boolean").execute();
+        DocumentFragment<Lookup> resultSub = ctx.bucket().lookupIn(key).exists("sub").doLookup();
+        DocumentFragment<Lookup> resultInt = ctx.bucket().lookupIn(key).exists("int").doLookup();
+        DocumentFragment<Lookup> resultString = ctx.bucket().lookupIn(key).exists("string").doLookup();
+        DocumentFragment<Lookup> resultArray = ctx.bucket().lookupIn(key).exists("array").doLookup();
+        DocumentFragment<Lookup> resultBoolean = ctx.bucket().lookupIn(key).exists("boolean").doLookup();
 
         assertTrue(resultSub.exists("sub"));
         assertTrue(resultInt.exists("int"));
@@ -210,12 +208,12 @@ public class SubDocumentTest {
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testExistsInOnUnknownDocumentThrowsException() {
-        ctx.bucket().lookupIn("blabla").exists("array").execute();
+        ctx.bucket().lookupIn("blabla").exists("array").doLookup();
     }
 
     @Test
     public void testExistsInUnknownPathReturnContentFalse() {
-        DocumentFragment<Lookup> result = ctx.bucket().lookupIn(key).exists("badPath").execute();
+        DocumentFragment<Lookup> result = ctx.bucket().lookupIn(key).exists("badPath").doLookup();
 
         assertNotNull(result);
         assertEquals(false, result.content(0));
@@ -224,7 +222,7 @@ public class SubDocumentTest {
 
     @Test(expected = PathMismatchException.class)
     public void testExistOnMismatchPathThrowsException() {
-        ctx.bucket().lookupIn(key).exists("sub[1]").execute();
+        ctx.bucket().lookupIn(key).exists("sub[1]").doLookup();
     }
 
     //=== Mutations with EMPTY path ===
@@ -271,7 +269,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .upsert("int", null, false)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -280,7 +278,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .insert("int", null, false)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -289,7 +287,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .replace( "int", null)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -298,7 +296,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .arrayPrepend("int", "something", false)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -307,7 +305,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .arrayAppend("int", "something", false)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -316,7 +314,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .arrayInsert("int", null)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -325,7 +323,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .arrayAddUnique("int", null, false)
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -334,7 +332,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .remove("int")
-                .execute();
+                .doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -343,7 +341,7 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .withCas(1234L)
                 .counter("int", 1000L, false)
-                .execute();
+                .doMutate();
     }
 
     //==== Durability and Expiry Litmus Tests ====
@@ -438,7 +436,7 @@ public class SubDocumentTest {
         mutateInBuilder.withDurability(persistTo, replicateTo);
         LOGGER.info("Asserting replication of {}", mutateInBuilder);
 
-        DocumentFragment<Mutation> result = mutateInBuilder.execute(timeout, TimeUnit.SECONDS);
+        DocumentFragment<Mutation> result = mutateInBuilder.doMutate(timeout, TimeUnit.SECONDS);
 
         JsonDocument masterDoc = ctx.bucket().get(key);
         JsonDocument replicaDoc = ctx.bucket().getFromReplica(key, ReplicaMode.FIRST).get(0);
@@ -457,7 +455,7 @@ public class SubDocumentTest {
 
         builder = builder.withExpiry(expirySeconds);
         LOGGER.info("Resetting expiry via {}", builder);
-        DocumentFragment<Mutation> result = builder.execute();
+        DocumentFragment<Mutation> result = builder.doMutate();
 
         assertNotNull("mutation failed", result);
         assertNotNull("document has expired too soon", ctx.bucket().get(expiredKey));
@@ -514,7 +512,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .upsert("sub.newValue", "sValue", false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(0));
@@ -527,7 +525,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .upsert("sub.value", true, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(0));
@@ -540,7 +538,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .upsert("sub.some.path", 1024, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -552,7 +550,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .upsert("sub.some.path", 1024, true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(0));
@@ -566,7 +564,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .upsert("boolean.some", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -579,7 +577,7 @@ public class SubDocumentTest {
                 ctx.bucket()
                 .mutateIn(key)
                 .upsert("array.some", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -591,7 +589,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .upsert("array[1]", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -605,7 +603,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .insert("sub.newValue", "sValue", false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(0));
@@ -618,7 +616,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .insert("sub.value", true, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -629,7 +627,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .insert("sub.some.path", 1024, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -641,7 +639,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .insert("sub.some.path", 1024, true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(0));
@@ -655,7 +653,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .insert("boolean.some", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -667,7 +665,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .insert("array.some", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -679,7 +677,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .insert("array[1]", "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -693,7 +691,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .replace("sub.newValue", "sValue"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -705,7 +703,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
                 .replace("sub.value", true)
-                .execute();
+                .doMutate();
 
         assertNotNull(singleResult);
         assertEquals(ResponseStatus.SUCCESS, singleResult.status(0));
@@ -718,7 +716,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .replace("boolean.some", "string"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -730,7 +728,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .replace( "array.some", "string"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -741,7 +739,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
                 .replace("array[1]", "string")
-                .execute();
+                .doMutate();
 
         singleResult.content(0);
 
@@ -756,7 +754,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .replace("array[3]", "badIndex"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -770,7 +768,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAppend(path, "string", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -785,7 +783,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayAppend(path, value, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -802,7 +800,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayPrepend(path, value, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -818,7 +816,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayPrepend(path, "newElement", true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNull(result.content(0));
@@ -834,7 +832,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayPrepend(path, "newElement", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -852,7 +850,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(arrayKey)
                 .arrayAppend(path, value1, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -864,7 +862,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result2 = ctx.bucket()
                 .mutateIn(arrayKey)
                 .arrayAppend(path, value2, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result2);
         assertNotEquals(0L, result2.cas());
@@ -873,98 +871,6 @@ public class SubDocumentTest {
         assertEquals(2, array.size());
         assertEquals(value1, array.getString(0));
         assertEquals(value2, array.getString(1));
-    }
-
-    @Test
-    public void testArrayPrependMultiValuesVararg() {
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayPrependAll("array", "a", "b", 123, "d")
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        assertEquals(storedArray.toString(), 7, storedArray.size());
-        assertEquals("a", storedArray.getString(0));
-        assertEquals("b", storedArray.getString(1));
-        assertEquals(123, storedArray.getInt(2).intValue());
-        assertEquals("d", storedArray.getString(3));
-        assertEquals("1", storedArray.getString(4));
-        assertEquals(2, storedArray.getInt(5).intValue());
-        assertEquals(true, storedArray.getBoolean(6));
-    }
-
-    @Test
-    public void testArrayPrependMultiValuesCollection() {
-        List<?> values = Arrays.asList("a", "b", 123, "d");
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayPrependAll("array", values, false)
-                .arrayPrependAll("array2", values, true)
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        assertEquals(7, storedArray.size());
-        assertEquals("a", storedArray.getString(0));
-        assertEquals("b", storedArray.getString(1));
-        assertEquals(123, storedArray.getInt(2).intValue());
-        assertEquals("d", storedArray.getString(3));
-        assertEquals("1", storedArray.getString(4));
-        assertEquals(2, storedArray.getInt(5).intValue());
-        assertEquals(true, storedArray.getBoolean(6));
-
-        storedArray = ctx.bucket().get(key).content().getArray("array2");
-        assertEquals(values, storedArray.toList());
-    }
-
-    @Test
-    public void testArrayAppendMultiValuesVararg() {
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayAppendAll("array", "a", "b", 123, "d")
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        System.out.println(storedArray);
-        assertEquals(7, storedArray.size());
-        assertEquals("1", storedArray.getString(0));
-        assertEquals(2, storedArray.getInt(1).intValue());
-        assertEquals(true, storedArray.getBoolean(2));
-        assertEquals("a", storedArray.getString(3));
-        assertEquals("b", storedArray.getString(4));
-        assertEquals(123, storedArray.getInt(5).intValue());
-        assertEquals("d", storedArray.getString(6));
-    }
-
-    @Test
-    public void testArrayAppendMultiValuesCollection() {
-        List<?> values = Arrays.asList("a", "b", 123, "d");
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayAppendAll("array", values, false)
-                .arrayAppendAll("array2", values, true)
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        System.out.println(storedArray);
-        assertEquals(7, storedArray.size());
-        assertEquals("1", storedArray.getString(0));
-        assertEquals(2, storedArray.getInt(1).intValue());
-        assertEquals(true, storedArray.getBoolean(2));
-        assertEquals("a", storedArray.getString(3));
-        assertEquals("b", storedArray.getString(4));
-        assertEquals(123, storedArray.getInt(5).intValue());
-        assertEquals("d", storedArray.getString(6));
-
-        storedArray = ctx.bucket().get(key).content().getArray("array2");
-        assertEquals(values, storedArray.toList());
     }
 
     @Test
@@ -978,7 +884,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(arrayKey)
                 .arrayPrepend(path, value1, true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -990,7 +896,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result2 = ctx.bucket()
                 .mutateIn(arrayKey)
                 .arrayPrepend(path, value2, true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result2);
         assertNotEquals(result.cas(), result2.cas());
@@ -1007,7 +913,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert("array[0]", "arrayInsert")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -1021,7 +927,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert("array[3]", "arrayInsert")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -1039,7 +945,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert("array[0]", "arrayInsert")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -1053,7 +959,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert("array[1]", "arrayInsert")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -1065,53 +971,12 @@ public class SubDocumentTest {
     }
 
     @Test
-    public void testArrayInsertMultiValuesVararg() {
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayInsertAll("array[1]", "a", "b", 123, "d")
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        assertEquals(7, storedArray.size());
-        assertEquals("1", storedArray.getString(0));
-        assertEquals("a", storedArray.getString(1));
-        assertEquals("b", storedArray.getString(2));
-        assertEquals(123, storedArray.getInt(3).intValue());
-        assertEquals("d", storedArray.getString(4));
-        assertEquals(2, storedArray.getInt(5).intValue());
-        assertEquals(true, storedArray.getBoolean(6));
-    }
-
-    @Test
-    public void testArrayInsertMultiValuesCollection() {
-        List<?> values = Arrays.asList("a", "b", 123, "d");
-        DocumentFragment<Mutation> result = ctx.bucket()
-                .mutateIn(key)
-                .arrayInsertAll("array[1]", values)
-                .execute();
-
-        assertNotNull(result);
-        assertNotEquals(0L, result.cas());
-        JsonArray storedArray = ctx.bucket().get(key).content().getArray("array");
-        assertEquals(7, storedArray.size());
-        assertEquals("1", storedArray.getString(0));
-        assertEquals("a", storedArray.getString(1));
-        assertEquals("b", storedArray.getString(2));
-        assertEquals(123, storedArray.getInt(3).intValue());
-        assertEquals("d", storedArray.getString(4));
-        assertEquals(2, storedArray.getInt(5).intValue());
-        assertEquals(true, storedArray.getBoolean(6));
-    }
-
-    @Test
     public void testArrayInsertAtIndexOutOfBounds() {
         final String path = "array[5]";
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert(path, "arrayInsert"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1124,7 +989,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert(path, "arrayInsert"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1137,7 +1002,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert(path, "arrayInsert"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1150,7 +1015,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayInsert(path, "arrayInsert"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1165,7 +1030,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique(path, "arrayInsert", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1182,7 +1047,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique("array", "arrayInsert", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1194,7 +1059,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique("array", JsonObject.create().put("object", true), false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1206,7 +1071,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique("array", true, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1218,7 +1083,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique("anotherArray", "arrayInsert", false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1230,7 +1095,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .arrayAddUnique( "anotherArray", "arrayInsert", true)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNotEquals(0L, result.cas());
@@ -1247,7 +1112,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .remove("int")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNull(result.content("int"));
@@ -1261,7 +1126,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .remove("sub.value")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNull(result.content("sub.value"));
@@ -1275,7 +1140,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .remove("array[1]")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNull(result.content("array[1]"));
@@ -1292,7 +1157,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .remove("array[-1]")
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertNull(result.content("array[-1]"));
@@ -1310,7 +1175,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .remove(path))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1323,7 +1188,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .remove(path))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1336,7 +1201,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .remove(path))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1351,7 +1216,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, false)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(1123L, result.content(path, Long.class).longValue());
@@ -1365,7 +1230,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, false)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(0L, result.content(path, Long.class).longValue());
@@ -1391,7 +1256,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, false)
-                .execute();
+                .doMutate();
 
         assertNotNull(result);
         assertEquals(ResponseStatus.SUCCESS, result.status(path));
@@ -1402,7 +1267,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, false))
-                .execute();
+                .doMutate();
         assertThat("second counter increment should have made the counter value too big", caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
                 hasCause(isA(CannotInsertValueException.class))));
@@ -1415,7 +1280,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, false)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(1000L, result.content(path, Long.class).longValue());
@@ -1430,7 +1295,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, expected, false)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(expected, result.content(path, Long.class).longValue());
@@ -1445,7 +1310,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, expected, false)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(expected, result.content(path, Long.class).longValue());
@@ -1458,7 +1323,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .counter("sub.value", 1000L, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1470,7 +1335,7 @@ public class SubDocumentTest {
         verifyException(ctx.bucket()
                 .mutateIn(key)
                 .counter("counters.a", 1000L, false))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), allOf(
                 instanceOf(MultiMutationException.class),
@@ -1484,7 +1349,7 @@ public class SubDocumentTest {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
                 .counter(path, delta, true)
-                .execute();
+                .doMutate();
 
         assertThat(result.content(path), instanceOf(Long.class));
         assertEquals(delta, result.content(path, Long.class).longValue());
@@ -1496,7 +1361,7 @@ public class SubDocumentTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testMultiLookupEmptySpecFails() {
-        ctx.bucket().lookupIn(key).execute();
+        ctx.bucket().lookupIn(key).doLookup();
     }
 
     @Test
@@ -1512,7 +1377,7 @@ public class SubDocumentTest {
                 //other error => content throws
                 .get("sub[1]")
                 .exists("sub[1]")
-                .execute();
+                .doLookup();
 
         assertNotNull(results);
         assertEquals(7, results.size());
@@ -1550,7 +1415,7 @@ public class SubDocumentTest {
                 .exists(path1)
                 .exists(path2)
                 .exists(path3)
-                .execute();
+                .doLookup();
 
         assertNotNull(results);
         assertEquals(3, results.size());
@@ -1587,7 +1452,7 @@ public class SubDocumentTest {
                 .get("sub")
                 .get("sub[1]")
                 .get("badPath")
-                .execute();
+                .doLookup();
 
         assertNotNull(results);
         assertEquals(3, results.size());
@@ -1620,7 +1485,7 @@ public class SubDocumentTest {
                 .counter("int", 1000, false)
                 .insert("sub.insert", "inserted", false)
                 .remove("boolean")
-                .execute();
+                .doMutate();
 
         JsonDocument stored = ctx.bucket().get(key);
 
@@ -1647,7 +1512,7 @@ public class SubDocumentTest {
                 .arrayPrepend("extend.array", "v", true)
                 .insert("insert.sub.entry", "v", true)
                 .upsert("upsert.sub.entry", "v", true)
-                .execute();
+                .doMutate();
 
         JsonDocument stored = ctx.bucket().get(key);
 
@@ -1671,7 +1536,7 @@ public class SubDocumentTest {
                 .replace("int", 1024)
                 .upsert("sub.otherValue.deeper", "newValue", false)
                 .replace("secondError", "unreachable"))
-                .execute();
+                .doMutate();
 
         assertThat(caughtException(), instanceOf(MultiMutationException.class));
         MultiMutationException e = caughtException();
@@ -1687,7 +1552,7 @@ public class SubDocumentTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testMultiMutationWithEmptySpecFails() {
-        ctx.bucket().mutateIn(key).execute();
+        ctx.bucket().mutateIn(key).doMutate();
     }
 
     @Test(expected = CASMismatchException.class)
@@ -1697,6 +1562,6 @@ public class SubDocumentTest {
                 .withCas(1234L)
                 .replace("sub", 123)
                 .remove("int")
-        .execute();
+        .doMutate();
     }
 }
