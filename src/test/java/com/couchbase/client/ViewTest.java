@@ -66,12 +66,9 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -251,27 +248,32 @@ public class ViewTest {
    * @post Assert row id and document id if successful.
    */
   @Test
-  public void testQueryWithDocs() throws Exception {
+  public void testQueryWithDocs() {
     Query query = new Query();
     query.setReduce(false);
     query.setIncludeDocs(true);
     query.setStale(Stale.FALSE);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    assertNotNull(view);
-
+    assert view != null : "Could not retrieve view";
     HttpFuture<ViewResponse> future = client.asyncQuery(view, query);
-    ViewResponse response = future.get();
-    assertNotNull(response);
-    assertTrue(future.getStatus().isSuccess());
+    ViewResponse response=null;
+    try {
+      response = future.get();
+    } catch (ExecutionException ex) {
+      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (InterruptedException ex) {
+      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    assert future.getStatus().isSuccess() : future.getStatus();
 
     Iterator<ViewRow> itr = response.iterator();
     while (itr.hasNext()) {
       ViewRow row = itr.next();
       if (ITEMS.containsKey(row.getId())) {
-        assertEquals(ITEMS.get(row.getId()), row.getDocument());
+        assert ITEMS.get(row.getId()).equals(row.getDocument());
       }
     }
-    assertEquals(ITEMS.size(), response.size());
+    assert ITEMS.size() == response.size() : future.getStatus().getMessage();
   }
 
   /**
@@ -1103,7 +1105,7 @@ public class ViewTest {
 
     success = false;
     try {
-      client.getDesignDocument("mydesign");
+      design = client.getDesignDocument("mydesign");
     } catch(InvalidViewException e) {
       success = true;
     }
@@ -1130,7 +1132,7 @@ public class ViewTest {
    */
   @Test(expected=InvalidViewException.class)
   public void testInvalidViewOnValidDesignDoc() {
-    client.getView(DESIGN_DOC_W_REDUCE, "invalidViewName");
+    View view = client.getView(DESIGN_DOC_W_REDUCE, "invalidViewName");
   }
 
   /**
