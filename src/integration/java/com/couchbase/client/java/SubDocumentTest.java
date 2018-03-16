@@ -24,9 +24,7 @@ package com.couchbase.client.java;
 
 import static com.googlecode.catchexception.CatchException.caughtException;
 import static com.googlecode.catchexception.CatchException.verifyException;
-import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -34,7 +32,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.internal.matchers.ThrowableCauseMatcher.hasCause;
 
 import java.util.concurrent.TimeUnit;
 
@@ -58,6 +55,7 @@ import com.couchbase.client.java.error.subdoc.PathInvalidException;
 import com.couchbase.client.java.error.subdoc.PathMismatchException;
 import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
+import com.couchbase.client.java.error.subdoc.ZeroDeltaException;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.util.CouchbaseTestContext;
@@ -295,7 +293,7 @@ public class SubDocumentTest {
         ctx.bucket()
                 .mutateIn(key)
                 .withCas(1234L)
-                .arrayPrepend("int", "something", false)
+                .pushFront("int", "something", false)
                 .doMutate();
     }
 
@@ -304,7 +302,7 @@ public class SubDocumentTest {
         ctx.bucket()
                 .mutateIn(key)
                 .withCas(1234L)
-                .arrayAppend("int", "something", false)
+                .pushBack("int", "something", false)
                 .doMutate();
     }
 
@@ -322,7 +320,7 @@ public class SubDocumentTest {
         ctx.bucket()
                 .mutateIn(key)
                 .withCas(1234L)
-                .arrayAddUnique("int", null, false)
+                .addUnique("int", null, false)
                 .doMutate();
     }
 
@@ -358,7 +356,7 @@ public class SubDocumentTest {
         //single mutations
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket().mutateIn(key)
-                        .arrayAddUnique("array", "foo", false));
+                        .addUnique("array", "foo", false));
 
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket().mutateIn(key)
@@ -370,11 +368,11 @@ public class SubDocumentTest {
 
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket().mutateIn(key)
-                .arrayPrepend("array", "extendFront", false));
+                .pushFront("array", "extendFront", false));
 
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket().mutateIn(key)
-                .arrayAppend("array", "extendBack", false));
+                .pushBack("array", "extendBack", false));
 
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket().mutateIn(key)
@@ -416,7 +414,7 @@ public class SubDocumentTest {
         assertMutationReplicated(key, timeout, persistTo, replicateTo,
                 ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("array", "foo", false)
+                .addUnique("array", "foo", false)
                 .remove("boolean"));
 
         //assert final state of JSON
@@ -470,7 +468,7 @@ public class SubDocumentTest {
         final String expiredKey = "SubdocMutationWithExpirySingleCommonPath";
         MutateInBuilder builder = ctx.bucket()
                 .mutateIn(expiredKey)
-                .arrayAddUnique("array", "foo", false);
+                .addUnique("array", "foo", false);
 
         assertMutationWithExpiry(expiredKey, builder, 3);
     }
@@ -533,16 +531,14 @@ public class SubDocumentTest {
         assertEquals(Boolean.TRUE, ctx.bucket().get(key).content().getObject("sub").getBoolean("value"));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testUpsertInDictionaryExtraLevelFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .upsert("sub.some.path", 1024, false))
+                .upsert("sub.some.path", 1024, false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
+        singleResult.content(0);
     }
 
     @Test
@@ -559,41 +555,34 @@ public class SubDocumentTest {
         assertEquals(1024, content);
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testUpsertInScalarFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .upsert("boolean.some", "string", false))
+                .upsert("boolean.some", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
+        singleResult.content(0);
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testUpsertInArrayFails() {
-        verifyException(
-                ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .upsert("array.some", "string", false))
+                .upsert("array.some", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
+        singleResult.content(0);
     }
 
-    @Test
+    @Test(expected = PathInvalidException.class)
     public void testUpsertInArrayIndexFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .upsert("array[1]", "string", false))
+                .upsert("array[1]", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathInvalidException.class))));
+        singleResult.content(0);
     }
 
 
@@ -611,27 +600,24 @@ public class SubDocumentTest {
         assertEquals("sValue", ctx.bucket().get(key).content().getObject("sub").getString("newValue"));
     }
 
-    @Test
+    @Test(expected = PathExistsException.class)
     public void testInsertInDictionaryDoesntUpdate() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("sub.value", true, false))
+                .insert("sub.value", true, false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathExistsException.class))));    }
+        result.content(0);
+    }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testInsertInDictionaryExtraLevelFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("sub.some.path", 1024, false))
+                .insert("sub.some.path", 1024, false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
+        result.content(0);
     }
 
     @Test
@@ -648,54 +634,46 @@ public class SubDocumentTest {
         assertEquals(1024, content);
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testInsertInScalarFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("boolean.some", "string", false))
+                .insert("boolean.some", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
+        result.content(0);
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testInsertInArrayFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("array.some", "string", false))
+                .insert("array.some", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
+        result.content(0);
     }
 
-    @Test
+    @Test(expected = PathInvalidException.class)
     public void testInsertInArrayIndexFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .insert("array[1]", "string", false))
+                .insert("array[1]", "string", false)
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathInvalidException.class))));
+        result.content(0);
     }
 
 
     //=== REPLACE ===
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testReplaceInDictionaryDoesntCreate() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .replace("sub.newValue", "sValue"))
+                .replace("sub.newValue", "sValue")
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
+        singleResult.content(0);
     }
 
     @Test
@@ -711,28 +689,25 @@ public class SubDocumentTest {
         assertEquals(Boolean.TRUE, ctx.bucket().get(key).content().getObject("sub").getBoolean("value"));
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testReplaceInScalarFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .replace("boolean.some", "string"))
+                .replace("boolean.some", "string")
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
+        singleResult.content(0);
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testReplaceInArrayFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .replace( "array.some", "string"))
+                .replace( "array.some", "string")
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));    }
+        singleResult.content(0);
+    }
 
     @Test
     public void testReplaceInArrayIndexUpdates() {
@@ -749,30 +724,24 @@ public class SubDocumentTest {
         assertEquals("string", ctx.bucket().get(key).content().getArray("array").getString(1));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testReplaceInArrayIndexOutOfBoundsFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> singleResult = ctx.bucket()
                 .mutateIn(key)
-                .replace("array[3]", "badIndex"))
+                .replace("array[3]", "badIndex")
                 .doMutate();
 
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
+        singleResult.content(0);
     }
 
     //=== EXTEND ===
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testExtendOnNonArrayFails() {
         final String path = "sub";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAppend(path, "string", false))
+                .pushBack(path, "string", false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
     }
 
     @Test
@@ -782,7 +751,7 @@ public class SubDocumentTest {
         final String value = "newElement";
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAppend(path, value, false)
+                .pushBack(path, value, false)
                 .doMutate();
 
         assertNotNull(result);
@@ -799,7 +768,7 @@ public class SubDocumentTest {
         final String value = "newElement";
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayPrepend(path, value, false)
+                .pushFront(path, value, false)
                 .doMutate();
 
         assertNotNull(result);
@@ -815,7 +784,7 @@ public class SubDocumentTest {
         final String path = "sub.array";
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayPrepend(path, "newElement", true)
+                .pushFront(path, "newElement", true)
                 .doMutate();
 
         assertNotNull(result);
@@ -826,17 +795,13 @@ public class SubDocumentTest {
         assertEquals("newElement", array.getString(0));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testExtendInDictionnaryWithoutCreateParentsFails() {
         final String path = "sub.array";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayPrepend(path, "newElement", false))
+                .pushFront(path, "newElement", false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
     @Test
@@ -849,7 +814,7 @@ public class SubDocumentTest {
 
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(arrayKey)
-                .arrayAppend(path, value1, false)
+                .pushBack(path, value1, false)
                 .doMutate();
 
         assertNotNull(result);
@@ -861,7 +826,7 @@ public class SubDocumentTest {
 
         DocumentFragment<Mutation> result2 = ctx.bucket()
                 .mutateIn(arrayKey)
-                .arrayAppend(path, value2, false)
+                .pushBack(path, value2, false)
                 .doMutate();
 
         assertNotNull(result2);
@@ -883,7 +848,7 @@ public class SubDocumentTest {
 
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(arrayKey)
-                .arrayPrepend(path, value1, true)
+                .pushFront(path, value1, true)
                 .doMutate();
 
         assertNotNull(result);
@@ -895,7 +860,7 @@ public class SubDocumentTest {
 
         DocumentFragment<Mutation> result2 = ctx.bucket()
                 .mutateIn(arrayKey)
-                .arrayPrepend(path, value2, true)
+                .pushFront(path, value2, true)
                 .doMutate();
 
         assertNotNull(result2);
@@ -970,131 +935,95 @@ public class SubDocumentTest {
         assertEquals(true, storedArray.getBoolean(3));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testArrayInsertAtIndexOutOfBounds() {
         final String path = "array[5]";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayInsert(path, "arrayInsert"))
+                .arrayInsert(path, "arrayInsert")
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
-    @Test
+    @Test(expected = PathInvalidException.class)
     public void testArrayInsertAtNegativeIndex() {
         final String path = "array[-1]";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayInsert(path, "arrayInsert"))
+                .arrayInsert(path, "arrayInsert")
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathInvalidException.class))));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testArrayInsertOnArrayThatDoesntExist() {
         final String path = "secondArray[0]";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayInsert(path, "arrayInsert"))
+                .arrayInsert(path, "arrayInsert")
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
-    @Test
+    @Test(expected = PathInvalidException.class)
     public void testArrayInsertOnPathNotEndingWithArrayElement() {
         final String path = "array";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayInsert(path, "arrayInsert"))
+                .arrayInsert(path, "arrayInsert")
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathInvalidException.class))));
     }
 
 
     //=== ARRAY ADD UNIQUE ===
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testArrayAddUniqueInNonArray() {
         final String path = "sub";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique(path, "arrayInsert", false))
+                .addUnique(path, "arrayInsert", false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testArrayAddUniqueInArrayWithNonPrimitives() {
         //create document with array containing array
         JsonObject root = JsonObject.create().put("array", JsonArray.create().add(JsonArray.empty()));
         ctx.bucket().upsert(JsonDocument.create(key, root));
 
         //not a primitive only array => MISMATCH
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("array", "arrayInsert", false))
+                .addUnique("array", "arrayInsert", false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
     }
 
-    @Test
+    @Test(expected = CannotInsertValueException.class)
     public void testArrayAddUniqueWithNonPrimitiveFragment() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("array", JsonObject.create().put("object", true), false))
+                .addUnique("array", JsonObject.create().put("object", true), false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(CannotInsertValueException.class))));
     }
 
-    @Test
+    @Test(expected = PathExistsException.class)
     public void testArrayAddUniqueWithValueAlreadyPresent() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("array", true, false))
+                .addUnique("array", true, false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathExistsException.class))));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testArrayAddUniqueOnNonExistingArray() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("anotherArray", "arrayInsert", false))
+                .addUnique("anotherArray", "arrayInsert", false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
     @Test
     public void testArrayAddUniqueOnNonExistingArraySucceedsWithCreateParents() {
         DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique( "anotherArray", "arrayInsert", true)
+                .addUnique( "anotherArray", "arrayInsert", true)
                 .doMutate();
 
         assertNotNull(result);
@@ -1169,43 +1098,31 @@ public class SubDocumentTest {
         assertEquals(2, storedArray.getInt(1).intValue());
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testRemoveScalarWithBadPath() {
         String path = "integer";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .remove(path))
+                .remove(path)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testRemoveDictEntryWithBadKey() {
         String path = "sub.valuezz";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .remove(path))
+                .remove(path)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testRemoveArrayElementWithIndexOutOfBounds() {
         final String path = "array[4]";
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .remove(path))
+                .remove(path)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
     //=== COUNTER ===
@@ -1237,7 +1154,7 @@ public class SubDocumentTest {
         assertEquals(0L, ctx.bucket().get(key).content().getLong("int").longValue());
     }
 
-    @Test(expected = BadDeltaException.class)
+    @Test(expected = ZeroDeltaException.class)
     public void testCounterWithZeroDeltaFails() {
         ctx.bucket()
                 .mutateIn(key)
@@ -1268,9 +1185,8 @@ public class SubDocumentTest {
                 .mutateIn(key)
                 .counter(path, delta, false))
                 .doMutate();
-        assertThat("second counter increment should have made the counter value too big", caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(CannotInsertValueException.class))));
+        assertThat("second counter increment should have made the counter value too big",
+                caughtException(), instanceOf(BadDeltaException.class));
     }
 
     @Test
@@ -1318,28 +1234,20 @@ public class SubDocumentTest {
         assertEquals(expected, ctx.bucket().get(key).content().getLong(path).longValue());
     }
 
-    @Test
+    @Test(expected = PathMismatchException.class)
     public void testCounterOnNonNumericPathFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .counter("sub.value", 1000L, false))
+                .counter("sub.value", 1000L, false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathMismatchException.class))));
     }
 
-    @Test
+    @Test(expected = PathNotFoundException.class)
     public void testCounterInPartialPathMissingIntermediaryElementFails() {
-        verifyException(ctx.bucket()
+        DocumentFragment<Mutation> result = ctx.bucket()
                 .mutateIn(key)
-                .counter("counters.a", 1000L, false))
+                .counter("counters.a", 1000L, false)
                 .doMutate();
-
-        assertThat(caughtException(), allOf(
-                instanceOf(MultiMutationException.class),
-                hasCause(isA(PathNotFoundException.class))));
     }
 
     @Test
@@ -1480,8 +1388,8 @@ public class SubDocumentTest {
                 .replace("string", "otherString")
                 .upsert("sub.otherValue", "newValue", false)
                 .arrayInsert("array[1]", "v")
-                .arrayAddUnique("array", "v2", false)
-                .arrayAppend("array", "v3", false)
+                .addUnique("array", "v2", false)
+                .pushBack("array", "v3", false)
                 .counter("int", 1000, false)
                 .insert("sub.insert", "inserted", false)
                 .remove("boolean")
@@ -1507,9 +1415,9 @@ public class SubDocumentTest {
     public void testMultiMutationWithCreateParents() {
         DocumentFragment<Mutation> mmr = ctx.bucket()
                 .mutateIn(key)
-                .arrayAddUnique("addUnique.array", "v", true)
+                .addUnique("addUnique.array", "v", true)
                 .counter("counter.newCounter", 100, true)
-                .arrayPrepend("extend.array", "v", true)
+                .pushFront("extend.array", "v", true)
                 .insert("insert.sub.entry", "v", true)
                 .upsert("upsert.sub.entry", "v", true)
                 .doMutate();
