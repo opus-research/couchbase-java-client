@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.document;
 
-import com.couchbase.client.core.message.kv.MutationToken;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -47,7 +46,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a {@link JsonLongDocument}.
      */
     public static JsonLongDocument create(String id) {
-        return new JsonLongDocument(id, 0, null, 0, null);
+        return new JsonLongDocument(id, 0, null, 0);
     }
 
     /**
@@ -58,7 +57,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a {@link JsonLongDocument}.
      */
     public static JsonLongDocument create(String id, Long content) {
-        return new JsonLongDocument(id, 0, content, 0, null);
+        return new JsonLongDocument(id, 0, content, 0);
     }
 
     /**
@@ -70,7 +69,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a {@link JsonLongDocument}.
      */
     public static JsonLongDocument create(String id, Long content, long cas) {
-        return new JsonLongDocument(id, 0, content, cas, null);
+        return new JsonLongDocument(id, 0, content, cas);
     }
 
     /**
@@ -82,7 +81,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a {@link JsonLongDocument}.
      */
     public static JsonLongDocument create(String id, int expiry, Long content) {
-        return new JsonLongDocument(id, expiry, content, 0, null);
+        return new JsonLongDocument(id, expiry, content, 0);
     }
 
     /**
@@ -99,24 +98,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a {@link JsonLongDocument}.
      */
     public static JsonLongDocument create(String id, int expiry, Long content, long cas) {
-        return new JsonLongDocument(id, expiry, content, cas, null);
-    }
-
-    /**
-     * Creates a {@link JsonLongDocument} which the document id, content, CAS value, expiration time and status code.
-     *
-     * This factory method is normally only called within the client library when a response is analyzed and a document
-     * is returned which is enriched with the status code. It does not make sense to pre populate the status field from
-     * the user level code.
-     *
-     * @param id the per-bucket unique document id.
-     * @param content the content of the document.
-     * @param cas the CAS (compare and swap) value for optimistic concurrency.
-     * @param expiry the expiration time of the document.
-     * @return a {@link JsonLongDocument}.
-     */
-    public static JsonLongDocument create(String id, int expiry, Long content, long cas, MutationToken mutationToken) {
-        return new JsonLongDocument(id, expiry, content, cas, mutationToken);
+        return new JsonLongDocument(id, expiry, content, cas);
     }
 
     /**
@@ -127,7 +109,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a copied {@link JsonLongDocument} with the changed properties.
      */
     public static JsonLongDocument from(JsonLongDocument doc, String id) {
-        return JsonLongDocument.create(id, doc.expiry(), doc.content(), doc.cas(), doc.mutationToken());
+        return JsonLongDocument.create(id, doc.expiry(), doc.content(), doc.cas());
     }
 
     /**
@@ -138,7 +120,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a copied {@link JsonLongDocument} with the changed properties.
      */
     public static JsonLongDocument from(JsonLongDocument doc, Long content) {
-        return JsonLongDocument.create(doc.id(), doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonLongDocument.create(doc.id(), doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -150,7 +132,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a copied {@link JsonLongDocument} with the changed properties.
      */
     public static JsonLongDocument from(JsonLongDocument doc, String id, Long content) {
-        return JsonLongDocument.create(id, doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonLongDocument.create(id, doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -161,7 +143,7 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @return a copied {@link JsonLongDocument} with the changed properties.
      */
     public static JsonLongDocument from(JsonLongDocument doc, long cas) {
-        return JsonLongDocument.create(doc.id(), doc.expiry(), doc.content(), cas, doc.mutationToken());
+        return JsonLongDocument.create(doc.id(), doc.expiry(), doc.content(), cas);
     }
 
     /**
@@ -172,8 +154,8 @@ public class JsonLongDocument extends AbstractDocument<Long> implements Serializ
      * @param cas the CAS (compare and swap) value for optimistic concurrency.
      * @param expiry the expiration time of the document.
      */
-    private JsonLongDocument(String id, int expiry, Long content, long cas, MutationToken mutationToken) {
-        super(id, expiry, content, cas, mutationToken);
+    private JsonLongDocument(String id, int expiry, Long content, long cas) {
+        super(id, expiry, content, cas);
     }
 
     private void writeObject(ObjectOutputStream stream) throws IOException {

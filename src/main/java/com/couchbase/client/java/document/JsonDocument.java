@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.document;
 
-import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.java.document.json.JsonObject;
 
 import java.io.IOException;
@@ -44,16 +43,15 @@ import java.io.Serializable;
  * It can always be the case that some or all fields of a {@link JsonDocument} are not set, depending on the operation
  * performed. Here are the accessible fields and their default values:
  *
- * +---------------+---------+
- * | Field         | Default |
- * +---------------+---------+
- * | id            | null    |
- * | content       | null    |
- * | cas           | 0       |
- * | expiry        | 0       |
- * | status        | null    |
- * | mutationToken | null    |
- * +---------------+---------+
+ * +---------+---------+
+ * | Field   | Default |
+ * +---------+---------+
+ * | id      | null    |
+ * | content | null    |
+ * | cas     | 0       |
+ * | expiry  | 0       |
+ * | status  | null    |
+ * +---------+---------+
  *
  * @author Michael Nitschinger
  * @since 2.0
@@ -62,6 +60,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
 
     private static final long serialVersionUID = 2050104986260610101L;
 
+
     /**
      * Creates a {@link JsonDocument} which the document id.
      *
@@ -69,7 +68,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id) {
-        return new JsonDocument(id, 0, null, 0, null);
+        return new JsonDocument(id, 0, null, 0);
     }
 
     /**
@@ -80,7 +79,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, JsonObject content) {
-        return new JsonDocument(id, 0, content, 0, null);
+        return new JsonDocument(id, 0, content, 0);
     }
 
     /**
@@ -92,7 +91,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, JsonObject content, long cas) {
-        return new JsonDocument(id, 0, content, cas, null);
+        return new JsonDocument(id, 0, content, cas);
     }
 
     /**
@@ -104,7 +103,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, int expiry, JsonObject content) {
-        return new JsonDocument(id, expiry, content, 0, null);
+        return new JsonDocument(id, expiry, content, 0);
     }
 
     /**
@@ -121,24 +120,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a {@link JsonDocument}.
      */
     public static JsonDocument create(String id, int expiry, JsonObject content, long cas) {
-        return new JsonDocument(id, expiry, content, cas, null);
-    }
-
-    /**
-     * Creates a {@link JsonDocument} which the document id, JSON content, CAS value, expiration time and status code.
-     *
-     * This factory method is normally only called within the client library when a response is analyzed and a document
-     * is returned which is enriched with the status code. It does not make sense to pre populate the status field from
-     * the user level code.
-     *
-     * @param id the per-bucket unique document id.
-     * @param content the content of the document.
-     * @param cas the CAS (compare and swap) value for optimistic concurrency.
-     * @param expiry the expiration time of the document.
-     * @return a {@link JsonDocument}.
-     */
-    public static JsonDocument create(String id, int expiry, JsonObject content, long cas, MutationToken mutationToken) {
-        return new JsonDocument(id, expiry, content, cas, mutationToken);
+        return new JsonDocument(id, expiry, content, cas);
     }
 
     /**
@@ -149,7 +131,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, String id) {
-        return JsonDocument.create(id, doc.expiry(), doc.content(), doc.cas(), doc.mutationToken());
+        return JsonDocument.create(id, doc.expiry(), doc.content(), doc.cas());
     }
 
     /**
@@ -160,7 +142,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, JsonObject content) {
-        return JsonDocument.create(doc.id(), doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonDocument.create(doc.id(), doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -172,7 +154,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, String id, JsonObject content) {
-        return JsonDocument.create(id, doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonDocument.create(id, doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -183,7 +165,7 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @return a copied {@link JsonDocument} with the changed properties.
      */
     public static JsonDocument from(JsonDocument doc, long cas) {
-        return JsonDocument.create(doc.id(), doc.expiry(), doc.content(), cas, doc.mutationToken());
+        return JsonDocument.create(doc.id(), doc.expiry(), doc.content(), cas);
     }
 
     /**
@@ -194,8 +176,8 @@ public class JsonDocument extends AbstractDocument<JsonObject> implements Serial
      * @param cas the CAS (compare and swap) value for optimistic concurrency.
      * @param expiry the expiration time of the document.
      */
-    private JsonDocument(String id, int expiry, JsonObject content, long cas, MutationToken mutationToken) {
-        super(id, expiry, content, cas, mutationToken);
+    private JsonDocument(String id, int expiry, JsonObject content, long cas) {
+        super(id, expiry, content, cas);
     }
 
     private void writeObject(ObjectOutputStream stream) throws IOException {

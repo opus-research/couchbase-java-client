@@ -427,13 +427,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), document.expiry(),
+                        document.content(), response.cas());
                 }
 
                 switch (response.status()) {
@@ -504,13 +499,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), document.expiry(),
+                        document.content(), response.cas());
                 }
 
                 switch (response.status()) {
@@ -582,13 +572,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                            document.content(), response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(),
+                        response.cas());
                 }
 
                 switch (response.status()) {
@@ -659,11 +644,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                 }
 
                 switch (response.status()) {
@@ -848,14 +829,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                 if (response.status().isSuccess()) {
                     int returnedExpiry = expiry == COUNTER_NOT_EXISTS_EXPIRY ? 0 : expiry;
-                    if (response.mutationToken() == null) {
-                        return JsonLongDocument.create(id, returnedExpiry, response.value(),
-                            response.cas());
-                    } else {
-                        return JsonLongDocument.create(id, returnedExpiry, response.value(),
-                            response.cas(), response.mutationToken());
-                    }
-
+                    return JsonLongDocument.create(id, returnedExpiry, response.value(), response.cas());
                 }
 
                 switch (response.status()) {
@@ -969,11 +943,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                 }
 
                 switch (response.status()) {
@@ -1011,11 +981,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 if (response.status().isSuccess()) {
-                    if (response.mutationToken() == null) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    } else {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas(), response.mutationToken());
-                    }
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
                 }
 
                 switch (response.status()) {
