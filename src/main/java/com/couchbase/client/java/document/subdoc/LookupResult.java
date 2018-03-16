@@ -20,40 +20,39 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.subdoc;
+package com.couchbase.client.java.document.subdoc;
 
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.ResponseStatus;
+import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 
 /**
- * Internally represent result corresponding to a single {@link LookupSpec} or {@link MutationSpec},
- * as part of a {@link DocumentFragment}.
+ * A result corresponding to a single {@link LookupSpec}, usually grouped inside a {@link MultiLookupResult}.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
-public class SubdocOperationResult<OPERATION> {
+@InterfaceAudience.Public
+public class LookupResult {
 
     private final String path;
-    private final OPERATION operation;
+    private final Lookup operation;
 
     private final ResponseStatus status;
 
     private final Object value;
 
     /**
-     * Create a new MultiResult.
+     * Create a new LookupResult.
      *
      * @param path the path that was looked up in a document.
-     * @param operation the kind of operation that was performed.
+     * @param operation the kind of lookup that was performed.
      * @param status the status for this lookup.
      * @param value the value for a successful GET, true/false for a EXIST, an Exception in case of FAILURE, null otherwise.
      */
-    private SubdocOperationResult(String path, OPERATION operation, ResponseStatus status, Object value) {
+    private LookupResult(String path, Lookup operation, ResponseStatus status, Object value) {
         this.path = path;
         this.operation = operation;
         this.status = status;
@@ -61,44 +60,40 @@ public class SubdocOperationResult<OPERATION> {
     }
 
     /**
-     * Create a {@link SubdocOperationResult} that denotes that a fatal Exception occurred when parsing
+     * Create a {@link LookupResult} that denotes that a fatal Exception occurred when parsing
      * server-side result. The exception can be found as the value, and the status is {@link ResponseStatus#FAILURE}.
      *
      * @param path the path looked up.
-     * @param operation the type of the operation which result couldn't be parsed.
+     * @param operation the lookup operation which result couldn't be parsed.
      * @param fatal the Exception that occurred during response parsing.
      * @return the fatal LookupResult.
      */
-    public static <OPERATION> SubdocOperationResult<OPERATION> createFatal(String path, OPERATION operation, RuntimeException fatal) {
-        return new SubdocOperationResult<OPERATION>(path, operation, ResponseStatus.FAILURE, fatal);
+    public static LookupResult createFatal(String path, Lookup operation, RuntimeException fatal) {
+        return new LookupResult(path, operation, ResponseStatus.FAILURE, fatal);
     }
 
     /**
-     * Create a {@link SubdocOperationResult} that corresponds to an operation that should return a content (including null)
-     * instead of throwing when calling {@link DocumentFragment#content(String)}.
+     * Create a {@link LookupResult} that corresponds to a GET.
      *
      * @param path the path looked up.
-     * @param operation the type of operation.
-     * @param status the status of the operation.
-     * @param value the value of the operation if applicable, null otherwise.
-     * @return the operation result.
+     * @param status the status of the GET.
+     * @param value the value of the GET if successful, null otherwise.
+     * @return the GET LookupResult.
      */
-    public static <OPERATION> SubdocOperationResult<OPERATION> createResult(String path, OPERATION operation, ResponseStatus status, Object value) {
-        return new SubdocOperationResult<OPERATION>(path, operation, status, value);
+    public static LookupResult createGetResult(String path, ResponseStatus status, Object value) {
+        return new LookupResult(path, Lookup.GET, status, value);
     }
 
     /**
-     * Create a {@link SubdocOperationResult} that correspond to a subdoc-level error, to be thrown by the enclosing
-     * {@link DocumentFragment#content(String) DocumentFragment when calling content methods}.
+     * Create a {@link LookupResult} that corresponds to a EXIST.
      *
      * @param path the path looked up.
-     * @param operation the type of operation.
-     * @param status the status of the operation.
-     * @param exception the exception to throw when trying to access the operation content.
-     * @return the operation result.
+     * @param status the status of the EXIST, its {@link ResponseStatus#isSuccess() isSuccess}
+     *               giving the LookupResult's value.
+     * @return the EXIST LookupResult.
      */
-    public static <OPERATION> SubdocOperationResult<OPERATION> createError(String path, OPERATION operation, ResponseStatus status, CouchbaseException exception) {
-        return new SubdocOperationResult<OPERATION>(path, operation, status, exception);
+    public static LookupResult createExistResult(String path, ResponseStatus status) {
+        return new LookupResult(path, Lookup.EXIST, status, status.isSuccess());
     }
 
     /**
@@ -111,7 +106,7 @@ public class SubdocOperationResult<OPERATION> {
     /**
      * @return the exact kind of lookup that was performed.
      */
-    public OPERATION operation() {
+    public Lookup operation() {
         return operation;
     }
 
@@ -123,7 +118,7 @@ public class SubdocOperationResult<OPERATION> {
     }
 
     /**
-     * @return true if the value existed (and might have associated value), false otherwise.
+     * @return true if the value existed (and in the case of a GET, could be retrieved), false otherwise.
      */
     public boolean exists() {
         return status.isSuccess();
@@ -137,6 +132,7 @@ public class SubdocOperationResult<OPERATION> {
      *  - a {@link RuntimeException} if the client side parsing of the result failed ({@link #isFatal()}).
      *
      * @return the value
+     * @see #valueOrThrow() for a version that throws the exception instead of returning it.
      */
     public Object value() {
         return value;
@@ -150,17 +146,22 @@ public class SubdocOperationResult<OPERATION> {
         return status == ResponseStatus.FAILURE;
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(operation).append('(').append(path).append("){");
-        if (status.isSuccess() || !(value instanceof Exception)) {
-            sb.append("value=").append(value);
-        } else if (status == ResponseStatus.FAILURE) {
-            sb.append("fatal=").append(value);
-        } else {
-            sb.append("error=").append(status);
+    /**
+     * Returns:
+     *  - the value retrieved by a successful GET.
+     *  - null for an unsuccessful GET (see the {@link #status()} for details).
+     *  - true/false for an EXIST (equivalent to {@link #exists()}).
+     *
+     * Throws:
+     *  - a {@link RuntimeException} if the client side parsing of the result failed ({@link #isFatal()}).
+     *
+     * @return the value
+     * @see #value() for a version that just returns the exception instead of throwing it.
+     */
+    public Object valueOrThrow() {
+        if (isFatal()) {
+            throw (RuntimeException) value;
         }
-        return sb.append('}').toString();
+        return value;
     }
 }
