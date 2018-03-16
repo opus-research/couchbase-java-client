@@ -23,11 +23,6 @@ package com.couchbase.client.java.document;
 
 import com.couchbase.client.java.document.json.JsonArray;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-
 /**
  * Stores a properly encoded JSON array as the toplevel type.
  *
@@ -37,9 +32,7 @@ import java.io.Serializable;
  * @author Michael Nitschinger
  * @since 2.0
  */
-public class JsonArrayDocument extends AbstractDocument<JsonArray> implements Serializable {
-
-    private static final long serialVersionUID = -2300114084316366873L;
+public class JsonArrayDocument extends AbstractDocument<JsonArray> {
 
     /**
      * Creates a {@link JsonDocument} which the document id.
@@ -158,13 +151,5 @@ public class JsonArrayDocument extends AbstractDocument<JsonArray> implements Se
      */
     private JsonArrayDocument(String id, int expiry, JsonArray content, long cas) {
         super(id, expiry, content, cas);
-    }
-
-    private void writeObject(ObjectOutputStream stream) throws IOException {
-        writeToSerializedStream(stream);
-    }
-
-    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        readFromSerializedStream(stream);
     }
 }

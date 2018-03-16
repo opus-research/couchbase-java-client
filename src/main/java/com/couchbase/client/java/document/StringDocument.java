@@ -21,11 +21,6 @@
  */
 package com.couchbase.client.java.document;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-
 /**
  * Handles a raw string as the document value.
  *
@@ -36,9 +31,7 @@ import java.io.Serializable;
  * @author Michael Nitschinger
  * @since 2.0
  */
-public class StringDocument extends AbstractDocument<String> implements Serializable {
-
-    private static final long serialVersionUID = -8616443474645911439L;
+public class StringDocument extends AbstractDocument<String> {
 
     /**
      * Creates a {@link StringDocument} which the document id.
@@ -137,11 +130,5 @@ public class StringDocument extends AbstractDocument<String> implements Serializ
         super(id, expiry, content, cas);
     }
 
-    private void writeObject(ObjectOutputStream stream) throws IOException {
-        writeToSerializedStream(stream);
-    }
 
-    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        readFromSerializedStream(stream);
-    }
 }
