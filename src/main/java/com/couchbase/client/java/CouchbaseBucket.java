@@ -29,6 +29,10 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.document.subdoc.DocumentFragment;
+import com.couchbase.client.java.document.subdoc.ExtendDirection;
+import com.couchbase.client.java.document.subdoc.LookupSpec;
+import com.couchbase.client.java.document.subdoc.MultiLookupResult;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
@@ -39,6 +43,8 @@ import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.CouchbaseRepository;
 import com.couchbase.client.java.repository.Repository;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -52,7 +58,6 @@ import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 import rx.functions.Func1;
 import rx.functions.Func6;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +77,7 @@ public class CouchbaseBucket implements Bucket {
      * {@link #CouchbaseBucket(CouchbaseEnvironment, ClusterFacade, String, String, List)} if you can obtain an AsyncBucket externally.
      */
     public CouchbaseBucket(final CouchbaseEnvironment env, final ClusterFacade core, final String name, final String password,
-        final List<Transcoder<? extends Document, ?>> customTranscoders) {
+                           final List<Transcoder<? extends Document, ?>> customTranscoders) {
         this(new CouchbaseAsyncBucket(core, env, name, password, customTranscoders), env, core, name, password);
     }
 
@@ -576,6 +581,18 @@ public class CouchbaseBucket implements Bucket {
         return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
+    @Override
+    public SearchQueryResult query(SearchQuery query) {
+        return query(query, environment.searchTimeout(), TIMEOUT_UNIT);
+    }
+
+    @Override
+    public SearchQueryResult query(SearchQuery query, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .query(query)
+            .single(), timeout, timeUnit);
+    }
+
 //    @Override
 //    public PreparedPayload prepare(String statement) {
 //        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
@@ -636,31 +653,31 @@ public class CouchbaseBucket implements Bucket {
         }
 
         return Blocking.blockForSingle(asyncBucket
-                .query(query)
-                .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlQueryResult>>() {
-                    @Override
-                    public Observable<N1qlQueryResult> call(AsyncN1qlQueryResult aqr) {
-                        final boolean parseSuccess = aqr.parseSuccess();
-                        final String requestId = aqr.requestId();
-                        final String clientContextId = aqr.clientContextId();
+            .query(query)
+            .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlQueryResult>>() {
+                @Override
+                public Observable<N1qlQueryResult> call(AsyncN1qlQueryResult aqr) {
+                    final boolean parseSuccess = aqr.parseSuccess();
+                    final String requestId = aqr.requestId();
+                    final String clientContextId = aqr.clientContextId();
 
-                        return Observable.zip(aqr.rows().toList(),
-                                aqr.signature().singleOrDefault(JsonObject.empty()),
-                                aqr.info().singleOrDefault(N1qlMetrics.EMPTY_METRICS),
-                                aqr.errors().toList(),
-                                aqr.status(),
-                                aqr.finalSuccess().singleOrDefault(Boolean.FALSE),
-                                new Func6<List<AsyncN1qlQueryRow>, Object, N1qlMetrics, List<JsonObject>, String, Boolean, N1qlQueryResult>() {
-                                    @Override
-                                    public N1qlQueryResult call(List<AsyncN1qlQueryRow> rows, Object signature,
-                                            N1qlMetrics info, List<JsonObject> errors, String finalStatus, Boolean finalSuccess) {
-                                        return new DefaultN1qlQueryResult(rows, signature, info, errors, finalStatus, finalSuccess,
-                                                parseSuccess, requestId, clientContextId);
-                                    }
-                                });
-                    }
-                })
-                .single(), timeout, timeUnit);
+                    return Observable.zip(aqr.rows().toList(),
+                        aqr.signature().singleOrDefault(JsonObject.empty()),
+                        aqr.info().singleOrDefault(N1qlMetrics.EMPTY_METRICS),
+                        aqr.errors().toList(),
+                        aqr.status(),
+                        aqr.finalSuccess().singleOrDefault(Boolean.FALSE),
+                        new Func6<List<AsyncN1qlQueryRow>, Object, N1qlMetrics, List<JsonObject>, String, Boolean, N1qlQueryResult>() {
+                            @Override
+                            public N1qlQueryResult call(List<AsyncN1qlQueryRow> rows, Object signature,
+                                                        N1qlMetrics info, List<JsonObject> errors, String finalStatus, Boolean finalSuccess) {
+                                return new DefaultN1qlQueryResult(rows, signature, info, errors, finalStatus, finalSuccess,
+                                    parseSuccess, requestId, clientContextId);
+                            }
+                        });
+                }
+            })
+            .single(), timeout, timeUnit);
     }
 
     @Override
@@ -916,6 +933,167 @@ public class CouchbaseBucket implements Bucket {
     public <D extends Document<?>> D prepend(D document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.prepend(document, persistTo, replicateTo), timeout, timeUnit);
     }
+
+    /*---------------------------*
+     * START OF SUB-DOCUMENT API *
+     *---------------------------*/
+    @Override
+    public <T> DocumentFragment<T> getIn(String id, String path, Class<T> fragmentType) {
+        return getIn(id, path, fragmentType, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> getIn(String id, String path, Class<T> fragmentType, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.getIn(id, path, fragmentType).singleOrDefault(null)
+            , timeout, timeUnit);
+    }
+
+    @Override
+    public boolean existsIn(String id, String path) {
+        return existsIn(id, path, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public boolean existsIn(String id, String path, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.existsIn(id, path), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo) {
+        return upsertIn(fragment, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.upsertIn(fragment, createParents, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> insertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo) {
+        return insertIn(fragment, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> insertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.insertIn(fragment, createParents, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> replaceIn(DocumentFragment<T> fragment, PersistTo persistTo,
+                                             ReplicateTo replicateTo) {
+        return replaceIn(fragment, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> replaceIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo,
+                                             long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.replaceIn(fragment, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> extendIn(DocumentFragment<T> fragment, ExtendDirection direction,
+                                            boolean createParents, PersistTo persistTo, ReplicateTo replicateTo) {
+        return extendIn(fragment, direction, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> extendIn(DocumentFragment<T> fragment, ExtendDirection direction,
+                                            boolean createParents, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.extendIn(fragment, direction, createParents, persistTo, replicateTo),
+            timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> arrayInsertIn(DocumentFragment<T> fragment, PersistTo persistTo,
+                                                 ReplicateTo replicateTo) {
+        return arrayInsertIn(fragment, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> arrayInsertIn(DocumentFragment<T> fragment, PersistTo persistTo,
+                                                 ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.arrayInsertIn(fragment, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> addUniqueIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                               ReplicateTo replicateTo) {
+        return addUniqueIn(fragment, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> addUniqueIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo,
+                                               ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.addUniqueIn(fragment, createParents, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> removeIn(DocumentFragment<T> fragment, PersistTo persistTo,
+                                            ReplicateTo replicateTo) {
+        return removeIn(fragment, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <T> DocumentFragment<T> removeIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo,
+                                            long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.removeIn(fragment, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public DocumentFragment<Long> counterIn(DocumentFragment<Long> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo) {
+        return counterIn(fragment, createParents, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public DocumentFragment<Long> counterIn(DocumentFragment<Long> fragment, boolean createParents, PersistTo persistTo,
+                                            ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.counterIn(fragment, createParents, persistTo, replicateTo), timeout, timeUnit);
+    }
+
+    @Override
+    public MultiLookupResult lookupIn(String id, LookupSpec... lookupSpecs) {
+        return lookupIn(id, kvTimeout, TIMEOUT_UNIT, lookupSpecs);
+    }
+
+    @Override
+    public MultiLookupResult lookupIn(String id, long timeout, TimeUnit timeUnit, LookupSpec... lookupSpecs) {
+        return Blocking.blockForSingle(asyncBucket.lookupIn(id, lookupSpecs), timeout, timeUnit);
+    }
+
+    //TODO reintroduce mutateIn once the protocol has been stabilized
+//    @Override
+//    public MultiMutationResult mutateIn(JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo,
+//                                        MutationSpec... mutationSpecs) {
+//        return mutateIn(doc, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT, mutationSpecs);
+//    }
+//
+//    @Override
+//    public MultiMutationResult mutateIn(JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo, long timeout,
+//                                        TimeUnit timeUnit, MutationSpec... mutationSpecs) {
+//        return Blocking.blockForSingle(asyncBucket.mutateIn(doc, persistTo, replicateTo, mutationSpecs), timeout, timeUnit);
+//    }
+//
+//    @Override
+//    public MultiMutationResult mutateIn(String docId, PersistTo persistTo, ReplicateTo replicateTo,
+//                                        MutationSpec... mutationSpecs) {
+//        return mutateIn(docId, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT, mutationSpecs);
+//    }
+//
+//    @Override
+//    public MultiMutationResult mutateIn(String docId, PersistTo persistTo, ReplicateTo replicateTo, long timeout,
+//                                        TimeUnit timeUnit, MutationSpec... mutationSpecs) {
+//        return Blocking.blockForSingle(asyncBucket.mutateIn(docId, persistTo, replicateTo, mutationSpecs), timeout, timeUnit);
+//    }
+
+    /*-------------------------*
+     * END OF SUB-DOCUMENT API *
+     *-------------------------*/
+
 
     @Override
     public Boolean close() {
