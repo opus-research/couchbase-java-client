@@ -22,25 +22,24 @@
 
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.java.SerializationHelper;
-import org.junit.Test;
-
 import static com.couchbase.client.java.query.Select.select;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
+import com.couchbase.client.java.SerializationHelper;
+import com.couchbase.client.java.document.json.JsonObject;
+import org.junit.Test;
 
 public class StatementSerializationTest {
 
     @Test
     public void rawStatementShouldBeSerializable() throws Exception {
-        N1qlQuery.RawStatement st = new N1qlQuery.RawStatement("test");
+        Query.RawStatement st = new Query.RawStatement("test");
 
         byte[] bytes = SerializationHelper.serializeToBytes(st);
         assertNotNull(bytes);
 
-        N1qlQuery.RawStatement deserialized = SerializationHelper.deserializeFromBytes(bytes,
-                N1qlQuery.RawStatement.class);
+        Query.RawStatement deserialized = SerializationHelper.deserializeFromBytes(bytes,
+                Query.RawStatement.class);
         assertEquals(st.toString(), deserialized.toString());
     }
     @Test
@@ -54,23 +53,21 @@ public class StatementSerializationTest {
         PrepareStatement deserialized = SerializationHelper.deserializeFromBytes(bytes,
                 PrepareStatement.class);
         assertEquals(st.toString(), deserialized.toString());
-        assertTrue(deserialized.toString().startsWith(PrepareStatement.PREPARE_PREFIX));
-        assertTrue(deserialized.toString().endsWith(toPrepare.toString()));
+        assertEquals(PrepareStatement.PREPARE_PREFIX + toPrepare.toString(), deserialized.toString());
     }
     @Test
-    public void preparedPayloadShouldBeSerializable() throws Exception {
-        PreparedPayload plan = new PreparedPayload(select("*"), "planName", "plan1234");
+    public void queryPlanShouldBeSerializable() throws Exception {
+        JsonObject internalPlan = JsonObject.create().put("plan", "test");
+        QueryPlan plan = new QueryPlan(internalPlan);
 
         byte[] bytes = SerializationHelper.serializeToBytes(plan);
         assertNotNull(bytes);
 
-        PreparedPayload deserialized = SerializationHelper.deserializeFromBytes(bytes,
-                PreparedPayload.class);
+        QueryPlan deserialized = SerializationHelper.deserializeFromBytes(bytes,
+                QueryPlan.class);
         assertNotNull(deserialized);
-        assertNotNull(deserialized.preparedName());
-        assertNotNull(deserialized.originalStatement());
-        assertEquals(plan.originalStatement().toString(), deserialized.originalStatement().toString());
-        assertEquals(plan.preparedName(), deserialized.preparedName());
+        assertNotNull(deserialized.plan());
+        assertEquals(plan.plan(), deserialized.plan());
         assertEquals(plan.toString(), deserialized.toString());
     }
 
