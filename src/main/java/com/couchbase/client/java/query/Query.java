@@ -61,10 +61,7 @@ public abstract class Query {
 
     //== PRIVATE CLASS FOR RAW STATEMENT ==
 
-    /* package */ static class RawStatement implements SerializableStatement {
-
-        private static final long serialVersionUID = 107907431113912054L;
-
+    /* package */ static class RawStatement implements Statement {
         private final String rawStatement;
 
         public RawStatement(String rawStatement) {

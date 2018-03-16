@@ -34,7 +34,7 @@ import com.couchbase.client.java.document.json.JsonValue;
 public abstract class AbstractQuery extends Query {
 
     private QueryParams queryParameters;
-    private SerializableStatement statement;
+    private Statement statement;
 
     /** The type of the statement, used as JSON name in the final JSON form of the query */
     protected abstract String statementType();
@@ -46,9 +46,7 @@ public abstract class AbstractQuery extends Query {
     protected abstract JsonValue statementParameters();
 
     protected AbstractQuery(Statement statement, QueryParams params) {
-        this.statement = (statement instanceof SerializableStatement)
-                ? (SerializableStatement) statement
-                : new RawStatement(statement.toString());
+        this.statement = statement;
         this.queryParameters = params;
     }
 

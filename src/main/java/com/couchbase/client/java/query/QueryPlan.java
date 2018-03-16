@@ -29,9 +29,7 @@ import com.couchbase.client.java.document.json.JsonObject;
  * @author Simon Baslé
  * @since 2.1
  */
-public class QueryPlan implements SerializableStatement {
-
-    private static final long serialVersionUID = 872622310459659115L;
+public class QueryPlan implements Statement {
 
     private final JsonObject jsonPlan;
 
