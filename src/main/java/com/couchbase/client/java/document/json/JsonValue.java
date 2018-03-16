@@ -52,7 +52,7 @@ public abstract class JsonValue {
      * @param item the value to check.
      * @return true if supported, false otherwise.
      */
-    public static boolean checkType(Object item) {
+    protected static boolean checkType(Object item) {
         return item == null
             || item instanceof String
             || item instanceof Integer
