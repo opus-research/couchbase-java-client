@@ -93,9 +93,9 @@ public class CouchbaseConnectionFactoryTest {
 
   /**
    * Verifies that when
-   * {@link CouchbaseConnectionFactory#pastReconnectThreshold()} is called
-   * in longer frames than the time period allows, no configuration update is
-   * triggered.
+   * {@link com.couchbase.client.CouchbaseConnectionFactory#pastReconnThreshold()}
+   * is called in longer frames than the time period allows, no configuration update
+   * is triggered.
    */
   @Test
   public void testPastReconnectThresholdWithSleep() throws Exception {
@@ -116,7 +116,6 @@ public class CouchbaseConnectionFactoryTest {
 
   @Test
   public void shouldRandomizeNodeList() throws Exception {
-    instance.setStreamingNodeOrder(CouchbaseNodeOrder.RANDOM);
     ConfigurationProviderMemcacheMock providerMock = new ConfigurationProviderMemcacheMock(
       Arrays.asList("127.0.0.1:8091/pools", "127.0.0.2:8091/pools",
         "127.0.0.3:8091/pools", "127.0.0.4:8091/pools")
@@ -145,6 +144,48 @@ public class CouchbaseConnectionFactoryTest {
     }
 
     assertTrue("Node list was not different after " + tries + " tries", false);
+  }
+
+  @Test
+  public void shouldBootstrapThroughProperties() throws Exception {
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.password", "");
+
+    CouchbaseConnectionFactory factory = new CouchbaseConnectionFactory();
+    Config config = factory.getVBucketConfig();
+
+    assertTrue(config.getServersCount() > 0);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoNodeProperty() throws Exception {
+    System.clearProperty("cbclient.nodes");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.password", "");
+
+    new CouchbaseConnectionFactory();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoBucketProperty() throws Exception {
+    System.clearProperty("cbclient.bucket");
+    System.setProperty("cbclient.password", "");
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+
+    new CouchbaseConnectionFactory();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailIfNoPasswordProperty() throws Exception {
+    System.clearProperty("cbclient.password");
+    System.setProperty("cbclient.bucket", "default");
+    System.setProperty("cbclient.nodes", "http://" + TestConfig.IPV4_ADDR
+      + ":8091/pools");
+
+    new CouchbaseConnectionFactory();
   }
 
 }
