@@ -27,20 +27,14 @@ import java.util.List;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.time.Delay;
-import com.couchbase.client.java.error.CannotRetryException;
 import rx.Scheduler;
 import rx.functions.Func1;
 
 /**
- * Builder for {@link RetryWhenFunction}. Start with {@link #any()}, {@link #anyOf(Class[])} or {@link #allBut(Class[])}
- * factory methods.
+ * Builder for {@link RetryWhenFunction}. Start with {@link #retryOnce()} or {@link #retryMax(int)} factory methods.
  *
- * By default, without calling additional methods it will retry on the specified exceptions, with a constant delay
- * (see {@link Retry#DEFAULT_DELAY}), and only once.
- *
- * Note that if retriable errors keep occurring more than the maximum allowed number of attempts, the last error that
- * triggered the extraneous attempt will be wrapped as the cause inside a {@link CannotRetryException}, which will be
- * emitted via the observable's onError method.
+ * By default, without calling additional methods it will retry the specified number of times, with a constant delay
+ * (see {@link Retry#DEFAULT_DELAY}) and on all errors.
  *
  * @author Simon Baslé
  * @since 2.1
@@ -96,22 +90,13 @@ public class RetryBuilder {
         return retryBuilder;
     }
 
-    /**
-     * Make only one retry attempt (default).
-     *
-     * If an error that can trigger a retry occurs twice in a row, it will be wrapped as the cause inside a
-     * {@link CannotRetryException}, which will be emitted via the observable's onError method.
-     */
+    /** Make only one retry attempt (default) */
     public RetryBuilder once() {
         this.maxAttempts = 1;
         return this;
     }
 
-    /** Make at most maxAttempts retry attempts.
-     *
-     * If an error that can trigger a retry occurs more that <i>maxAttempts</i>, it will be wrapped as the
-     * cause inside a {@link CannotRetryException}, which will be emitted via the observable's onError method.
-     */
+    /** Make at most maxAttempts retry attempts */
     public RetryBuilder max(int maxAttempts) {
         this.maxAttempts = maxAttempts;
         return this;
