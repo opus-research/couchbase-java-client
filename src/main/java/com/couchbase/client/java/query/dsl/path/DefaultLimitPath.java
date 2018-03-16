@@ -2,7 +2,11 @@ package com.couchbase.client.java.query.dsl.path;
 
 import com.couchbase.client.java.query.dsl.element.LimitElement;
 
-
+/**
+ * .
+ *
+ * @author Michael Nitschinger
+ */
 public class DefaultLimitPath extends DefaultOffsetPath implements LimitPath {
 
     public DefaultLimitPath(AbstractPath parent) {
