@@ -23,11 +23,16 @@
 package com.couchbase.client;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.naming.ConfigurationException;
@@ -42,15 +47,55 @@ import net.spy.memcached.tapmessage.ResponseMessage;
 import net.spy.memcached.tapmessage.TapOpcode;
 
 /**
- * A tap client for Couchbase server.
+ * A tap client for memcached, Membase, and Couchbase server.
  */
-public class TapClient extends net.spy.memcached.TapClient {
+public class TapClient {
+  private boolean vBucketAware;
+  private BlockingQueue<Object> rqueue;
+  private HashMap<Operation, TapConnectionProvider> omap;
+  private List<InetSocketAddress> addrs;
   private List<URI> baseList;
   private String bucketName;
+  private String usr;
   private String pwd;
+  private long messagesRead;
 
   /**
-   * Creates a cluster aware tap client for Couchbase Server.
+   * Creates a TapClient against the specified servers.
+   *
+   * This type of TapClient will TAP the specified servers, but will not be able
+   * to react to changes in the number of cluster nodes. Using the constructor
+   * which bootstraps itself from the cluster REST interface is preferred.
+   *
+   * @param ia the addresses of each node in the cluster.
+   */
+  public TapClient(InetSocketAddress... ia) {
+    this(Arrays.asList(ia));
+  }
+
+  /**
+   * Creates a TapClient against the specified servers.
+   *
+   * This type of TapClient will TAP the specified servers, but will not be able
+   * to react to changes in the number of cluster nodes. Using the constructor
+   * which bootstraps itself from the cluster REST interface is preferred.
+   *
+   * @param addrs a list of addresses containing each node in the cluster.
+   */
+  public TapClient(List<InetSocketAddress> addrs) {
+    this.rqueue = new LinkedBlockingQueue<Object>();
+    this.omap = new HashMap<Operation, TapConnectionProvider>();
+    this.vBucketAware = false;
+    this.addrs = addrs;
+    this.baseList = null;
+    this.bucketName = null;
+    this.usr = null;
+    this.pwd = null;
+    this.messagesRead = 0;
+  }
+
+  /**
+   * Creates a cluster aware TapClient
    *
    * This type of TapClient will TAP all servers in the specified cluster and
    * will react to changes in the number of cluster nodes.
@@ -61,15 +106,21 @@ public class TapClient extends net.spy.memcached.TapClient {
    * @param pwd the buckets password.
    */
   public TapClient(final List<URI> baseList, final String bucketName,
-      final String pwd) {
+      final String usr, final String pwd) {
     for (URI bu : baseList) {
       if (!bu.isAbsolute()) {
         throw new IllegalArgumentException("The base URI must be absolute");
       }
     }
+    this.rqueue = new LinkedBlockingQueue<Object>();
+    this.omap = new HashMap<Operation, TapConnectionProvider>();
+    this.vBucketAware = true;
+    this.addrs = null;
     this.baseList = baseList;
     this.bucketName = bucketName;
+    this.usr = usr;
     this.pwd = pwd;
+    this.messagesRead = 0;
   }
 
   /**
@@ -148,14 +199,18 @@ public class TapClient extends net.spy.memcached.TapClient {
    * @param message the custom tap message that will be used to initiate the tap
    *          stream.
    * @return the operation that controls the tap stream.
-   * @throws ConfigurationException a bad configuration was received from the
-   *           Couchbase cluster.
+   * @throws ConfigurationException a bad configuration was recieved from the
+   *           Membase cluster.
    * @throws IOException if there are errors connecting to the cluster.
    */
   public Operation tapCustom(String id, RequestMessage message)
     throws ConfigurationException, IOException {
-    final TapConnectionProvider conn = new TapConnectionProvider(baseList,
-        bucketName, pwd);
+    final TapConnectionProvider conn;
+    if (vBucketAware) {
+      conn = new TapConnectionProvider(baseList, bucketName, usr, pwd);
+    } else {
+      conn = new TapConnectionProvider(addrs);
+    }
 
     final CountDownLatch latch = new CountDownLatch(1);
     final Operation op = conn.getOpFactory().tapCustom(id, message,
@@ -193,8 +248,8 @@ public class TapClient extends net.spy.memcached.TapClient {
    *          backfill.
    * @param timeunit the unit of time for the runtime parameter.
    * @return the operation that controls the tap stream.
-   * @throws ConfigurationException a bad configuration was received from the
-   *           Couchbase cluster.
+   * @throws ConfigurationException a bad configuration was recieved from the
+   *           Membase cluster.
    * @throws IOException If there are errors connecting to the cluster.
    */
   public Operation tapBackfill(String id, final int runTime,
@@ -214,15 +269,19 @@ public class TapClient extends net.spy.memcached.TapClient {
    *          backfill.
    * @param timeunit the unit of time for the runtime parameter.
    * @return the operation that controls the tap stream.
-   * @throws ConfigurationException a bad configuration was received from the
-   *           Couchbase cluster.
+   * @throws ConfigurationException a bad configuration was recieved from the
+   *           Membase cluster.
    * @throws IOException If there are errors connecting to the cluster.
    */
   public Operation tapBackfill(final String id, final long date,
       final int runTime, final TimeUnit timeunit) throws IOException,
       ConfigurationException {
-    final TapConnectionProvider conn = new TapConnectionProvider(baseList,
-        bucketName, pwd);
+    final TapConnectionProvider conn;
+    if (vBucketAware) {
+      conn = new TapConnectionProvider(baseList, bucketName, usr, pwd);
+    } else {
+      conn = new TapConnectionProvider(addrs);
+    }
 
     final CountDownLatch latch = new CountDownLatch(1);
     final Operation op = conn.getOpFactory().tapBackfill(id, date,
@@ -268,21 +327,14 @@ public class TapClient extends net.spy.memcached.TapClient {
     return op;
   }
 
-  /**
-   * Specifies a tap stream that will take a snapshot of items in Couchbase and
-   * send them through a tap stream.
-   *
-   * @param id the named tap id that can be used to resume a disconnected tap
-   *          stream
-   * @return the operation that controls the tap stream.
-   * @throws ConfigurationException a bad configuration was received from the
-   *           Couchbase cluster.
-   * @throws IOException If there are errors connecting to the cluster.
-   */
   public Operation tapDump(final String id) throws IOException,
       ConfigurationException {
-    final TapConnectionProvider conn = new TapConnectionProvider(baseList,
-        bucketName, pwd);
+    final TapConnectionProvider conn;
+    if (vBucketAware) {
+      conn = new TapConnectionProvider(baseList, bucketName, usr, pwd);
+    } else {
+      conn = new TapConnectionProvider(addrs);
+    }
 
     final CountDownLatch latch = new CountDownLatch(1);
     final Operation op = conn.getOpFactory().tapDump(id,
@@ -318,8 +370,7 @@ public class TapClient extends net.spy.memcached.TapClient {
    */
   public void shutdown() {
     synchronized (omap) {
-      for (Map.Entry<Operation, net.spy.memcached.TapConnectionProvider> me
-          : omap.entrySet()) {
+      for (Map.Entry<Operation, TapConnectionProvider> me : omap.entrySet()) {
         me.getValue().shutdown();
       }
     }
