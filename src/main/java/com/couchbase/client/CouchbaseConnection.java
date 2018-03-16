@@ -24,10 +24,18 @@ package com.couchbase.client;
 
 import com.couchbase.client.internal.AdaptiveThrottler;
 import com.couchbase.client.internal.ThrottleManager;
-import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.FailureMode;
+import net.spy.memcached.MemcachedConnection;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.OperationFactory;
+import net.spy.memcached.ops.KeyedOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.ReplicaGetOperation;
+import net.spy.memcached.ops.VBucketAware;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,16 +50,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.MemcachedConnection;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.OperationFactory;
-import net.spy.memcached.ops.KeyedOperation;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.ReplicaGetOperation;
-import net.spy.memcached.ops.VBucketAware;
 
 /**
  * Maintains connections to each node in a cluster of Couchbase Nodes.
@@ -198,10 +196,13 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       return;
     }
 
+    boolean needsRecheckConfigUpdate = false;
     if (primary.isActive() || failureMode == FailureMode.Retry) {
       placeIn = primary;
+      needsRecheckConfigUpdate = !primary.isActive();
     } else if (failureMode == FailureMode.Cancel) {
       o.cancel();
+      needsRecheckConfigUpdate = true;
     } else {
       // Look for another node in sequence that is ready.
       for (Iterator<MemcachedNode> i = locator.getSequence(key); placeIn == null
@@ -211,16 +212,21 @@ public class CouchbaseConnection extends MemcachedConnection  implements
           placeIn = n;
         }
       }
-      // If we didn't find an active node, queue it in the primary node
-      // and wait for it to come back online.
+
       if (placeIn == null) {
         placeIn = primary;
-        getLogger().warn(
-            "Node expected to receive data is inactive. This could be due to "
-            + "a failure within the cluster. Will check for updated "
-            + "configuration. Key without a configured node is: %s.", key);
-        cf.checkConfigUpdate();
+        needsRecheckConfigUpdate = true;
       }
+    }
+
+    // If we didn't find an active node, queue it in the primary node
+    // and wait for it to come back online.
+    if (needsRecheckConfigUpdate) {
+      getLogger().warn(
+        "Node expected to receive data is inactive. This could be due to "
+          + "a failure within the cluster. Will check for updated "
+          + "configuration. Key without a configured node is: %s.", key);
+      cf.checkConfigUpdate();
     }
 
     assert o.isCancelled() || placeIn != null : "No node found for key " + key;
