@@ -946,8 +946,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
                         throw new CouchbaseOutOfMemoryException();
-                    case EXISTS:
-                        throw new CASMismatchException();
                     default:
                         throw new CouchbaseException(response.status().toString());
                 }
@@ -986,8 +984,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
                         throw new CouchbaseOutOfMemoryException();
-                    case EXISTS:
-                        throw new CASMismatchException();
                     default:
                         throw new CouchbaseException(response.status().toString());
                 }
