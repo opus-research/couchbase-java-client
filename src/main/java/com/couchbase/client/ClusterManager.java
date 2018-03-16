@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -79,14 +78,12 @@ public class ClusterManager extends SpyObject {
   /**
    * The default connection timeout in milliseconds.
    */
-  public static final int DEFAULT_CONN_TIMEOUT =
-    (int) TimeUnit.MINUTES.toMillis(2);
+  public static final int DEFAULT_CONN_TIMEOUT = 5000;
 
   /**
    * The default socket timeout in milliseconds.
    */
-  public static final int DEFAULT_SOCKET_TIMEOUT =
-    (int) TimeUnit.MINUTES.toMillis(2);
+  public static final int DEFAULT_SOCKET_TIMEOUT = 5000;
 
   /**
    * By default, enable tcp nodelay.
@@ -478,13 +475,13 @@ public class ClusterManager extends SpyObject {
 
             @Override
             public void failed(Exception ex) {
-              getLogger().warn("Cluster Response failed with: ", ex);
+              getLogger().debug("Cluster Response failed with: ", ex);
               latch.countDown();
             }
 
             @Override
             public void cancelled() {
-              getLogger().warn("Cluster Response was cancelled.");
+              getLogger().debug("Cluster Response was cancelled.");
               latch.countDown();
             }
           }
@@ -492,7 +489,7 @@ public class ClusterManager extends SpyObject {
 
         latch.await();
         if (!success.get()) {
-          getLogger().info("Could not finish request execution");
+          getLogger().debug("Could not finish request execution");
           continue;
         }
 
