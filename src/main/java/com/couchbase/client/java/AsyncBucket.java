@@ -36,7 +36,6 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.LegacyDocument;
 import com.couchbase.client.java.document.StringDocument;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
@@ -51,7 +50,6 @@ import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.core.QueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -87,13 +85,6 @@ public interface AsyncBucket {
     String name();
 
     /**
-     * The {@link CouchbaseEnvironment} used.
-     *
-     * @return the CouchbaseEnvironment.
-     */
-    CouchbaseEnvironment environment();
-
-    /**
      * Returns the underlying "core-io" library through its {@link ClusterFacade}.
      *
      * Handle with care, with great power comes great responsibility. All additional checks which are normally performed
@@ -102,13 +93,6 @@ public interface AsyncBucket {
      * @return the underlying {@link ClusterFacade} from the "core-io" package.
      */
     Observable<ClusterFacade> core();
-
-    /**
-     * Returns the underlying {@link QueryExecutor} used to perform N1QL queries.
-     *
-     * Handle with care since all additional checks that are normally performed by this library may be skipped.
-     */
-    QueryExecutor queryExecutor();
 
     /**
      * Retrieves a {@link JsonDocument} by its unique ID.
