@@ -57,8 +57,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
 import org.apache.http.message.BasicHttpRequest;
@@ -749,17 +747,9 @@ public class CouchbaseClient extends MemcachedClient
 
   @Override
   public boolean shutdown(long timeout, TimeUnit unit) {
-    boolean shutdownResult = false;
-    try {
-      shutdownResult = super.shutdown(timeout, unit);
-      CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
-      cf.getConfigurationProvider().shutdown();
-      vconn.shutdown();
-    } catch (IOException ex) {
-      Logger.getLogger(
-         CouchbaseClient.class.getName()).log(Level.SEVERE, null, ex);
-    }
+    boolean shutdownResult = super.shutdown(timeout, unit);
+    CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
+    cf.getConfigurationProvider().shutdown();
     return shutdownResult;
   }
-
 }
