@@ -30,5 +30,4 @@ public interface EntityMetadata {
      * @return the metadata or null.
      */
     PropertyMetadata idProperty();
-
 }
