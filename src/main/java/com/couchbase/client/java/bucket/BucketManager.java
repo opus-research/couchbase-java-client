@@ -217,11 +217,12 @@ public interface BucketManager {
     /**
      * Loads a {@link DesignDocument}s by its name from either development or production with a custom timeout.
      *
+     * If the {@link DesignDocument} is not found, null is returned.
+     *
      * This method throws:
      *
      * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
      * - com.couchbase.client.java.error.TranscodingException: If the server response could not be parsed.
-     * - com.couchbase.client.java.error.DesignDocumentDoesNotExistException: If {@link DesignDocument} is not found.
      *
      * @param name the name of the {@link DesignDocument}.
      * @param development if {@link DesignDocument} should be loaded from development or from production.
@@ -392,7 +393,6 @@ public interface BucketManager {
      * This method throws:
      *
      * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentDoesNotExistException: If {@link DesignDocument} is not found.
      *
      * @param name the name of the {@link DesignDocument}.
      * @return true if succeeded, false otherwise.
@@ -405,7 +405,6 @@ public interface BucketManager {
      * This method throws:
      *
      * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentDoesNotExistException: If {@link DesignDocument} is not found.
      *
      * @param name the name of the {@link DesignDocument}.
      * @param timeout the custom timeout.
@@ -420,7 +419,6 @@ public interface BucketManager {
      * This method throws:
      *
      * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentDoesNotExistException: If {@link DesignDocument} is not found.
      *
      * @param name the name of the {@link DesignDocument}.
      * @param development if the {@link DesignDocument} should be removed from development or production.
@@ -434,8 +432,6 @@ public interface BucketManager {
      * This method throws:
      *
      * - java.util.concurrent.TimeoutException: If the timeout is exceeded.
-     * - com.couchbase.client.java.error.DesignDocumentDoesNotExistException: If {@link DesignDocument} is not found.
-     *
      *
      * @param name the name of the {@link DesignDocument}.
      * @param development if the {@link DesignDocument} should be removed from development or production.

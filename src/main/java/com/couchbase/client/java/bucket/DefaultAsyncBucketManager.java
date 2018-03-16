@@ -34,7 +34,6 @@ import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.config.BucketConfigRequest;
 import com.couchbase.client.core.message.config.BucketConfigResponse;
 import com.couchbase.client.core.message.config.GetDesignDocumentsRequest;
@@ -50,7 +49,13 @@ import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.*;
+import com.couchbase.client.java.error.CannotRetryException;
+import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
+import com.couchbase.client.java.error.DesignDocumentException;
+import com.couchbase.client.java.error.IndexAlreadyExistsException;
+import com.couchbase.client.java.error.IndexDoesNotExistException;
+import com.couchbase.client.java.error.IndexesNotReadyException;
+import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
 import com.couchbase.client.java.query.Index;
@@ -186,9 +191,6 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }).filter(new Func1<GetDesignDocumentResponse, Boolean>() {
             @Override
             public Boolean call(GetDesignDocumentResponse response) {
-                if (response.status() == ResponseStatus.NOT_EXISTS) {
-                    throw new DesignDocumentDoesNotExistException();
-                }
                 boolean success = response.status().isSuccess();
                 if (!success) {
                     if (response.content() != null && response.content().refCnt() > 0) {
@@ -197,7 +199,8 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                 }
                 return success;
             }
-        }).map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
+        })
+            .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
                 @Override
                 public DesignDocument call(GetDesignDocumentResponse response) {
                     JsonObject converted;
@@ -224,16 +227,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<DesignDocument> insertDesignDocument(final DesignDocument designDocument, final boolean development) {
         return getDesignDocument(designDocument.name(), development)
-            .onErrorResumeNext(new Func1<Throwable, Observable<? extends DesignDocument>>() {
-                @Override
-                public Observable<? extends DesignDocument> call(Throwable throwable) {
-                    if (throwable instanceof DesignDocumentDoesNotExistException) {
-                        return Observable.empty();
-                    } else {
-                        return Observable.error(throwable);
-                    }
-                }
-            }).isEmpty()
+            .isEmpty()
             .flatMap(new Func1<Boolean, Observable<DesignDocument>>() {
                 @Override
                 public Observable<DesignDocument> call(Boolean doesNotExist) {
@@ -299,9 +293,6 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }).map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
             @Override
             public Boolean call(RemoveDesignDocumentResponse response) {
-                if (response.status() == ResponseStatus.NOT_EXISTS) {
-                    throw new DesignDocumentDoesNotExistException();
-                }
                 if (response.content() != null && response.content().refCnt() > 0) {
                     response.content().release();
                 }
@@ -318,16 +309,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<DesignDocument> publishDesignDocument(final String name, final boolean overwrite) {
         return getDesignDocument(name, false)
-                .onErrorResumeNext(new Func1<Throwable, Observable<? extends DesignDocument>>() {
-                    @Override
-                    public Observable<? extends DesignDocument> call(Throwable throwable) {
-                        if (throwable instanceof DesignDocumentDoesNotExistException) {
-                            return Observable.empty();
-                        } else {
-                            return Observable.error(throwable);
-                        }
-                    }
-                }).isEmpty()
+            .isEmpty()
             .flatMap(new Func1<Boolean, Observable<DesignDocument>>() {
                 @Override
                 public Observable<DesignDocument> call(Boolean doesNotExist) {
