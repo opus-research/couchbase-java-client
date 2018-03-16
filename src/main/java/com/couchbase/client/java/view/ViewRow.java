@@ -1,15 +1,15 @@
-package com.couchbase.client.java.query;
+package com.couchbase.client.java.view;
 
 /**
  * Created by michael on 05/05/14.
  */
-public class ViewResult {
+public class ViewRow {
 
     private final String id;
     private final String key;
     private final Object value;
 
-    public ViewResult(String id, String key, Object value) {
+    public ViewRow(String id, String key, Object value) {
         this.id = id;
         this.key = key;
         this.value = value;

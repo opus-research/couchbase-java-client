@@ -2,18 +2,12 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryResult;
-import com.couchbase.client.java.query.ViewQuery;
-import com.couchbase.client.java.query.ViewResult;
+import com.couchbase.client.java.query.N1qlQuery;
+import com.couchbase.client.java.query.N1qlRow;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewRow;
 import rx.Observable;
 
-/**
- * Represents a Couchbase Server bucket.
- *
- * @author Michael Nitschinger
- * @since 2.0
- */
 public interface Bucket {
 
     /**
@@ -95,20 +89,20 @@ public interface Bucket {
     <D extends Document<?>> Observable<D> remove(String id, Class<D> target);
 
     /**
-    * Queries a View defined by the {@link ViewQuery} and returns a {@link ViewResult}
+    * Queries a View defined by the {@link ViewQuery} and returns a {@link ViewRow}
     * for each emitted row in the view.
     *
     * @param query the query for the view.
     * @return a row for each result (from 0 to N).
     */
-    Observable<ViewResult> query(ViewQuery query);
+    Observable<ViewRow> query(ViewQuery query);
 
     /**
-     * Runs a {@link Query} and returns a {@link QueryResult} for each emitted row in the result.
+     * Runs a {@link N1qlQuery} and returns a {@link N1qlRow} for each emitted row in the result.
      *
      * @param query the query.
      * @return a row for each result (from 0 to N).
      */
-    Observable<QueryResult> query(Query query);
+    Observable<N1qlRow> query(N1qlQuery query);
 
 }
