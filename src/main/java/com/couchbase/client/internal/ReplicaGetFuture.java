@@ -158,7 +158,6 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> addListener(
     ReplicaGetCompletionListener listener) {
     super.addToListeners((GenericCompletionListener) listener);
@@ -166,7 +165,6 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ReplicaGetFuture<T> removeListener(
     ReplicaGetCompletionListener listener) {
     super.removeFromListeners((GenericCompletionListener) listener);

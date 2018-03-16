@@ -94,14 +94,12 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ViewFuture addListener(HttpCompletionListener listener) {
     super.addToListeners((GenericCompletionListener) listener);
     return this;
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public ViewFuture removeListener(HttpCompletionListener listener) {
     super.removeFromListeners((GenericCompletionListener) listener);
     return this;
