@@ -460,7 +460,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
   public void testNoPersistRepObserve() throws Exception {
     OperationFuture<Boolean> noPersistRep =
       (((CouchbaseClient)client).add("testNoPersistRepObserve", 0, "value",
-        PersistTo.ZERO, ReplicateTo.ZERO));
+      PersistTo.ZERO, ReplicateTo.ZERO));
     assertTrue("Key not added and not persisted to master : "
       + noPersistRep.getStatus().getMessage(), noPersistRep.get());
   }
@@ -489,7 +489,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
   }
 
   /**
-   * Test observe with stale CAS.
+   * Test observe with stale CAS
    *
    * @pre Perform an add operation with cas1 and then set with cas2
    * @post Append should not succeed if performed with cas1
@@ -497,14 +497,13 @@ public class CouchbaseClientTest extends BinaryClientTest {
    * @throws Exception
    */
   public void testStaleCAS() throws Exception {
-    OperationFuture<Boolean> staleCasOp = client.add("testStaleCAS", 0,
-      "value");
+    OperationFuture<Boolean> staleCasOp = client.add("testStaleCAS", 0, "value");
     long cas1 = staleCasOp.getCas();
     client.set("testStaleCAS", 0, "value2").getCas();
     assertFalse(client.append(cas1, "testStaleCAS", "")
       .getStatus().isSuccess());
     assertEquals((client.append(cas1, "testStaleCAS", "")
-      .getStatus().getMessage()), "Data exists for key");
+      .getStatus().getMessage()),"Data exists for key");
   }
   /**
    * Get the key status from the client in the operation future object.
@@ -745,8 +744,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
 
     Thread.sleep(2500);
     Object response = client.get(key);
-    assertNull("casWithExpiration key should be null but was: " + response,
-      response);
+    assertNull("casWithExpiration key should be null but was: " + response, response);
   }
 
   @Override

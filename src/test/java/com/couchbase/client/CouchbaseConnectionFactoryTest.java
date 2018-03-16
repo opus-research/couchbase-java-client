@@ -93,9 +93,9 @@ public class CouchbaseConnectionFactoryTest {
 
   /**
    * Verifies that when
-   * {@link CouchbaseConnectionFactory#pastReconnThreshold()}
-   * is called in longer frames than the time period allows, no configuration
-   * update is triggered.
+   * {@link com.couchbase.client.CouchbaseConnectionFactory#pastReconnThreshold()}
+   * is called in longer frames than the time period allows, no configuration update
+   * is triggered.
    */
   @Test
   public void testPastReconnectThresholdWithSleep() throws Exception {
@@ -116,18 +116,15 @@ public class CouchbaseConnectionFactoryTest {
 
   @Test
   public void shouldRandomizeNodeList() throws Exception {
-    ConfigurationProviderMemcacheMock providerMock = new
-      ConfigurationProviderMemcacheMock(
-        Arrays.asList("127.0.0.1:8091/pools", "127.0.0.2:8091/pools",
+    ConfigurationProviderMemcacheMock providerMock = new ConfigurationProviderMemcacheMock(
+      Arrays.asList("127.0.0.1:8091/pools", "127.0.0.2:8091/pools",
         "127.0.0.3:8091/pools", "127.0.0.4:8091/pools")
-      );
+    );
 
     CouchbaseConnectionFactory connFact = new CouchbaseConnectionFactoryMock(
       Arrays.asList(
-        new URI("http://127.0.0.1:8091/pools"),
-        new URI("http://127.0.0.2:8091/pools"),
-        new URI("http://127.0.0.3:8091/pools"),
-        new URI("http://127.0.0.5:8091/pools")
+        new URI("http://127.0.0.1:8091/pools"), new URI("http://127.0.0.2:8091/pools"),
+        new URI("http://127.0.0.3:8091/pools"), new URI("http://127.0.0.5:8091/pools")
       ), "default", "", providerMock, CouchbaseNodeOrder.RANDOM
     );
 
@@ -148,8 +145,7 @@ public class CouchbaseConnectionFactoryTest {
       int nIndex2 = newList.indexOf(new URI("http://127.0.0.2:8091/pools"));
       int nIndex3 = newList.indexOf(new URI("http://127.0.0.3:8091/pools"));
       int nIndex4 = newList.indexOf(new URI("http://127.0.0.5:8091/pools"));
-      if (oIndex1 != nIndex1 || oIndex2 != nIndex2 || oIndex3 != nIndex3
-        || oIndex4 == nIndex4) {
+      if (oIndex1 != nIndex1 || oIndex2 != nIndex2 || oIndex3 != nIndex3 || oIndex4 == nIndex4) {
         assertTrue(true);
         return;
       }

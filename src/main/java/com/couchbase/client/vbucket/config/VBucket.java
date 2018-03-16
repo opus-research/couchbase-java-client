@@ -48,8 +48,7 @@ public class VBucket {
     this(m, r1, r2, REPLICA_NOT_USED);
   }
 
-  public VBucket(final short m, final short r1, final short r2,
-    final short r3) {
+  public VBucket(final short m, final short r1, final short r2, final short r3) {
     master = m;
     replica1 = r1;
     replica2 = r2;
@@ -62,15 +61,12 @@ public class VBucket {
 
   public int getReplica(int n) {
     switch (n) {
-    case 0:
-      return replica1;
-    case 1:
-      return replica2;
-    case 2:
-      return replica3;
-    default:
-      throw new IllegalArgumentException("No more than " + MAX_REPLICAS
-        + " replicas allowed.");
+      case 0: return replica1;
+      case 1: return replica2;
+      case 2: return replica3;
+      default:
+        throw new IllegalArgumentException("No more than " + MAX_REPLICAS
+          + " replicas allowed.");
     }
   }
 

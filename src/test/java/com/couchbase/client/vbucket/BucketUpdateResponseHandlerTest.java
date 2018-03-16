@@ -32,6 +32,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.easymock.classextension.EasyMock.createMock;

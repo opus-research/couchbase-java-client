@@ -70,10 +70,8 @@ public class DefaultConfigFactoryTest {
   @Test
   public void shouldCreateConfigFromOldConfigAndJSONObject() throws Exception {
     final Config configInit = factory.create(new JSONObject(rawConfig1));
-    final Config configUpdated = factory.create(new JSONObject(rawConfig2),
-      configInit);
-    final Config configInitFromUpdated = factory.create(
-      new JSONObject(rawConfig2));
+    final Config configUpdated = factory.create(new JSONObject(rawConfig2), configInit);
+    final Config configInitFromUpdated = factory.create(new JSONObject(rawConfig2));
 
     assertEquals(3, configUpdated.getServers().size());
     assertEquals("192.168.56.101:11210", configUpdated.getServers().get(0));

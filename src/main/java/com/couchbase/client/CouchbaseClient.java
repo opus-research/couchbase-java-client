@@ -88,6 +88,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -862,8 +863,7 @@ public class CouchbaseClient extends MemcachedClient
     final Transcoder<T> tc) {
     int discardedOps = 0;
 
-    int bucketReplicaCount = cbConnFactory.getVBucketConfig()
-      .getReplicasCount();
+    int bucketReplicaCount = cbConnFactory.getVBucketConfig().getReplicasCount();
     if (bucketReplicaCount == 0) {
       getLogger().debug("No replica configured for this bucket, trying to get "
         + "the document from active node only.");
@@ -897,8 +897,8 @@ public class CouchbaseClient extends MemcachedClient
 
     if (locator.hasActiveMaster(key)) {
       final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> additionalActiveGet = new GetFuture<T>(latch,
-        operationTimeout, key, executorService);
+      final GetFuture<T> additionalActiveGet = new GetFuture<T>(latch, operationTimeout, key,
+        executorService);
       Operation op = createOperationForReplicaGet(key, additionalActiveGet,
         replicaFuture, latch, tc, 0, false);
       additionalActiveGet.setOperation(op);
@@ -1571,8 +1571,7 @@ public class CouchbaseClient extends MemcachedClient
       }
     }
 
-    int replicaCount = Math.min(locator.getAll().size() - 1,
-      cfg.getReplicasCount());
+    int replicaCount = Math.min(locator.getAll().size() - 1, cfg.getReplicasCount());
     if (numReplica > replicaCount) {
       throw new ObservedException("Requested replication to " + numReplica
           + " node(s), but only " + replicaCount + " are available.");
@@ -1596,14 +1595,12 @@ public class CouchbaseClient extends MemcachedClient
     final long pollInterval = cbConnFactory.getObsPollInterval();
     final VBucketNodeLocator locator = (VBucketNodeLocator) mconn.getLocator();
 
-    final int shouldPersistTo = persist.getValue() > 0
-      ? persist.getValue() - 1 : 0;
+    final int shouldPersistTo = persist.getValue() > 0 ? persist.getValue() - 1 : 0;
     final int shouldReplicateTo = replicate.getValue();
     final boolean shouldPersistToMaster = persist.getValue() > 0;
 
     final boolean toMaster = persist.getValue() > 0;
-    final boolean toReplica = replicate.getValue() > 0
-      || persist.getValue() > 1;
+    final boolean toReplica = replicate.getValue() > 0 || persist.getValue() > 1;
 
     int donePolls = 0;
     int alreadyPersistedTo = 0;
@@ -1638,8 +1635,7 @@ public class CouchbaseClient extends MemcachedClient
         }
 
         if (isDelete) {
-          if (!isMaster && observeResponse
-            == ObserveResponse.NOT_FOUND_NOT_PERSISTED) {
+          if (!isMaster && observeResponse == ObserveResponse.NOT_FOUND_NOT_PERSISTED) {
             alreadyReplicatedTo++;
           }
           if (observeResponse == ObserveResponse.NOT_FOUND_PERSISTED) {
@@ -1651,8 +1647,7 @@ public class CouchbaseClient extends MemcachedClient
             }
           }
         } else {
-          if (!isMaster && observeResponse
-            == ObserveResponse.FOUND_NOT_PERSISTED) {
+          if (!isMaster && observeResponse == ObserveResponse.FOUND_NOT_PERSISTED) {
             alreadyReplicatedTo++;
           }
           if (observeResponse == ObserveResponse.FOUND_PERSISTED) {
