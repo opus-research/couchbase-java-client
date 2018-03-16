@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.view;
 
-import com.couchbase.client.java.SerializationHelper;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import org.junit.Test;
@@ -29,7 +28,6 @@ import org.junit.Test;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Verifies the correct functionality of the {@link ViewQuery} DSL.
@@ -256,23 +254,6 @@ public class ViewQueryTest {
 
         query = ViewQuery.from("design", "view").development(false);
         assertFalse(query.isDevelopment());
-    }
-
-    @Test
-    public void shouldSupportSerialization() throws Exception {
-        ViewQuery query = ViewQuery.from("design", "view")
-            .descending()
-            .debug()
-            .development()
-            .group()
-            .reduce(false)
-            .startKey(JsonArray.from("foo", true));
-
-        byte[] serialized = SerializationHelper.serializeToBytes(query);
-        assertNotNull(serialized);
-
-        ViewQuery deserialized = SerializationHelper.deserializeFromBytes(serialized, ViewQuery.class);
-        assertEquals(query, deserialized);
     }
 
 }
