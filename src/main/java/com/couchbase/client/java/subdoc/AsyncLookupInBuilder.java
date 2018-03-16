@@ -44,7 +44,6 @@ import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.java.error.subdoc.SubDocumentException;
-import com.couchbase.client.java.error.subdoc.XattrOrderingException;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
 import rx.Observable;
@@ -439,14 +438,6 @@ public class AsyncLookupInBuilder {
     protected Observable<DocumentFragment<Lookup>> doMultiLookup() {
         if (specs.isEmpty()) {
             throw new IllegalArgumentException("At least one Lookup Command is necessary for lookupIn");
-        }
-        boolean seenNonXattr = false;
-        for (LookupSpec spec : specs) {
-            if (spec.xattr() && seenNonXattr) {
-                throw new XattrOrderingException("Xattr-based commands must always come first in the builder!");
-            } else if (!spec.xattr()) {
-                seenNonXattr = true;
-            }
         }
         final LookupSpec[] lookupSpecs = specs.toArray(new LookupSpec[specs.size()]);
 
