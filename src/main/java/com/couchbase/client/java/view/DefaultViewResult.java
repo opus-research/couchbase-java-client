@@ -65,11 +65,6 @@ public class DefaultViewResult implements ViewResult {
     }
 
     @Override
-    public Iterator<ViewRow> iterator() {
-        return rows();
-    }
-
-    @Override
     public int totalRows() {
         return asyncViewResult.totalRows();
     }
