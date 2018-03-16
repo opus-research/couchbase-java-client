@@ -19,37 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.convert;
 
-import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.document.CoreDocument;
-import com.couchbase.client.java.document.Document;
+package com.couchbase.client.java.convert.util;
 
-/**
- * Generic interface for document body converters.
- */
-public interface Converter<D extends Document<T>, T> {
+import java.util.regex.Pattern;
+
+public class StringUtils {
 
   /**
-   * Creates a new document.
-   *
-   * @return a new document.
+   * A pattern to match on a signed integer value.
    */
-  D newDocument(String id);
+  private static final Pattern decimalPattern = Pattern.compile("^-?\\d+$");
 
   /**
-   * Converts decode the source format into a {@link CoreDocument}.
+   * Check if a given string is a JSON object.
    *
-   * @param document the document with the source content.
-   * @return the converted core document.
+   * @param document the input string.
+   * @return true if it is a JSON object, false otherwise.
    */
-  CoreDocument encode(Document document);
+  public static boolean isJsonObject(final String document) {
+    return (document != null && !document.isEmpty()) && (document.startsWith("{") || document.startsWith("[")
+        || "true".equals(document) || "false".equals(document)
+        || "null".equals(document) || decimalPattern.matcher(document).matches()
+    );
+  }
 
-  /**
-   * Converts decode a {@link CoreDocument} into the target format.
-   *
-   * @param coreDocument the core document to be decoded.
-   * @return the converted object.
-   */
-  Document decode(String id, CoreDocument coreDocument, ResponseStatus status);
 }
