@@ -46,7 +46,6 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.*;
@@ -82,15 +81,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     private final ClusterFacade core;
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
     private final AsyncBucketManager bucketManager;
-    private final CouchbaseEnvironment environment;
 
 
-    public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-        final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
+    public CouchbaseAsyncBucket(final ClusterFacade core, final String name, final String password,
+                                final List<Transcoder<? extends Document, ?>> customTranscoders) {
         bucket = name;
         this.password = password;
         this.core = core;
-        this.environment = environment;
 
         transcoders = new ConcurrentHashMap<Class<? extends Document>, Transcoder<? extends Document, ?>>();
         transcoders.put(JSON_OBJECT_TRANSCODER.documentType(), JSON_OBJECT_TRANSCODER);
@@ -331,20 +328,19 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
-                    .map(new Func1<Boolean, D>() {
-                        @Override
-                        public D call(Boolean aBoolean) {
-                            return doc;
-                        }
-                    }).onErrorResumeNext(new Func1<Throwable, Observable<? extends D>>() {
-                        @Override
-                        public Observable<? extends D> call(Throwable throwable) {
-                            return Observable.error(
-                                    new DurabilityException("Durability constraint failed.", throwable));
-                        }
-                    });
+                        .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
+                        .map(new Func1<Boolean, D>() {
+                            @Override
+                            public D call(Boolean aBoolean) {
+                                return doc;
+                            }
+                        }).onErrorResumeNext(new Func1<Throwable, Observable<? extends D>>() {
+                            @Override
+                            public Observable<? extends D> call(Throwable throwable) {
+                                return Observable.error(
+                                        new DurabilityException("Durability constraint failed.", throwable));
+                            }
+                        });
             }
         });
     }
@@ -376,8 +372,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -421,8 +416,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -484,8 +478,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), true, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), true, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
