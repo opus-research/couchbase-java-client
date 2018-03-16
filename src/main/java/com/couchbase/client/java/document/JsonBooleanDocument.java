@@ -21,14 +21,7 @@
  */
 package com.couchbase.client.java.document;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-
-public class JsonBooleanDocument extends AbstractDocument<Boolean> implements Serializable {
-
-    private static final long serialVersionUID = -6187394630378336834L;
+public class JsonBooleanDocument extends AbstractDocument<Boolean> {
 
     /**
      * Creates a {@link JsonBooleanDocument} which the document id.
@@ -147,13 +140,5 @@ public class JsonBooleanDocument extends AbstractDocument<Boolean> implements Se
      */
     private JsonBooleanDocument(String id, int expiry, Boolean content, long cas) {
         super(id, expiry, content, cas);
-    }
-
-    private void writeObject(ObjectOutputStream stream) throws IOException {
-        writeToSerializedStream(stream);
-    }
-
-    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        readFromSerializedStream(stream);
     }
 }
