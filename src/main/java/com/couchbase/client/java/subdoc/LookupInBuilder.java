@@ -165,17 +165,6 @@ public class LookupInBuilder {
     }
 
     /**
-     * Get full JSON document
-     *
-     * @return this builder for chaining.
-     */
-    @InterfaceStability.Experimental
-    public LookupInBuilder get() {
-        this.async.get();
-        return this;
-    }
-
-    /**
      * Get a value inside the JSON document.
      *
      * @param path the paths inside the document where to get the value from.
@@ -238,47 +227,6 @@ public class LookupInBuilder {
      */
     public LookupInBuilder exists(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
         this.async.exists(paths, optionsBuilder);
-        return this;
-    }
-
-    /**
-     * Get a count of values inside the JSON document.
-     *
-     * This method is only available with Couchbase Server 5.0 and later.
-     *
-     * @param paths the paths inside the document where to get the count from.
-     * @return this builder for chaining.
-     */
-    public LookupInBuilder getCount(String... paths) {
-        this.async.getCount(paths);
-        return this;
-    }
-
-    /**
-     * Get a count of values inside the JSON document.
-     *
-     * This method is only available with Couchbase Server 5.0 and later.
-     *
-     * @param path the paths inside the document where to get the count from.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public LookupInBuilder getCount(String path, SubdocOptionsBuilder optionsBuilder) {
-        this.async.getCount(path, optionsBuilder);
-        return this;
-    }
-
-    /**
-     * Get a count of values inside the JSON document.
-     *
-     * This method is only available with Couchbase Server 5.0 and later.
-     *
-     * @param paths the paths inside the document where to get the count from.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @return this builder for chaining.
-     */
-    public LookupInBuilder getCount(Iterable<String> paths, SubdocOptionsBuilder optionsBuilder) {
-        this.async.getCount(paths, optionsBuilder);
         return this;
     }
 
