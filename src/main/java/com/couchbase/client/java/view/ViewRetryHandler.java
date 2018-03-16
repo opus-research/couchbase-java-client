@@ -81,8 +81,7 @@ public class ViewRetryHandler {
                             }
                         });
                 }
-            })
-            .last();
+            });
     }
 
     /**
@@ -101,25 +100,19 @@ public class ViewRetryHandler {
             .info()
             .map(new Func1<ByteBuf, ViewQueryResponse>() {
                 @Override
-                public ViewQueryResponse call(ByteBuf infoBuffer) {
-                    ByteBuf infoBufferCopy = infoBuffer.copy();
+                public ViewQueryResponse call(ByteBuf byteBuf) {
+                    ByteBuf infoCopy = byteBuf.copy();
                     JsonObject content = null;
                     try {
                         content =
-                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoBufferCopy);
+                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoCopy);
                     } catch (Exception e) {
-                        if (infoBuffer.refCnt() > 0) {
-                            infoBuffer.release();
-                        }
                         throw new CouchbaseException("Could not parse View error message", e);
                     } finally {
-                        infoBufferCopy.release();
+                        infoCopy.release();
                     }
 
                     if (shouldRetry(responseCode, content)) {
-                        if (infoBuffer.refCnt() > 0) {
-                            infoBuffer.release();
-                        }
                         throw SHOULD_RETRY;
                     }
                     return response;
