@@ -93,6 +93,7 @@ public class ViewConnection extends SpyThread  implements
 
   private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
     throws IOException {
+
     List<ViewNode> nodeList = new LinkedList<ViewNode>();
 
     for (InetSocketAddress a : addrs) {
@@ -104,7 +105,7 @@ public class ViewConnection extends SpyThread  implements
               false)
           .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
           .setParameter(CoreProtocolPNames.USER_AGENT,
-              "Spymemcached Client/1.1");
+              new BuildInfo().toString());
 
       HttpProcessor httpproc =
           new ImmutableHttpProcessor(new HttpRequestInterceptor[] {

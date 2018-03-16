@@ -100,21 +100,19 @@ public class CouchbaseConnection extends MemcachedConnection  implements
 
     for (InetSocketAddress a : addrs) {
       HttpParams params = new SyncBasicHttpParams();
-      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT,
-              5000).setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT,
-              5000).setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE,
-              8 * 1024).setBooleanParameter(
-              CoreConnectionPNames.STALE_CONNECTION_CHECK,
-              false).setBooleanParameter(
-              CoreConnectionPNames.TCP_NODELAY, true).setParameter(
-              CoreProtocolPNames.USER_AGENT,
-              "Spymemcached Client/1.1");
-
+      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
+         .setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000)
+         .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
+         .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK,
+              false)
+         .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
+         .setParameter(CoreProtocolPNames.USER_AGENT,
+              new BuildInfo().toString());
       HttpProcessor httpproc =
-              new ImmutableHttpProcessor(new HttpRequestInterceptor[]{
-                new RequestContent(), new RequestTargetHost(),
-                new RequestConnControl(), new RequestUserAgent(),
-                new RequestExpectContinue(), });
+            new ImmutableHttpProcessor(new HttpRequestInterceptor[]{
+              new RequestContent(), new RequestTargetHost(),
+              new RequestConnControl(), new RequestUserAgent(),
+              new RequestExpectContinue(), });
 
       AsyncNHttpClientHandler protocolHandler =
               new AsyncNHttpClientHandler(httpproc,

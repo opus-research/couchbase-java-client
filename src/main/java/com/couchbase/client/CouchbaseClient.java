@@ -368,15 +368,6 @@ public class CouchbaseClient extends MemcachedClient
   /**
    * Gets a list of views for a given design document from the cluster.
    *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
    * @param designDocumentName the name of the design document.
    * @return a list of View objects from the cluster.
    */
@@ -401,8 +392,8 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result of its
-   * map function. The result can be accessed row-wise via an iterator. This
+   * Asynchronously queries a Couchbase view and returns the result.
+   * The result can be accessed row-wise via an iterator. This
    * type of query will return the view result along with all of the documents
    * for each row in the query.
    *
@@ -451,10 +442,10 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result of its
-   * map function. The result can be accessed row-wise via an iterator. This
-   * type of query will return the view result but will not get the documents
-   * associated with each row of the query.
+   * Asynchronously queries a Couchbase view and returns the result.
+   * The result can be accessed row-wise via an iterator. This
+   * type of query will return the view result but will not
+   * get the documents associated with each row of the query.
    *
    * @param view the view to run the query against.
    * @param query the type of query to run against the view.
@@ -494,9 +485,8 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result of its
-   * map function followed by the reduce function. The result can be
-   * accessed row-wise via an iterator.
+   * Asynchronously queries a Couchbase view and returns the result.
+   * The result can be accessed row-wise via an iterator.
    *
    * @param view the view to run the query against.
    * @param query the type of query to run against the view.
@@ -539,10 +529,10 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Queries a Couchbase view and returns the result of its
-   * map function. The result can be accessed row-wise via an iterator.
-   * This type of query
-   * will return the view result along with all of the documents for each row in
+   * Queries a Couchbase view and returns the result.
+   * The result can be accessed row-wise via an iterator.
+   * This type of query will return the view result along
+   * with all of the documents for each row in
    * the query.
    *
    * @param view the view to run the query against.
@@ -572,7 +562,7 @@ public class CouchbaseClient extends MemcachedClient
    * @return A Paginator (iterator) to use for reading the results of the query.
    */
   public Paginator paginatedQuery(View view, Query query, int docsPerPage) {
-    return new Paginator(this, view, query, 10);
+    return new Paginator(this, view, query, docsPerPage);
   }
 
   /**
