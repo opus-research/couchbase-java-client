@@ -71,10 +71,6 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.fts.SearchParams;
-import com.couchbase.client.java.fts.SearchQuery;
-import com.couchbase.client.java.search.SearchQueryResult;
-import com.couchbase.client.java.search.SearchQueryRow;
 import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
 import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
@@ -92,6 +88,9 @@ import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.core.N1qlQueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.SearchQueryRow;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
 import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
@@ -787,17 +786,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<SearchQueryResult> query(final String indexName, final SearchQuery query) {
-        return query(indexName, query, SearchParams.build());
-    }
-
-    @Override
-    public Observable<SearchQueryResult> query(final String indexName, final SearchQuery query, final SearchParams params) {
+    public Observable<SearchQueryResult> query(final SearchQuery query) {
         Observable<SearchQueryResponse> source = Observable.defer(new Func0<Observable<SearchQueryResponse>>() {
             @Override
             public Observable<SearchQueryResponse> call() {
                 final SearchQueryRequest request =
-                    new SearchQueryRequest(indexName, query.export(params).toString(), bucket, password);
+                    new SearchQueryRequest(query.index(), query.json().toString(), bucket, password);
                 return core.send(request);
             }
         });
@@ -881,7 +875,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
                     hits.add(new SearchQueryRow(index, id, score, explanation, locations, fragments, fields));
                 }
-                //FIXME use fts SearchQueryResult
                 return new SearchQueryResult(took, totalHits, maxScore, hits);
             }
         });
