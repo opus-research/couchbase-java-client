@@ -2241,11 +2241,6 @@ public interface Bucket {
     /**
      * Append a {@link Document} to another one with the default key/value timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the appended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2253,14 +2248,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be appended.
      * @return a document which mirrors the one supplied as an argument.
@@ -2270,11 +2262,6 @@ public interface Bucket {
     /**
      * Append a {@link Document} to another one with a custom timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the appended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2282,14 +2269,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be appended.
      * @param timeout the custom timeout.
@@ -2301,11 +2285,6 @@ public interface Bucket {
     /**
      * Prepend a {@link Document} to another one with the default key/value timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the prepended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2313,14 +2292,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be prepended.
      * @return a document which mirrors the one supplied as an argument.
@@ -2330,11 +2306,6 @@ public interface Bucket {
     /**
      * Prepend a {@link Document} to another one with a custom timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the prepended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2342,14 +2313,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be prepended.
      * @param timeout the custom timeout.

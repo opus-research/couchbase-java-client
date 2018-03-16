@@ -576,7 +576,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas());
                 }
             });
     }
@@ -595,7 +595,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(),  0, null, response.cas());
+                    return (D) transcoder.newDocument(document.id(),  document.expiry(), document.content(), response.cas());
                 }
             });
     }
