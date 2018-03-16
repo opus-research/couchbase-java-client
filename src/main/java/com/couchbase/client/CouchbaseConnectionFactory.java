@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -52,6 +53,8 @@ import net.spy.memcached.KetamaNodeLocator;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
+import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
 
@@ -240,6 +243,17 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     this.minReconnectInterval = reconnIntervalMsecs;
   }
 
+  void checkConfigAgainstPersistence(PersistTo pers, ReplicateTo repl) {
+    int nodeCount = getVBucketConfig().getServersCount();
+    if(pers.getValue() > nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the persistence constraint.");
+    }
+    if(repl.getValue() >= nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the replication constraint.");
+    }
+  }
 
   void checkConfigUpdate() {
     if (needsReconnect || pastReconnThreshold()) {
@@ -278,15 +292,15 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   /**
-   * Check to see if we've gone beyond 10 secs since last reconnection
-   * attempt.
+   * Checks if the last reconnection was more than or equal 10 seconds
+   * ago.
    *
    * @return true if it's been more than 10 seconds since we last tried
    *         to connect
    */
   private boolean pastReconnThreshold() {
     long currentTime = System.nanoTime();
-    if (currentTime - thresholdLastCheck > 100000000) { //if longer than 10 sec
+    if (currentTime - thresholdLastCheck >= TimeUnit.SECONDS.toMillis(10)) {
       configThresholdCount.set(0); // it's been more than 10 sec since last
                                 // tried, so don't try again just yet.
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,59 +20,51 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.http;
-
-import org.apache.http.nio.NHttpClientConnection;
+package com.couchbase.client.protocol.views;
 
 /**
- * An AsyncConnectionRequest.
+ * The SpatialViewDesign object represents a spatial view to be stored and
+ * retrieved from the Couchbase cluster.
  */
-public class AsyncConnectionRequest {
+public class SpatialViewDesign {
 
-  private volatile boolean completed;
-  private volatile NHttpClientConnection conn;
+  /**
+   * The name of the spatial view.
+   */
+  String name = null;
 
-  public AsyncConnectionRequest() {
-    super();
+  /**
+   * The map function of the spatial view.
+   */
+  String map = null;
+
+  /**
+   * Create a SpatialViewDesign with a name and a map function.
+   *
+   * @param name the name of the spatial view.
+   * @param map the map function of the spatial view.
+   */
+  public SpatialViewDesign(String name, String map) {
+    this.name = name;
+    this.map = map;
   }
 
-  public boolean isCompleted() {
-    return this.completed;
+  /**
+   * Get the name of the spatial view.
+   *
+   * @return the name of the spatial view.
+   */
+  public String getName() {
+    return name;
   }
 
-  public void setConnection(NHttpClientConnection newConn) {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    synchronized (this) {
-      this.conn = newConn;
-      notifyAll();
-    }
+  /**
+   * Get the map function of the spatial view.
+   *
+   * @return the map function of the spatial view.
+   */
+  public String getMap() {
+    return map;
   }
 
-  public NHttpClientConnection getConnection() {
-    return this.conn;
-  }
-
-  public void cancel() {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    synchronized (this) {
-      notifyAll();
-    }
-  }
-
-  public void waitFor() throws InterruptedException {
-    if (this.completed) {
-      return;
-    }
-    synchronized (this) {
-      while (!this.completed) {
-        wait();
-      }
-    }
-  }
 }

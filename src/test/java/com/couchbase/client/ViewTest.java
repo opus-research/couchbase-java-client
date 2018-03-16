@@ -27,6 +27,7 @@ import com.couchbase.client.BucketTool.FunctionCallback;
 import com.couchbase.client.clustermanager.BucketType;
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.protocol.views.ComplexKey;
+import com.couchbase.client.protocol.views.DesignDocument;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.protocol.views.InvalidViewException;
@@ -35,14 +36,19 @@ import com.couchbase.client.protocol.views.OnError;
 import com.couchbase.client.protocol.views.Query;
 import com.couchbase.client.protocol.views.ReducedOperationImpl;
 import com.couchbase.client.protocol.views.RowError;
+import com.couchbase.client.protocol.views.SpatialViewDesign;
 import com.couchbase.client.protocol.views.Stale;
 import com.couchbase.client.protocol.views.View;
+import com.couchbase.client.protocol.views.ViewDesign;
 import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -53,6 +59,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.ops.OperationStatus;
 import org.apache.http.HttpResponse;
@@ -64,11 +71,10 @@ import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 /**
  * A CouchbaseClientTest.
@@ -89,9 +95,6 @@ public class ViewTest {
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
   public static final String VIEW_NAME_OBSERVE = "view_staletest";
   public static final String VIEW_NAME_BINARY = "view_binary";
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   static {
     ITEMS = new HashMap<String, Object>();
@@ -636,6 +639,21 @@ public class ViewTest {
     op.handleResponse(response);
   }
 
+  @Test(expected = InvalidViewException.class)
+  public void testInvalidViewHandling() {
+    String designDoc = "invalid_design";
+    String viewName = "invalid_view";
+    View view = client.getView(designDoc, viewName);
+    assertNull(view);
+  }
+
+  @Test(expected = InvalidViewException.class)
+  public void testInvalidDesignDocHandling() {
+    String designDoc = "invalid_design";
+    List<View> views = client.getViews(designDoc);
+    assertNull(views);
+  }
+
   /**
    * This test case acts as an integration test to verify that adding
    * data with the given integrity constraints in combination with the
@@ -704,26 +722,113 @@ public class ViewTest {
   }
 
   @Test
-  public void testInvalidViewHandling() {
-    String designDoc = "invalid_design";
-    String viewName = "invalid_view";
+  public void testDesignDocumentCreation() throws InterruptedException {
+    List<ViewDesign> views = new ArrayList<ViewDesign>();
+    List<SpatialViewDesign> spviews = new ArrayList<SpatialViewDesign>();
 
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load view \""
-                + viewName + "\" for design doc \"" + designDoc + "\"");
-    View view = client.getView(designDoc, viewName);
-    assertNull(view);
+    ViewDesign view1 = new ViewDesign(
+      "view1",
+      "function(a, b) {}"
+    );
+    views.add(view1);
+
+    ViewDesign view2 = new ViewDesign(
+      "view2",
+      "function(b, c) {}",
+      "function(red) {}"
+    );
+    views.add(view2);
+
+    SpatialViewDesign spview = new SpatialViewDesign(
+      "spatialfoo",
+      "function(map) {}"
+    );
+    spviews.add(spview);
+
+    DesignDocument doc = new DesignDocument("mydesign", views, spviews);
+    HttpFuture<Boolean> result;
+    boolean success = true;
+    try {
+      result = client.asyncCreateDesignDoc(doc);
+      assertTrue(result.get());
+    } catch (Exception ex) {
+      success = false;
+    }
+    assertTrue(success);
+
+    Thread.sleep(2000);
+
+    List<View> storedViews = client.getViews("mydesign");
+    assertEquals(2, storedViews.size());
   }
 
   @Test
-  public void testInvalidDesignDocHandling() {
-    String designDoc = "invalid_design";
+  public void testRawDesignDocumentCreation() throws InterruptedException {
+    List<ViewDesign> views = new ArrayList<ViewDesign>();
 
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load views for design doc \""
-            + designDoc + "\"");
-    List<View> views = client.getViews(designDoc);
-    assertNull(views);
+    ViewDesign view = new ViewDesign(
+      "viewname",
+      "function(a, b) {}"
+    );
+    views.add(view);
+
+    DesignDocument doc = new DesignDocument("rawdesign", views, null);
+    HttpFuture<Boolean> result;
+    boolean success = true;
+    try {
+      result = client.asyncCreateDesignDoc(doc.getName(), doc.toJson());
+      assertTrue(result.get());
+    } catch (Exception ex) {
+      success = false;
+    }
+    assertTrue(success);
+
+    Thread.sleep(2000);
+
+    List<View> storedViews = client.getViews("rawdesign");
+    assertEquals(1, storedViews.size());
+  }
+
+  @Test
+  public void testInvalidDesignDocumentCreation() throws Exception {
+    String content = "{certainly_not_a_view: true}";
+    HttpFuture<Boolean> result = client.asyncCreateDesignDoc(
+      "invalid_design", content);
+    assertFalse(result.get());
+
+    boolean success = false;
+    try {
+      client.getViews("invalid_design");
+    } catch(InvalidViewException ex) {
+      success = true;
+    }
+    assertTrue(success);
+  }
+
+  @Test
+  public void testDesignDocumentDeletion() throws InterruptedException {
+    List<View> storedViews = client.getViews("mydesign");
+    assertEquals(2, storedViews.size());
+
+    boolean success = true;
+
+    try {
+      HttpFuture<Boolean> result = client.asyncDeleteDesignDoc("mydesign");
+      assertTrue(result.get());
+    } catch (Exception ex) {
+      success = false;
+    }
+    assertTrue(success);
+
+    Thread.sleep(2000);
+
+    success = false;
+    try {
+      storedViews = client.getViews("mydesign");
+    } catch(InvalidViewException e) {
+      success = true;
+    }
+    assertTrue(success);
   }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,59 +20,47 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.http;
+package com.couchbase.client.protocol.views;
 
-import org.apache.http.nio.NHttpClientConnection;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
- * An AsyncConnectionRequest.
+ * Tests the various creation/modification ways of the SpatialViewDesign class.
  */
-public class AsyncConnectionRequest {
+public class SpatialViewDesignTest {
 
-  private volatile boolean completed;
-  private volatile NHttpClientConnection conn;
-
-  public AsyncConnectionRequest() {
-    super();
+  public SpatialViewDesignTest() {
   }
 
-  public boolean isCompleted() {
-    return this.completed;
+  @BeforeClass
+  public static void setUpClass() {
   }
 
-  public void setConnection(NHttpClientConnection newConn) {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    synchronized (this) {
-      this.conn = newConn;
-      notifyAll();
-    }
+  @AfterClass
+  public static void tearDownClass() {
   }
 
-  public NHttpClientConnection getConnection() {
-    return this.conn;
+  @Before
+  public void setUp() {
   }
 
-  public void cancel() {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    synchronized (this) {
-      notifyAll();
-    }
+  @After
+  public void tearDown() {
   }
 
-  public void waitFor() throws InterruptedException {
-    if (this.completed) {
-      return;
-    }
-    synchronized (this) {
-      while (!this.completed) {
-        wait();
-      }
-    }
+  @Test
+  public void testSpatialViewDesign() {
+    String name = "points";
+    String map = "function(){}";
+    SpatialViewDesign view = new SpatialViewDesign(name, map);
+    assertEquals(name, view.getName());
+    assertEquals(map, view.getMap());
   }
+
+
 }
