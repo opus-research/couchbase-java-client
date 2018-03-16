@@ -5,9 +5,6 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import rx.Observer;
-import rx.Subscriber;
-import rx.observables.BlockingObservable;
 
 /**
  * Base test class for tests that need a working cluster reference.
