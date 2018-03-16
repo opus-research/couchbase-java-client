@@ -53,11 +53,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
     client = new CouchbaseClient((CouchbaseConnectionFactory) cf);
   }
 
-  public void testShutdownNoOperations() throws Exception {
-    // Let threads settle
-    Thread.sleep(500);
-  }
-
   @Override
   public void testAvailableServers() {
     // CouchbaseClient tracks hostname and ip address of servers need to
