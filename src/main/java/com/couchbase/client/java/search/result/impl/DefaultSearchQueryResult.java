@@ -41,7 +41,7 @@ import rx.functions.Func5;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class DefaultSearchQueryResult implements SearchQueryResult {
 

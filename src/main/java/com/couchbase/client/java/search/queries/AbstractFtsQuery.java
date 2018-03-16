@@ -29,7 +29,7 @@ import com.couchbase.client.java.search.SearchQuery;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Private
 public abstract class AbstractFtsQuery {
 

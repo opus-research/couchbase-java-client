@@ -35,7 +35,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class SearchUtils {
 

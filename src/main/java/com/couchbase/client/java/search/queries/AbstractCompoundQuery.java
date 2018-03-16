@@ -29,7 +29,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Private
 public abstract class AbstractCompoundQuery extends AbstractFtsQuery {
 

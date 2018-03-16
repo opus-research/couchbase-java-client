@@ -31,7 +31,7 @@ import com.couchbase.client.java.search.result.hits.HitLocations;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class DefaultSearchQueryRow implements SearchQueryRow {
 
