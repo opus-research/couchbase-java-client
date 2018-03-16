@@ -146,7 +146,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public static final SerializableTranscoder SERIALIZABLE_TRANSCODER = new SerializableTranscoder();
 
     private final String bucket;
-    private final String username;
     private final String password;
     private final ClusterFacade core;
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
@@ -163,14 +162,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-                                final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
-        this(core, environment, name, name, password, customTranscoders);
-    }
-
-    public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-                                final String username, final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
+        final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
         bucket = name;
-        this.username = username;
         this.password = password;
         this.core = core;
         this.environment = environment;
@@ -193,11 +186,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             transcoders.put(custom.documentType(), custom);
         }
 
-        bucketManager = DefaultAsyncBucketManager.create(bucket, username, password, core);
+        bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
 
         boolean n1qlPreparedEncodedPlanEnabled = "true".equalsIgnoreCase(System.getProperty(N1qlQueryExecutor.ENCODED_PLAN_ENABLED_PROPERTY, "true")); //active by default
-        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, username, password, n1qlPreparedEncodedPlanEnabled);
-        analyticsQueryExecutor = new AnalyticsQueryExecutor(core, bucket, username, password);
+        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, password, n1qlPreparedEncodedPlanEnabled);
+        analyticsQueryExecutor = new AnalyticsQueryExecutor(core, bucket, password);
     }
 
     @Override
@@ -816,7 +809,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<SearchQueryResponse> call() {
                 final SearchQueryRequest request =
-                    new SearchQueryRequest(indexName, query.export().toString(), username, password);
+                    new SearchQueryRequest(indexName, query.export().toString(), bucket, password);
                 return core.send(request);
             }
         });
@@ -847,7 +840,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<ViewQueryResponse> call() {
                 final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
-                    query.isDevelopment(), true, query.toString(), null, bucket, username, password);
+                    query.isDevelopment(), true, query.toString(), null, bucket, password);
                 return core.send(request);
             }
         });
