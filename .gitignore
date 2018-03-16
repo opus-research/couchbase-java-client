@@ -27,3 +27,5 @@ atlassian-ide-plugin.xml
 
 # Gradle
 .gradle/
+
+generated/
