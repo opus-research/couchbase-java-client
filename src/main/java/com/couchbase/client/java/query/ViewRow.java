@@ -18,7 +18,6 @@ public interface ViewRow {
     Object value();
 
     Observable<JsonDocument> document();
-
     <D extends Document<?>> Observable<D> document(final Class<D> target);
 
 }
