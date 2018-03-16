@@ -22,10 +22,7 @@
 package com.couchbase.client.java.util;
 
 import com.couchbase.client.java.bucket.BucketManager;
-import com.couchbase.client.java.util.features.CouchbaseFeature;
-import com.couchbase.client.java.util.features.FeaturesHelper;
 import org.junit.AfterClass;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 
 import com.couchbase.client.java.Bucket;
@@ -77,16 +74,6 @@ public class ClusterDependentTest {
     @AfterClass
     public static void disconnect() throws InterruptedException {
         cluster.disconnect();
-    }
-
-    /**
-     * By calling this in @BeforeClass with a {@link CouchbaseFeature},
-     * tests will be skipped is said feature is not available on the cluster.
-     *
-     * @param feature the feature to check for.
-     */
-    public static void ignoreIfMissing(CouchbaseFeature feature) {
-        Assume.assumeTrue(FeaturesHelper.checkAvailable(clusterManager().info(), feature));
     }
 
     public static String password() {
