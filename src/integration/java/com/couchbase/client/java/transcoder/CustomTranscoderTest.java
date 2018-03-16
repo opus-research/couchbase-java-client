@@ -30,6 +30,7 @@ import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -56,15 +57,17 @@ public class CustomTranscoderTest {
                 .adhoc(true)
                 .build();
 
-        // The bucket managed by the test context was opened without any transcoders.
-        // Need to close it so the cached bucket is not returned by subsequent openBucket calls
-        // that specify custom transcoders. See JCBC-1132 (Bucket cache ignores custom transcoders).
+        // Necessary pending resolution of JCBC-1132 Bucket cache ignores custom transcoders
         ctx.bucket().close();
     }
 
     @AfterClass
     public static void disconnect() throws Exception {
         ctx.destroyBucketAndDisconnect();
+    }
+
+    private Bucket openBucket() {
+        return openBucket(null);
     }
 
     private Bucket openBucket(List<Transcoder<? extends Document, ?>> transcoders) {
@@ -80,6 +83,10 @@ public class CustomTranscoderTest {
         assertValueAfterRoundTripEquals(bucket, StringDocument.create("id", "hello world"), "HELLO WORLD");
     }
 
+    private static void assertStringDocumentIsPersistedNormally(Bucket bucket) {
+        assertValueAfterRoundTripEquals(bucket, StringDocument.create("id", "hello world"), "hello world");
+    }
+
     private static void assertTestDocumentIsReversed(Bucket bucket) {
         assertValueAfterRoundTripEquals(bucket, TestDocument.create("id", "hello world"), "dlrow olleh");
     }
@@ -92,6 +99,24 @@ public class CustomTranscoderTest {
     @Test
     public void canAddCustomTranscoder() throws Exception {
         assertTestDocumentIsReversed(openBucket(customTranscoders));
+    }
+
+    @Ignore("Pending resolution of JCBC-1132 Bucket cache ignores custom transcoders")
+    @Test
+    public void canReopenBucketWithCustomTranscoder() throws Exception {
+        // This is testing whether the bucket cache interferes with transcoder registration.
+        // The order of these two method calls is significant!
+        assertStringDocumentIsPersistedNormally(openBucket());
+        assertStringDocumentIsUpperCased(openBucket(customTranscoders));
+    }
+
+    @Ignore("Pending resolution of JCBC-1132 Bucket cache ignores custom transcoders")
+    @Test
+    public void canReopenBucketWithDefaultTranscoder() throws Exception {
+        // This is testing whether the bucket cache interferes with transcoder registration.
+        // The order of these two method calls is significant!
+        assertStringDocumentIsUpperCased(openBucket(customTranscoders));
+        assertStringDocumentIsPersistedNormally(openBucket());
     }
 
     /**
