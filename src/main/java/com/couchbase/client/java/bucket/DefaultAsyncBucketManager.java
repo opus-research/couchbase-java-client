@@ -91,18 +91,24 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     private final ClusterFacade core;
     private final String bucket;
+    private final String username;
     private final String password;
     private final N1qlQueryExecutor queryExecutor;
 
-    DefaultAsyncBucketManager(String bucket, String password, ClusterFacade core) {
+    DefaultAsyncBucketManager(String bucket, String username, String password, ClusterFacade core) {
         this.bucket = bucket;
+        this.username = username;
         this.password = password;
         this.core = core;
-        this.queryExecutor = new N1qlQueryExecutor(core, bucket, password);
+        this.queryExecutor = new N1qlQueryExecutor(core, bucket, username, password);
+    }
+
+    public static DefaultAsyncBucketManager create(String bucket, String username, String password, ClusterFacade core) {
+        return new DefaultAsyncBucketManager(bucket, username, password, core);
     }
 
     public static DefaultAsyncBucketManager create(String bucket, String password, ClusterFacade core) {
-        return new DefaultAsyncBucketManager(bucket, password, core);
+        return new DefaultAsyncBucketManager(bucket, bucket, password, core);
     }
 
     @Override
@@ -144,7 +150,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         return Observable.defer(new Func0<Observable<GetDesignDocumentsResponse>>() {
             @Override
             public Observable<GetDesignDocumentsResponse> call() {
-                return core.send(new GetDesignDocumentsRequest(bucket, password));
+                return core.send(new GetDesignDocumentsRequest(bucket, username, password));
             }
         })
         .retryWhen(any().delay(Delay.fixed(100, TimeUnit.MILLISECONDS)).max(Integer.MAX_VALUE).build())
@@ -269,7 +275,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         return deferAndWatch(new Func0<Observable<UpsertDesignDocumentResponse>>() {
             @Override
             public Observable<UpsertDesignDocumentResponse> call() {
-                return core.send(new UpsertDesignDocumentRequest(designDocument.name(), b, development, bucket, password));
+                return core.send(new UpsertDesignDocumentRequest(designDocument.name(), b, development, bucket, username, password));
             }
         }).map(new Func1<UpsertDesignDocumentResponse, DesignDocument>() {
             @Override
@@ -299,7 +305,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         return deferAndWatch(new Func0<Observable<RemoveDesignDocumentResponse>>() {
             @Override
             public Observable<RemoveDesignDocumentResponse> call() {
-                return core.send(new RemoveDesignDocumentRequest(name, development, bucket, password));
+                return core.send(new RemoveDesignDocumentRequest(name, development, bucket, username, password));
             }
         }).map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
             @Override
