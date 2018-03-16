@@ -33,7 +33,7 @@ import com.couchbase.client.java.subdoc.MutateInBuilder;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class PathExistsException extends SubDocumentException {
 
