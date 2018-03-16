@@ -43,25 +43,28 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
 
 /**
- * Maintains connections to each node in a cluster of Couchbase Nodes.
+ * Couchbase implementation of CouchbaseConnection.
  *
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
   Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
+  private final CouchbaseConnectionFactory cf;
 
-  public CouchbaseConnection(CouchbaseConnectionFactory cf,
-      List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
-    throws IOException {
-    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(),
-        cf.getOperationFactory());
+  public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
+      List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
+      FailureMode fm, OperationFactory opfactory) throws IOException {
+    super(bufSize, f, a, obs, fm, opfactory);
+    this.cf = f;
   }
+
 
   public void reconfigure(Bucket bucket) {
     reconfiguring = true;
@@ -156,8 +159,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       if (placeIn == null) {
         placeIn = primary;
         this.getLogger().warn(
-            "Could not redistribute "
-                + "to another node, retrying primary node for %s.", key);
+            "Node exepcted to receive data is inactive.  This could be due to a"
+            + "failure within the cluster.  Will check for updated "
+            + "configuration.  Key without a configured node is: %s.", key);
+        cf.checkConfigUpdate();
       }
     }
 
