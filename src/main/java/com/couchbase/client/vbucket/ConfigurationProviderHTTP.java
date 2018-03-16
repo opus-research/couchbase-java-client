@@ -222,7 +222,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           continue;
         }
 
-
         // load pools
         for (Pool pool : pools.values()) {
           URLConnection poolConnection = urlConnBuilder(baseUri,
@@ -246,22 +245,38 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           }
         }
         if (bucketFound) {
+          boolean inList = false;
           for (Pool pool : pools.values()) {
             for (Map.Entry<String, Bucket> bucketEntry : pool.getROBuckets()
                 .entrySet()) {
+              Bucket bucket = bucketEntry.getValue();
+              List<String> servers = bucket.getConfig().getServers();
+              for(String server : servers) {
+                URI serverUri = URI.create("http://" + server);
+                if(baseUri.getHost().equals(serverUri.getHost())) {
+                  inList = true;
+                  break;
+                }
+              }
               this.buckets.put(bucketEntry.getKey(), bucketEntry.getValue());
             }
+          }
+          if(!inList) {
+            getLogger().info("Node configuration is available, but this node "
+              + "is part of the current cluster map (i.e. during failover "
+              + "but before rebalance)! -> Skipping");
+            continue;
           }
           this.loadedBaseUri = baseUri;
           return;
         }
       } catch (ParseException e) {
         getLogger().warn("Provided URI " + baseUri
-          + " has an unparsable response...skipping", e);
+          + " has an unparsable response! -> Skipping", e);
         continue;
       } catch (IOException e) {
         getLogger().warn("Connection problems with URI " + baseUri
-          + " ...skipping", e);
+          + "! -> Skipping", e);
         continue;
       }
       throw new ConfigurationException("Configuration for bucket "
