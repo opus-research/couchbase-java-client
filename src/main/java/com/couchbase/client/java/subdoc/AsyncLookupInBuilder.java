@@ -48,8 +48,6 @@ import rx.Observable;
 import rx.functions.Func0;
 import rx.functions.Func1;
 
-import static com.couchbase.client.java.util.OnSubscribeDeferAndWatch.deferAndWatch;
-
 /**
  * A builder for subdocument lookups. In order to perform the final set of operations, use the
  * {@link #execute()} method. Operations are performed asynchronously (see {@link LookupInBuilder} for a synchronous
@@ -265,7 +263,7 @@ public class AsyncLookupInBuilder {
         }
         final LookupSpec[] lookupSpecs = specs.toArray(new LookupSpec[specs.size()]);
 
-        return deferAndWatch(new Func0<Observable<MultiLookupResponse>>() {
+        return Observable.defer(new Func0<Observable<MultiLookupResponse>>() {
             @Override
             public Observable<MultiLookupResponse> call() {
                 return core.send(new SubMultiLookupRequest(docId, bucketName, lookupSpecs));
@@ -301,7 +299,7 @@ public class AsyncLookupInBuilder {
 
 
     private <T> Observable<DocumentFragment<Lookup>> getIn(final String id, final String path, final Class<T> fragmentType) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return Observable.defer(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
             public Observable<SimpleSubdocResponse> call() {
                 SubGetRequest request = new SubGetRequest(id, path, bucketName);
@@ -346,7 +344,7 @@ public class AsyncLookupInBuilder {
     }
 
     private Observable<DocumentFragment<Lookup>> existsIn(final String id, final String path) {
-        return deferAndWatch(new Func0<Observable<SimpleSubdocResponse>>() {
+        return Observable.defer(new Func0<Observable<SimpleSubdocResponse>>() {
             @Override
             public Observable<SimpleSubdocResponse> call() {
                 SubExistRequest request = new SubExistRequest(id, path, bucketName);
