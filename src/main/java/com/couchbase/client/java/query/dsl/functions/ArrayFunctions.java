@@ -37,8 +37,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 @InterfaceAudience.Public
 public class ArrayFunctions {
 
-    private ArrayFunctions() {}
-
     /**
      * Returned expression results in new array with value appended.
      */

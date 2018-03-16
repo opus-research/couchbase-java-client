@@ -56,8 +56,6 @@ public class SearchUtils {
         }
     };
 
-    private SearchUtils() {}
-
     /**
      * Converts a date to the default string representation in FTS (RFC 3339).
      *

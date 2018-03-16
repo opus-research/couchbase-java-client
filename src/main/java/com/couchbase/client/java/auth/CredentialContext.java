@@ -13,38 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.queries;
+package com.couchbase.client.java.auth;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * A FTS query that performs a search according to the "string query" syntax.
+ * Enum of the contexts that can be used to retrieve an implicit credential from an
+ * {@link Authenticator}. Note that not all Authenticator implementations will support
+ * all these contexts, and some contexts may also require additional information (a
+ * "specific").
  *
  * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
+ * @since 2.3
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class StringQuery extends AbstractFtsQuery {
+public enum CredentialContext {
 
-    private final String query;
+    BUCKET_KV, BUCKET_VIEW, BUCKET_N1QL, BUCKET_FTS,
+    CLUSTER_N1QL, CLUSTER_FTS,
+    BUCKET_MANAGEMENT, CLUSTER_MANAGEMENT;
 
-    public StringQuery(String query) {
-        super();
-        this.query = query;
-    }
-
-    @Override
-    public StringQuery boost(double boost) {
-        super.boost(boost);
-        return this;
-    }
-
-    @Override
-    protected void injectParams(JsonObject input) {
-        input.put("query", query);
-    }
 }
