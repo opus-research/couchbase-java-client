@@ -19,44 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.transcoder;
+package com.couchbase.client.java.error;
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import com.couchbase.client.core.CouchbaseException;
 
 /**
- * Verifies the functionality of {@link TranscoderUtils}.
+ * .
  *
  * @author Michael Nitschinger
- * @since 2.0
  */
-public class TranscoderUtilsTest {
+public class FlushDisabledException extends CouchbaseException {
 
-    @Test
-    public void testHasCommonFlags() {
-        assertFalse(TranscoderUtils.hasCommonFlags(4));
-        assertTrue(TranscoderUtils.hasCommonFlags(4 << 24));
+    public FlushDisabledException() {
     }
 
-    @Test
-    public void testExtractCommonFlags() {
-        assertEquals(4, TranscoderUtils.extractCommonFlags(4 << 24));
+    public FlushDisabledException(String message) {
+        super(message);
     }
 
-    @Test
-    public void testCreateCommonFlags() {
-        assertEquals(2 << 24, TranscoderUtils.createCommonFlags(2));
+    public FlushDisabledException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    @Test
-    public void testHasJsonFlags() {
-        assertTrue(TranscoderUtils.hasJsonFlags(0));
-        assertTrue(TranscoderUtils.hasJsonFlags(2 << 24));
-        assertFalse(TranscoderUtils.hasJsonFlags(1));
-        assertFalse(TranscoderUtils.hasJsonFlags(4 << 24));
+    public FlushDisabledException(Throwable cause) {
+        super(cause);
     }
-
 }
