@@ -25,7 +25,6 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.CouchbaseCluster;
 
-import com.couchbase.client.java.cluster.ClusterManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -39,19 +38,15 @@ public class ClusterDependentTest {
     private static final String seedNode = TestProperties.seedNode();
     private static final String bucketName = TestProperties.bucket();
     private static final String password = TestProperties.password();
-    private static final String adminName = TestProperties.adminName();
-    private static final String adminPassword = TestProperties.adminPassword();
 
     private static Cluster cluster;
     private static Bucket bucket;
-    private static ClusterManager clusterManager;
 
     @BeforeClass
     public static void connect() {
         cluster = CouchbaseCluster.create(seedNode);
         bucket = cluster.openBucket(bucketName, password).toBlocking().single();
         bucket.bucketManager().toBlocking().single().flush().toBlocking().single();
-        clusterManager = cluster.clusterManager(adminName, adminPassword).toBlocking().single();
     }
 
     @AfterClass
@@ -73,9 +68,5 @@ public class ClusterDependentTest {
 
     public static String bucketName() {
         return bucketName;
-    }
-
-    public static ClusterManager clusterManager() {
-        return clusterManager;
     }
 }

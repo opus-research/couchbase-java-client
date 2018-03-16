@@ -2,16 +2,8 @@ package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.message.config.BucketConfigRequest;
-import com.couchbase.client.core.message.config.BucketConfigResponse;
-import com.couchbase.client.core.message.config.BucketsConfigRequest;
-import com.couchbase.client.core.message.config.BucketsConfigResponse;
 import com.couchbase.client.core.message.config.ClusterConfigRequest;
 import com.couchbase.client.core.message.config.ClusterConfigResponse;
-import com.couchbase.client.core.message.config.InsertBucketRequest;
-import com.couchbase.client.core.message.config.InsertBucketResponse;
-import com.couchbase.client.core.message.config.RemoveBucketRequest;
-import com.couchbase.client.core.message.config.RemoveBucketResponse;
 import com.couchbase.client.core.message.internal.AddNodeRequest;
 import com.couchbase.client.core.message.internal.AddNodeResponse;
 import com.couchbase.client.core.message.internal.AddServiceRequest;
@@ -19,18 +11,12 @@ import com.couchbase.client.core.message.internal.AddServiceResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.ConnectionString;
 import com.couchbase.client.java.CouchbaseBucket;
-import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import rx.Observable;
-import rx.functions.Action1;
 import rx.functions.Func1;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class CouchbaseClusterManager implements ClusterManager {
 
@@ -76,41 +62,22 @@ public class CouchbaseClusterManager implements ClusterManager {
             });
     }
 
+    /*
     @Override
     public Observable<ClusterBucketSettings> getBuckets() {
-        return
-            ensureServiceEnabled()
-            .flatMap(new Func1<Boolean, Observable<BucketsConfigResponse>>() {
+        /*return ensureServiceEnabled()
+            .flatMap(new Func1<Boolean, Observable<GetBucketsResponse>>() {
                 @Override
-                public Observable<BucketsConfigResponse> call(Boolean aBoolean) {
-                    return core.send(new BucketsConfigRequest(username, password));
+                public Observable<GetBucketsResponse> call(Boolean serviceEnabled) {
+                    return core.send(new GetBucketsRequest());
                 }
-            }).flatMap(new Func1<BucketsConfigResponse, Observable<ClusterBucketSettings>>() {
+            }).map(new Func1<GetBucketsResponse, ClusterBucketSettings>() {
                 @Override
-                public Observable<ClusterBucketSettings> call(BucketsConfigResponse response) {
-                    try {
-                        JsonArray decoded = CouchbaseBucket.JSON_TRANSCODER.stringTojsonArray(response.config());
-                        List<ClusterBucketSettings> settings = new ArrayList<ClusterBucketSettings>();
-                        for (Object item : decoded) {
-                            JsonObject bucket = (JsonObject) item;
-                            settings.add(DefaultClusterBucketSettings.builder()
-                                .name(bucket.getString("name"))
-                                .enableFlush(bucket.getObject("controllers").getString("flush") != null)
-                                .type(bucket.getString("bucketType").equals("membase")
-                                    ? BucketType.COUCHBASE : BucketType.MEMCACHED)
-                                .replicas(bucket.getInt("replicaNumber"))
-                                .quota(bucket.getObject("quota").getInt("ram"))
-                                .indexReplicas(bucket.getBoolean("replicaIndex"))
-                                .port(bucket.getInt("proxyPort"))
-                                .password(bucket.getString("saslPassword"))
-                                .build());
-                        }
-                        return Observable.from(settings);
-                    } catch (Exception e) {
-                        throw new CouchbaseException("Could not decode cluster info.", e);
-                    }
+                public ClusterBucketSettings call(GetBucketsResponse getBucketsResponse) {
+                    return null;
                 }
-            });
+            });*/
+        /*return null;
     }
 
     @Override
@@ -124,72 +91,19 @@ public class CouchbaseClusterManager implements ClusterManager {
     }
 
     @Override
-    public Observable<Boolean> hasBucket(final String name) {
-        return getBucket(name)
-            .isEmpty()
-            .map(new Func1<Boolean, Boolean>() {
-                @Override
-                public Boolean call(Boolean notFound) {
-                    return !notFound;
-                }
-            });
-    }
-
-    @Override
-    public Observable<Boolean> removeBucket(final String name) {
-        return
-            ensureServiceEnabled()
-            .flatMap(new Func1<Boolean, Observable<RemoveBucketResponse>>() {
-                @Override
-                public Observable<RemoveBucketResponse> call(Boolean aBoolean) {
-                    return core.send(new RemoveBucketRequest(name, username, password));
-                }
-            }).map(new Func1<RemoveBucketResponse, Boolean>() {
-                @Override
-                public Boolean call(RemoveBucketResponse response) {
-                    return response.status().isSuccess();
-                }
-            });
-    }
-
-    @Override
-    public Observable<ClusterBucketSettings> insertBucket(final ClusterBucketSettings settings) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("name=").append(settings.name());
-        sb.append("&ramQuotaMB=").append(settings.quota());
-        sb.append("&authType=").append("sasl");
-        sb.append("&saslPassword=").append(settings.password());
-        sb.append("&replicaNumber=").append(settings.replicas());
-        sb.append("&proxyPort=").append(settings.port());
-        sb.append("&bucketType=").append(settings.type() == BucketType.COUCHBASE ? "membase" : "memcached");
-        sb.append("&flushEnabled=").append(settings.enableFlush() ? "1" : "0");
-
-        return hasBucket(settings.name())
-            .doOnNext(new Action1<Boolean>() {
-                @Override
-                public void call(Boolean exists) {
-                    if (exists) {
-                        throw new BucketExistsException("Bucket " + settings.name() + " already exists!");
-                    }
-                }
-            }).flatMap(new Func1<Boolean, Observable<InsertBucketResponse>>() {
-                @Override
-                public Observable<InsertBucketResponse> call(Boolean exists) {
-                    return core.send(new InsertBucketRequest(sb.toString(), username, password));
-                }
-            })
-            .map(new Func1<InsertBucketResponse, ClusterBucketSettings>() {
-                @Override
-                public ClusterBucketSettings call(InsertBucketResponse response) {
-                    return settings;
-                }
-            });
-    }
-
-    @Override
-    public Observable<ClusterBucketSettings> updateBucket(ClusterBucketSettings settings) {
+    public Observable<ClusterBucketSettings> removeBucket(String name) {
         return null;
     }
+
+    @Override
+    public Observable<ClusterBucketSettings> insertBucket(ClusterBucketSettings bucketSettings) {
+        return null;
+    }
+
+    @Override
+    public Observable<ClusterBucketSettings> updateBucket(ClusterBucketSettings bucketSettings) {
+        return null;
+    }*/
 
     private Observable<Boolean> ensureServiceEnabled() {
         return Observable

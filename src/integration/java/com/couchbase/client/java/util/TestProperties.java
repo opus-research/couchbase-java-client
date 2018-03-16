@@ -32,8 +32,6 @@ public class TestProperties {
   private static String seedNode;
   private static String bucket;
   private static String password;
-  private static String adminName;
-  private static String adminPassword;
 
   /**
    * Initialize static the properties.
@@ -42,8 +40,6 @@ public class TestProperties {
     seedNode = System.getProperty("seedNode", "127.0.0.1");
     bucket = System.getProperty("bucket", "default");
     password = System.getProperty("password", "");
-    adminName = System.getProperty("adminName", "Administrator");
-    adminPassword = System.getProperty("adminPassword", "password");
   }
 
   /**
@@ -71,13 +67,5 @@ public class TestProperties {
    */
   public static String password() {
     return password;
-  }
-
-  public static String adminName() {
-      return adminName;
-  }
-
-  public static String adminPassword() {
-      return adminPassword;
   }
 }
