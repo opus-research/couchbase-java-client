@@ -707,7 +707,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
   public void testGATZeroTimeout() throws Exception {
     assertNull(client.get("gatkey"));
     assertTrue(client.set("gatkey", 1, "gatvalue").get());
-    Thread.sleep(5000);
+    Thread.sleep(1500);
     assertNull(client.get("gatkey"));
     assertNull(client.getAndTouch("gatkey", 0));
   }

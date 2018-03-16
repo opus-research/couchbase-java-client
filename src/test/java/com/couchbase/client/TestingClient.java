@@ -47,19 +47,16 @@ import org.apache.http.message.BasicHttpRequest;
  */
 public class TestingClient extends CouchbaseClient {
 
-  private final CouchbaseConnectionFactory factory;
-
   public TestingClient(List<URI> baseList, String bucketName, String pwd)
     throws IOException {
     super(baseList, bucketName, pwd);
-    factory = (CouchbaseConnectionFactory) connFactory;
   }
 
   public HttpFuture<String> asyncHttpPut(String uri, String document)
     throws UnsupportedEncodingException {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-      factory.getViewTimeout(), executorService);
+            operationTimeout, executorService);
 
     HttpRequest request = new BasicHttpEntityEnclosingRequest("PUT", uri,
             HttpVersion.HTTP_1_1);
@@ -93,7 +90,7 @@ public class TestingClient extends CouchbaseClient {
   public HttpFuture<String> asyncHttpGet(String uri) {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-      factory.getViewTimeout(), executorService);
+        operationTimeout, executorService);
 
     HttpRequest request = new BasicHttpRequest("GET", uri,
         HttpVersion.HTTP_1_1);
@@ -123,7 +120,7 @@ public class TestingClient extends CouchbaseClient {
   public HttpFuture<String> asyncHttpDelete(String uri) {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-      factory.getViewTimeout(), executorService);
+        operationTimeout, executorService);
 
     HttpRequest request = new BasicHttpRequest("DELETE", uri,
         HttpVersion.HTTP_1_1);
