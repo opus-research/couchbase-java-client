@@ -22,9 +22,6 @@
 package com.couchbase.client;
 
 
-import net.spy.memcached.compat.log.Logger;
-import net.spy.memcached.compat.log.LoggerFactory;
-
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -39,8 +36,6 @@ import java.util.TreeMap;
  * Provides access to various metrics helpful for system diagnosis.
  */
 public class Diagnostics {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(Diagnostics.class);
 
     public static final OperatingSystemMXBean OS_BEAN = ManagementFactory.getOperatingSystemMXBean();
     public static final MemoryMXBean MEM_BEAN = ManagementFactory.getMemoryMXBean();
@@ -59,19 +54,15 @@ public class Diagnostics {
         infos.put("sys.cpu.num", OS_BEAN.getAvailableProcessors());
         infos.put("sys.cpu.loadAvg", OS_BEAN.getSystemLoadAverage());
 
-        try {
-            if (OS_BEAN instanceof com.sun.management.OperatingSystemMXBean) {
-                com.sun.management.OperatingSystemMXBean sunBean = (com.sun.management.OperatingSystemMXBean) OS_BEAN;
+        if (OS_BEAN instanceof com.sun.management.OperatingSystemMXBean) {
+            com.sun.management.OperatingSystemMXBean sunBean = (com.sun.management.OperatingSystemMXBean) OS_BEAN;
 
-                infos.put("proc.cpu.time", sunBean.getProcessCpuTime());
-                infos.put("mem.physical.total", sunBean.getTotalPhysicalMemorySize());
-                infos.put("mem.physical.free", sunBean.getFreePhysicalMemorySize());
-                infos.put("mem.virtual.comitted", sunBean.getCommittedVirtualMemorySize());
-                infos.put("mem.swap.total", sunBean.getTotalSwapSpaceSize());
-                infos.put("mem.swap.free", sunBean.getFreeSwapSpaceSize());
-            }
-        } catch(final Throwable err) {
-            LOGGER.debug("com.sun.management.OperatingSystemMXBean not available, skipping extended system info.");
+            infos.put("proc.cpu.time", sunBean.getProcessCpuTime());
+            infos.put("mem.physical.total", sunBean.getTotalPhysicalMemorySize());
+            infos.put("mem.physical.free", sunBean.getFreePhysicalMemorySize());
+            infos.put("mem.virtual.comitted", sunBean.getCommittedVirtualMemorySize());
+            infos.put("mem.swap.total", sunBean.getTotalSwapSpaceSize());
+            infos.put("mem.swap.free", sunBean.getFreeSwapSpaceSize());
         }
     }
 
