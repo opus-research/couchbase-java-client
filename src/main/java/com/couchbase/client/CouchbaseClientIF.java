@@ -26,12 +26,8 @@ import java.util.concurrent.Future;
 
 import net.spy.memcached.CASValue;
 import net.spy.memcached.MemcachedClientIF;
-import net.spy.memcached.ObserveResponse;
-import net.spy.memcached.PersistTo;
-import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.transcoders.Transcoder;
-
 
 
 /**
@@ -48,7 +44,6 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
   <T> CASValue<T> getAndLock(String key, int exp, Transcoder<T> tc);
 
   CASValue<Object> getAndLock(String key, int exp);
-
   <T> OperationFuture<Boolean> asyncUnlock(final String key,
           long casId, final Transcoder<T> tc);
 
@@ -61,11 +56,6 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
   Boolean unlock(final String key,
           long casId);
 
-  ObserveResponse[] observe(final String key, long cas);
 
-  OperationFuture<Boolean> set(String key, int exp,
-          String value, PersistTo persist);
-  OperationFuture<Boolean> set(String key, int exp,
-          String value, PersistTo persist, ReplicateTo replicate);
   int getNumVBuckets();
 }
