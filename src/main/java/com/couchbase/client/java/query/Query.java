@@ -61,7 +61,7 @@ public abstract class Query {
 
     //== PRIVATE CLASS FOR RAW STATEMENT ==
 
-    /* package */ static class RawStatement implements SerializableStatement {
+    /* package */ static class RawStatement implements Statement {
         private final String rawStatement;
 
         public RawStatement(String rawStatement) {

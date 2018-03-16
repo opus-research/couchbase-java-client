@@ -29,7 +29,7 @@ import com.couchbase.client.java.document.json.JsonObject;
  * @author Simon Baslé
  * @since 2.1
  */
-public class QueryPlan implements SerializableStatement {
+public class QueryPlan implements Statement {
 
     private final JsonObject jsonPlan;
 
