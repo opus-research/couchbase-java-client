@@ -24,7 +24,6 @@ package com.couchbase.client.java.env;
 import com.couchbase.client.core.env.DefaultCoreEnvironment;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.time.Delay;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CouchbaseCluster;
@@ -335,18 +334,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder observeIntervalDelay(Delay observeIntervalDelay) {
-            super.observeIntervalDelay(observeIntervalDelay);
-            return this;
-        }
-
-        @Override
-        public Builder reconnectDelay(Delay reconnectDelay) {
-            super.reconnectDelay(reconnectDelay);
-            return this;
-        }
-
-        @Override
         public Builder packageNameAndVersion(final String packageNameAndVersion) {
             super.packageNameAndVersion(packageNameAndVersion);
             return this;
@@ -367,8 +354,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         public String userAgent() {
             return userAgent;
         }
-
-
 
         @Override
         public DefaultCouchbaseEnvironment build() {
