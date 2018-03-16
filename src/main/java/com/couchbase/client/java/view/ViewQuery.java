@@ -539,11 +539,8 @@ public class ViewQuery implements Serializable {
         }
     }
 
-    /**
-     * Returns the query string for this ViewQuery, containing all the key/value pairs
-     * for parameters that will be part of this ViewQuery's execution URL for the view service.
-     */
-    public String toQueryString() {
+    @Override
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         boolean firstParam = true;
         for (int i = 0; i < params.length; i++) {
@@ -564,38 +561,6 @@ public class ViewQuery implements Serializable {
                 sb.append('=');
             }
         }
-        return sb.toString();
-    }
-
-    /**
-     * A string representation of this ViewQuery, suitable for logging and other human consumption.
-     * If the {@link #keys(JsonArray)} parameter is too large, it is truncated in this dump.
-     *
-     * @see this#toQueryString() for the parameter representation of the ViewQuery execution URL.
-     */
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("ViewQuery(").append(design).append('/').append(view).append("){");
-        sb.append("params=\"").append(toQueryString()).append('"');
-        if (isDevelopment()) {
-            sb.append(", dev");
-        }
-        if (isIncludeDocs()) {
-            sb.append(", includeDocs");
-        }
-        if (keysJson != null) {
-            sb.append(", keys=\"");
-            if (keysJson.length() < 140) {
-                sb.append(keysJson).append('"');
-            } else {
-                sb.append(keysJson, 0, 140)
-                    .append("...\"(")
-                    .append(keysJson.length())
-                    .append(" chars total)");
-            }
-        }
-        sb.append('}');
         return sb.toString();
     }
 
