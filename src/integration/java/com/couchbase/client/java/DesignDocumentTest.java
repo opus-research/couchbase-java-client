@@ -33,15 +33,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Verifies the functionality of the Design Document management facilities.
@@ -242,21 +236,6 @@ public class DesignDocumentTest extends ClusterDependentTest {
         assertNotNull(view.map());
         assertNull(view.reduce());
         assertFalse(view.hasReduce());
-    }
-
-    @Test
-    public void shouldCreateAndLoadDesignDocumentWithOptions() {
-        List<View> views = Arrays.asList(DefaultView.create("vOpts", "function(d,m){}", "_count"));
-        Map<DesignDocument.Option, Object> options = new HashMap<DesignDocument.Option, Object>();
-        options.put(DesignDocument.Option.UPDATE_MIN_CHANGES, 100);
-        options.put(DesignDocument.Option.REPLICA_UPDATE_MIN_CHANGES, 5000);
-
-        DesignDocument designDocument = DesignDocument.create("upsertWithOpts", views, options);
-        manager.upsertDesignDocument(designDocument);
-
-        DesignDocument loaded = manager.getDesignDocument("upsertWithOpts");
-        assertEquals(100, loaded.options().get(DesignDocument.Option.UPDATE_MIN_CHANGES));
-        assertEquals(5000, loaded.options().get(DesignDocument.Option.REPLICA_UPDATE_MIN_CHANGES));
     }
 
 }

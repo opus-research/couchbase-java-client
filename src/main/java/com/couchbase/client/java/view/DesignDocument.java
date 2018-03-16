@@ -24,7 +24,6 @@ package com.couchbase.client.java.view;
 import com.couchbase.client.java.document.json.JsonObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,12 +37,10 @@ public class DesignDocument {
 
     private final String name;
     private final List<View> views;
-    private final Map<Option, Object> options;
 
-    protected DesignDocument(final String name, final List<View> views, Map<Option, Object> options) {
+    protected DesignDocument(final String name, final List<View> views) {
         this.name = name;
         this.views = views;
-        this.options = options;
     }
 
     /**
@@ -54,24 +51,11 @@ public class DesignDocument {
      * @return a new {@link DesignDocument}.
      */
     public static DesignDocument create(final String name, final List<View> views) {
-        return create(name, views, new HashMap<Option, Object>());
-    }
-
-    /**
-     * Creates a new {@link DesignDocument}.
-     *
-     * @param name the name of the design document.
-     * @param views all views it contains.
-     * @param options optional options of the design document.
-     * @return a new {@link DesignDocument}.
-     */
-    public static DesignDocument create(final String name, final List<View> views, Map<Option, Object> options) {
-        return new DesignDocument(name, views, options);
+        return new DesignDocument(name, views);
     }
 
     public static DesignDocument from(final String name, final JsonObject raw) {
         final List<View> views = new ArrayList<View>();
-
         JsonObject rawViews = raw.getObject("views");
         if (rawViews != null) {
             for(String viewName: rawViews.getNames()) {
@@ -81,7 +65,6 @@ public class DesignDocument {
                 views.add(DefaultView.create(viewName, map, reduce));
             }
         }
-
         JsonObject spatialViews = raw.getObject("spatial");
         if (spatialViews != null) {
             for(String viewName : spatialViews.getNames()) {
@@ -89,16 +72,7 @@ public class DesignDocument {
                 views.add(SpatialView.create(viewName, map));
             }
         }
-
-        JsonObject opts = raw.getObject("options");
-        final Map<Option, Object> options = new HashMap<Option, Object>();
-        if (opts != null) {
-            for (String key : opts.getNames()) {
-                options.put(Option.fromName(key), opts.get(key));
-            }
-        }
-
-        return new DesignDocument(name, views, options);
+        return new DesignDocument(name, views);
     }
 
     public String name() {
@@ -109,25 +83,16 @@ public class DesignDocument {
         return views;
     }
 
-    public Map<Option, Object> options() {
-        return options;
-    }
-
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("DesignDocument{");
-        sb.append("name='").append(name).append('\'');
-        sb.append(", views=").append(views);
-        sb.append(", options=").append(options);
-        sb.append('}');
-        return sb.toString();
+        return "DesignDocument{" + "name='" + name + '\'' + ", views=" + views + '}';
     }
+
 
     public JsonObject toJsonObject() {
         JsonObject converted = JsonObject.empty();
         JsonObject views = JsonObject.empty();
         JsonObject spatialViews = JsonObject.empty();
-        JsonObject opts = JsonObject.empty();
 
         for (View view : this.views) {
             if (view instanceof SpatialView) {
@@ -142,17 +107,8 @@ public class DesignDocument {
             }
         }
 
-        boolean hasOptions = false;
-        for (Map.Entry<Option, Object> entry : options.entrySet()) {
-            hasOptions = true;
-            opts.put(entry.getKey().alias(), entry.getValue());
-        }
-
         converted.put("views", views);
         converted.put("spatial", spatialViews);
-        if (hasOptions) {
-            converted.put("options", opts);
-        }
         return converted;
     }
 
@@ -165,51 +121,14 @@ public class DesignDocument {
 
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
         if (views != null ? !views.equals(that.views) : that.views != null) return false;
-        return !(options != null ? !options.equals(that.options) : that.options != null);
 
+        return true;
     }
 
     @Override
     public int hashCode() {
         int result = name != null ? name.hashCode() : 0;
         result = 31 * result + (views != null ? views.hashCode() : 0);
-        result = 31 * result + (options != null ? options.hashCode() : 0);
         return result;
-    }
-
-    /**
-     * Optional design document options.
-     */
-    public enum Option {
-
-        /**
-         * The minimum changes to perform on a design document before indexing is triggered.
-         */
-        UPDATE_MIN_CHANGES("updateMinChanges"),
-
-        /**
-         * The minimum changes to perform on a design document before replica indexing is triggered.
-         */
-        REPLICA_UPDATE_MIN_CHANGES("replicaUpdateMinChanges");
-
-        private final String alias;
-
-        Option(String alias) {
-            this.alias = alias;
-        }
-
-        public String alias() {
-            return alias;
-        }
-
-        public static Option fromName(final String name) {
-            if (name.equals(UPDATE_MIN_CHANGES.alias())) {
-                return UPDATE_MIN_CHANGES;
-            } else if (name.equals(REPLICA_UPDATE_MIN_CHANGES.alias())) {
-                return REPLICA_UPDATE_MIN_CHANGES;
-            } else {
-                throw new IllegalArgumentException("Unknown name: " + name);
-            }
-        }
     }
 }
