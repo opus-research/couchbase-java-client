@@ -33,22 +33,24 @@ import java.net.URI;
 import java.text.ParseException;
 import java.util.Observable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpVersion;
 import net.spy.memcached.compat.log.Logger;
 import net.spy.memcached.compat.log.LoggerFactory;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
  * The BucketMonitor will open an HTTP comet stream to monitor for changes to
@@ -59,17 +61,17 @@ public class BucketMonitor extends Observable {
   private final URI cometStreamURI;
   private final String httpUser;
   private final String httpPass;
-  private final ChannelFactory factory;
   private volatile Channel channel;
   private final String host;
   private final int port;
   private ConfigurationParser configParser;
-  private BucketUpdateResponseHandler handler;
-  private final HttpMessageHeaders headers;
+  private BucketMonitorHandler handler;
+  private final HttpHeaders headers;
   private static final Logger LOGGER =
     LoggerFactory.getLogger(BucketMonitor.class.getName());
-  private ClientBootstrap bootstrap;
+  private Bootstrap bootstrap;
   private final ConfigurationProviderHTTP provider;
+  private final EventLoopGroup group;
 
   /**
    * @param cometStreamURI the URI which will stream node changes
@@ -80,7 +82,6 @@ public class BucketMonitor extends Observable {
    */
   public BucketMonitor(URI cometStreamURI, String username, String password,
     ConfigurationParser configParser, ConfigurationProviderHTTP provider) {
-    super();
     if (cometStreamURI == null) {
       throw new IllegalArgumentException("cometStreamURI cannot be NULL");
     }
@@ -92,15 +93,14 @@ public class BucketMonitor extends Observable {
     }
 
     this.cometStreamURI = cometStreamURI;
-    this.httpUser = username;
-    this.httpPass = password;
+    httpUser = username;
+    httpPass = password;
     this.configParser = configParser;
-    this.host = cometStreamURI.getHost();
-    this.port = cometStreamURI.getPort() == -1 ? 80 : cometStreamURI.getPort();
-    factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
-      Executors.newCachedThreadPool());
-    this.headers = new HttpMessageHeaders();
-      this.provider = provider;
+    host = cometStreamURI.getHost();
+    port = cometStreamURI.getPort() == -1 ? 80 : cometStreamURI.getPort();
+    headers = new DefaultHttpHeaders();
+    this.provider = provider;
+    group = new NioEventLoopGroup();
   }
 
   /**
@@ -117,57 +117,6 @@ public class BucketMonitor extends Observable {
     notifyObservers(bucket);
   }
 
-  /**
-   * A strategy that selects and invokes the appropriate setHeader method on
-   * the netty HttpHeader class, either setHeader(String, Object) or
-   * setHeader(String, String). This indirection is needed as with netty 3.2.0
-   * setHeader(String, String) was changed to setHeader(String, Object) and
-   * spymemcached users shall be saved from incompatibilities due to an
-   * upgrade to the newer netty version. Once netty is upgraded to 3.2.0+ this
-   * may strategy can be replaced with a direct invocation of setHeader.
-   */
-  private static final class HttpMessageHeaders {
-
-    private final Method m;
-
-    private HttpMessageHeaders() {
-      this(getHttpMessageHeaderStrategy());
-    }
-
-    private HttpMessageHeaders(final Method m) {
-      this.m = m;
-    }
-
-    private static Method getHttpMessageHeaderStrategy() {
-      try {
-        return HttpRequest.class.getMethod("setHeader", String.class,
-          Object.class);
-      } catch (final SecurityException e) {
-        throw new RuntimeException(
-          "Cannot check method due to security restrictions.", e);
-      } catch (final NoSuchMethodException e) {
-        try {
-          return HttpRequest.class.getMethod("setHeader", String.class,
-            String.class);
-        } catch (final Exception e1) {
-          throw new RuntimeException(
-            "No suitable setHeader method found on netty HttpRequest, the "
-            + "signature seems to have changed.", e1);
-        }
-      }
-    }
-
-    void setHeader(HttpRequest obj, String name, String value) {
-      try {
-        m.invoke(obj, name, value);
-      } catch (final Exception e) {
-        throw new RuntimeException("Could not invoke method " + m
-          + " with args '" + name + "' and '" + value + "'.", e);
-      }
-    }
-
-  }
-
   public void startMonitor() {
     if (channel != null) {
       LOGGER.info("Bucket monitor is already started.");
@@ -181,10 +130,10 @@ public class BucketMonitor extends Observable {
       @Override
       public void operationComplete(ChannelFuture cf) throws Exception {
         if(cf.isSuccess()) {
-          channel = cf.getChannel();
+          channel = cf.channel();
         } else {
           LOGGER.warn("Could not start monitor channel because of: ",
-            cf.getCause());
+            cf.cause());
         }
         channelLatch.countDown();
       }
@@ -198,44 +147,49 @@ public class BucketMonitor extends Observable {
     }
 
     if (channel == null) {
-      bootstrap.releaseExternalResources();
+      shutdown();
       throw new ConnectionException("Could not establish a streaming connection to "
         + host + ":" + port);
     }
 
-    this.handler = channel.getPipeline().get(BucketUpdateResponseHandler.class);
+    handler = (BucketMonitorHandler) channel.pipeline().get("handler");
     handler.setBucketMonitor(this);
     HttpRequest request = prepareRequest(cometStreamURI, host);
-    channel.write(request);
     try {
-      String response = this.handler.getLastResponse();
+      channel.writeAndFlush(request).await(30, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted while waiting to write the " +
+        "streaming config request.");
+    }
+
+    try {
+      String response = handler.getCurrentConfig();
       LOGGER.debug("Getting server list returns this last chunked response:\n"
           + response);
-      Bucket bucketToMonitor = this.configParser.parseBucket(response);
+      Bucket bucketToMonitor = configParser.parseBucket(response);
       setChanged();
       notifyObservers(bucketToMonitor);
     } catch (ParseException ex) {
       LOGGER.warn("Invalid client configuration received from server. "
         + "Staying with existing configuration.", ex);
       LOGGER.debug("Invalid client configuration received:\n",
-        handler.getLastResponse());
+        handler.getCurrentConfig());
     }
   }
 
   protected ChannelFuture createChannel() {
-    // Configure the client.
-    bootstrap = new ClientBootstrap(factory);
+    bootstrap = new Bootstrap();
+    bootstrap
+      .group(new NioEventLoopGroup())
+      .channel(NioSocketChannel.class)
+      .handler(new BucketMonitorChannelInitializer());
 
-    // Set up the event pipeline factory.
-    bootstrap.setPipelineFactory(new BucketMonitorPipelineFactory());
-
-    // Start the connection attempt.
     return bootstrap.connect(new InetSocketAddress(host, port));
   }
 
   protected HttpRequest prepareRequest(URI uri, String h) {
     // Send the HTTP request.
-    HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
+    HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
       HttpMethod.GET, uri.toASCIIString());
     headers.setHeader(request, HttpHeaders.Names.HOST, h);
     if (getHttpUser() != null && !getHttpUser().isEmpty()) {
@@ -290,10 +244,11 @@ public class BucketMonitor extends Observable {
    */
   public void shutdown(long timeout, TimeUnit unit) {
     deleteObservers();
-    if (channel != null) {
-      channel.close().awaitUninterruptibly(timeout, unit);
+    if (timeout < 0) {
+      group.shutdownGracefully();
+    } else {
+      group.shutdownGracefully(0, timeout, unit);
     }
-    factory.releaseExternalResources();
   }
 
   /**
@@ -301,7 +256,7 @@ public class BucketMonitor extends Observable {
    */
   protected void replaceConfig() {
     try {
-      String response = handler.getLastResponse();
+      String response = handler.getCurrentConfig();
       Bucket updatedBucket = this.configParser.updateBucket(
         response,
         provider.getBucketConfiguration(provider.getBucket())

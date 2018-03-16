@@ -22,28 +22,24 @@
 
 package com.couchbase.client.vbucket;
 
-/**
- * portions Copyright 2009 Red Hat, Inc. as provided under an Apache 2.0 license
- * from the netty project.
- */
-
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-
-import static org.jboss.netty.channel.Channels.pipeline;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpClientCodec;
 
 /**
- * A BucketMonitorPipelineFactory.
+ * Initializes the Channel Pipeline with Handlers.
  */
-public class BucketMonitorPipelineFactory implements ChannelPipelineFactory {
+public class BucketMonitorChannelInitializer extends ChannelInitializer<Channel> {
 
-  public ChannelPipeline getPipeline() {
-    ChannelPipeline pipeline = pipeline();
-    pipeline.addLast("decoder", new HttpResponseDecoder());
-    pipeline.addLast("encoder", new HttpRequestEncoder());
-    pipeline.addLast("handler", new BucketUpdateResponseHandler());
-    return pipeline;
+  @Override
+  protected void initChannel(Channel channel) throws Exception {
+    ChannelPipeline pipeline = channel.pipeline();
+
+    pipeline
+      //.addLast("logging", new LoggingHandler(LogLevel.INFO))
+      .addLast("codec", new HttpClientCodec())
+      //.addLast("handler", new BucketUpdateResponseHandler());
+      .addLast("handler", new BucketMonitorHandler());
   }
 }
