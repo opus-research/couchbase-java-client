@@ -47,7 +47,6 @@ import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.*;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
-import rx.functions.Func0;
 import rx.functions.Func1;
 
 import java.util.ArrayList;
@@ -442,16 +441,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   public Observable<AsyncViewResult> query(final ViewQuery query) {
     final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
         query.toString(), bucket, password);
-
-        Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
-            @Override
-            public Observable<ViewQueryResponse> call() {
-                return core.send(request);
-            }
-        });
-
-        return ViewRetryHandler
-            .retryOnCondition(source)
+        return core.<ViewQueryResponse>send(request)
             .flatMap(new Func1<ViewQueryResponse, Observable<AsyncViewResult>>() {
                 @Override
                 public Observable<AsyncViewResult> call(final ViewQueryResponse response) {
