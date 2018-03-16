@@ -34,16 +34,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Tests on {@link N1qlParams}.
+ * Tests on {@link QueryParams}.
  *
  * @author Simon Baslé
  * @since 2.1
  */
-public class N1qlParamsTest {
+public class QueryParamsTest {
 
     @Test
     public void shouldInjectCorrectConsistencies() {
-        N1qlParams p = N1qlParams.build().consistency(ScanConsistency.NOT_BOUNDED);
+        QueryParams p = QueryParams.build().consistency(ScanConsistency.NOT_BOUNDED);
 
         JsonObject actual = JsonObject.empty();
         p.injectParams(actual);
@@ -63,7 +63,7 @@ public class N1qlParamsTest {
 
     @Test
     public void consistencyNotBoundedShouldEraseScanWaitAndVector() {
-        N1qlParams p = N1qlParams.build()
+        QueryParams p = QueryParams.build()
             .scanWait(12, TimeUnit.SECONDS)
             .consistency(ScanConsistency.NOT_BOUNDED);
 
@@ -77,7 +77,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldIgnoreScanWaitIfConsistencyNotBounded() {
-        N1qlParams p = N1qlParams.build()
+        QueryParams p = QueryParams.build()
            .consistency(ScanConsistency.NOT_BOUNDED)
            .scanWait(12, TimeUnit.SECONDS);
 
@@ -91,7 +91,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldAllowScanWaitOnlyForCorrectConsistencies() {
-        N1qlParams p = N1qlParams.build()
+        QueryParams p = QueryParams.build()
                                    .scanWait(12, TimeUnit.SECONDS)
                                    .consistency(ScanConsistency.REQUEST_PLUS);
 
@@ -117,7 +117,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldInjectClientId() {
-        N1qlParams p = N1qlParams.build()
+        QueryParams p = QueryParams.build()
                                    .withContextId("test");
 
         JsonObject expected = JsonObject.create()
@@ -130,7 +130,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldInjectTimeoutNanos() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.NANOSECONDS);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.NANOSECONDS);
 
         JsonObject expected = JsonObject.create().put("timeout", "24ns");
         JsonObject actual = JsonObject.empty();
@@ -140,7 +140,7 @@ public class N1qlParamsTest {
     }
     @Test
     public void shouldInjectTimeoutMicros() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.MICROSECONDS);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.MICROSECONDS);
 
         JsonObject expected = JsonObject.create().put("timeout", "24us");
         JsonObject actual = JsonObject.empty();
@@ -150,7 +150,7 @@ public class N1qlParamsTest {
     }
     @Test
     public void shouldInjectTimeoutMillis() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.MILLISECONDS);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.MILLISECONDS);
 
         JsonObject expected = JsonObject.create().put("timeout", "24ms");
         JsonObject actual = JsonObject.empty();
@@ -160,7 +160,7 @@ public class N1qlParamsTest {
     }
     @Test
     public void shouldInjectTimeoutSeconds() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.SECONDS);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.SECONDS);
 
         JsonObject expected = JsonObject.create().put("timeout", "24s");
         JsonObject actual = JsonObject.empty();
@@ -170,7 +170,7 @@ public class N1qlParamsTest {
     }
     @Test
     public void shouldInjectTimeoutMinutes() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.MINUTES);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.MINUTES);
 
         JsonObject expected = JsonObject.create().put("timeout", "24m");
         JsonObject actual = JsonObject.empty();
@@ -181,7 +181,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldInjectTimeoutHours() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(24, TimeUnit.HOURS);
+        QueryParams p = QueryParams.build().serverSideTimeout(24, TimeUnit.HOURS);
 
         JsonObject expected = JsonObject.create().put("timeout", "24h");
         JsonObject actual = JsonObject.empty();
@@ -192,7 +192,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldInjectTimeoutHoursIfDays() {
-        N1qlParams p = N1qlParams.build().serverSideTimeout(2, TimeUnit.DAYS);
+        QueryParams p = QueryParams.build().serverSideTimeout(2, TimeUnit.DAYS);
 
         JsonObject expected = JsonObject.create().put("timeout", "48h");
         JsonObject actual = JsonObject.empty();
@@ -203,7 +203,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldDoNothingIfParamsEmpty() {
-        N1qlParams p = N1qlParams.build();
+        QueryParams p = QueryParams.build();
         JsonObject empty = JsonObject.empty();
         p.injectParams(empty);
 
@@ -212,7 +212,7 @@ public class N1qlParamsTest {
 
     @Test
     public void shouldSupportSerialization() throws Exception {
-        N1qlParams source = N1qlParams
+        QueryParams source = QueryParams
             .build()
             .serverSideTimeout(1, TimeUnit.DAYS)
             .consistency(ScanConsistency.NOT_BOUNDED);
@@ -220,13 +220,13 @@ public class N1qlParamsTest {
         byte[] serialized = SerializationHelper.serializeToBytes(source);
         assertNotNull(serialized);
 
-        N1qlParams deserialized = SerializationHelper.deserializeFromBytes(serialized, N1qlParams.class);
+        QueryParams deserialized = SerializationHelper.deserializeFromBytes(serialized, QueryParams.class);
         assertEquals(source, deserialized);
     }
 
     @Test
     public void shouldInjectMaxParallelism() throws Exception {
-        N1qlParams source = N1qlParams.build().maxParallelism(5);
+        QueryParams source = QueryParams.build().maxParallelism(5);
 
         JsonObject expected = JsonObject.create().put("max_parallelism", "5");
         JsonObject actual = JsonObject.empty();

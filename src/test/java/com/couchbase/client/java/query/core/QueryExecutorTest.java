@@ -39,14 +39,14 @@ import java.util.List;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.QueryExecutionException;
-import com.couchbase.client.java.query.AsyncN1qlQueryResult;
-import com.couchbase.client.java.query.AsyncN1qlQueryRow;
-import com.couchbase.client.java.query.DefaultAsyncN1qlQueryResult;
-import com.couchbase.client.java.query.N1qlMetrics;
-import com.couchbase.client.java.query.N1qlQuery;
-import com.couchbase.client.java.query.PreparedN1qlQuery;
+import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.AsyncQueryRow;
+import com.couchbase.client.java.query.DefaultAsyncQueryResult;
 import com.couchbase.client.java.query.PreparedPayload;
-import com.couchbase.client.java.query.N1qlParams;
+import com.couchbase.client.java.query.PreparedQuery;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryMetrics;
+import com.couchbase.client.java.query.QueryParams;
 import com.couchbase.client.java.query.Select;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.util.LRUCache;
@@ -55,39 +55,39 @@ import org.mockito.internal.stubbing.answers.ReturnsElementsOf;
 import rx.Observable;
 
 /**
- * Tests the functionality of {@link N1qlQueryExecutor}.
+ * Tests the functionality of {@link QueryExecutor}.
  *
  * @author Simon Baslé
  * @since 2.2
  */
-public class N1qlQueryExecutorTest {
+public class QueryExecutorTest {
 
     @Test
     public void testPreparedStatementInCacheBypassesPreparation() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
         PreparedPayload payloadFromServer = new PreparedPayload(st, "server", "encodedPlan");
         PreparedPayload payloadInCache = new PreparedPayload(st, "cached", "encodedPlan");
         //put the statement in cache
         cache.put(st.toString(), payloadInCache);
 
-        doReturn(Observable.empty()).when(executor).executeQuery(any(N1qlQuery.class));
+        doReturn(Observable.empty()).when(executor).executeQuery(any(Query.class));
         doReturn(Observable.just(payloadFromServer)).when(executor).prepare(any(Statement.class));
-        doReturn(Observable.<AsyncN1qlQueryResult>empty()).when(executor)
-                                                      .executePrepared(any(N1qlQuery.class), any(PreparedPayload.class));
+        doReturn(Observable.<AsyncQueryResult>empty()).when(executor)
+                                                      .executePrepared(any(Query.class), any(PreparedPayload.class));
 
         executor.execute(q).toBlocking().firstOrDefault(null);
 
-        verify(executor).dispatchPrepared(any(N1qlQuery.class));
+        verify(executor).dispatchPrepared(any(Query.class));
         verify(executor, never()).prepare(any(Statement.class));
         verify(executor).executePrepared(q, payloadInCache);
         verify(executor, never()).executePrepared(q, payloadFromServer);
-        verify(executor, never()).prepareAndExecute(any(N1qlQuery.class));
-        verify(executor, never()).retryPrepareAndExecuteOnce(any(QueryExecutionException.class), any(N1qlQuery.class));
+        verify(executor, never()).prepareAndExecute(any(Query.class));
+        verify(executor, never()).retryPrepareAndExecuteOnce(any(QueryExecutionException.class), any(Query.class));
         assertEquals(1, cache.size());
     }
 
@@ -95,24 +95,24 @@ public class N1qlQueryExecutorTest {
     public void testPreparedStatementNotInCacheTriggersPreparation() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
         PreparedPayload payloadFromServer = new PreparedPayload(st, "server", "encodedPlan");
 
         doReturn(Observable.just(payloadFromServer)).when(executor).prepare(any(Statement.class));
-        doReturn(Observable.<AsyncN1qlQueryResult>empty()).when(executor)
-                                                      .executePrepared(any(N1qlQuery.class), any(PreparedPayload.class));
+        doReturn(Observable.<AsyncQueryResult>empty()).when(executor)
+                                                      .executePrepared(any(Query.class), any(PreparedPayload.class));
 
         assertEquals(0, cache.size());
         executor.execute(q).toBlocking().firstOrDefault(null);
 
-        verify(executor).dispatchPrepared(any(N1qlQuery.class));
+        verify(executor).dispatchPrepared(any(Query.class));
         verify(executor).prepare(any(Statement.class));
         verify(executor).executePrepared(q, payloadFromServer);
-        verify(executor).prepareAndExecute(any(N1qlQuery.class));
-        verify(executor, never()).retryPrepareAndExecuteOnce(any(QueryExecutionException.class), any(N1qlQuery.class));
+        verify(executor).prepareAndExecute(any(Query.class));
+        verify(executor, never()).retryPrepareAndExecuteOnce(any(QueryExecutionException.class), any(Query.class));
         assertEquals(1, cache.size());
     }
 
@@ -120,32 +120,32 @@ public class N1qlQueryExecutorTest {
     public void testCachedPlanExecutionErrorTriggersRetry() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
         PreparedPayload payloadFromServer = new PreparedPayload(st, "server", "encodedPlan");
         PreparedPayload payloadFromCache = new PreparedPayload(st, "cache", "encodedPlan");
-        AsyncN1qlQueryResult result4050 = new DefaultAsyncN1qlQueryResult(Observable.<AsyncN1qlQueryRow>empty(),
+        AsyncQueryResult result4050 = new DefaultAsyncQueryResult(Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.just(JsonObject.create().put("code", 4050).put("msg", "notRelevant")),
                 Observable.just(false),
                 true, "req", "");
 
         cache.put(st.toString(), payloadFromCache);
         doReturn(Observable.just(payloadFromServer)).when(executor).prepare(any(Statement.class));
-        doReturn(Observable.just(result4050)).when(executor).executeQuery(any(PreparedN1qlQuery.class));
+        doReturn(Observable.just(result4050)).when(executor).executeQuery(any(PreparedQuery.class));
 
         assertEquals(1, cache.size());
         assertEquals(payloadFromCache, cache.values().iterator().next());
 
         executor.execute(q).toBlocking().firstOrDefault(null);
 
-        verify(executor).dispatchPrepared(any(N1qlQuery.class));
+        verify(executor).dispatchPrepared(any(Query.class));
         verify(executor, times(1)).executePrepared(q, payloadFromCache);
         verify(executor, times(1)).executePrepared(q, payloadFromServer);
-        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(N1qlQuery.class));
+        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(Query.class));
         verify(executor, times(1)).prepare(any(Statement.class));
         assertEquals(1, cache.size());
         assertEquals(payloadFromServer, cache.values().iterator().next());
@@ -155,44 +155,44 @@ public class N1qlQueryExecutorTest {
     public void testUncachedPlanExecutionErrorTriggersRetry() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
         PreparedPayload payloadFromServer1 = new PreparedPayload(st, "badserver", "encodedPlan");
         PreparedPayload payloadFromServer2 = new PreparedPayload(st, "goodserver", "encodedPlan");
         List<Observable<PreparedPayload>> payloads = Arrays.asList(
                 Observable.just(payloadFromServer1),
                 Observable.just(payloadFromServer2));
-        Observable<DefaultAsyncN1qlQueryResult> result4050 = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> result4050 = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.just(JsonObject.create().put("code", 4050).put("msg", "notRelevant")),
                 Observable.just(false),
                 true, "req", ""));
-        Observable<DefaultAsyncN1qlQueryResult> resultOk = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> resultOk = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.<JsonObject>empty(),
                 Observable.just(true),
                 true, "req", ""));
 
         doAnswer(new ReturnsElementsOf(payloads)).when(executor).prepare(any(Statement.class));
         doAnswer(new ReturnsElementsOf(Arrays.asList(result4050, resultOk))).when(executor).executeQuery(
-                any(PreparedN1qlQuery.class));
+                any(PreparedQuery.class));
 
         assertEquals(0, cache.size());
 
-        AsyncN1qlQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null);
+        AsyncQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null);
         List<JsonObject> errors = result.errors().toList().toBlocking().first();
         boolean success = result.finalSuccess().toBlocking().first();
 
-        verify(executor).dispatchPrepared(any(N1qlQuery.class));
+        verify(executor).dispatchPrepared(any(Query.class));
         verify(executor, times(1)).executePrepared(q, payloadFromServer1);
         verify(executor, times(1)).executePrepared(q, payloadFromServer2);
-        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(N1qlQuery.class));
+        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(Query.class));
         verify(executor, times(2)).prepare(any(Statement.class));
         assertEquals(1, cache.size());
         assertEquals(payloadFromServer2, cache.values().iterator().next());
@@ -205,26 +205,26 @@ public class N1qlQueryExecutorTest {
     public void testUncachedPlanExecutionDoubleErrorTriggersRetryThenFails() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
         PreparedPayload payloadFromServer1 = new PreparedPayload(st, "badserver", "encodedPlan");
         PreparedPayload payloadFromServer2 = new PreparedPayload(st, "goodserver", "encodedPlan");
         List<Observable<PreparedPayload>> payloads = Arrays.asList(
                 Observable.just(payloadFromServer1),
                 Observable.just(payloadFromServer2));
-        Observable<DefaultAsyncN1qlQueryResult> result4050 = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> result4050 = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.just(JsonObject.create().put("code", 4050).put("msg", "notRelevant")),
                 Observable.just(false),
                 true, "req", ""));
-        Observable<DefaultAsyncN1qlQueryResult> resultOk = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> resultOk = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.<JsonObject>empty(),
                 Observable.just(true),
                 true, "req", ""));
@@ -236,18 +236,18 @@ public class N1qlQueryExecutorTest {
                 result4050,
                 result4050,
                 resultOk
-        ))).when(executor).executeQuery(any(PreparedN1qlQuery.class));
+        ))).when(executor).executeQuery(any(PreparedQuery.class));
 
         assertEquals(0, cache.size());
 
-        AsyncN1qlQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null);
+        AsyncQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null);
         List<JsonObject> errors = result.errors().toList().toBlocking().first();
         boolean success = result.finalSuccess().toBlocking().first();
 
-        verify(executor).dispatchPrepared(any(N1qlQuery.class));
+        verify(executor).dispatchPrepared(any(Query.class));
         verify(executor, times(1)).executePrepared(q, payloadFromServer1);
         verify(executor, times(1)).executePrepared(q, payloadFromServer2);
-        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(N1qlQuery.class));
+        verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(Query.class));
         verify(executor, times(2)).prepare(any(Statement.class));
         assertEquals(1, cache.size());
         assertEquals(payloadFromServer2, cache.values().iterator().next());
@@ -259,27 +259,27 @@ public class N1qlQueryExecutorTest {
     private void testRetryCondition(int code, String msg, boolean retryExpected) throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache));
+        QueryExecutor executor = spy(new QueryExecutor(mockFacade, "default", "", cache));
 
         Statement st = Select.select("*");
-        N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
+        Query q = Query.simple(st, QueryParams.build().adhoc(false));
 
         PreparedPayload payloadFromServer1 = new PreparedPayload(st, "badserver", "encodedPlan");
         PreparedPayload payloadFromServer2 = new PreparedPayload(st, "goodserver", "encodedPlan");
         List<Observable<PreparedPayload>> payloads = Arrays.asList(
                 Observable.just(payloadFromServer1),
                 Observable.just(payloadFromServer2));
-        Observable<DefaultAsyncN1qlQueryResult> resultRetry = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> resultRetry = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.just(JsonObject.create().put("code", code).put("msg", msg)),
                 Observable.just(false),
                 true, "req", ""));
-        Observable<DefaultAsyncN1qlQueryResult> resultOk = Observable.just(new DefaultAsyncN1qlQueryResult(
-                Observable.<AsyncN1qlQueryRow>empty(),
+        Observable<DefaultAsyncQueryResult> resultOk = Observable.just(new DefaultAsyncQueryResult(
+                Observable.<AsyncQueryRow>empty(),
                 Observable.empty(),
-                Observable.<N1qlMetrics>empty(),
+                Observable.<QueryMetrics>empty(),
                 Observable.<JsonObject>empty(),
                 Observable.just(true),
                 true, "req", ""));
@@ -291,22 +291,22 @@ public class N1qlQueryExecutorTest {
         doAnswer(new ReturnsElementsOf(Arrays.asList(
                 resultRetry,
                 resultOk
-        ))).when(executor).executeQuery(any(PreparedN1qlQuery.class));
+        ))).when(executor).executeQuery(any(PreparedQuery.class));
 
         assertEquals(0, cache.size());
 
-        AsyncN1qlQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null); //ok
+        AsyncQueryResult result = executor.execute(q).toBlocking().firstOrDefault(null); //ok
         List<JsonObject> errors = result.errors().toList().toBlocking().first();
         boolean success = result.finalSuccess().toBlocking().first();
 
         if (retryExpected) {
-            verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(N1qlQuery.class));
+            verify(executor, times(1)).retryPrepareAndExecuteOnce(any(Throwable.class), any(Query.class));
             assertTrue(success);
             assertEquals(0, errors.size());
             assertEquals(1, cache.size());
             assertEquals(payloadFromServer2, cache.values().iterator().next());
         } else {
-            verify(executor, never()).retryPrepareAndExecuteOnce(any(Throwable.class), any(N1qlQuery.class));
+            verify(executor, never()).retryPrepareAndExecuteOnce(any(Throwable.class), any(Query.class));
             assertFalse(success);
             assertEquals(1, errors.size());
             assertEquals(new Integer(code), errors.get(0).getInt("code"));
@@ -328,7 +328,7 @@ public class N1qlQueryExecutorTest {
 
     @Test
     public void testRetryOn5000WithSpecificMessage() throws Exception {
-        testRetryCondition(5000, "toto" + N1qlQueryExecutor.ERROR_5000_SPECIFIC_MESSAGE, true);
+        testRetryCondition(5000, "toto" + QueryExecutor.ERROR_5000_SPECIFIC_MESSAGE, true);
     }
 
     @Test

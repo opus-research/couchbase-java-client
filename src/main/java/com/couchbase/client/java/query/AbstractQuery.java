@@ -26,14 +26,14 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.document.json.JsonValue;
 
 /**
- * An abstract base for N1QL {@link N1qlQuery}.
+ * An abstract base for N1QL {@link Query}.
  *
  * @author Simon Baslé
  * @since 2.1
  */
-public abstract class AbstractN1qlQuery extends N1qlQuery {
+public abstract class AbstractQuery extends Query {
 
-    private N1qlParams queryParameters;
+    private QueryParams queryParameters;
     private SerializableStatement statement;
 
     /** The type of the statement, used as JSON name in the final JSON form of the query */
@@ -45,15 +45,15 @@ public abstract class AbstractN1qlQuery extends N1qlQuery {
     /** The parameters to inject in the query, null or empty to ignore. */
     protected abstract JsonValue statementParameters();
 
-    protected AbstractN1qlQuery(Statement statement, N1qlParams params) {
+    protected AbstractQuery(Statement statement, QueryParams params) {
         this.statement = (statement instanceof SerializableStatement)
                 ? (SerializableStatement) statement
                 : new RawStatement(statement.toString());
-        this.queryParameters = params == null ? N1qlParams.build() : params;
+        this.queryParameters = params == null ? QueryParams.build() : params;
     }
 
     @Override
-    public N1qlParams params() {
+    public QueryParams params() {
         return this.queryParameters;
     }
 
