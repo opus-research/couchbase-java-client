@@ -397,11 +397,6 @@ public class BinaryTest extends ClusterDependentTest {
         }
     }
 
-    @Test(expected = DocumentDoesNotExistException.class)
-    public void shouldFailOnRemoveWhenNotExists() {
-        bucket().remove("thisDocumentDoesNotExist");
-    }
-
     static class User implements Serializable {
 
         private final String firstname;
