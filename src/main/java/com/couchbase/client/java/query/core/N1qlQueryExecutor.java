@@ -198,7 +198,8 @@ public class N1qlQueryExecutor {
                     @Override
                     public AsyncN1qlQueryRow call(ByteBuf byteBuf) {
                         try {
-                            byte[] copy = TranscoderUtils.copyByteBufToByteArray(byteBuf);
+                            TranscoderUtils.ByteBufToArray rawData = TranscoderUtils.byteBufToByteArray(byteBuf);
+                            byte[] copy = Arrays.copyOfRange(rawData.byteArray, rawData.offset, rawData.offset + rawData.length);
                             return new DefaultAsyncN1qlQueryRow(copy);
                         } catch (Exception e) {
                             throw new TranscodingException("Could not decode N1QL Query Row.", e);
