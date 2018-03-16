@@ -28,7 +28,10 @@ import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.DurabilityException;
-import com.couchbase.client.java.query.*;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.ViewQuery;
+import com.couchbase.client.java.query.ViewResult;
 import rx.Observable;
 
 /**
