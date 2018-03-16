@@ -31,7 +31,7 @@ public class ViewQueryMapper implements Func1<ViewQueryResponse, Observable<Json
         for (Integer marker : markers) {
             ByteBuf chunk = response.content().readBytes(marker - response.content().readerIndex());
             chunk.readerIndex(chunk.readerIndex()+1);
-            objects.add((JsonObject) converter.decode(chunk, 0));
+            objects.add((JsonObject) converter.decode(chunk));
         }
         return Observable.from(objects);
     }
