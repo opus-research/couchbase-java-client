@@ -17,6 +17,7 @@ package com.couchbase.client.java.cluster;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.java.ConnectionString;
+import com.couchbase.client.java.cluster.api.ClusterApiClient;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.util.Blocking;
 
@@ -114,5 +115,10 @@ public class DefaultClusterManager implements ClusterManager {
     @Override
     public Boolean removeBucket(String name, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncClusterManager.removeBucket(name).single(), timeout, timeUnit);
+    }
+
+    @Override
+    public ClusterApiClient apiClient() {
+        return asyncClusterManager.apiClient();
     }
 }
