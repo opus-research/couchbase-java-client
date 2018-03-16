@@ -350,8 +350,8 @@ public class BucketConfigurationProvider extends SpyObject
       httpProvider.get().clearBuckets();
       Bucket config = httpProvider.get().getBucketConfiguration(bucket);
       setConfig(config);
-      bootstrapProvider = BootstrapProviderType.HTTP;
       monitorBucket();
+      bootstrapProvider = BootstrapProviderType.HTTP;
       return true;
     } catch(Exception ex) {
       getLogger().info("Could not fetch config from http seed nodes.", ex);
