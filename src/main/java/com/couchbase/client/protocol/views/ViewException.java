@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,52 +20,23 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import net.spy.memcached.ops.OperationErrorType;
+import net.spy.memcached.ops.OperationException;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * An exception thrown for non-200 server error codes.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class ViewException extends OperationException {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  private static final long serialVersionUID = 5349443788429204015L;
+
+  public ViewException() {
+    super();
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public ViewException(String error, String reason) {
+    super(OperationErrorType.SERVER, error + " Reason: " + reason);
   }
 }
