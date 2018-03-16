@@ -81,7 +81,7 @@ public class ViewConnection extends SpyObject implements
 
   private final CouchbaseConnectionFactory connFactory;
   private final Collection<ConnectionObserver> connObservers =
-    new ConcurrentLinkedQueue<ConnectionObserver>();
+      new ConcurrentLinkedQueue<ConnectionObserver>();
   private List<ViewNode> couchNodes;
   private int nextNode;
 
@@ -313,7 +313,7 @@ public class ViewConnection extends SpyObject implements
         for (ViewNode current : couchNodes) {
           if (newServerAddresses.contains(current.getSocketAddress())) {
             stayNodes.add(current);
-            stayServers.add(current.getSocketAddress());
+            stayServers.add((InetSocketAddress) current.getSocketAddress());
           } else {
             shutdownNodes.add(current);
           }

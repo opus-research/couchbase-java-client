@@ -60,7 +60,7 @@ public class ClusterManagerTest extends TestCase {
   @Override
   public void tearDown() throws HttpException {
     deleteAllBuckets(manager);
-    assertTrue(manager.shutdown());
+    manager.shutdown();
   }
   /**
    * This method is used to get the cluster manager instance
@@ -83,7 +83,8 @@ public class ClusterManagerTest extends TestCase {
    * @param cm the cm
    * @throws HttpException the http exception
    */
-  private void deleteAllBuckets(ClusterManager cm) {
+  private void deleteAllBuckets(ClusterManager cm)
+    throws HttpException {
     List<String> buckets = cm.listBuckets();
     for (int i = 0; i < buckets.size(); i++) {
       cm.deleteBucket(buckets.get(i));
@@ -300,7 +301,7 @@ public class ClusterManagerTest extends TestCase {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://badurl:8091/pools"));
     uris.add(URI.create("http://anotherbadurl:8091/pools"));
-    assertTrue(manager.shutdown());
+    manager.shutdown();
     manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
       CbTestConfig.CLUSTER_PASS);
     try {
@@ -325,7 +326,7 @@ public class ClusterManagerTest extends TestCase {
   public void testConnectionRefused() throws InterruptedException {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":3454/pools"));
-    assertTrue(manager.shutdown());
+    manager.shutdown();
     manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
       CbTestConfig.CLUSTER_PASS);
     String message = "";
@@ -352,7 +353,7 @@ public class ClusterManagerTest extends TestCase {
   public void testNetworkUnreachable() throws InterruptedException {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://123.123.123.123:8091/pools"));
-    assertTrue(manager.shutdown());
+    manager.shutdown();
     manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
       CbTestConfig.CLUSTER_PASS);
     String message = "";
@@ -380,7 +381,7 @@ public class ClusterManagerTest extends TestCase {
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
     uris.add(URI.create("http://anotherbadurl:8091/pools"));
 
-    assertTrue(manager.shutdown());
+    manager.shutdown();
     manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
       CbTestConfig.CLUSTER_PASS);
     manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
