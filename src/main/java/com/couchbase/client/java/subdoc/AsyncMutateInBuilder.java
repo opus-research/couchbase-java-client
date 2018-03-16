@@ -111,7 +111,6 @@ public class AsyncMutateInBuilder {
     protected PersistTo persistTo;
     protected ReplicateTo replicateTo;
     protected boolean createDocument;
-    protected boolean insertDocument;
 
     /**
      * Instances of this builder should be obtained through {@link AsyncBucket#mutateIn(String)} rather than directly
@@ -418,20 +417,8 @@ public class AsyncMutateInBuilder {
      *
      * @param createDocument true to create document.
      */
-    @InterfaceStability.Experimental
     public AsyncMutateInBuilder createDocument(boolean createDocument) {
         this.createDocument = createDocument;
-        return this;
-    }
-
-    /**
-     * Set insertDocument to true, if the document has to be created only if it does not exist
-     *
-     * @param insertDocument true to insert document.
-     */
-    @InterfaceStability.Experimental
-    public AsyncMutateInBuilder insertDocument(boolean insertDocument) {
-        this.insertDocument = insertDocument;
         return this;
     }
 
@@ -1068,7 +1055,7 @@ public class AsyncMutateInBuilder {
             @Override
             public Observable<MultiMutationResponse> call(List<MutationCommand> mutationCommands) {
                 return core.send(new SubMultiMutationRequest(docId, bucketName,
-                        expiry, cas, SubMultiMutationDocOptionsBuilder.builder().createDocument(createDocument).insertDocument(insertDocument),
+                        expiry, cas, SubMultiMutationDocOptionsBuilder.builder().createDocument(createDocument),
                         mutationCommands));
             }
         }).flatMap(new Func1<MultiMutationResponse, Observable<DocumentFragment<Mutation>>>() {
@@ -1167,7 +1154,6 @@ public class AsyncMutateInBuilder {
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
                     request.createDocument(createDocument);
-                    request.insertDocument(insertDocument);
                     return request;
                 }
             };
@@ -1198,7 +1184,6 @@ public class AsyncMutateInBuilder {
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
                     request.createDocument(createDocument);
-                    request.insertDocument(insertDocument);
                     return request;
                 }
             };
@@ -1231,7 +1216,6 @@ public class AsyncMutateInBuilder {
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
                     request.createDocument(createDocument);
-                    request.insertDocument(insertDocument);
                     return request;
                 }
             };
@@ -1273,7 +1257,6 @@ public class AsyncMutateInBuilder {
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
                     request.createDocument(createDocument);
-                    request.insertDocument(insertDocument);
                     return request;
                 }
             };
@@ -1325,7 +1308,6 @@ public class AsyncMutateInBuilder {
                     request.createIntermediaryPath(spec.createParents());
                     request.xattr(spec.xattr());
                     request.createDocument(createDocument);
-                    request.insertDocument(insertDocument);
                     return request;
                 }
             };
@@ -1453,7 +1435,6 @@ public class AsyncMutateInBuilder {
                         request.xattr(spec.xattr());
                         request.subscriber(s);
                         request.createDocument(createDocument);
-                        request.insertDocument(insertDocument);
                         return core.send(request);
                     }
                 })
