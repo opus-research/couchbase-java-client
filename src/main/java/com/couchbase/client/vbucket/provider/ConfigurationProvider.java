@@ -68,15 +68,6 @@ public interface ConfigurationProvider {
   void signalOutdated();
 
   /**
-   * Method used to signal a new configuration should be loaded.
-   *
-   * With HTTP streaming connections, this method is ignored, but it can be
-   * helpful in some scenarios that a carrier config needs to be reloaded
-   * from the current active connection.
-   */
-  void reloadConfig();
-
-  /**
    * Shut down the {@link ConfigurationProvider}.
    */
   void shutdown();
