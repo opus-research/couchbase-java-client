@@ -23,8 +23,6 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.CouchbaseConnectionFactory;
-import com.couchbase.client.CouchbaseClient;
 import java.net.URI;
 import java.util.Arrays;
 import net.spy.memcached.BinaryClientTest;
@@ -32,7 +30,7 @@ import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.TestConfig;
 
 /**
- * A MembaseClientTest.
+ * A CouchbaseClientTest.
  */
 public class CouchbaseClientTest extends BinaryClientTest {
   @Override

@@ -22,10 +22,10 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.vbucket.config.Bucket;
+
 import java.util.Observable;
 import java.util.Observer;
-
-import com.couchbase.client.vbucket.config.Bucket;
 
 /**
  * An implementation of the observer for calling reconfigure.

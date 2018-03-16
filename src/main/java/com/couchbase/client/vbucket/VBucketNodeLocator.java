@@ -22,6 +22,9 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.vbucket.config.Config;
+import com.couchbase.client.vbucket.config.ConfigDifference;
+
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,8 +39,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.compat.SpyObject;
-import com.couchbase.client.vbucket.config.Config;
-import com.couchbase.client.vbucket.config.ConfigDifference;
 
 /**
  * Implementation of the {@link NodeLocator} interface that contains vbucket

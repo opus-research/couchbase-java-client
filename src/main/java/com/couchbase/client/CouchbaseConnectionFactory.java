@@ -22,17 +22,18 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.ConfigurationException;
+import com.couchbase.client.vbucket.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
+import com.couchbase.client.vbucket.VBucketNodeLocator;
+import com.couchbase.client.vbucket.config.Config;
+import com.couchbase.client.vbucket.config.ConfigType;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
 
-import net.spy.memcached.auth.AuthDescriptor;
-import net.spy.memcached.auth.PlainCallbackHandler;
-import com.couchbase.client.vbucket.ConfigurationException;
-import com.couchbase.client.vbucket.ConfigurationProvider;
-import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.VBucketNodeLocator;
 import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.DefaultHashAlgorithm;
 import net.spy.memcached.FailureMode;
@@ -41,8 +42,9 @@ import net.spy.memcached.KetamaNodeLocator;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
-import com.couchbase.client.vbucket.config.Config;
-import com.couchbase.client.vbucket.config.ConfigType;
+import net.spy.memcached.auth.AuthDescriptor;
+import net.spy.memcached.auth.PlainCallbackHandler;
+
 
 /**
  * Membase implementation of ConnectionFactory.

@@ -22,6 +22,12 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.vbucket.config.Bucket;
+import com.couchbase.client.vbucket.config.Config;
+import com.couchbase.client.vbucket.config.ConfigurationParser;
+import com.couchbase.client.vbucket.config.ConfigurationParserJSON;
+import com.couchbase.client.vbucket.config.Pool;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,7 +42,6 @@ import java.net.URLConnection;
 
 import java.text.ParseException;
 
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,11 +49,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.compat.SpyObject;
-import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.Config;
-import com.couchbase.client.vbucket.config.ConfigurationParser;
-import com.couchbase.client.vbucket.config.ConfigurationParserJSON;
-import com.couchbase.client.vbucket.config.Pool;
 
 import org.apache.commons.codec.binary.Base64;
 

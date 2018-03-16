@@ -22,6 +22,7 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.ConfigurationException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -31,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
-import com.couchbase.client.vbucket.ConfigurationException;
 import net.spy.memcached.TestConfig;
 
 /**

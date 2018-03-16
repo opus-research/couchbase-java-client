@@ -22,13 +22,13 @@
 
 package com.couchbase.client.vbucket.config;
 
+import com.couchbase.client.vbucket.ConfigurationException;
+
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.couchbase.client.vbucket.ConfigurationException;
 
 /**
  * Pool represents a collection of buckets.

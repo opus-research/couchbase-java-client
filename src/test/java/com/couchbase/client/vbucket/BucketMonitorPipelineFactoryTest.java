@@ -22,8 +22,6 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.BucketMonitorPipelineFactory;
-import com.couchbase.client.vbucket.BucketUpdateResponseHandler;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;

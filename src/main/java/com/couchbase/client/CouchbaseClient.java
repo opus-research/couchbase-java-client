@@ -22,6 +22,9 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.Reconfigurable;
+import com.couchbase.client.vbucket.config.Bucket;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
@@ -30,24 +33,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.ops.GetlOperation;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.transcoders.Transcoder;
-import com.couchbase.client.vbucket.Reconfigurable;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.OperationTimeoutException;
-import com.couchbase.client.vbucket.config.Bucket;
+import net.spy.memcached.internal.OperationFuture;
+import net.spy.memcached.ops.GetlOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.transcoders.Transcoder;
 
 /**
  * A client for Membase Server.
  */
-public class CouchbaseClient extends MemcachedClient implements CouchbaseClientIF,
-    Reconfigurable {
+public class CouchbaseClient extends MemcachedClient
+  implements CouchbaseClientIF, Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
 

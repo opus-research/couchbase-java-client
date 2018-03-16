@@ -22,6 +22,10 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.Reconfigurable;
+import com.couchbase.client.vbucket.VBucketNodeLocator;
+import com.couchbase.client.vbucket.config.Bucket;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -35,18 +39,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import net.spy.memcached.ops.KeyedOperation;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.VBucketAware;
-import com.couchbase.client.vbucket.Reconfigurable;
-import com.couchbase.client.vbucket.VBucketNodeLocator;
 import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.OperationFactory;
-import com.couchbase.client.vbucket.config.Bucket;
+import net.spy.memcached.ops.KeyedOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.VBucketAware;
 
 /**
  * Membase implementation of MembaseConnection.

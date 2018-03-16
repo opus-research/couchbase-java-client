@@ -22,13 +22,13 @@
 
 package com.couchbase.client.vbucket;
 
-import java.util.List;
-
-import junit.framework.TestCase;
-
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigFactory;
 import com.couchbase.client.vbucket.config.DefaultConfigFactory;
+
+import java.util.List;
+
+import junit.framework.TestCase;
 
 /**
  * A VBucketCacheNodeLocatorTest.

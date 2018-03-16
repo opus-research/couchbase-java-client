@@ -22,7 +22,8 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
+import com.couchbase.client.vbucket.config.Bucket;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,8 +31,6 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import net.spy.memcached.TestConfig;
-import com.couchbase.client.vbucket.config.Bucket;
-
 
 /**
  * Test to ensure a down node in the URI list specified won't stop us from

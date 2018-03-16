@@ -22,16 +22,16 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.VBucketNodeLocator;
+import com.couchbase.client.vbucket.config.Config;
+import com.couchbase.client.vbucket.config.ConfigFactory;
+import com.couchbase.client.vbucket.config.DefaultConfigFactory;
+
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
 
 import net.spy.memcached.MemcachedNode;
-import com.couchbase.client.vbucket.config.Config;
-import com.couchbase.client.vbucket.config.ConfigFactory;
-import com.couchbase.client.vbucket.config.DefaultConfigFactory;
 
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;

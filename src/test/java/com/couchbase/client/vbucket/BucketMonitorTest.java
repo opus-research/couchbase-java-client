@@ -22,13 +22,13 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.BucketMonitor;
+import com.couchbase.client.vbucket.config.ConfigurationParserMock;
+
 import java.net.URI;
 
 import junit.framework.TestCase;
 
 import net.spy.memcached.TestConfig;
-import com.couchbase.client.vbucket.config.ConfigurationParserMock;
 
 /**
  * A BucketMonitorTest.

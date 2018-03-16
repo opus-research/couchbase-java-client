@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.config.Config;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -36,7 +38,6 @@ import net.spy.memcached.OperationFactory;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
-import com.couchbase.client.vbucket.config.Config;
 
 /**
  * MembaseConnectionFactoryBuilder.

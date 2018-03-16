@@ -22,6 +22,12 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.vbucket.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
+import com.couchbase.client.vbucket.Reconfigurable;
+import com.couchbase.client.vbucket.config.Bucket;
+import com.couchbase.client.vbucket.config.Config;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -34,17 +40,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.naming.ConfigurationException;
 
-import net.spy.memcached.auth.AuthDescriptor;
-import net.spy.memcached.auth.AuthThreadMonitor;
-import net.spy.memcached.auth.PlainCallbackHandler;
-import net.spy.memcached.compat.SpyObject;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.OperationCallback;
-import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.transcoders.TranscodeService;
-import com.couchbase.client.vbucket.ConfigurationProvider;
-import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.Reconfigurable;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.BroadcastOpFactory;
@@ -53,8 +48,14 @@ import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.OperationFactory;
-import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.Config;
+import net.spy.memcached.auth.AuthDescriptor;
+import net.spy.memcached.auth.AuthThreadMonitor;
+import net.spy.memcached.auth.PlainCallbackHandler;
+import net.spy.memcached.compat.SpyObject;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.transcoders.TranscodeService;
 
 /**
  * A TapConnectionProvider.

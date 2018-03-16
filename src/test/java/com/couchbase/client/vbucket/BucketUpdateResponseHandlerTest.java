@@ -22,7 +22,6 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.BucketUpdateResponseHandler;
 import junitx.util.PrivateAccessor;
 
 import org.jboss.netty.buffer.ChannelBuffer;

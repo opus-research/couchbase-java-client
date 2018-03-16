@@ -22,6 +22,9 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.vbucket.config.Bucket;
+import com.couchbase.client.vbucket.config.ConfigurationParser;
+
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -32,9 +35,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.ConfigurationParser;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;

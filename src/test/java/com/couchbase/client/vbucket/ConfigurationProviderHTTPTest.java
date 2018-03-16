@@ -22,7 +22,8 @@
 
 package com.couchbase.client.vbucket;
 
-import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
+import com.couchbase.client.vbucket.config.Bucket;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.Arrays;
