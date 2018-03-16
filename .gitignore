@@ -1,21 +1,29 @@
-.#*
+# General Ignores
 *~
-atlassian-ide-plugin.xml
-bin/
-build
-classes
 .classpath
 .DS_Store
-.externalToolBuilders
-.factorypath
-.gradle
-.idea/dictionaries
-.idea/gradle.xml
-.idea/libraries
-.idea/tasks.xml
-.idea/workspace.xml
-log/
-.nbattrs
 .project
+build/
+lib/ivy-2.2.0.jar
+bin/
+target/
+log/
+
+# IDE Support
+# IntelliJ specific files/directories
+.idea/
+*.ipr
+*.iws
+*.iml
+atlassian-ide-plugin.xml
+
+# Eclipse
+.factorypath
 .settings/
-target
+.externalToolBuilders
+
+# NetBeans
+.nbattrs
+
+# Gradle
+.gradle/
