@@ -34,9 +34,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Verifies the correct functionality of the DefaultViewConnection class.
+ * Verifies the correct functionality of the ViewConnection class.
  */
-public class DefaultViewConnectionTest {
+public class ViewConnectionTest {
 
   /**
    * Tests the correctness of the initialization and shutdown phase.

@@ -51,13 +51,6 @@ public interface ConfigurationProvider {
   void updateBucket(String bucketname, Bucket newBucket);
 
   /**
-   * Updates the current bucket with a new JSON config string.
-   *
-   * @param config the raw JSON config to transform and store.
-   */
-  void updateBucket(String config);
-
-  /**
    * Subscribes for configuration updates.
    *
    * @param bucketName bucket name to receive configuration for

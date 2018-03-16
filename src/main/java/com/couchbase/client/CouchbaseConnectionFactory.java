@@ -30,7 +30,6 @@ import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
 import com.couchbase.client.vbucket.CouchbaseNodeOrder;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
-import com.couchbase.client.vbucket.cccp.AdvancedConfigurationProvider;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
@@ -209,25 +208,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     this.bucket = bucket;
     pass = password;
     configurationProvider =
-      new AdvancedConfigurationProvider(baseList, bucket, password);
+      new ConfigurationProviderHTTP(baseList, bucket, password);
   }
 
-  /**
-   * Returns a {@link DefaultViewNode} based on the given address.
-   *
-   * Note that this method is deprecated because it mixes concerns with
-   * the factory and the {@link ViewConnection}. It is currently only called
-   * within the {@link ViewConnection} and will be removed once transitioned
-   * over to a new system.
-   *
-   * @param addr the address of the node.
-   * @param connMgr the connection manager to use.
-   * @return a created view node.
-   * @deprecated do not call this method directly.
-   */
-  public DefaultViewNode createDefaultViewNode(InetSocketAddress addr,
-    AsyncConnectionManager connMgr) {
-    return new DefaultViewNode(addr, connMgr, opQueueLen,
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
         getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
   }
 
@@ -249,7 +235,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public ViewConnection createViewConnection(
       List<InetSocketAddress> addrs) throws IOException {
-    return new DefaultViewConnection(this, addrs, getInitialObservers());
+    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
@@ -311,7 +297,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     } else if (config.isNotUpdating()) {
       LOGGER.warning("Noticed bucket configuration to be disconnected, "
         + "will attempt to reconnect");
-      setConfigurationProvider(new AdvancedConfigurationProvider(storedBaseList,
+      setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
         bucket, pass));
     }
     return configurationProvider.getBucketConfiguration(bucket).getConfig();
@@ -461,7 +447,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
           Reconfigurable oldRec = oldConfigProvider.getReconfigurable();
 
           ConfigurationProvider newConfigProvider =
-            new AdvancedConfigurationProvider(storedBaseList, bucket, pass);
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
           newConfigProvider.subscribe(bucket, oldRec);
 
           setConfigurationProvider(newConfigProvider);
