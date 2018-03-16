@@ -5,8 +5,8 @@ package com.couchbase.client.java.query.dsl.path;
  *
  * @author Michael Nitschinger
  */
-public interface AsPath extends HintPath {
+public interface AsPath extends KeysPath {
 
-    HintPath as(String alias);
+    KeysPath as(String alias);
 
 }

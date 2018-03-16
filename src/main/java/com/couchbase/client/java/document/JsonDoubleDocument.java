@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.document;
 
-import com.couchbase.client.core.message.kv.MutationToken;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -47,7 +46,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a {@link JsonDoubleDocument}.
      */
     public static JsonDoubleDocument create(String id) {
-        return new JsonDoubleDocument(id, 0, null, 0, null);
+        return new JsonDoubleDocument(id, 0, null, 0);
     }
 
     /**
@@ -58,7 +57,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a {@link JsonDoubleDocument}.
      */
     public static JsonDoubleDocument create(String id, Double content) {
-        return new JsonDoubleDocument(id, 0, content, 0, null);
+        return new JsonDoubleDocument(id, 0, content, 0);
     }
 
     /**
@@ -70,7 +69,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a {@link JsonDoubleDocument}.
      */
     public static JsonDoubleDocument create(String id, Double content, long cas) {
-        return new JsonDoubleDocument(id, 0, content, cas, null);
+        return new JsonDoubleDocument(id, 0, content, cas);
     }
 
     /**
@@ -82,7 +81,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a {@link JsonDoubleDocument}.
      */
     public static JsonDoubleDocument create(String id, int expiry, Double content) {
-        return new JsonDoubleDocument(id, expiry, content, 0, null);
+        return new JsonDoubleDocument(id, expiry, content, 0);
     }
 
     /**
@@ -99,24 +98,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a {@link JsonDoubleDocument}.
      */
     public static JsonDoubleDocument create(String id, int expiry, Double content, long cas) {
-        return new JsonDoubleDocument(id, expiry, content, cas, null);
-    }
-
-    /**
-     * Creates a {@link JsonDoubleDocument} which the document id, content, CAS value, expiration time and status code.
-     *
-     * This factory method is normally only called within the client library when a response is analyzed and a document
-     * is returned which is enriched with the status code. It does not make sense to pre populate the status field from
-     * the user level code.
-     *
-     * @param id the per-bucket unique document id.
-     * @param content the content of the document.
-     * @param cas the CAS (compare and swap) value for optimistic concurrency.
-     * @param expiry the expiration time of the document.
-     * @return a {@link JsonDoubleDocument}.
-     */
-    public static JsonDoubleDocument create(String id, int expiry, Double content, long cas, MutationToken mutationToken) {
-        return new JsonDoubleDocument(id, expiry, content, cas, mutationToken);
+        return new JsonDoubleDocument(id, expiry, content, cas);
     }
 
     /**
@@ -127,7 +109,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a copied {@link JsonDoubleDocument} with the changed properties.
      */
     public static JsonDoubleDocument from(JsonDoubleDocument doc, String id) {
-        return JsonDoubleDocument.create(id, doc.expiry(), doc.content(), doc.cas(), doc.mutationToken());
+        return JsonDoubleDocument.create(id, doc.expiry(), doc.content(), doc.cas());
     }
 
     /**
@@ -138,7 +120,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a copied {@link JsonDoubleDocument} with the changed properties.
      */
     public static JsonDoubleDocument from(JsonDoubleDocument doc, Double content) {
-        return JsonDoubleDocument.create(doc.id(), doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonDoubleDocument.create(doc.id(), doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -150,7 +132,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a copied {@link JsonDoubleDocument} with the changed properties.
      */
     public static JsonDoubleDocument from(JsonDoubleDocument doc, String id, Double content) {
-        return JsonDoubleDocument.create(id, doc.expiry(), content, doc.cas(), doc.mutationToken());
+        return JsonDoubleDocument.create(id, doc.expiry(), content, doc.cas());
     }
 
     /**
@@ -161,7 +143,7 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @return a copied {@link JsonDoubleDocument} with the changed properties.
      */
     public static JsonDoubleDocument from(JsonDoubleDocument doc, long cas) {
-        return JsonDoubleDocument.create(doc.id(), doc.expiry(), doc.content(), cas, doc.mutationToken());
+        return JsonDoubleDocument.create(doc.id(), doc.expiry(), doc.content(), cas);
     }
 
     /**
@@ -172,8 +154,8 @@ public class JsonDoubleDocument extends AbstractDocument<Double> implements Seri
      * @param cas the CAS (compare and swap) value for optimistic concurrency.
      * @param expiry the expiration time of the document.
      */
-    private JsonDoubleDocument(String id, int expiry, Double content, long cas, MutationToken mutationToken) {
-        super(id, expiry, content, cas, mutationToken);
+    private JsonDoubleDocument(String id, int expiry, Double content, long cas) {
+        super(id, expiry, content, cas);
     }
 
     private void writeObject(ObjectOutputStream stream) throws IOException {
