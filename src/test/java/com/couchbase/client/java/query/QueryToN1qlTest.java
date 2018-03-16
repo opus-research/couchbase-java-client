@@ -28,7 +28,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.couchbase.client.java.query.Select.select;
-import static com.couchbase.client.java.query.dsl.Expression.*;
+import static com.couchbase.client.java.query.dsl.Expression.s;
+import static com.couchbase.client.java.query.dsl.Expression.x;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -216,4 +217,7 @@ public class QueryToN1qlTest {
         assertEquals(JsonObject.create().put("a", 123), jsonObject);
         assertEquals(JsonArray.from(1, 2, 3), jsonArray);
     }
+
+
+
 }
