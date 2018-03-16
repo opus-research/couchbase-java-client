@@ -86,13 +86,14 @@ public class ViewNode extends SpyObject {
         try {
           connMgr.execute();
         } catch (InterruptedIOException ex) {
-          getLogger().error("I/O reactor Interrupted", ex);
+          getLogger().error("I/O reactor Interrupted");
         } catch (IOException e) {
-          getLogger().error("I/O error: " + e.getMessage(), e);
+          getLogger().error("I/O error: " + e.getMessage());
+          e.printStackTrace();
         }
         getLogger().info("Couchbase I/O reactor terminated");
       }
-    }, "Couchbase View Thread for node " + addr);
+    });
     t.start();
   }
 
