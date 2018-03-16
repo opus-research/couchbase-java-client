@@ -59,8 +59,6 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.DefaultAsyncBucketManager;
 import com.couchbase.client.java.bucket.ReplicaReader;
-import com.couchbase.client.java.datastructures.AsyncCouchbaseMap;
-import com.couchbase.client.java.datastructures.MutationOptionBuilder;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
@@ -1291,36 +1289,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     /*-------------------------*
      * END OF SUB-DOCUMENT API *
      *-------------------------*/
-
-    @Override
-    public <V> Observable<V> mapGet(String docId, String key, Class<V> valueType) {
-        return new AsyncCouchbaseMap<V>(this, docId).get(key);
-    }
-
-    @Override
-    public <V> Observable<Boolean> mapAdd(String docId, String key, V value) {
-        return new AsyncCouchbaseMap<V>(this, docId).add(key, value);
-    }
-
-    @Override
-    public <V> Observable<Boolean> mapAdd(String docId, String key, V value, MutationOptionBuilder mutationOptionBuilder) {
-        return new AsyncCouchbaseMap<V>(this, docId).add(key, value, mutationOptionBuilder);
-    }
-
-    @Override
-    public Observable<Boolean> mapRemove(String docId, String key) {
-        return new AsyncCouchbaseMap<Object>(this, docId).remove(key);
-    }
-
-    @Override
-    public Observable<Boolean> mapRemove(String docId, String key, MutationOptionBuilder mutationOptionBuilder) {
-        return new AsyncCouchbaseMap<Object>(this, docId).remove(key, mutationOptionBuilder);
-    }
-
-    @Override
-    public Observable<Integer> mapSize(String docId) {
-        return new AsyncCouchbaseMap<Object>(this, docId).size();
-    }
 
     @Override
     public Observable<Boolean> close() {
