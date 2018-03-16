@@ -22,7 +22,10 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.java.document.json.JsonObject;
-import rx.Observable;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a view result loaded from the index.
@@ -37,7 +40,11 @@ public interface ViewResult {
      *
      * @return an observable containing view rows.
      */
-    Observable<ViewRow> rows();
+    List<ViewRow> allRows();
+    List<ViewRow> allRows(long timeout, TimeUnit timeUnit);
+
+    Iterator<ViewRow> rows();
+    Iterator<ViewRow> rows(long timeout, TimeUnit timeUnit);
 
     /**
      * The total number of rows.

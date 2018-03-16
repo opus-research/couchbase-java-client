@@ -23,33 +23,29 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
-import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.transcoder.Transcoder;
 import rx.Observable;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Represents a Couchbase Server {@link Cluster}.
+ * Represents a Couchbase Server {@link AsyncCluster}.
  *
- * A {@link Cluster} is able to open many {@link AsyncBucket}s while sharing the underlying resources (like sockets)
+ * A {@link AsyncCluster} is able to open many {@link AsyncBucket}s while sharing the underlying resources (like sockets)
  * very efficiently. In addition, a {@link AsyncClusterManager} is available to perform cluster-wide operations.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-public interface Cluster {
+public interface AsyncCluster {
 
     /**
      * Open the default {@link AsyncBucket}.
      *
      * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
      */
-    Bucket openBucket();
-
-    Bucket openBucket(long timeout, TimeUnit timeUnit);
+    Observable<AsyncBucket> openBucket();
 
     /**
      * Open the given {@link AsyncBucket} without a password (if not set during creation).
@@ -57,9 +53,7 @@ public interface Cluster {
      * @param name the name of the bucket.
      * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
      */
-    Bucket openBucket(String name);
-
-    Bucket openBucket(String name, long timeout, TimeUnit timeUnit);
+    Observable<AsyncBucket> openBucket(String name);
 
     /**
      * Open the given {@link AsyncBucket} with a password (set during creation).
@@ -68,9 +62,7 @@ public interface Cluster {
      * @param password the password of the bucket, can be an empty string.
      * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
      */
-    Bucket openBucket(String name, String password);
-
-    Bucket openBucket(String name, String password, long timeout, TimeUnit timeUnit);
+    Observable<AsyncBucket> openBucket(String name, String password);
 
     /**
      * Open the given {@link AsyncBucket} with a password and a custom list of transcoders.
@@ -80,10 +72,7 @@ public interface Cluster {
      * @param transcoders a list of custom transcoders.
      * @return a {@link Observable} containing the {@link AsyncBucket} reference once opened.
      */
-    Bucket openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders);
-
-    Bucket openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders,
-        long timeout, TimeUnit timeUnit);
+    Observable<AsyncBucket> openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders);
 
     /**
      * Returns a reference to the {@link AsyncClusterManager}.
@@ -96,16 +85,14 @@ public interface Cluster {
      * @param password privileged password.
      * @return a {@link Observable} containing the {@link AsyncClusterManager}.
      */
-    ClusterManager clusterManager(String username, String password);
+    Observable<AsyncClusterManager> clusterManager(String username, String password);
 
     /**
-     * Disconnects from the {@link Cluster} and closes all open {@link AsyncBucket}s.
+     * Disconnects from the {@link AsyncCluster} and closes all open {@link AsyncBucket}s.
      *
      * @return a {@link Observable} containing true if successful and failing the {@link Observable} otherwise.
      */
-    Boolean disconnect();
-
-    Boolean disconnect(long timeout, TimeUnit timeUnit);
+    Observable<Boolean> disconnect();
 
     /**
      * Returns a reference to the underlying core engine.
@@ -115,6 +102,6 @@ public interface Cluster {
      *
      * @return a {@link Observable} containing the core engine.
      */
-    ClusterFacade core();
+    Observable<ClusterFacade> core();
 
 }

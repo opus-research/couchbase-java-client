@@ -19,44 +19,19 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.document;
+package com.couchbase.client.java.cluster;
 
-import com.couchbase.client.java.AsyncBucket;
+import rx.Observable;
 
-/**
- * Represents a Couchbase Server {@link Document} which is stored in and retrieved from a {@link AsyncBucket}.
- *
- * @author Michael Nitschinger
- * @since 2.0
- */
-public interface Document<T> {
+public interface AsyncClusterManager {
 
-   /**
-    * The per-bucket unique ID of the {@link Document}.
-    *
-    * @return the document id.
-    */
-    String id();
+    Observable<ClusterInfo> info();
 
-   /**
-    * The content of the {@link Document}.
-    *
-    * @return the content.
-    */
-    T content();
-
-   /**
-    * The last-known CAS value for the {@link Document} (0 if not set).
-    *
-    * @return the CAS value if set.
-    */
-    long cas();
-
-   /**
-    * The optional expiration time for the {@link Document} (0 if not set).
-    *
-    * @return the expiration time.
-    */
-    int expiry();
+    Observable<BucketSettings> getBuckets();
+    Observable<BucketSettings> getBucket(String name);
+    Observable<Boolean> hasBucket(String name);
+    Observable<BucketSettings> insertBucket(BucketSettings settings);
+    Observable<BucketSettings> updateBucket(BucketSettings settings);
+    Observable<Boolean> removeBucket(String name);
 
 }
