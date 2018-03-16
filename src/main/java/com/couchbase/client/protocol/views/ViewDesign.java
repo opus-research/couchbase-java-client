@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,17 +31,17 @@ public class ViewDesign {
   /**
    * The name of the view.
    */
-  String name = null;
+  private String name = null;
 
   /**
    * The map function of the view.
    */
-  String map = null;
+  private String map = null;
 
   /**
    * The optional reduce function of the view.
    */
-  String reduce = null;
+  private String reduce = null;
 
   /**
    * Create a ViewDesign with a name and a map function.

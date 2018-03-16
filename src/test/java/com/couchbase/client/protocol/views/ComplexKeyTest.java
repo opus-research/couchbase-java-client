@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2012-2012 Couchbase, Inc.
+ * Copyright (C) 2012-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,19 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test the creation of complex keys for views.
  */
 public class ComplexKeyTest {
 
+  /**
+   * Instantiates a new complex key test.
+   */
   public ComplexKeyTest() {
   }
 
@@ -54,7 +59,11 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Test of of method, of class ComplexKey.
+   * Prepare complex keys using different expressions.
+   *
+   * @pre  Prepare the expressions for the complex keys.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testOf() {
@@ -72,7 +81,11 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Test of of method, of class ComplexKey.
+   * Prepare complex keys using empty array.
+   *
+   * @pre  Prepare the expression string.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testOfEmptyArray() {
@@ -82,7 +95,11 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Test of of method, of class ComplexKey.
+   * Prepare complex keys using empty object.
+   *
+   * @pre  Prepare the expression string.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testOfEmptyObject() {
@@ -92,7 +109,11 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Test of emptyArray method, of class ComplexKey.
+   * Prepare complex keys using an array of objects.
+   *
+   * @pre  Prepare the expression string.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testEmptyArray() {
@@ -102,7 +123,11 @@ public class ComplexKeyTest {
   }
 
   /**
-   * Test of emptyObject method, of class ComplexKey.
+   * Prepare complex keys using an empty object.
+   *
+   * @pre  Prepare the expression string.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testEmptyObject() {
@@ -114,9 +139,12 @@ public class ComplexKeyTest {
   /**
    * Tests the construction of more complex JSON strings with Dates.
    *
-   * This test case shows how the implicit typecasting happens during the JSON
-   * generation phase. If you work with ComplexKeys and you're not dealing with
-   * trivial types make sure they have a proper "toString" method implemented.
+   * @pre This test case shows how the implicit typecasting happens
+   * during the JSON generation phase. If you work with ComplexKeys
+   * and you're not dealing with trivial types make sure they have
+   * a proper "toString" method implemented.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
    */
   @Test
   public void testDateInput() {
@@ -128,4 +156,93 @@ public class ComplexKeyTest {
     assertEquals(expResult, result.toJson());
   }
 
+  /**
+   * Tests forcing the cast to a JSON array even when
+   * there is only one element.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects and then force it into an array
+   * @post Asserts true if json string of the
+   * complex key before and after calling force
+   * array is 40.
+   */
+  @Test
+  public void testForceArray() {
+    ComplexKey simple = ComplexKey.of("40");
+    assertEquals("\"40\"", simple.toJson());
+    simple.forceArray(true);
+    assertEquals("[\"40\"]", simple.toJson());
+  }
+
+  /**
+   * Tests making complex keys from numeric values.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects using numeric values.
+   * @post Asserts true if json string of the
+   * complex key is equal to the numeric value itself.
+   */
+  @Test
+  public void testNumericValues() {
+    ComplexKey singleInt = ComplexKey.of(4444);
+    assertEquals("4444", singleInt.toJson());
+
+    ComplexKey singleLong = ComplexKey.of(99999999999L);
+    assertEquals("99999999999", singleLong.toJson());
+
+    ComplexKey singleFloat = ComplexKey.of(3.141159f);
+    assertEquals("3.141159", singleFloat.toJson());
+
+    ComplexKey singleDouble = ComplexKey.of(3.141159);
+    assertEquals("3.141159", singleDouble.toJson());
+  }
+
+  /**
+   * Tests making complex keys from null object.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects from null object.
+   * @post Asserts true if json string of the
+   * complex key is equal to null.
+   */
+  // TODO: eventually support this
+  @Ignore("Null argument not yet implemented") @Test
+  public void testNullSingleValues() {
+    ComplexKey singleNull = ComplexKey.of((Object[]) null); // NPE here
+    String aNullJsonString = singleNull.toJson();
+    assertEquals("null", aNullJsonString);
+  }
+
+  /**
+   * Tests making complex keys from an array containing null.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects from an array containing null.
+   * @post Asserts true if json string of the
+   * complex key equals comma separated values in
+   * the array.
+   */
+  @Test
+  public void testNullInArray() {
+    ComplexKey withNull = ComplexKey.of("Matt", null);
+    String wNullJsonString = withNull.toJson();
+    assertEquals("[\"Matt\",null]", wNullJsonString);
+  }
+
+  /**
+   * Tests making complex keys from boolean value.
+   *
+   * @pre Work with ComplexKeys to create simple JSON
+   * objects  from boolean value.
+   * @post Asserts true if json string of the
+   * complex key equals corresponding boolean values.
+   */
+  @Test
+  public void testBoolValues() {
+    ComplexKey singleTrue = ComplexKey.of(true);
+    assertEquals("true", singleTrue.toJson());
+
+    ComplexKey arrBools = ComplexKey.of(true, false);
+    assertEquals("[true,false]", arrBools.toJson());
+  }
 }

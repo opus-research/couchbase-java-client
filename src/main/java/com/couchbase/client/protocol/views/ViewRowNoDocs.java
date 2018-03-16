@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,13 +68,13 @@ public class ViewRowNoDocs implements ViewRow {
 
   @Override
   public String getBbox() {
-     throw new UnsupportedOperationException("Map/Reduce views don't contain "
-       + "Bounding Box information");
+    throw new UnsupportedOperationException("Map/Reduce views don't contain "
+      + "Bounding Box information");
   }
 
   @Override
   public String getGeometry() {
-      throw new UnsupportedOperationException("Map/Reduce views don't contain "
-       + "Geometry information");
+    throw new UnsupportedOperationException("Map/Reduce views don't contain "
+      + "Geometry information");
   }
 }

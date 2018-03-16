@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,5 +60,13 @@ public class ConfigurationProviderMemcacheMock
   }
 
   public void finishResubscribe() {}
+
+  public Reconfigurable getReconfigurable() {
+    throw new UnsupportedOperationException("Not needed in the mock?");
+  }
+
+  public String getBucket() {
+    throw new UnsupportedOperationException("Not needed in the mock?");
+  }
 
 }

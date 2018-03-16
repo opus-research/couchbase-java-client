@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,6 +64,15 @@ public class VBucketNodeLocatorHostnameTest extends TestCase {
       + "      [1, 2, 0],\n" + "      [2, 1, -1],\n" + "      [1, 2, 0]\n"
       + "    ]\n" + "}" + "}";
 
+  /**
+   * Get primary memcached node for a given key.
+   *
+   * @pre  Create three nodes and set their corresponding
+   * socket addresses. Using the default config and the
+   * VBucketNodeLocator instance, get primary node.
+   * @post  Asserts true if node1 is the primary node.
+   * Verify the three nodes.
+   */
   public void testGetPrimary() {
     MemcachedNode node1 = createMock(MemcachedNode.class);
     MemcachedNode node2 = createMock(MemcachedNode.class);
@@ -92,6 +101,13 @@ public class VBucketNodeLocatorHostnameTest extends TestCase {
     verify(node1, node2, node3);
   }
 
+  /**
+   * Get alternative memcached node for a given key.
+   *
+   * @pre  Create three nodes and set their corresponding
+   * socket addresses. Using the default config and the
+   * VBucketNodeLocator instance, get primary and alternative nodes.
+   */
   public void testGetAlternative() {
     MemcachedNodeMockImpl node1 = new MemcachedNodeMockImpl();
     MemcachedNodeMockImpl node2 = new MemcachedNodeMockImpl();
@@ -110,6 +126,14 @@ public class VBucketNodeLocatorHostnameTest extends TestCase {
     alternative.getSocketAddress();
   }
 
+  /**
+   * Get a collection of all memcached nodes.
+   *
+   * @pre  Create three nodes and set their corresponding socket
+   * addresses. Using the default config and the VBucketNodeLocator
+   * instance, get a collection of all memcached nodes.
+   * @post  Asserts true if the size of collection equals 3
+   */
   public void testHostnameCount() {
     MemcachedNode node1 = createMock(MemcachedNode.class);
     MemcachedNode node2 = createMock(MemcachedNode.class);

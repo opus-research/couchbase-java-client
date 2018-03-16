@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,9 +51,10 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
   private Config vBucketConfig;
   private long reconnThresholdTimeMsecs =
     CouchbaseConnectionFactory.DEFAULT_MIN_RECONNECT_INTERVAL;
-  private long obsPollInterval;
-  private int obsPollMax;
-  private int viewTimeout;
+  private long obsPollInterval =
+    CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL;
+  private int obsPollMax = CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX;
+  private int viewTimeout = CouchbaseConnectionFactory.DEFAULT_VIEW_TIMEOUT;
   private static final Logger LOGGER =
     Logger.getLogger(CouchbaseConnectionFactoryBuilder.class.getName());
 

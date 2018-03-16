@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
+import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
 
@@ -89,16 +90,32 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public static final int DEFAULT_OP_QUEUE_LEN = 16384;
   /**
    * Specify a default minimum reconnect interval of 1.1s.
+   *
    * This means that if a reconnect is needed, it won't try to reconnect
    * more frequently than 1.1s between tries.  The initial HTTP connections
    * under us take up to 500ms per request.
    */
   public static final long DEFAULT_MIN_RECONNECT_INTERVAL = 1100;
 
+  /**
+   * Default View request timeout in ms.
+   */
+  public static final int DEFAULT_VIEW_TIMEOUT = 75000;
+
+  /**
+   * Default Observe poll interval in ms.
+   */
+  public static final long DEFAULT_OBS_POLL_INTERVAL = 100;
+
+  /**
+   * Default maximum amount of poll cycles before failure.
+   */
+  public static final int DEFAULT_OBS_POLL_MAX = 400;
+
   protected volatile ConfigurationProvider configurationProvider;
-  private String bucket;
-  private String pass;
-  private List<URI> storedBaseList;
+  private volatile String bucket;
+  private volatile String pass;
+  private volatile List<URI> storedBaseList;
   private static final Logger LOGGER =
     Logger.getLogger(CouchbaseConnectionFactory.class.getName());
   private volatile boolean needsReconnect;
@@ -110,9 +127,10 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private volatile long configProviderLastUpdateTimestamp;
   private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
   private ExecutorService resubExec = Executors.newSingleThreadExecutor();
-  private long obsPollInterval = 100;
-  private int obsPollMax = 400;
-  private int viewTimeout = 75000;
+  private long obsPollInterval = DEFAULT_OBS_POLL_INTERVAL;
+  private int obsPollMax = DEFAULT_OBS_POLL_MAX;
+  private int viewTimeout = DEFAULT_VIEW_TIMEOUT;
+  private ClusterManager clusterManager;
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
       final String bucketName, String password)
@@ -207,25 +225,22 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return this.viewTimeout;
   }
 
+
   public Config getVBucketConfig() {
-    try {
-      // If we find the config provider associated with this bucket is
-      // disconnected and thus stale, we simply replace the configuration
-      // provider
-      if (configurationProvider.getBucketConfiguration(bucket)
-           .isNotUpdating()) {
+      Bucket config = configurationProvider.getBucketConfiguration(bucket);
+      if(config == null) {
+        throw new ConfigurationException("Could not fetch valid configuration "
+          + "from provided nodes. Stopping.");
+      } else if (config.isNotUpdating()) {
         LOGGER.warning("Noticed bucket configuration to be disconnected, "
             + "will attempt to reconnect");
         setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
           bucket, pass));
       }
       return configurationProvider.getBucketConfiguration(bucket).getConfig();
-    } catch (ConfigurationException e) {
-      return null;
-    }
   }
 
-  public ConfigurationProvider getConfigurationProvider() {
+  public synchronized ConfigurationProvider getConfigurationProvider() {
     return configurationProvider;
   }
 
@@ -234,7 +249,8 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     needsReconnect = true;
   }
 
-  void setConfigurationProvider(ConfigurationProvider configProvider) {
+  synchronized void setConfigurationProvider(
+    ConfigurationProvider configProvider) {
     this.configProviderLastUpdateTimestamp = System.currentTimeMillis();
     this.configurationProvider = configProvider;
   }
@@ -255,11 +271,21 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
   }
 
+  /**
+   * Check if a configuration update is needed.
+   *
+   * There are two main reasons that can trigger a configuration update. Either
+   * there is a configuration update happening in the cluster, or operations
+   * added to the queue can not find their corresponding node. For the latter,
+   * see the {@link #pastReconnThreshold()} method for further details.
+   *
+   * If a configuration update is needed, a resubscription for configuration
+   * updates is triggered. Note that since reconnection takes some time,
+   * the method will also wait a time period given by
+   * {@link #getMinReconnectInterval()} before the resubscription is triggered.
+   */
   void checkConfigUpdate() {
     if (needsReconnect || pastReconnThreshold()) {
-
-      // past the threshold, but now we need to give the reconnect attempt
-      // a bit of time to complete setting itself up
       long now = System.currentTimeMillis();
       long intervalWaited = now - this.configProviderLastUpdateTimestamp;
       if (intervalWaited < this.getMinReconnectInterval()) {
@@ -268,13 +294,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
                 new Object[]{intervalWaited, this.getMinReconnectInterval()});
         return;
       }
+
       if (doingResubscribe.compareAndSet(false, true)) {
         resubConfigUpdate();
       } else {
         LOGGER.log(Level.CONFIG, "Duplicate resubscribe for config updates"
           + " suppressed.");
       }
-
     } else {
       LOGGER.log(Level.FINE, "No reconnect required, though check requested."
               + " Current config check is {0} out of a threshold of {1}.",
@@ -282,34 +308,39 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     }
   }
 
+  /**
+   * Resubscribe for configuration updates.
+   */
   private synchronized void resubConfigUpdate() {
-    // synchronized shouldn't be needed here, just being defensive
     LOGGER.log(Level.INFO, "Attempting to resubscribe for cluster config"
       + " updates.");
     resubExec.execute(new Resubscriber());
-
-
   }
 
   /**
-   * Checks if the last reconnection was more than or equal 10 seconds
-   * ago.
+   * Checks if there have been more requests than allowed through
+   * maxConfigCheck in a 10 second period.
    *
-   * @return true if it's been more than 10 seconds since we last tried
-   *         to connect
+   * If this is the case, then true is returned. If the timeframe between
+   * two distinct requests is more than 10 seconds, a fresh timeframe starts.
+   * This means that 10 calls every second would trigger an update while
+   * 1 operation, then a 11 second sleep and one more operation would not.
+   *
+   * @return true if there were more config check requests than maxConfigCheck
+   *              in the 10 second period.
    */
-  private boolean pastReconnThreshold() {
+  protected boolean pastReconnThreshold() {
     long currentTime = System.nanoTime();
-    if (currentTime - thresholdLastCheck >= TimeUnit.SECONDS.toMillis(10)) {
-      configThresholdCount.set(0); // it's been more than 10 sec since last
-                                // tried, so don't try again just yet.
-    }
-    configThresholdCount.incrementAndGet();
-    thresholdLastCheck = currentTime;
 
-    if (configThresholdCount.get() >= maxConfigCheck) {
+    if (currentTime - thresholdLastCheck >= TimeUnit.SECONDS.toNanos(10)) {
+      configThresholdCount.set(0);
+    }
+
+    thresholdLastCheck = currentTime;
+    if (configThresholdCount.incrementAndGet() >= maxConfigCheck) {
       return true;
     }
+
     return false;
   }
 
@@ -318,7 +349,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    *
    * @return the minReconnectInterval
    */
-  public long getMinReconnectInterval() {
+  long getMinReconnectInterval() {
     return minReconnectInterval;
   }
 
@@ -330,29 +361,73 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return obsPollMax;
   }
 
+  /**
+   * Returns the amount of how many config checks in a given time period
+   * (currently 10 seconds) are allowed before a reconfiguration is triggered.
+   *
+   * @return the number of config checks allowed.
+   */
+  int getMaxConfigCheck() {
+    return maxConfigCheck;
+  }
+
   private class Resubscriber implements Runnable {
 
     public void run() {
-      String threadNameBase = "couchbase cluster resubscriber - ";
-      Thread.currentThread().setName(threadNameBase + "running");
-      LOGGER.log(Level.CONFIG, "Starting resubscription for bucket {0}",
-        bucket);
+      String threadNameBase = "Couchbase/Resubscriber (Status: ";
+      Thread.currentThread().setName(threadNameBase + "running)");
       LOGGER.log(Level.CONFIG, "Resubscribing for {0} using base list {1}",
         new Object[]{bucket, storedBaseList});
-      ConfigurationProvider oldConfigProvider = configurationProvider;
-      setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
-        bucket, pass));
-      configurationProvider.finishResubscribe();
-    // cleanup the old config provider
-      if (null != oldConfigProvider) {
-        oldConfigProvider.shutdown();
-      }
 
-      if (!doingResubscribe.compareAndSet(true, false)) {
-        assert false : "Could not reset from doing a resubscribe.";
-      }
-      Thread.currentThread().setName(threadNameBase + "complete");
+      long reconnectAttempt = 0;
+      long backoffTime = 1000;
+      long maxWaitTime = 10000;
+      do {
+        try {
+          long waitTime = (reconnectAttempt++)*backoffTime;
+          if(reconnectAttempt >= 10) {
+            waitTime = maxWaitTime;
+          }
+          LOGGER.log(Level.INFO, "Reconnect attempt {0}, waiting {1}ms",
+            new Object[]{reconnectAttempt, waitTime});
+          Thread.sleep(waitTime);
+
+          ConfigurationProvider oldConfigProvider = getConfigurationProvider();
+
+          if (null != oldConfigProvider) {
+            oldConfigProvider.shutdown();
+          }
+
+          ConfigurationProvider newConfigProvider =
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
+          setConfigurationProvider(newConfigProvider);
+
+          newConfigProvider.subscribe(bucket,
+            oldConfigProvider.getReconfigurable());
+
+          if (!doingResubscribe.compareAndSet(true, false)) {
+            LOGGER.log(Level.WARNING,
+              "Could not reset from doing a resubscribe.");
+          }
+        } catch (Exception ex) {
+          LOGGER.log(Level.WARNING,
+            "Resubscribe attempt failed: ", ex);
+        }
+      } while(doingResubscribe.get());
+
+      Thread.currentThread().setName(threadNameBase + "complete)");
     }
+  }
+
+  /**
+   * Returns a ClusterManager and initializes one if it does not exist.
+   * @return Returns an instance of a ClusterManager.
+   */
+  public ClusterManager getClusterManager() {
+    if(clusterManager == null) {
+      clusterManager = new ClusterManager(storedBaseList, bucket, pass);
+    }
+    return clusterManager;
   }
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,18 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.clustermanager.FlushResponse;
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.internal.ViewFuture;
 import com.couchbase.client.protocol.views.AbstractView;
-import com.couchbase.client.protocol.views.DocsOperationImpl;
-import com.couchbase.client.protocol.views.HttpOperation;
-import com.couchbase.client.protocol.views.InvalidViewException;
+import com.couchbase.client.protocol.views.DesignDocFetcherOperation;
+import com.couchbase.client.protocol.views.DesignDocFetcherOperationImpl;
 import com.couchbase.client.protocol.views.DesignDocOperationImpl;
 import com.couchbase.client.protocol.views.DesignDocument;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.protocol.views.HttpOperationImpl;
+import com.couchbase.client.protocol.views.InvalidViewException;
 import com.couchbase.client.protocol.views.NoDocsOperationImpl;
 import com.couchbase.client.protocol.views.Paginator;
 import com.couchbase.client.protocol.views.Query;
@@ -46,21 +47,15 @@ import com.couchbase.client.protocol.views.ViewFetcherOperationImpl;
 import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
-import com.couchbase.client.protocol.views.ViewsFetcherOperation;
-import com.couchbase.client.protocol.views.ViewsFetcherOperationImpl;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 import com.couchbase.client.vbucket.config.ConfigType;
-
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -69,14 +64,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
@@ -88,7 +81,6 @@ import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
-import net.spy.memcached.compat.CloseUtil;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.ObserveOperation;
@@ -97,7 +89,6 @@ import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.transcoders.Transcoder;
-
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
 import org.apache.http.entity.StringEntity;
@@ -129,32 +120,18 @@ public class CouchbaseClient extends MemcachedClient
   private final CouchbaseConnectionFactory cbConnFactory;
 
   /**
-   * Properties priority from highest to lowest:
+   * Try to load the cbclient.properties file and check for the viewmode.
    *
-   * 1. Property defined in user code.
-   * 2. Property defined on command line.
-   * 3. Property defined in cbclient.properties.
+   * If no viewmode (either through "cbclient.viewmode" or "viewmode")
+   * property is set, the fallback is always "production". Possible options
+   * are either "development" or "production".
    */
   static {
-    Properties properties = new Properties(System.getProperties());
-    String viewmode = properties.getProperty("viewmode", null);
+    CouchbaseProperties.setPropertyFile("cbclient.properties");
 
+    String viewmode = CouchbaseProperties.getProperty("viewmode");
     if (viewmode == null) {
-      FileInputStream fs = null;
-      try {
-        URL url =  ClassLoader.getSystemResource("cbclient.properties");
-        if (url != null) {
-          fs = new FileInputStream(new File(url.getFile()));
-          properties.load(fs);
-        }
-        viewmode = properties.getProperty("viewmode");
-      } catch (IOException e) {
-        // Properties file doesn't exist. Error logged later.
-      } finally {
-        if (fs != null) {
-          CloseUtil.close(fs);
-        }
-      }
+      viewmode = CouchbaseProperties.getProperty("viewmode", true);
     }
 
     if (viewmode == null) {
@@ -281,6 +258,7 @@ public class CouchbaseClient extends MemcachedClient
         + "configuration updates, attempting to reconnect.");
       CouchbaseConnectionFactory cbcf = (CouchbaseConnectionFactory)connFactory;
       cbcf.requestConfigReconnect(cbcf.getBucketName(), this);
+      cbcf.checkConfigUpdate();
     }
     try {
       if(vconn != null) {
@@ -425,45 +403,34 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Gets a future with a list of views for a given design document from the
-   * cluster.
+   * Gets a future with a design document from the cluster.
    *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
-   * Note that since an HttpFuture is returned, the caller must also check to
-   * see if the View is null. The HttpFuture does provide a getStatus() method
-   * which can be used to check whether or not the view request has been
-   * successful.
+   * If no design document was found, the enclosed DesignDocument inside
+   * the future will be null.
    *
    * @param designDocumentName the name of the design document.
-   * @return a future containing a List of View objects from the cluster.
+   * @return a future containing a DesignDocument from the cluster.
    */
-  public HttpFuture<List<View>> asyncGetViews(String designDocumentName) {
-    CouchbaseConnectionFactory factory =
-      (CouchbaseConnectionFactory) connFactory;
+  public HttpFuture<DesignDocument> asyncGetDesignDocument(
+    String designDocumentName) {
     designDocumentName = MODE_PREFIX + designDocumentName;
-    String bucket = factory.getBucketName();
+    String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<List<View>> crv =
-        new HttpFuture<List<View>>(couchLatch, factory.getViewTimeout());
+    final HttpFuture<DesignDocument> crv =
+        new HttpFuture<DesignDocument>(couchLatch, 60000);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op = new ViewsFetcherOperationImpl(request, bucket,
-        designDocumentName, new ViewsFetcherOperation.ViewsFetcherCallback() {
-          private List<View> views = null;
+    final HttpOperation op = new DesignDocFetcherOperationImpl(
+      request,
+      designDocumentName,
+      new DesignDocFetcherOperation.DesignDocFetcherCallback() {
+          private DesignDocument design = null;
 
           @Override
           public void receivedStatus(OperationStatus status) {
-            crv.set(views, status);
+            crv.set(design, status);
           }
 
           @Override
@@ -472,8 +439,8 @@ public class CouchbaseClient extends MemcachedClient
           }
 
           @Override
-          public void gotData(List<View> v) {
-            views = v;
+          public void gotData(DesignDocument d) {
+            design = d;
           }
         });
     crv.setOperation(op);
@@ -545,24 +512,24 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Gets a list of views for a given design document from the cluster.
+   * Returns a representation of a design document stored in the cluster.
    *
    * @param designDocumentName the name of the design document.
-   * @return a list of View objects from the cluster.
+   * @return a DesignDocument object from the cluster.
    * @throws InvalidViewException if no design document or view was found.
    */
-  public List<View> getViews(final String designDocumentName) {
+  public DesignDocument getDesignDocument(final String designDocumentName) {
     try {
-      List<View> views = asyncGetViews(designDocumentName).get();
-      if(views == null) {
-        throw new InvalidViewException("Could not load views for design doc \""
+      DesignDocument design = asyncGetDesignDocument(designDocumentName).get();
+      if(design == null) {
+        throw new InvalidViewException("Could not load design document \""
           + designDocumentName + "\"");
       }
-      return views;
+      return design;
     } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted getting views", e);
+      throw new RuntimeException("Interrupted getting design document", e);
     } catch (ExecutionException e) {
-      throw new RuntimeException("Failed getting views", e);
+      throw new RuntimeException("Failed getting design document", e);
     }
   }
 
@@ -573,7 +540,7 @@ public class CouchbaseClient extends MemcachedClient
    * @return the result of the creation operation.
    */
   public Boolean createDesignDoc(final DesignDocument doc) {
-     try {
+    try {
       return asyncCreateDesignDoc(doc).get();
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted creating design document", e);
@@ -616,7 +583,7 @@ public class CouchbaseClient extends MemcachedClient
         public void complete() {
           couchLatch.countDown();
         }
-    });
+      });
 
     crv.setOperation(op);
     addOp(op);
@@ -637,11 +604,11 @@ public class CouchbaseClient extends MemcachedClient
   /**
    * Delete a design document in the cluster.
    *
-   * @param doc the design document to delete.
+   * @param name the design document to delete.
    * @return the result of the deletion operation.
    */
   public Boolean deleteDesignDoc(final String name) {
-     try {
+    try {
       return asyncDeleteDesignDoc(name).get();
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted deleting design document", e);
@@ -655,7 +622,7 @@ public class CouchbaseClient extends MemcachedClient
    /**
    * Delete a design document in the cluster.
    *
-   * @param doc the design document to delete.
+   * @param name the design document to delete.
    * @return a future containing the result of the deletion operation.
    */
   public HttpFuture<Boolean> asyncDeleteDesignDoc(final String name)
@@ -682,7 +649,7 @@ public class CouchbaseClient extends MemcachedClient
         public void complete() {
           couchLatch.countDown();
         }
-    });
+      });
 
     crv.setOperation(op);
     addOp(op);
@@ -731,32 +698,32 @@ public class CouchbaseClient extends MemcachedClient
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
     final HttpOperation op = new DocsOperationImpl(request, view,
       new ViewCallback() {
-      private ViewResponse vr = null;
+        private ViewResponse vr = null;
 
-      @Override
-      public void receivedStatus(OperationStatus status) {
-        if (vr != null) {
-          Collection<String> ids = new LinkedList<String>();
-          Iterator<ViewRow> itr = vr.iterator();
-          while (itr.hasNext()) {
-            ids.add(itr.next().getId());
+        @Override
+        public void receivedStatus(OperationStatus status) {
+          if (vr != null) {
+            Collection<String> ids = new LinkedList<String>();
+            Iterator<ViewRow> itr = vr.iterator();
+            while (itr.hasNext()) {
+              ids.add(itr.next().getId());
+            }
+            crv.set(vr, asyncGetBulk(ids), status);
+          } else {
+            crv.set(null, null, status);
           }
-          crv.set(vr, asyncGetBulk(ids), status);
-        } else {
-          crv.set(null, null, status);
         }
-      }
 
-      @Override
-      public void complete() {
-        couchLatch.countDown();
-      }
+        @Override
+        public void complete() {
+          couchLatch.countDown();
+        }
 
-      @Override
-      public void gotData(ViewResponse response) {
-        vr = response;
-      }
-    });
+        @Override
+        public void gotData(ViewResponse response) {
+          vr = response;
+        }
+      });
     crv.setOperation(op);
     addOp(op);
     return crv;
@@ -1089,6 +1056,72 @@ public class CouchbaseClient extends MemcachedClient
   public Boolean unlock(final String key,
           long casId) {
     return unlock(key, casId, transcoder);
+  }
+
+  /**
+   * Delete a value with durability options.
+   *
+   * The durability options here operate similarly to those documented in
+   * the set method.
+   *
+   * @param key the key to set
+   * @param req the Persistence to Master value
+   * @param rep the Persistence to Replicas
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> delete(String key,
+          PersistTo req, ReplicateTo rep) {
+
+    OperationFuture<Boolean> deleteOp = delete(key);
+    boolean deleteStatus = false;
+
+    try {
+      deleteStatus = deleteOp.get();
+    } catch (InterruptedException e) {
+      deleteOp.set(false, new OperationStatus(false, "Delete get timed out"));
+    } catch (ExecutionException e) {
+      deleteOp.set(false, new OperationStatus(false, "Delete get "
+              + "execution exception "));
+    }
+    if (!deleteStatus) {
+      return deleteOp;
+    }
+    try {
+      observePoll(key, deleteOp.getCas(), req, rep, true);
+      deleteOp.set(true, deleteOp.getStatus());
+    } catch (ObservedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return deleteOp;
+  }
+
+  /**
+   * Delete a value with durability options for persistence.
+   *
+   * @param key the key to set
+   * @param req the persistence option requested
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> delete(String key, PersistTo req) {
+    return delete(key, req, ReplicateTo.ZERO);
+  }
+
+  /**
+   * Delete a value with durability options for replication.
+   *
+   * @param key the key to set
+   * @param req the replication option requested
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> delete(String key, ReplicateTo req) {
+    return delete(key, PersistTo.ZERO, req);
   }
 
   /**
@@ -1566,7 +1599,10 @@ public class CouchbaseClient extends MemcachedClient
 
     bcastNodes.add(locator.getServerByIndex(cfg.getMaster(vb)));
     for (int i = 1; i <= cfg.getReplicasCount(); i++) {
-      bcastNodes.add(locator.getServerByIndex(cfg.getReplica(vb, i-1)));
+      int replica = cfg.getReplica(vb, i-1);
+      if(replica > 0) {
+        bcastNodes.add(locator.getServerByIndex(replica));
+      }
     }
 
     final Map<MemcachedNode, ObserveResponse> response =
@@ -1709,7 +1745,8 @@ public class CouchbaseClient extends MemcachedClient
           throw new ObservedModifiedException("Key was modified");
         }
         if (!isDelete) {
-          if (!isMaster && r.getValue() == ObserveResponse.FOUND_NOT_PERSISTED) {
+          if (!isMaster && r.getValue()
+            == ObserveResponse.FOUND_NOT_PERSISTED) {
             replicatedTo++;
           }
           if (r.getValue() == ObserveResponse.FOUND_PERSISTED) {
@@ -1766,4 +1803,132 @@ public class CouchbaseClient extends MemcachedClient
     mconn.enqueueOperation(key, op);
     return rv;
   }
+
+  /**
+   * Flush all data from the bucket immediately.
+   *
+   * Note that if the bucket is of type memcached the flush will be nearly
+   * instantaneous.  Running a flush() on a Couchbase bucket can take quite
+   * a while, depending on the amount of data and the load on the system.
+   *
+   * @return
+   */
+  @Override
+  public OperationFuture<Boolean> flush() {
+    return flush(-1);
+  }
+
+    /**
+   * Flush all caches from all servers with a delay of application.
+   *
+   * @param delay the period of time to delay, in seconds
+   * @return whether or not the operation was accepted
+   */
+  @Override
+  public OperationFuture<Boolean> flush(final int delay) {
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final FlushRunner flushRunner = new FlushRunner(latch);
+
+    final OperationFuture<Boolean> rv =
+      new OperationFuture<Boolean>("", latch, operationTimeout) {
+        private CouchbaseConnectionFactory factory =
+          (CouchbaseConnectionFactory) connFactory;
+
+        @Override
+        public boolean cancel() {
+          throw new UnsupportedOperationException("Flush cannot be"
+            + " canceled");
+        }
+
+        @Override
+        public boolean isDone() {
+          return flushRunner.status();
+        }
+
+        @Override
+        public Boolean get(long duration, TimeUnit units) throws
+          InterruptedException, TimeoutException,
+          ExecutionException {
+          if (!latch.await(duration, units)) {
+            throw new TimeoutException("Flush not completed within"
+              + " timeout.");
+          }
+
+          return flushRunner.status();
+        }
+
+        @Override
+        public Boolean get() throws InterruptedException,
+          ExecutionException {
+          try {
+            return get(factory.getViewTimeout(), TimeUnit.MILLISECONDS);
+          } catch (TimeoutException e) {
+            throw new RuntimeException("Timed out waiting for operation",
+              e);
+          }
+        }
+
+        @Override
+        public Long getCas() {
+          throw new UnsupportedOperationException("Flush has no CAS"
+            + " value.");
+        }
+
+        @Override
+        public String getKey() {
+          throw new UnsupportedOperationException("Flush has no"
+            + " associated key.");
+        }
+
+        @Override
+        public OperationStatus getStatus() {
+          throw new UnsupportedOperationException("Flush has no"
+            + " OperationStatus.");
+        }
+
+        @Override
+        public boolean isCancelled() {
+          throw new UnsupportedOperationException("Flush cannot be"
+            + " canceled.");
+        }
+      };
+
+    Thread flusher = new Thread(flushRunner, "Temporary Flusher");
+    flusher.setDaemon(true);
+    flusher.start();
+
+    return rv;
+  }
+
+  /**
+   * Flush the current bucket.
+   */
+  private boolean flushBucket() {
+    FlushResponse res = cbConnFactory.getClusterManager().flushBucket(
+      cbConnFactory.getBucketName());
+    return res.equals(FlushResponse.OK);
+  }
+
+  // This is a bit of a hack since we don't have async http on this
+  // particular interface, but it conforms to the specification
+  private class FlushRunner implements Runnable {
+
+    private final CountDownLatch flatch;
+    private Boolean flushStatus = false;
+
+    public FlushRunner(CountDownLatch latch) {
+      flatch = latch;
+    }
+
+    public void run() {
+      flushStatus = flushBucket();
+      flatch.countDown();
+    }
+
+    private boolean status() {
+      return flushStatus.booleanValue();
+    }
+  }
+
 }

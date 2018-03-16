@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,6 +80,10 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
           String value, PersistTo req, ReplicateTo rep);
   CASResponse cas(String key, long cas,
           String value, PersistTo req);
+  OperationFuture<Boolean> delete(String key, PersistTo persist);
+  OperationFuture<Boolean> delete(String key, PersistTo persist,
+          ReplicateTo replicate);
+  OperationFuture<Boolean> delete(String key, ReplicateTo replicate);
 
   int getNumVBuckets();
 }

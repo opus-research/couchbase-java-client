@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,15 @@ public class DesignDocumentTest {
   public void tearDown() {
   }
 
+  /**
+   * Tests the design documents without passing any
+   * spatial parameters or dimensions.
+   *
+   * @pre Create list of ViewDesign elements and
+   * create a DesignDocument using the same.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
+   */
   @Test
   public void testDesignDocumentWithoutSpatial() {
     String viewname = "myview";
@@ -69,6 +78,17 @@ public class DesignDocumentTest {
     assertEquals(expected, doc.toJson());
   }
 
+  /**
+   * Tests the design documents with spatial
+   * parameters or dimensions.
+   *
+   * @pre Create list of ViewDesign elements.
+   * Also create a list of SpatialViewDesign using
+   * maps of the coordinates of a point and create
+   * a DesignDocument using both the lists.
+   * @post Asserts true if the expression string
+   * matches the generated JSON
+   */
   @Test
   public void testDesignDocumentWithSpatial() {
     String viewname = "myview";

@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2006-2009 Dustin Sallings
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import net.spy.memcached.TestConfig;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test for basic things in the CouchbaseConnectionFactoryBuilder.
@@ -39,31 +36,19 @@ import static org.junit.Assert.*;
  */
 public class CouchbaseConnectionFactoryBuilderTest {
 
-  private List<URI> uris = Arrays.asList(
-      URI.create("http://localhost:8091/pools"));
-
-  public CouchbaseConnectionFactoryBuilderTest() {
-  }
-
-  @BeforeClass
-  public static void setUpClass() {
-  }
-
-  @AfterClass
-  public static void tearDownClass() {
-  }
-
-  @Before
-  public void setUp() {
-  }
-
-  @After
-  public void tearDown() {
-  }
+  private List<URI> uris = Arrays.asList(URI.create(
+    "http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
 
   /**
-   * Test of setObsPollInterval method, of class
-   * CouchbaseConnectionFactoryBuilder.
+   * Test setting the observer poll interval as 600.
+   *
+   * @pre Instantiate the connection factory builder and
+   * set the observer poll interval as 600 and assert it.
+   * @post Assert that the observer poll interval was not set.
+   * And build the connection.
+   *
+   * @throws IOException
+   * Signals that an I/O exception has occurred.
    */
   @Test
   public void testSetObsPollInterval() throws IOException {
@@ -79,7 +64,15 @@ public class CouchbaseConnectionFactoryBuilderTest {
   }
 
   /**
-   * Test of setObsPollMax method, of class CouchbaseConnectionFactoryBuilder.
+   * Test setting the max observer poll interval as 40.
+   *
+   * @pre Instantiate the connection factory builder and
+   * set the observer poll interval as 40 and assert it.
+   * @post Asserts no error if correctly set
+   * and then build connection.
+   *
+   * @throws IOException
+   * Signals that an I/O exception has occurred.
    */
   @Test
   public void testSetObsPollMax() throws IOException {
@@ -94,7 +87,17 @@ public class CouchbaseConnectionFactoryBuilderTest {
   }
 
   /**
-   * Test of setViewTimeout method, of class CouchbaseConnectionFactoryBuilder.
+   * Test setting the time out limits.
+   *
+   * @pre  Instantiate the connection factory builder
+   * and set the view timeout as 30000 and assert it.
+   * Also try to set 200 and as its not equal to 500
+   * then an assert with error message will appear.
+   * @post  Asserts no error if correctly set and
+   * then build connection.
+   *
+   * @throws IOException
+   * Signals that an I/O exception has occurred.
    */
   @Test
   public void testSetViewTimeout() throws IOException {
@@ -104,7 +107,7 @@ public class CouchbaseConnectionFactoryBuilderTest {
 
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
-     CouchbaseConnectionFactoryBuilder instanceResult
+    CouchbaseConnectionFactoryBuilder instanceResult
       = instance.setViewTimeout(viewTimeout);
     assertEquals(instance, instanceResult);
     assertEquals(viewTimeout, instanceResult.getViewTimeout());
@@ -114,4 +117,32 @@ public class CouchbaseConnectionFactoryBuilderTest {
 
     instance.buildCouchbaseConnection(uris, "default", "");
   }
+
+  /**
+   * Test to be sure that the default values are the expected values.
+   *
+   * This especially verifies the view timeout, which has been reported in
+   * JCBC-168.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testDefaultValues() throws IOException {
+
+    CouchbaseConnectionFactoryBuilder instance =
+      new CouchbaseConnectionFactoryBuilder();
+
+    CouchbaseConnectionFactory connFact =
+      instance.buildCouchbaseConnection(uris, "default", "");
+
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_VIEW_TIMEOUT,
+      connFact.getViewTimeout());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL,
+      connFact.getObsPollInterval());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX,
+      connFact.getObsPollMax());
+    assertEquals(CouchbaseConnectionFactory.DEFAULT_MIN_RECONNECT_INTERVAL,
+      connFact.getMinReconnectInterval());
+  }
+
 }

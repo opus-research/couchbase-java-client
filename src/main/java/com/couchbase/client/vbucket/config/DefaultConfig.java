@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -150,8 +150,8 @@ public class DefaultConfig implements Config {
       difference.setSequenceChanged(true);
     }
 
-    if (config.getConfigType().equals(ConfigType.COUCHBASE) &&
-      this.vbucketsCount == config.getVbucketsCount()) {
+    if (config.getConfigType().equals(ConfigType.COUCHBASE)
+      && this.vbucketsCount == config.getVbucketsCount()) {
       int vbucketsChanges = 0;
       for (int i = 0; i < this.vbucketsCount; i++) {
         vbucketsChanges += (this.getMaster(i) == config.getMaster(i)) ? 0 : 1;

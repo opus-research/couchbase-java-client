@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,16 +40,33 @@ public class ClusterManagerTest extends TestCase {
 
   private ClusterManager manager;
 
+  /**
+   * This method is used to do the initial setUp of the cluster manager.
+   * It creates a new instance using the server configuration stored in the
+   * build.xml and the CbTestConfig class. The existing buckets are
+   * all deleted initially.
+   */
+  @Override
   public void setUp() throws HttpException {
     manager = getClusterManager();
     deleteAllBuckets(manager);
   }
-
+  /**
+   * This method is used to shut down the cluster manager's running instance.
+   * The existing buckets are first deleted and then the connection is closed.
+   */
+  @Override
   public void tearDown() throws HttpException {
     deleteAllBuckets(manager);
     manager.shutdown();
   }
-
+  /**
+   * This method is used to get the cluster manager instance
+   * using the URI and the login configuration information
+   * in stored in build.xml and CbTestConfig.
+   *
+   * @return the cluster manager
+   */
   private ClusterManager getClusterManager() {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://"
@@ -57,7 +74,13 @@ public class ClusterManagerTest extends TestCase {
     return new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME,
       CbTestConfig.CLUSTER_PASS);
   }
-
+  /**
+   * This method is called every time the user needs
+   * to delete all the buckets from the cluster.
+   *
+   * @param cm the cm
+   * @throws HttpException the http exception
+   */
   private void deleteAllBuckets(ClusterManager cm)
     throws HttpException {
     List<String> buckets = cm.listBuckets();
@@ -66,45 +89,87 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * This unit test creates default buckets.
+   *
+   * @pre First it creates a default couchbase bucket then sleeps
+   * for 1000ms and then deletes this bucket. Another default bucket
+   * is then created, this time of the type - Memcached. This bucket
+   * is also deleted, after a delay of 1000ms of its creation.
+   * @post Creation and deletion of the default buckets succeeds
+   * without exception.
+   * @throws Exception
+   */
   public void testCreateDefaultBucket() throws Exception {
-    manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
+    manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
     Thread.sleep(1000);
     manager.deleteBucket("default");
-    manager.createDefaultBucket(BucketType.MEMCACHED, 100, 0);
+    manager.createDefaultBucket(BucketType.MEMCACHED, 100, 0, true);
     Thread.sleep(1000);
     manager.deleteBucket("default");
   }
 
+  /**
+   * This test creates SASL buckets.
+   *
+   * @pre First it creates a SASL couchbase bucket then sleeps
+   * for 1000ms and then deletes this bucket. Another SASL bucket
+   * is then created, this time of the type - Memcached. This bucket
+   * is also deleted, after a delay of 1000ms of its creation.
+   * @post  Creation and deletion of the SASL buckets succeeds
+   * without exception.
+   * @throws Exception
+   */
   public void testCreateSaslBucket() throws Exception {
-    manager.createSaslBucket(BucketType.COUCHBASE, "saslbucket", 100, 0,
-        "password");
+    manager.createNamedBucket(BucketType.COUCHBASE, "saslbucket", 100, 0,
+        "password", true);
     Thread.sleep(1000);
     manager.deleteBucket("saslbucket");
-    manager.createSaslBucket(BucketType.MEMCACHED, "saslbucket", 100, 0,
-        "password");
+    manager.createNamedBucket(BucketType.MEMCACHED, "saslbucket", 100, 0,
+        "password", false);
     Thread.sleep(1000);
     manager.deleteBucket("saslbucket");
   }
 
+  /**
+   * Creates port buckets i.e. buckets on alternate port.
+   *
+   * @pre  First it creates a port couchbase bucket,
+   * sleeps for 1000ms and then deletes this bucket.
+   * Another port bucket is then created, this time
+   * of the type - Memcached. This bucket is also deleted,
+   * after a delay of 1000ms of its creation.
+   * @post  Creation and deletion of the port
+   * buckets succeeds without exception.
+   * @throws Exception
+   */
   public void testCreatePortBucket() throws Exception {
     manager.createPortBucket(BucketType.COUCHBASE, "portbucket", 100, 0,
-        11212);
+        11212, true);
     Thread.sleep(1000);
     manager.deleteBucket("portbucket");
     manager.createPortBucket(BucketType.MEMCACHED, "portbucket", 100, 0,
-        11212);
+        11212, true);
     Thread.sleep(1000);
     manager.deleteBucket("portbucket");
   }
 
+  /**
+   * Get SASL buckets from a cluster.
+   *
+   * @pre Three SASL buckets are created.
+   * @post Asserts true if all the three SASL buckets
+   * are successfully created.
+   * @throws Exception
+   */
   public void testGetBuckets() throws Exception {
     assertEquals(manager.listBuckets().size(), 0);
-    manager.createSaslBucket(BucketType.COUCHBASE, "bucket1", 100, 0,
-        "password");
-    manager.createSaslBucket(BucketType.COUCHBASE, "bucket2", 100, 0,
-        "password");
-    manager.createSaslBucket(BucketType.COUCHBASE, "bucket3", 100, 0,
-        "password");
+    manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, 0,
+        "password", false);
+    manager.createNamedBucket(BucketType.COUCHBASE, "bucket2", 100, 0,
+        "password", false);
+    manager.createNamedBucket(BucketType.COUCHBASE, "bucket3", 100, 0,
+        "password", false);
     List<String> buckets = manager.listBuckets();
     assertTrue(buckets.contains("bucket1"));
     assertTrue(buckets.contains("bucket2"));
@@ -112,10 +177,18 @@ public class ClusterManagerTest extends TestCase {
     assertEquals(manager.listBuckets().size(), 3);
   }
 
+  /**
+   * Create SASL bucket even if the specified bucket quota is too small.
+   *
+   * @pre A SASL couchbase bucket is created with RAM share as 25MB.
+   * @post Test fails and gives a message that the bucket quota is too
+   * small. Asserts an error message if due to this the test runs into
+   * RuntimeException.
+   */
   public void testCreateBucketQuotaTooSmall() {
     try {
-      manager.createSaslBucket(BucketType.COUCHBASE, "bucket1", 25, 0,
-          "password");
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 25, 0,
+          "password", false);
       fail("Bucket quota too small, but bucket was still created");
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Http Error: 400 Reason: Bad Request "
@@ -124,10 +197,18 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * Create SASL bucket even if the specified bucket quota is too large.
+   *
+   * @pre A SASL couchbase bucket is created with RAM share as 100000MB.
+   * @post Test fails and gives a message that the bucket quota is too
+   * large. Asserts an error message if due to this the test runs into
+   * RuntimeException.
+   */
   public void testCreateBucketQuotaTooBig() {
     try {
-      manager.createSaslBucket(BucketType.COUCHBASE, "bucket1", 100000, 0,
-          "password");
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100000, 0,
+          "password", false);
       fail("Bucket quota too large, but bucket was still created");
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Http Error: 400 Reason: Bad Request "
@@ -136,10 +217,20 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * Create SASL bucket even if the specified bucket
+   * replica nodes exceeds maximum possible.
+   *
+   * @pre A SASL couchbase bucket is created with 4 replicas,
+   * when we know that a max of 3 replicas can only exist.
+   * @post Test fails and gives a message that the replica
+   * number is too large. Asserts an error message if due
+   * to this the test runs into a RuntimeException.
+   */
   public void testCreateBucketTooManyReplicas() {
     try {
-      manager.createSaslBucket(BucketType.COUCHBASE, "bucket1", 100, 4,
-          "password");
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, 4,
+          "password", false);
       fail("Replica number too large, but bucket was still created");
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Http Error: 400 Reason: Bad Request "
@@ -148,10 +239,21 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * Create the SASL buckets even if replicas nodes are
+   * less than minimum possible.
+   *
+   * @pre  A SASL couchbase bucket is created with -1 replicas,
+   * when we know that a min of 0 replicas can only exist.
+   * @post  A failure message stating that the replica number
+   * is too small, is returned and in case due to this,
+   * if the code runs into a runtime exception,
+   * then the assert message is returned.
+   */
   public void testCreateBucketTooFewReplicas() {
     try {
-      manager.createSaslBucket(BucketType.COUCHBASE, "bucket1", 100, -1,
-          "password");
+      manager.createNamedBucket(BucketType.COUCHBASE, "bucket1", 100, -1,
+          "password", false);
       fail("Replica number too small, but bucket was still created");
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Http Error: 400 Reason: Bad Request "
@@ -160,10 +262,19 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * Verify the creation of the SASL bucket with invalid name.
+   *
+   * @pre  Use the cluster manager instance to create a SASL
+   * bucket even if invalid name is used while creating it.
+   * @post  A failure message stating that the bucket name is
+   * invalid is returned and in case the code runs into a
+   * runtime exception, then the assert message is returned.
+   */
   public void testCreateBucketBadName() {
     try {
-      manager.createSaslBucket(BucketType.COUCHBASE, "$$$", 100, 0,
-          "password");
+      manager.createNamedBucket(BucketType.COUCHBASE, "$$$", 100, 0,
+          "password", false);
       fail("Invalid bucket name, but bucket was still created");
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Http Error: 400 Reason: Bad Request "
@@ -173,6 +284,17 @@ public class ClusterManagerTest extends TestCase {
     }
   }
 
+  /**
+   * Connects to the cluster and its default bucket using invalid
+   * server addresses.
+   *
+   * @pre  First the running client is shut down and a new instance
+   * is created using URIs of invalid addresses. Next an attempt is
+   * made to create the default bucket for this new instance.
+   * @post  The connection should not succeed, after which the
+   * previous cluster manager instance is restored.
+   * @throws InterruptedException the interrupted exception
+   */
   public void testWithOnlyBadAddrs() throws InterruptedException {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://badurl:8091/pools"));
@@ -181,13 +303,23 @@ public class ClusterManagerTest extends TestCase {
     manager = new ClusterManager(uris, "Administrator", "password");
 
     try {
-      manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
+      manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
     } catch (RuntimeException e) {
       assertEquals(e.getMessage(), "Unable to connect to cluster");
     }
     manager = getClusterManager();
   }
 
+  /**
+   * Create and delete the default buckets with some bad server addresses.
+   *
+   * @pre  It first creates a list of URIs and shuts down the cluster manager.
+   * Then a new cluster manager instance is retrieved using the list of URIs,
+   * and default bucket is created.
+   * @post  The working thread sleeps for 1000ms and
+   * then deletes the bucket just created.
+   * @throws InterruptedException the interrupted exception
+   */
   public void testWithSomeBadAddrs() throws InterruptedException {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://badurl:8091/pools"));
@@ -196,7 +328,7 @@ public class ClusterManagerTest extends TestCase {
 
     manager.shutdown();
     manager = new ClusterManager(uris, "Administrator", "password");
-    manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0);
+    manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
     Thread.sleep(1000);
     manager.deleteBucket("default");
   }

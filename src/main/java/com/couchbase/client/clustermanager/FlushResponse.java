@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,12 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.protocol.views;
-
-import java.util.List;
-
-import net.spy.memcached.ops.OperationCallback;
+package com.couchbase.client.clustermanager;
 
 /**
- * A ViewsOperation.
+ * Contains the possible responses that can come up when flushing a bucket.
  */
-public interface ViewsFetcherOperation {
-
-  /**
-   * A ViewsCallback.
-   */
-  interface ViewsFetcherCallback extends OperationCallback {
-    void gotData(List<View> views);
-  }
+public enum FlushResponse {
+  OK,
+  NOT_ENABLED
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -145,11 +145,12 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
 
   public void updateLocator(final Collection<MemcachedNode> nodes,
       final Config newconf) {
-    // we'll get a new config for various reasons we don't care about, so check
-    // if we do care
     Config current = fullConfig.get().getConfig();
+
     ConfigDifference compareTo = current.compareTo(newconf);
-    if (compareTo.isSequenceChanged() || compareTo.getVbucketsChanges() > 0) {
+
+    if (compareTo.isSequenceChanged() || compareTo.getVbucketsChanges() > 0
+      || current.getCouchServers().size() != newconf.getCouchServers().size()) {
       getLogger().debug("Updating configuration, received updated configuration"
         + " with significant changes.");
       fullConfig.set(new TotalConfig(newconf,

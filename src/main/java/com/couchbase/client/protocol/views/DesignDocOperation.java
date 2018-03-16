@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,9 @@ package com.couchbase.client.protocol.views;
 
 import net.spy.memcached.ops.OperationCallback;
 
-
+/**
+ * Base class for all Design Document Operations.
+ */
 public interface DesignDocOperation {
 
   /**

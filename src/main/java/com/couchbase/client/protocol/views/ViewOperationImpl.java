@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
 
 package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
 import java.text.ParseException;
 import java.util.logging.Logger;
 

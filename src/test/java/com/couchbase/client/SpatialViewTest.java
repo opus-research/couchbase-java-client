@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import net.spy.memcached.PersistTo;
 import net.spy.memcached.TestConfig;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -43,9 +44,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies the correct functionality of spatial view queries.
@@ -75,14 +76,32 @@ public class SpatialViewTest {
     private String name;
     private double lat;
     private double lng;
+
+    /**
+     * Instantiates a new city.
+     * @param n the name
+     * @param la the latitude
+     * @param ln the longitude
+     */
     public City(String n, double la, double ln) {
       name = n;
       lat = la;
       lng = ln;
     }
+
+    /**
+     * Gets the key.
+     * @return the key
+     */
     public String getKey() {
       return "city:" + name;
     }
+
+    /**
+     * Converts json to string.
+     * @return the string
+     * @throws JSONException the jSON exception
+     */
     public String toJson() throws JSONException {
       JSONObject obj = new JSONObject();
       obj.put("type", type);
@@ -113,7 +132,7 @@ public class SpatialViewTest {
   public static void before() throws Exception {
     BucketTool bucketTool = new BucketTool();
     bucketTool.deleteAllBuckets();
-    bucketTool.createDefaultBucket(BucketType.COUCHBASE, 256, 0);
+    bucketTool.createDefaultBucket(BucketType.COUCHBASE, 256, 0, true);
 
     BucketTool.FunctionCallback callback = new BucketTool.FunctionCallback() {
       @Override
@@ -138,7 +157,7 @@ public class SpatialViewTest {
     client.asyncHttpPut(docUri, view);
 
     for(City city : CITY_DOCS) {
-      client.set(city.getKey(), 0, city.toJson());
+      client.set(city.getKey(), 0, city.toJson(), PersistTo.MASTER);
     }
 
     System.out.println("Setup of design docs complete, "
@@ -161,7 +180,9 @@ public class SpatialViewTest {
   }
 
   /**
-   * Initialize the client new before every test to provide a clean state.
+   * Initialize the client new before every test
+   * to provide a clean state.
+   *
    * @throws Exception
    */
   @Before
@@ -169,6 +190,15 @@ public class SpatialViewTest {
     initClient();
   }
 
+  /**
+   * Test spatial view functionality without design docs.
+   *
+   * @pre Query the view to fetch all the records.
+   * Query on the view and iterate over the view response.
+   * @post  Asserts true as the view row is an instance of
+   * SpatialViewRowNoDocs and asserts false as the Bbox,
+   * Gometry and the value of the Spatial view are empty.
+   */
   @Test
   public void testSpatialWithoutDocs() {
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);
@@ -188,6 +218,17 @@ public class SpatialViewTest {
     assertEquals(CITY_DOCS.size(), response.size());
   }
 
+  /**
+   * Test spatial Bbox functionality of views.
+   *
+   * @pre Query the view to fetch all the records.
+   * Set the query Bbox parameters as (0,0,50,50)
+   * Query on the view and iterate over the view response.
+   * @post Asserts true as the view row is an instance of
+   * SpatialViewRowNoDocs and asserts false as the Bbox,
+   * Gometry and the value of the Spatial view are empty.
+   * Also, asserts that the response size is equal to 3.
+   */
   @Test
   public void testSpatialBbox() {
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);
@@ -204,6 +245,18 @@ public class SpatialViewTest {
     assertEquals(3, response.size());
   }
 
+  /**
+   * Test spatial view with docs.
+   *
+   * @pre Query the view to fetch all the records.
+   * Set the Include Docs parameter as true.
+   * Query on the view and iterate over the view response.
+   * @post Asserts true as the view row is an instance of
+   * SpatialViewRowNoDocs and asserts false as the Bbox,
+   * Gometry, value and the document inside the Spatial
+   * view rows are not empty. Also, asserts that the
+   * response size is equal to 4.
+   */
   @Test
   public void testSpatialWithDocs() {
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);

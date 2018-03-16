@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * requests to the server.
    */
   public static final String CLIENT_SPEC_VER = "1.0";
-  private List<URI> baseList;
+  private volatile List<URI> baseList;
   private String restUsr;
   private String restPwd;
   private URI loadedBaseUri;
@@ -81,8 +81,8 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       new ConfigurationParserJSON();
   private Map<String, BucketMonitor> monitors =
       new HashMap<String, BucketMonitor>();
-  private String reSubBucket;
-  private Reconfigurable reSubRec;
+  private volatile String reSubBucket;
+  private volatile Reconfigurable reSubRec;
 
   /**
    * Constructs a configuration provider with disabled authentication for the
@@ -111,6 +111,23 @@ public class ConfigurationProviderHTTP extends SpyObject implements
   }
 
   /**
+   * Returns the current Reconfigurable object.
+   */
+  @Override
+  public synchronized Reconfigurable getReconfigurable() {
+    return reSubRec;
+  }
+
+  /**
+   * Returns the current bucket name.
+   */
+  @Override
+  public synchronized String getBucket() {
+    return reSubBucket;
+  }
+
+
+  /**
    * Connects to the REST service and retrieves the bucket configuration from
    * the first pool available.
    *
@@ -132,11 +149,17 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * For a given bucket to be found, walk the URIs in the baselist until the
    * bucket needed is found.
    *
+   * The intent with this method is to encapsulate all of the walking of
+   * URIs and populating an internal object model of the configuration in
+   * one place.
+   *
+   * When the full baseList URIs are walked and still no connection is
+   * established, a backoff algorithm is in place to retry after a
+   * increasing timeframe.
+   *
    * @param bucketToFind
    */
   private void readPools(String bucketToFind) {
-    // the intent with this method is to encapsulate all of the walking of URIs
-    // and populating an internal object model of the configuration to one place
     for (URI baseUri : baseList) {
       try {
         // get and parse the response from the current base uri
@@ -157,7 +180,8 @@ public class ConfigurationProviderHTTP extends SpyObject implements
         }
         // load pools
         for (Pool pool : pools.values()) {
-          URLConnection poolConnection = urlConnBuilder(baseUri, pool.getUri());
+          URLConnection poolConnection = urlConnBuilder(baseUri,
+            pool.getUri());
           String poolString = readToString(poolConnection);
           configurationParser.loadPool(pool, poolString);
           URLConnection poolBucketsConnection = urlConnBuilder(baseUri,
@@ -210,12 +234,13 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     return AddrUtil.getAddresses(serversString.toString());
   }
 
-  public void finishResubscribe() {
+  public synchronized void finishResubscribe() {
     monitors.clear();
     subscribe(reSubBucket, reSubRec);
   }
 
-  public void markForResubscribe(String bucketName, Reconfigurable rec) {
+  public synchronized void markForResubscribe(String bucketName,
+    Reconfigurable rec) {
     getLogger().debug("Marking bucket " + bucketName
       + " for resubscribe with reconfigurable " + rec);
     reSubBucket = bucketName; // can't subscribe here, must from user request
@@ -228,27 +253,29 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * @param bucketName bucket name to receive configuration for
    * @param rec reconfigurable that will receive updates
    */
-  public void subscribe(String bucketName, Reconfigurable rec) {
-    // this seems odd, and it is, but this code was taken from outside the
-    // client where it supported multiple buckets and was now shoved down in.
-    // recent changes don't support multiple, so we validate
-    /* @TODO: refactor all of this bucket and subscription behind the
-     *        node locator
-     */
+  public synchronized void subscribe(String bucketName, Reconfigurable rec) {
     if (null == bucketName || (null != reSubBucket
       && !bucketName.equals(reSubBucket))) {
       throw new IllegalArgumentException("Bucket name cannot be null and must"
-        + " never be re-set to a new object.");
+        + " never be re-set to a new object. Bucket: "
+        + bucketName + ", reSubBucket: " + reSubBucket);
     }
+
     if (null == rec || (null != reSubRec && rec != reSubRec)) {
       throw new IllegalArgumentException("Reconfigurable cannot be null and"
         + " must never be re-set to a new object");
     }
     reSubBucket = bucketName;  // More than one subscriber, would be an error
     reSubRec = rec;
+
     getLogger().debug("Subscribing an object for reconfiguration updates "
       + rec.getClass().getName());
     Bucket bucket = getBucketConfiguration(bucketName);
+
+    if(bucket == null) {
+      throw new ConfigurationException("Could not get bucket configuration "
+        + "for: " + bucketName);
+    }
 
     ReconfigurableObserver obs = new ReconfigurableObserver(rec);
     BucketMonitor monitor = this.monitors.get(bucketName);
@@ -341,6 +368,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       + connection.getURL());
     try {
       connection.setConnectTimeout(500);
+      connection.setReadTimeout(5000);
       InputStream inStream = connection.getInputStream();
       if (connection instanceof java.net.HttpURLConnection) {
         HttpURLConnection httpConnection = (HttpURLConnection) connection;
@@ -373,4 +401,14 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       }
     }
   }
+
+  @Override
+  public synchronized String toString() {
+    String result = "";
+    result += "bucket: " + reSubBucket;
+    result += "reconf:" + reSubRec;
+    result += "baseList:" + baseList;
+    return result;
+  }
+
 }

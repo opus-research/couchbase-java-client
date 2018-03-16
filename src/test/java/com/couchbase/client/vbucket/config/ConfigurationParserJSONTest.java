@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,11 @@
 package com.couchbase.client.vbucket.config;
 
 
+import com.couchbase.client.vbucket.ConnectionException;
+import java.text.ParseException;
 import java.util.Map;
-
 import junit.framework.TestCase;
+import net.spy.memcached.TestConfig;
 
 /**
  * A ConfigParserJSONTest.
@@ -35,6 +37,13 @@ public class ConfigurationParserJSONTest extends TestCase {
   private ConfigurationParser configParser = new ConfigurationParserJSON();
   private static final String DEFAULT_POOL_NAME = "default";
 
+  /**
+   * Test to check if the base string used
+   * can be parsed or not.
+   *
+   * @pre Parse base string
+   * @throws Exception the exception
+   */
   public void testParseBase() throws Exception {
     Map<String, Pool> base = configParser.parseBase(BASE_STRING);
     assertNotNull(base);
@@ -45,6 +54,14 @@ public class ConfigurationParserJSONTest extends TestCase {
     assertNotNull(pool.getUri());
   }
 
+  /**
+   * Test to check if the buckets string used
+   * can be parsed or not.
+   *
+   * @pre Parse bucket cluster strings
+   * @post check bucket
+   * @throws Exception the exception
+   */
   public void testParseBuckets() throws Exception {
     Map<String, Bucket> buckets = configParser.parseBuckets(BUCKETS_STRING);
     for (Bucket bucket : buckets.values()) {
@@ -52,6 +69,14 @@ public class ConfigurationParserJSONTest extends TestCase {
     }
   }
 
+  /**
+   * Test to check if the buckets cluster string used
+   * can be parsed or not.
+   *
+   * @pre Parse bucket cluster strings
+   * @post check bucket
+   * @throws Exception the exception
+   */
   public void testParseBucketsClustered() throws Exception {
     StringBuilder sb = new StringBuilder();
     sb.append(BUCKETS_CLUSTER_STRING);
@@ -62,17 +87,59 @@ public class ConfigurationParserJSONTest extends TestCase {
     }
   }
 
+  /**
+   * Test to check if the JSON bucket string used in this
+   * test can be parsed into a server bucket with all the
+   * configuration like URI, name etc.
+   *
+   * @pre Parse bucket
+   * @post check bucket
+   * @throws Exception the exception
+   */
   public void testParseBucket() throws Exception {
     Bucket bucket = configParser.parseBucket(BUCKET_STRING);
     checkBucket(bucket);
   }
 
+  /**
+   * Test to load the JSON pool string after parsing it using the
+   * configuration parser and retrieving the bucket information
+   * from the created pool.
+   *
+   * @pre Load the pool of strings
+   * @post Asserts that the bucket URI is not null
+   *
+   * @throws Exception the exception
+   */
   public void testLoadPool() throws Exception {
     Pool pool = new Pool(null, null, null);
     configParser.loadPool(pool, POOL_STRING);
     assertNotNull(pool.getBucketsUri());
   }
 
+  /**
+   * Tests the behaviour of the client when a wrong URI is provided
+   * for connection.
+   *
+   * @pre Wrong connection URI is passed.
+   * @post Asserts equals if due to this the test runs
+   * into ConnectionException.
+   */
+  public void testInvalidURI() throws ParseException{
+    try {
+      configParser.parseBase(INVALID_BASE_STRING);
+    } catch (ConnectionException e) {
+      assertEquals(e.getMessage(), "Connection URI is either incorrect "
+        + "or invalid as it cannot be parsed.");
+    }
+  }
+
+  /**
+   * Check bucket.
+   *
+   * @param bucket the bucket
+   * @throws Exception the exception
+   */
   private void checkBucket(Bucket bucket) throws Exception {
     assertNotNull("Bucket is null", bucket);
     assertNotNull(bucket.getName());
@@ -87,6 +154,9 @@ public class ConfigurationParserJSONTest extends TestCase {
           + "2.2.4\",\"mnesia\":\"4.4.12\",\"kernel\":\"2.13.4\",\"sasl\""
           + ":\"2.1.8\",\"ns_server\":\"1.6.0beta3\",\"menelaus\":\"1.6.0"
           + "beta3\",\"stdlib\":\"1.16.4\"}}";
+
+  private static final String INVALID_BASE_STRING =
+      "http://" + TestConfig.IPV4_ADDR + ":8091/index.html";
 
   private static final String BUCKETS_STRING = "[\n"
       + "    {\n"

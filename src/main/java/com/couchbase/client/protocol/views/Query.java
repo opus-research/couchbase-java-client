@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,8 @@ package com.couchbase.client.protocol.views;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -529,6 +531,10 @@ public class Query {
    * for itself. It also checks for various special cases and makes
    * sure the correct string representation is returned.
    *
+   * When no previous match was found, the final try is to cast it to a
+   * long value and treat it as a numeric value. If this doesn't succeed
+   * either, then it is treated as a string.
+   *
    * @param key The key for the corresponding value.
    * @param value The value to prepared.
    * @return The correctly formatted and encoded value.
@@ -548,7 +554,11 @@ public class Query {
     } else if(value.toString().startsWith("\"")) {
       encoded = value.toString();
     } else {
-      encoded = "\"" + value + "\"";
+      try {
+        encoded = NumberFormat.getInstance().parse(value.toString()).toString();
+      } catch(ParseException ex) {
+        encoded = "\"" + value.toString() + "\"";
+      }
     }
 
     return URLEncoder.encode(encoded, "UTF-8");

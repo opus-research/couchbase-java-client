@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.internal.AdaptiveThrottler;
+import com.couchbase.client.internal.ThrottleManager;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -57,12 +59,23 @@ public class CouchbaseConnection extends MemcachedConnection  implements
 
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cf;
+  private final ThrottleManager throttleManager;
+  private final boolean enableThrottling;
 
   public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
       List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
       FailureMode fm, OperationFactory opfactory) throws IOException {
     super(bufSize, f, a, obs, fm, opfactory);
     this.cf = f;
+
+    enableThrottling = Boolean.parseBoolean(
+      CouchbaseProperties.getProperty("enable_throttle", false));
+    if(enableThrottling) {
+      this.throttleManager = new ThrottleManager<AdaptiveThrottler>(
+        a, AdaptiveThrottler.class, this, opfactory);
+    } else {
+      this.throttleManager = null;
+    }
   }
 
   public void reconfigure(Bucket bucket) {
@@ -114,6 +127,11 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       mergedNodes.addAll(stayNodes);
       mergedNodes.addAll(newNodes);
 
+      for(MemcachedNode keepingNode : mergedNodes) {
+        getLogger().debug("Node " + keepingNode.getSocketAddress()
+          + " will stay in cluster config after reconfiguration.");
+      }
+
       // call update locator with new nodes list and vbucket config
       if (locator instanceof VBucketNodeLocator) {
         ((VBucketNodeLocator)locator).updateLocator(mergedNodes,
@@ -122,7 +140,22 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         locator.updateLocator(mergedNodes);
       }
 
+      if(enableThrottling) {
+        for(MemcachedNode node : newNodes) {
+          throttleManager.setThrottler(
+            (InetSocketAddress)node.getSocketAddress());
+        }
+        for(MemcachedNode node : oddNodes) {
+          throttleManager.removeThrottler(
+            (InetSocketAddress)node.getSocketAddress());
+        }
+      }
+
       // schedule shutdown for the oddNodes
+      for(MemcachedNode shutDownNode : oddNodes) {
+        getLogger().info("Scheduling Node "
+          + shutDownNode.getSocketAddress() + "for shutdown.");
+      }
       nodesToShutdown.addAll(oddNodes);
     } catch (IOException e) {
       getLogger().error("Connection reconfiguration failed", e);
@@ -158,10 +191,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       // and wait for it to come back online.
       if (placeIn == null) {
         placeIn = primary;
-        this.getLogger().warn(
-            "Node exepcted to receive data is inactive.  This could be due to "
-            + "a failure within the cluster.  Will check for updated "
-            + "configuration.  Key without a configured node is: %s.", key);
+        getLogger().warn(
+            "Node expected to receive data is inactive. This could be due to "
+            + "a failure within the cluster. Will check for updated "
+            + "configuration. Key without a configured node is: %s.", key);
         cf.checkConfigUpdate();
       }
     }
@@ -185,6 +218,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
           }
         }
       }
+      if(enableThrottling) {
+        throttleManager.getThrottler(
+          (InetSocketAddress)placeIn.getSocketAddress()).throttle();
+      }
       addOperation(placeIn, o);
     } else {
       assert o.isCancelled() : "No node found for " + key
@@ -193,7 +230,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   }
 
   public void addOperations(final Map<MemcachedNode, Operation> ops) {
-
     for (Map.Entry<MemcachedNode, Operation> me : ops.entrySet()) {
       final MemcachedNode node = me.getKey();
       Operation o = me.getValue();

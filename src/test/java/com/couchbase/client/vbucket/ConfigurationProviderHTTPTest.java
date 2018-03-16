@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,23 +52,58 @@ public class ConfigurationProviderHTTPTest extends TestCase {
     assertNotNull(configProvider);
   }
 
+  /**
+   * Get bucket configuration.
+   *
+   * @pre  Using config provider instance,
+   * get the bucket configuration.
+   * @post  Asserts that an bucket isn't null.
+   * @throws Exception the exception
+   */
   public void testGetBucketConfiguration() throws Exception {
     Bucket bucket = configProvider.getBucketConfiguration(DEFAULT_BUCKET_NAME);
     assertNotNull(bucket);
   }
 
+  /**
+   * Test the Subscription for configuration updates.
+   *
+   * @pre  Use config provider instance to call subscribe method.
+   * @throws Exception the exception
+   */
   public void testSubscribe() throws Exception {
     configProvider.subscribe(DEFAULT_BUCKET_NAME, reconfigurable);
   }
 
+  /**
+   * Test reverting the Subscription for configuration updates.
+   *
+   * @pre  Use config provider instance to call unsubscribe method.
+   * @throws Exception the exception
+   */
   public void testUnsubscribe() throws Exception {
     configProvider.unsubscribe(DEFAULT_BUCKET_NAME, reconfigurable);
   }
 
+  /**
+   * Test the shutdown of configProvider.
+   *
+   * @pre  Use config provider instance to call shutdown method.
+   * @throws Exception the exception
+   */
   public void testShutdown() throws Exception {
     configProvider.shutdown();
   }
 
+  /**
+   * Test the retrieval of anonymous auth bucket.
+   *
+   * @pre  Use config provider instance to call
+   * getAnonymousAuthBucket method.
+   * @post  Asserts true as the anonymous auth
+   * bucket is the default bucket.
+   * @throws Exception the exception
+   */
   public void testGetAnonymousAuthBucket() throws Exception {
     assertEquals("default", configProvider.getAnonymousAuthBucket());
   }

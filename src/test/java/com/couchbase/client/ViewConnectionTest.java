@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,10 +29,6 @@ import java.util.Arrays;
 import java.util.List;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.TestConfig;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -44,6 +40,15 @@ public class ViewConnectionTest {
 
   /**
    * Tests the correctness of the initialization and shutdown phase.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Create view connection using the
+   * parameters as above.
+   * @post Assert false if the view connection nodes are empty
+   * Shutdown the client and then again check for assertion.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
    */
   @Test
   public void testInitAndShutdown() throws IOException, InterruptedException {

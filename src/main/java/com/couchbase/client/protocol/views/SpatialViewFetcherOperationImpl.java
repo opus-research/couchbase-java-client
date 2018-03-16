@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -61,7 +61,8 @@ public class SpatialViewFetcherOperationImpl extends HttpOperationImpl
           viewName, json);
       int errorcode = response.getStatusLine().getStatusCode();
       if (errorcode == HttpURLConnection.HTTP_OK) {
-        ((SpatialViewFetcherOperation.ViewFetcherCallback) callback).gotData(view);
+        ((SpatialViewFetcherOperation.ViewFetcherCallback) callback)
+          .gotData(view);
         callback.receivedStatus(new OperationStatus(true, "OK"));
       } else {
         callback.receivedStatus(new OperationStatus(false,

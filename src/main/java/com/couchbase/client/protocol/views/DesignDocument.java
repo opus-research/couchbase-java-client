@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ public class DesignDocument<T> {
   private List<ViewDesign> views;
 
   /**
-   * Associated spatial views to the design document;
+   * Associated spatial views to the design document.
    */
   private List<SpatialViewDesign> spatialViews;
 
@@ -106,7 +106,8 @@ public class DesignDocument<T> {
 
   /**
    * Get the name of the design document.
-   * @return
+   *
+   * @return the name of the design document.
    */
   public String getName() {
     return name;
@@ -124,11 +125,11 @@ public class DesignDocument<T> {
   /**
    * Set a list of ViewDesigns.
    *
-   * @param views the list of ViewDesign objects representing the views.
+   * @param v the list of ViewDesign objects representing the views.
    * @return the current object instance.
    */
-  public DesignDocument setViews(List<ViewDesign> views) {
-    this.views = views;
+  public DesignDocument setViews(List<ViewDesign> v) {
+    this.views = v;
     return this;
   }
 
@@ -155,18 +156,18 @@ public class DesignDocument<T> {
   /**
    * Set a list of SpatialViewDesigns.
    *
-   * @param spatialViews the list of SpatialViewDesign objects.
+   * @param sv the list of SpatialViewDesign objects.
    * @return the current object instance.
    */
-  public DesignDocument setSpatialViews(List<SpatialViewDesign> spatialViews) {
-    this.spatialViews = spatialViews;
+  public DesignDocument setSpatialViews(List<SpatialViewDesign> sv) {
+    this.spatialViews = sv;
     return this;
   }
 
   /**
    * Add a single spatial view to the list of stored DpatialViewDesign objects.
    *
-   * @param view a single spatial view to be added.
+   * @param spatialView a single spatial view to be added.
    * @return the current object instance.
    */
   public DesignDocument setSpatialView(SpatialViewDesign spatialView) {
@@ -177,11 +178,11 @@ public class DesignDocument<T> {
   /**
    * Set the name of the design document.
    *
-   * @param name the name of the design document.
+   * @param n the name of the design document.
    * @return the current object instance.
    */
-  public DesignDocument setName(String name) {
-    this.name = name;
+  public DesignDocument setName(String n) {
+    this.name = n;
     return this;
   }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -114,20 +114,31 @@ public class CouchbaseMemcachedConnection extends MemcachedConnection implements
       mergedNodes.addAll(stayNodes);
       mergedNodes.addAll(newNodes);
 
+      for(MemcachedNode keepingNode : mergedNodes) {
+        getLogger().debug("Node " + keepingNode.getSocketAddress()
+          + " will stay in cluster config after reconfiguration.");
+      }
+
       // call update locator with new nodes list and vbucket config
       if (locator instanceof VBucketNodeLocator) {
         ((VBucketNodeLocator)locator).updateLocator(mergedNodes,
             bucket.getConfig());
       } else {
+        // We update the locator with the merged nodes
+        // before initiating a reconnect on the queue
+        locator.updateLocator(mergedNodes);
         for (MemcachedNode node : mergedNodes) {
           if (!node.isActive()) {
             queueReconnect(node);
           }
         }
-        locator.updateLocator(mergedNodes);
       }
 
       // schedule shutdown for the oddNodes
+      for(MemcachedNode shutDownNode : oddNodes) {
+        getLogger().info("Scheduling Node "
+          + shutDownNode.getSocketAddress() + "for shutdown.");
+      }
       nodesToShutdown.addAll(oddNodes);
     } catch (IOException e) {
       getLogger().error("Connection reconfiguration failed", e);

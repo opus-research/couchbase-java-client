@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -72,6 +72,12 @@ public final class ComplexKey {
   private static final Object[] EMPTY_ARRAY = new Object[0];
 
   /**
+   * If the ComplexKex instance should be forced to an array, even
+   * when there is only one key.
+   */
+  private boolean forceArray = false;
+
+  /**
    * Private constructor used by the "of" or other factory methods.
    *
    * @param components List of objects that should be converted
@@ -115,6 +121,17 @@ public final class ComplexKey {
     return EMPTY_ARRAY;
   }
 
+  /**
+   * Force the cast to a JSON array even when there is only one element.
+   *
+   * @param force whether the ComplexKey should be forced to be an array or not.
+   * @return the current ComplexKey instance.
+   */
+  public ComplexKey forceArray(boolean force) {
+    forceArray = force;
+    return this;
+  }
+
 
   /**
    * Generate a JSON string of the ComplexKey.
@@ -126,7 +143,7 @@ public final class ComplexKey {
    * @return the JSON of the underlying complex key
    */
   public String toJson() {
-    if(components.size() == 1) {
+    if(components.size() == 1 && !forceArray) {
       Object component = components.get(0);
       if(component == EMPTY_OBJECT) {
         return new JSONObject().toString();

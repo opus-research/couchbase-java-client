@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,14 @@ public class ConfigurationProviderHTTPDownNodeTest extends TestCase {
     assertNotNull(configProvider);
   }
 
+  /**
+   * Tests to get bucket configuration.
+   *
+   * @pre  Using config provider instance,
+   * get the bucket configuration.
+   * @post  Asserts that an bucket isn't null.
+   * @throws Exception the exception
+   */
   public void testGetBucketConfiguration() throws Exception {
     Bucket bucket = configProvider.getBucketConfiguration(DEFAULT_BUCKET_NAME);
     assertNotNull(bucket);

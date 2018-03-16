@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,15 @@ public class ViewDesignTest {
   public void tearDown() {
   }
 
+  /**
+   * Tests the ViewDesign instance created
+   * from a view name and a map.
+   *
+   * @pre Prepare ViewDesign using view
+   * name and a map as the criteria.
+   * @post Asserts true.
+   * @throws UnsupportedEncodingException
+   */
   @Test
   public void testViewDesignWithoutReduce() {
     String name = "beers";
@@ -63,6 +72,15 @@ public class ViewDesignTest {
     assertEquals("", view.getReduce());
   }
 
+  /**
+   * Tests the ViewDesign instance created from
+   * a view name, map and reduce functions.
+   *
+   * @pre Prepare ViewDesign using view name,
+   * map and reduce functions as the criteria.
+   * @post Asserts true.
+   * @throws UnsupportedEncodingException
+   */
   @Test
   public void testViewDesignWithReduce() {
     String name = "beers";
@@ -73,6 +91,4 @@ public class ViewDesignTest {
     assertEquals(map, view.getMap());
     assertEquals(reduce, view.getReduce());
   }
-
-
 }

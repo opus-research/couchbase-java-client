@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2013 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,13 +71,13 @@ public class SpatialViewRowNoDocs implements ViewRow {
   @Override
   public Object getDocument() {
     throw new UnsupportedOperationException("This view result doesn't contain "
-        + "documents");
+      + "documents");
   }
 
   @Override
   public String getKey() {
-     throw new UnsupportedOperationException("Spatial views don't contain "
-       + "a key");
+    throw new UnsupportedOperationException("Spatial views don't contain "
+      + "a key");
   }
 
 }
