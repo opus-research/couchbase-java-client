@@ -25,7 +25,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public interface SearchMetrics {
 

@@ -25,7 +25,7 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  * @author Simon Baslé
  * @since 2.3
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public enum SearchConsistency {
 

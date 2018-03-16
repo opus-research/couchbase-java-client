@@ -30,7 +30,7 @@ import rx.exceptions.CompositeException;
  * @author Michael Nitschinger
  * @since 2.3.0
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public interface AsyncSearchQueryResult {
 

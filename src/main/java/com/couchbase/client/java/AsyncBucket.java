@@ -1232,7 +1232,7 @@ public interface AsyncBucket {
      * @param query the query builder.
      * @return a query result containing the matches and additional information.
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     Observable<AsyncSearchQueryResult> query(SearchQuery query);
 
     /**
