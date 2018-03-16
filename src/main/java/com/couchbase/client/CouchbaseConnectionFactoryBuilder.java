@@ -30,7 +30,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -40,8 +39,6 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.OperationFactory;
-import net.spy.memcached.metrics.MetricCollector;
-import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
 
@@ -50,7 +47,7 @@ import net.spy.memcached.transcoders.Transcoder;
  *
  */
 
-public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder {
+public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
 
   private Config vBucketConfig;
   private long reconnThresholdTimeMsecs =
@@ -63,9 +60,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
     = CouchbaseConnectionFactory.DEFAULT_STREAMING_NODE_ORDER;
   private static final Logger LOGGER =
     Logger.getLogger(CouchbaseConnectionFactoryBuilder.class.getName());
-  protected MetricType metricType = null;
-  protected MetricCollector collector = null;
-  protected ExecutorService executorService = null;
 
   public Config getVBucketConfig() {
     return vBucketConfig;
@@ -110,39 +104,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
    */
   public CouchbaseConnectionFactoryBuilder setStreamingNodeOrder(CouchbaseNodeOrder order) {
     nodeOrder = order;
-    return this;
-  }
-
-  /**
-   * Enable or disable metric collection.
-   *
-   * @param type the metric type to use (or disable).
-   */
-  @Override
-  public ConnectionFactoryBuilder setEnableMetrics(MetricType type) {
-    metricType = type;
-    return this;
-  }
-
-  /**
-   * Set a custom {@link MetricCollector}.
-   *
-   * @param collector the metric collector to use.
-   */
-  @Override
-  public ConnectionFactoryBuilder setMetricCollector(MetricCollector collector) {
-    this.collector = collector;
-    return this;
-  }
-
-  /**
-   * Set a custom {@link ExecutorService} to execute the listener callbacks.
-   *
-   * @param executorService the ExecutorService to use.
-   */
-  @Override
-  public ConnectionFactoryBuilder setListenerExecutorService(ExecutorService executorService) {
-    this.executorService = executorService;
     return this;
   }
 
@@ -289,21 +250,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         return viewTimeout;
       }
 
-      @Override
-      public MetricType enableMetrics() {
-        return metricType == null ? super.enableMetrics() : metricType;
-      }
-
-      @Override
-      public MetricCollector getMetricCollector() {
-        return collector == null ? super.getMetricCollector() : collector;
-      }
-
-      @Override
-      public ExecutorService getListenerExecutorService() {
-        return executorService == null ? super.getListenerExecutorService() : executorService;
-      }
-
     };
   }
 
@@ -420,21 +366,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         return viewTimeout;
       }
 
-      @Override
-      public MetricType enableMetrics() {
-        return metricType == null ? super.enableMetrics() : metricType;
-      }
-
-      @Override
-      public MetricCollector getMetricCollector() {
-        return collector == null ? super.getMetricCollector() : collector;
-      }
-
-      @Override
-      public ExecutorService getListenerExecutorService() {
-        System.out.println("called in builder");
-        return executorService == null ? super.getListenerExecutorService() : executorService;
-      }
     };
   }
 
