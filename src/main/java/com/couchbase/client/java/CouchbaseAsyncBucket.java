@@ -67,10 +67,10 @@ import com.couchbase.client.java.error.DurabilityException;
 import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
-import com.couchbase.client.java.query.AsyncN1qlQueryResult;
-import com.couchbase.client.java.query.N1qlQuery;
+import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.core.N1qlQueryExecutor;
+import com.couchbase.client.java.query.core.QueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
@@ -122,8 +122,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
     private final AsyncBucketManager bucketManager;
     private final CouchbaseEnvironment environment;
-    /** the bucket's {@link N1qlQueryExecutor}. Prefer using {@link #n1qlQueryExecutor()} since it allows mocking and testing */
-    private final N1qlQueryExecutor n1qlQueryExecutor;
+    /** the bucket's {@link QueryExecutor}. Prefer using {@link #queryExecutor()} since it allows mocking and testing */
+    private final QueryExecutor queryExecutor;
 
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
@@ -151,7 +151,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         }
 
         bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
-        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, password);
+        queryExecutor = new QueryExecutor(core, bucket, password);
     }
 
     @Override
@@ -165,13 +165,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     /**
-     * Returns the underlying {@link N1qlQueryExecutor} used to perform N1QL queries.
+     * Returns the underlying {@link QueryExecutor} used to perform N1QL queries.
      *
      * Handle with care since all additional checks that are normally performed by this library may be skipped (hence
      * the protected visibility).
      */
-    protected N1qlQueryExecutor n1qlQueryExecutor() {
-        return this.n1qlQueryExecutor;
+    protected QueryExecutor queryExecutor() {
+        return this.queryExecutor;
     }
 
     @Override
@@ -241,11 +241,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public Observable<Boolean> exists(final String id) {
         return Observable.defer(new Func0<Observable<ObserveResponse>>() {
-            @Override
-            public Observable<ObserveResponse> call() {
-                return core.send(new ObserveRequest(id, 0, true, (short) 0, bucket));
-            }
-        })
+                @Override
+                public Observable<ObserveResponse> call() {
+                    return core.send(new ObserveRequest(id, 0, true, (short) 0, bucket));
+                }
+            })
             .map(new Func1<ObserveResponse, Boolean>() {
                 @Override
                 public Boolean call(ObserveResponse response) {
@@ -761,17 +761,17 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<AsyncN1qlQueryResult> query(final Statement statement) {
-        return query(N1qlQuery.simple(statement));
+    public Observable<AsyncQueryResult> query(final Statement statement) {
+        return query(Query.simple(statement));
     }
 
     @Override
-    public Observable<AsyncN1qlQueryResult> query(final N1qlQuery query) {
+    public Observable<AsyncQueryResult> query(final Query query) {
         if (!query.params().hasServerSideTimeout()) {
             query.params().serverSideTimeout(environment().queryTimeout(), TimeUnit.MILLISECONDS);
         }
 
-        return n1qlQueryExecutor.execute(query);
+        return queryExecutor.execute(query);
     }
 
     @Override
@@ -1064,6 +1064,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Integer> invalidateQueryCache() {
-        return Observable.just(n1qlQueryExecutor.invalidateQueryCache());
+        return Observable.just(queryExecutor.invalidateQueryCache());
     }
 }

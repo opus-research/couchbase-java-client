@@ -32,50 +32,50 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Verifies the functionality of the {@link N1qlQuery} class.
+ * Verifies the functionality of the {@link Query} class.
  *
  * @author Michael Nitschinger
  * @since 2.1.1
  */
-public class N1qlQueryTest {
+public class QueryTest {
 
-    private final N1qlParams params = N1qlParams.build().serverSideTimeout(1, TimeUnit.SECONDS);
+    private final QueryParams params = QueryParams.build().serverSideTimeout(1, TimeUnit.SECONDS);
 
     @Test
     public void simpleShouldSupportSerialization() throws Exception {
-        N1qlQuery source = N1qlQuery.simple("select * from default", params);
+        Query source = Query.simple("select * from default", params);
 
         byte[] serialized = SerializationHelper.serializeToBytes(source);
         assertNotNull(serialized);
 
-        N1qlQuery deserialized = SerializationHelper.deserializeFromBytes(serialized, N1qlQuery.class);
+        Query deserialized = SerializationHelper.deserializeFromBytes(serialized, Query.class);
         assertSerialization(source, deserialized);
     }
 
     @Test
     public void parameterizedShouldSupportSerialization() throws Exception {
-        N1qlQuery source = N1qlQuery.parameterized(select("*").from("default"), JsonArray.from("a", "b"), params);
+        Query source = Query.parameterized(select("*").from("default"), JsonArray.from("a", "b"), params);
 
         byte[] serialized = SerializationHelper.serializeToBytes(source);
         assertNotNull(serialized);
 
-        N1qlQuery deserialized = SerializationHelper.deserializeFromBytes(serialized, N1qlQuery.class);
+        Query deserialized = SerializationHelper.deserializeFromBytes(serialized, Query.class);
         assertSerialization(source, deserialized);
     }
 
     @Test
     public void preparedShouldSupportSerialization() throws Exception {
         PreparedPayload plan = new PreparedPayload(select("*"), "planName", "somePlan434324");
-        N1qlQuery source = new PreparedN1qlQuery(plan, JsonArray.from("a", "b"), params);
+        Query source = new PreparedQuery(plan, JsonArray.from("a", "b"), params);
 
         byte[] serialized = SerializationHelper.serializeToBytes(source);
         assertNotNull(serialized);
 
-        N1qlQuery deserialized = SerializationHelper.deserializeFromBytes(serialized, N1qlQuery.class);
+        Query deserialized = SerializationHelper.deserializeFromBytes(serialized, Query.class);
         assertSerialization(source, deserialized);
     }
 
-    private static void assertSerialization(N1qlQuery left, N1qlQuery right) {
+    private static void assertSerialization(Query left, Query right) {
         assertEquals(left.n1ql(), right.n1ql());
         assertEquals(left.params(), right.params());
         assertEquals(left.statement().toString(), right.statement().toString());

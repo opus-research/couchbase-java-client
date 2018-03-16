@@ -25,16 +25,17 @@ package com.couchbase.client.java.query;
 import static org.junit.Assert.*;
 
 import com.couchbase.client.java.document.json.JsonObject;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class N1qlMetricsTest {
+public class QueryMetricsTest {
 
     @Test
     public void emptyMetricsShouldHaveZeroEverywhere() {
-        N1qlMetrics metrics = new N1qlMetrics(JsonObject.create());
+        QueryMetrics metrics = new QueryMetrics(JsonObject.create());
 
-        assertEquals(N1qlMetrics.NO_TIME, metrics.elapsedTime());
-        assertEquals(N1qlMetrics.NO_TIME, metrics.executionTime());
+        assertEquals(QueryMetrics.NO_TIME, metrics.elapsedTime());
+        assertEquals(QueryMetrics.NO_TIME, metrics.executionTime());
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.mutationCount());
         assertEquals(0, metrics.resultCount());
@@ -56,7 +57,7 @@ public class N1qlMetricsTest {
                   .put("warningCount", 4)
                   .put("mutationCount", 5)
                   .put("sortCount", 6);
-        N1qlMetrics metrics = new N1qlMetrics(wellFormed);
+        QueryMetrics metrics = new QueryMetrics(wellFormed);
 
         assertEquals("123.45ms", metrics.elapsedTime());
         assertEquals("200.00ms", metrics.executionTime());
@@ -71,7 +72,7 @@ public class N1qlMetricsTest {
     @Test
     public void ensureSourceJsonIsReturnedByAsJson() {
         JsonObject test = JsonObject.create().put("test", "test");
-        N1qlMetrics metrics = new N1qlMetrics(test);
+        QueryMetrics metrics = new QueryMetrics(test);
 
         assertEquals(test, metrics.asJsonObject());
         assertSame(test, metrics.asJsonObject());
@@ -80,7 +81,7 @@ public class N1qlMetricsTest {
     @Test
     public void ensureSourceJsonDoesntBackDefinedMetrics() {
         JsonObject partial = JsonObject.create().put("errorCount", 32);
-        N1qlMetrics metrics = new N1qlMetrics(partial);
+        QueryMetrics metrics = new QueryMetrics(partial);
         partial.put("errorCount", 3);
 
         assertFalse(metrics.errorCount() == partial.getInt("errorCount"));

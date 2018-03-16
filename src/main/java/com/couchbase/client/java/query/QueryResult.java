@@ -30,7 +30,7 @@ import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * Represents the results of a {@link N1qlQuery}, in a blocking fashion.
+ * Represents the results of a {@link Query}, in a blocking fashion.
  * Note that the result is complete, meaning it will block until all
  * data has been streamed from the server.
  *
@@ -39,17 +39,17 @@ import com.couchbase.client.java.document.json.JsonObject;
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public interface N1qlQueryResult extends Iterable<N1qlQueryRow> {
+public interface QueryResult extends Iterable<QueryRow> {
 
     /**
-     * @return the list of all {@link N1qlQueryRow}, the results of the query, if successful.
+     * @return the list of all {@link QueryRow}, the results of the query, if successful.
      */
-    List<N1qlQueryRow> allRows();
+    List<QueryRow> allRows();
 
     /**
-     * @return an iterator over the list of all {@link N1qlQueryRow}, the results of the query, if successful.
+     * @return an iterator over the list of all {@link QueryRow}, the results of the query, if successful.
      */
-    Iterator<N1qlQueryRow> rows();
+    Iterator<QueryRow> rows();
 
     /**
      * @return an object representing the signature of the results, that can be used to
@@ -61,7 +61,7 @@ public interface N1qlQueryResult extends Iterable<N1qlQueryRow> {
     /**
      * @return an object describing some metrics/info about the execution of the query.
      */
-    N1qlMetrics info();
+    QueryMetrics info();
 
     /**
      * @return true if the query could be parsed, false if it short-circuited due to syntax/fatal error.
