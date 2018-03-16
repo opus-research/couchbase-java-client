@@ -24,6 +24,3 @@ atlassian-ide-plugin.xml
 
 # NetBeans
 .nbattrs
-
-# Gradle
-.gradle/
