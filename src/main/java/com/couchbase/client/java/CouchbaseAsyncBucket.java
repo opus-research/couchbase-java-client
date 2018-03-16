@@ -423,7 +423,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                             return false;
                         case TEMPORARY_FAILURE:
                         case SERVER_BUSY:
-                        case LOCKED:
                             throw addDetails(new TemporaryFailureException(), response);
                         case OUT_OF_MEMORY:
                             throw addDetails(new CouchbaseOutOfMemoryException(), response);
@@ -573,7 +572,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     case TOO_BIG:
                         throw addDetails(new RequestTooBigException(), response);
                     case EXISTS:
-                    case LOCKED:
                         throw addDetails(new CASMismatchException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
@@ -651,7 +649,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     case NOT_EXISTS:
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case EXISTS:
-                    case LOCKED:
                         throw addDetails(new CASMismatchException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
@@ -723,7 +720,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     case NOT_EXISTS:
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case EXISTS:
-                    case LOCKED:
                         throw addDetails(new CASMismatchException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
@@ -944,7 +940,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                    case LOCKED:
                         throw addDetails(new TemporaryFailureException(), response);
                     case OUT_OF_MEMORY:
                         throw addDetails(new CouchbaseOutOfMemoryException(), response);
@@ -979,7 +974,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     case NOT_EXISTS:
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case TEMPORARY_FAILURE:
-                    case LOCKED:
                         throw addDetails(new TemporaryLockFailureException(), response);
                     case SERVER_BUSY:
                         throw addDetails(new TemporaryFailureException(), response);
@@ -1022,7 +1016,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                    case LOCKED:
                         throw addDetails(new TemporaryFailureException(), response);
                     case OUT_OF_MEMORY:
                         throw addDetails(new CouchbaseOutOfMemoryException(), response);
@@ -1069,7 +1062,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                    case LOCKED:
                         throw addDetails(new TemporaryFailureException(), response);
                     case OUT_OF_MEMORY:
                         throw addDetails(new CouchbaseOutOfMemoryException(), response);
@@ -1112,7 +1104,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw addDetails(new DocumentDoesNotExistException(), response);
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
-                    case LOCKED:
                         throw addDetails(new TemporaryFailureException(), response);
                     case OUT_OF_MEMORY:
                         throw addDetails(new CouchbaseOutOfMemoryException(), response);
