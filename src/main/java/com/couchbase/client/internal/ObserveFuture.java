@@ -20,61 +20,49 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.http;
+package com.couchbase.client.internal;
 
-import org.apache.http.nio.NHttpClientConnection;
+import net.spy.memcached.internal.OperationFuture;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 /**
- * A connection request.
+ * A future that allows to chain operations with observe calls.
  */
-public class RequestHandle {
+public class ObserveFuture<T> extends OperationFuture<T> {
 
-  private final AsyncConnectionManager connMgr;
-  private final NHttpClientConnection conn;
+  private volatile boolean cancelled;
+  private volatile boolean done;
 
-  private volatile boolean completed;
+  public ObserveFuture(final String k, final CountDownLatch l,
+    final long opTimeout, final ExecutorService service) {
+    super(k, l, opTimeout, service);
 
-  public RequestHandle(AsyncConnectionManager connMgr,
-      NHttpClientConnection conn) {
-    super();
-    this.connMgr = connMgr;
-    this.conn = conn;
+    cancelled = false;
+    done = false;
   }
 
-  public boolean isCompleted() {
-    return this.completed;
+  @Override
+  public boolean cancel() {
+    cancelled = true;
+    done = true;
+    notifyListeners();
+    return true;
   }
 
-  public void completed() {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    this.connMgr.releaseConnection(this.conn);
-    synchronized (this) {
-      notifyAll();
-    }
+  @Override
+  public boolean cancel(boolean ign) {
+    return cancel();
   }
 
-  public void cancel() {
-    if (this.completed) {
-      return;
-    }
-    this.completed = true;
-    this.connMgr.releaseConnection(this.conn);
-    synchronized (this) {
-      notifyAll();
-    }
+  @Override
+  public boolean isCancelled() {
+    return cancelled;
   }
 
-  public void waitFor() throws InterruptedException {
-    if (this.completed) {
-      return;
-    }
-    synchronized (this) {
-      while (!this.completed) {
-        wait();
-      }
-    }
+  @Override
+  public boolean isDone() {
+    return done;
   }
 }

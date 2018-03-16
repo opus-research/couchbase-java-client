@@ -42,8 +42,15 @@ public class CacheConfig implements Config {
 
   private List<VBucket> vbuckets;
 
-  public CacheConfig(int serversCount) {
+  private final List<String> restEndpoints;
+
+  public CacheConfig(int serversCount, List<String> restEndpoints) {
     this.serversCount = serversCount;
+    this.restEndpoints = restEndpoints;
+  }
+
+  public List<String> getRestEndpoints() {
+    return restEndpoints;
   }
 
   public int getReplicasCount() {
@@ -148,5 +155,16 @@ public class CacheConfig implements Config {
   @Override
   public List<URL> getCouchServers() {
     throw new UnsupportedOperationException("No couch port for cache buckets");
+  }
+
+  @Override
+  public String toString() {
+    return "CacheConfig{" +
+      "vbucketsCount=" + vbucketsCount +
+      ", serversCount=" + serversCount +
+      ", servers=" + servers +
+      ", vbuckets=" + vbuckets +
+      ", restEndpoints=" + restEndpoints +
+      '}';
   }
 }
