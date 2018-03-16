@@ -26,7 +26,6 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         module.addSerializer(JsonObject.class, new JsonObjectSerializer());
         module.addSerializer(JsonArray.class, new JsonArraySerializer());
         module.addDeserializer(JsonObject.class, new JsonObjectDeserializer());
-        module.addDeserializer(JsonArray.class, new JsonArrayDeserializer());
         mapper.registerModule(module);
     }
 
@@ -63,10 +62,6 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         return mapper.readValue(input, JsonObject.class);
     }
 
-    public JsonArray stringTojsonArray(String input) throws Exception {
-        return mapper.readValue(input, JsonArray.class);
-    }
-
     public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
         return stringToJsonObject(input.toString(CharsetUtil.UTF_8));
     }
@@ -93,8 +88,22 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         }
     }
 
-    static abstract class AbstractJsonValueDeserializer<T> extends JsonDeserializer<T> {
-        protected JsonObject decodeObject(final JsonParser parser, final JsonObject target) throws IOException {
+    /**
+     *
+     */
+    static class JsonObjectDeserializer extends JsonDeserializer<JsonObject> {
+        @Override
+        public JsonObject deserialize(JsonParser jp, DeserializationContext ctx)
+            throws IOException {
+            if (jp.getCurrentToken() == JsonToken.START_OBJECT) {
+                return decodeObject(jp, JsonObject.empty());
+            } else {
+                throw new IllegalStateException("Expecting Object as root level object, " +
+                    "was: " + jp.getCurrentToken());
+            }
+        }
+
+        private JsonObject decodeObject(final JsonParser parser, final JsonObject target) throws IOException {
             JsonToken current = parser.nextToken();
             String field = null;
             while(current != null && current != JsonToken.END_OBJECT) {
@@ -136,7 +145,7 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
             return target;
         }
 
-        protected JsonArray decodeArray(final JsonParser parser, final JsonArray target) throws IOException {
+        private JsonArray decodeArray(final JsonParser parser, final JsonArray target) throws IOException {
             JsonToken current = parser.nextToken();
             while (current != null && current != JsonToken.END_ARRAY) {
                 if (current == JsonToken.START_OBJECT) {
@@ -174,32 +183,7 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
             }
             return target;
         }
-    }
 
-    static class JsonObjectDeserializer extends AbstractJsonValueDeserializer<JsonObject> {
-        @Override
-        public JsonObject deserialize(JsonParser jp, DeserializationContext ctx)
-            throws IOException {
-            if (jp.getCurrentToken() == JsonToken.START_OBJECT) {
-                return decodeObject(jp, JsonObject.empty());
-            } else {
-                throw new IllegalStateException("Expecting Object as root level object, " +
-                    "was: " + jp.getCurrentToken());
-            }
-        }
-    }
-
-    static class JsonArrayDeserializer extends AbstractJsonValueDeserializer<JsonArray> {
-        @Override
-        public JsonArray deserialize(JsonParser jp, DeserializationContext ctx)
-            throws IOException {
-            if (jp.getCurrentToken() == JsonToken.START_ARRAY) {
-                return decodeArray(jp, JsonArray.empty());
-            } else {
-                throw new IllegalStateException("Expecting Array as root level object, " +
-                    "was: " + jp.getCurrentToken());
-            }
-        }
     }
 
 
