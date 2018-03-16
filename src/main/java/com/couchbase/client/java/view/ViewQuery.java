@@ -68,17 +68,15 @@ public class ViewQuery implements Serializable {
 
     private final String design;
     private final String view;
-    private final boolean retainOrder;
 
     private boolean development;
     private boolean includeDocs;
     private Class<? extends Document<?>> includeDocsTarget;
     private String keysJson;
 
-    private ViewQuery(String design, String view, boolean retainOrder) {
+    private ViewQuery(String design, String view) {
         this.design = design;
         this.view = view;
-        this.retainOrder = retainOrder;
         params = new String[NUM_PARAMS * 2];
         includeDocs = false;
         includeDocsTarget = null;
@@ -89,22 +87,10 @@ public class ViewQuery implements Serializable {
      *
      * @param design the name of the design document.
      * @param view the name of the view.
-     * @param retainOrder retain the document emission order.
-     * @return a {@link ViewQuery} DSL.
-     */
-    public static ViewQuery from(String design, String view, boolean retainOrder) {
-        return new ViewQuery(design, view, retainOrder);
-    }
-
-    /**
-     * Creates an new {@link ViewQuery} with default order ignored.
-     *
-     * @param design the name of the design document.
-     * @param view the name of the view.
      * @return a {@link ViewQuery} DSL.
      */
     public static ViewQuery from(String design, String view) {
-        return new ViewQuery(design, view, false);
+        return new ViewQuery(design, view);
     }
 
     public ViewQuery development() {
@@ -525,10 +511,6 @@ public class ViewQuery implements Serializable {
      */
     public String getKeys() {
         return this.keysJson;
-    }
-
-    boolean retainOrder() {
-        return retainOrder;
     }
 
     public boolean isDevelopment() {
