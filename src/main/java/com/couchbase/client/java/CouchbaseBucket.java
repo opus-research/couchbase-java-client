@@ -42,15 +42,11 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.CASMismatchException;
-import com.couchbase.client.java.error.DocumentAlreadyExistsException;
-import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.error.DurabilityException;
+import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.JsonTranscoder;
 import com.couchbase.client.java.transcoder.LegacyTranscoder;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
 import rx.functions.Func1;
@@ -446,7 +442,11 @@ public class CouchbaseBucket implements Bucket {
                                     totalRows = trows;
                                 }
                             } else {
-                                error = jsonInfo;
+                                if (query.isStopOnError()) {
+                                    throw new ViewQueryException(jsonInfo.getString("error"), jsonInfo.getString("reason"));
+                                } else {
+                                    error = jsonInfo;
+                                }
                             }
 
                             Observable<ViewRow> rows = response.rows().map(new Func1<ByteBuf, ViewRow>() {
