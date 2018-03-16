@@ -119,6 +119,9 @@ import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.ViewQuery;
 import com.couchbase.client.java.view.ViewQueryResponseMapper;
 import com.couchbase.client.java.view.ViewRetryHandler;
+import io.opentracing.BaseSpan;
+import io.opentracing.Span;
+import io.opentracing.Tracer;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Func0;
@@ -202,7 +205,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         bucketManager = DefaultAsyncBucketManager.create(bucket, username, password, core);
 
         boolean n1qlPreparedEncodedPlanEnabled = "true".equalsIgnoreCase(System.getProperty(N1qlQueryExecutor.ENCODED_PLAN_ENABLED_PROPERTY, "true")); //active by default
-        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, username, password, n1qlPreparedEncodedPlanEnabled);
+        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, username, password, n1qlPreparedEncodedPlanEnabled, environment);
         analyticsQueryExecutor = new AnalyticsQueryExecutor(core, bucket, username, password);
     }
 
@@ -255,11 +258,27 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
+        return get(id, null, target);
+    }
+
+    @Override
+    public Observable<JsonDocument> get(String id, BaseSpan<?> span) {
+        return get(id, span, JsonDocument.class);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <D extends Document<?>> Observable<D> get(final String id, final BaseSpan<?> parent, final Class<D> target) {
         return deferAndWatch(new Func1<Subscriber, Observable<GetResponse>>() {
                 @Override
                 public Observable<GetResponse> call(Subscriber s) {
                     GetRequest request = new GetRequest(id, bucket);
                     request.subscriber(s);
+                    Tracer.SpanBuilder builder = environment.tracer().buildSpan("getRequest");
+                    if (parent != null) {
+                        builder.asChildOf(parent);
+                    }
+                    request.span(builder);
                     return core.send(request);
                 }
             })
@@ -895,10 +914,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncN1qlQueryResult> query(final N1qlQuery query) {
+        return query(query, null);
+    }
+
+    @Override
+    public Observable<AsyncN1qlQueryResult> query(N1qlQuery query, BaseSpan<?> span) {
         if (!query.params().hasServerSideTimeout()) {
             query.params().serverSideTimeout(environment().queryTimeout(), TimeUnit.MILLISECONDS);
         }
-        return n1qlQueryExecutor.execute(query);
+        return n1qlQueryExecutor.execute(query, span);
     }
 
     public Observable<AsyncAnalyticsQueryResult> query(final AnalyticsQuery query) {

@@ -60,6 +60,8 @@ import com.couchbase.client.java.view.AsyncViewResult;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.View;
 import com.couchbase.client.java.view.ViewQuery;
+import io.opentracing.BaseSpan;
+import io.opentracing.Span;
 import rx.Observable;
 
 /**
@@ -132,6 +134,8 @@ public interface AsyncBucket {
      */
     Observable<JsonDocument> get(String id);
 
+    Observable<JsonDocument> get(String id, BaseSpan<?> span);
+
     /**
      * Retrieves any type of {@link Document} by its unique ID.
      *
@@ -178,6 +182,9 @@ public interface AsyncBucket {
      * @return an {@link Observable} eventually containing the found {@link Document}.
      */
     <D extends Document<?>> Observable<D> get(String id, Class<D> target);
+
+    <D extends Document<?>> Observable<D> get(String id, BaseSpan<?> parent, Class<D> target);
+
 
     /**
      * Check whether a document with the given ID does exist in the bucket.
@@ -1219,6 +1226,9 @@ public interface AsyncBucket {
      * @return a result containing all found rows and additional information.
      */
     Observable<AsyncN1qlQueryResult> query(N1qlQuery query);
+
+    Observable<AsyncN1qlQueryResult> query(N1qlQuery query, BaseSpan<?> span);
+
 
     /**
      * Queries a Full-Text Index
