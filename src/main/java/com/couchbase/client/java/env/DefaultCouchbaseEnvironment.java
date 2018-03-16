@@ -67,6 +67,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private static final long CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
     private static final long DISCONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(25);
     private static final boolean DNS_SRV_ENABLED = false;
+    private static final boolean USE_BUCKET_CACHE = true;
 
     private final long managementTimeout;
     private final long queryTimeout;
@@ -76,6 +77,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private final long connectTimeout;
     private final long disconnectTimeout;
     private final boolean dnsSrvEnabled;
+    private final boolean useBucketCache;
 
     protected static String CLIENT_VERSION;
     protected static String CLIENT_GIT_VERSION;
@@ -142,6 +144,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout);
         disconnectTimeout = longPropertyOr("disconnectTimeout", builder.disconnectTimeout);
         dnsSrvEnabled = booleanPropertyOr("dnsSrvEnabled", builder.dnsSrvEnabled);
+        useBucketCache = booleanPropertyOr("useBucketCache", builder.useBucketCache);
 
         if (queryTimeout > maxRequestLifetime()) {
             LOGGER.warn("The configured query timeout is greater than the maximum request lifetime. " +
@@ -189,6 +192,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         private long connectTimeout = CONNECT_TIMEOUT;
         private long disconnectTimeout = DISCONNECT_TIMEOUT;
         private boolean dnsSrvEnabled = DNS_SRV_ENABLED;
+        private boolean useBucketCache = USE_BUCKET_CACHE;
 
         public Builder() {
             super();
@@ -230,6 +234,11 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         public Builder disconnectTimeout(long disconnectTimeout) {
             this.disconnectTimeout = disconnectTimeout;
+            return this;
+        }
+
+        public Builder useBucketCache(boolean useBucketCache) {
+            this.useBucketCache = useBucketCache;
             return this;
         }
 
@@ -555,6 +564,11 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     }
 
     @Override
+    public boolean useBucketCache() {
+        return useBucketCache;
+    }
+
+    @Override
     public String clientVersion() {
         return CLIENT_VERSION;
     }
@@ -575,6 +589,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         sb.append(", connectTimeout=").append(this.connectTimeout);
         sb.append(", disconnectTimeout=").append(this.disconnectTimeout);
         sb.append(", dnsSrvEnabled=").append(this.dnsSrvEnabled);
+        sb.append(", useBucketCache=").append(this.useBucketCache);
         return sb;
     }
 

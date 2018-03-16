@@ -21,6 +21,13 @@
  */
 package com.couchbase.client.java;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.CouchbaseException;
@@ -47,12 +54,6 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main asynchronous entry point to a Couchbase Cluster.
@@ -132,6 +133,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ConnectionString connectionString;
     private final Map<String, AsyncBucket> bucketCache;
     private final boolean sharedEnvironment;
+    private CredentialsManager credentialsManager = new CredentialsManager();
 
     /**
      * Creates a new {@link CouchbaseAsyncCluster} reference against the {@link #DEFAULT_HOST}.
@@ -357,7 +359,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     }
 
     @Override
-    public Observable<AsyncBucket> openBucket(final String name, final String password,
+    public Observable<AsyncBucket> openBucket(final String name, String password,
         final List<Transcoder<? extends Document, ?>> transcoders) {
         if (name == null || name.isEmpty()) {
             return Observable.error(
@@ -370,14 +372,19 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             return Observable.just(cachedBucket);
         }
 
-        final String pass = password == null ? "" : password;
+        final String resolvedBucketPassword = credentialsManager().resolveBucketPassword(name, password);
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
             ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
 
+        return openAndInstantiateBucket(name, resolvedBucketPassword, trans);
+    }
+
+    protected Observable<AsyncBucket> openAndInstantiateBucket(final String bucketName, final String bucketPassword,
+            final List<Transcoder<? extends Document, ?>> transcoders) {
         return Observable.defer(new Func0<Observable<OpenBucketResponse>>() {
                 @Override
                 public Observable<OpenBucketResponse> call() {
-                    return core.send(new OpenBucketRequest(name, pass));
+                    return core.send(new OpenBucketRequest(bucketName, bucketPassword));
                 }
             })
             .map(new Func1<CouchbaseResponse, AsyncBucket>() {
@@ -387,13 +394,13 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                         throw new CouchbaseException("Could not open bucket.");
                     }
 
-                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, pass,
-                        trans);
-                    bucketCache.put(name, bucket);
+                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, bucketName, bucketPassword,
+                        transcoders);
+                    bucketCache.put(bucketName, bucket);
                     return bucket;
                 }
             })
-            .onErrorResumeNext(new OpenBucketErrorHandler(name));
+            .onErrorResumeNext(new OpenBucketErrorHandler(bucketName));
     }
 
     /**
@@ -402,17 +409,14 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
      * @param name the name of the bucket
      * @return the cached bucket if found, null if not.
      */
-    private AsyncBucket getCachedBucket(final String name) {
+    protected AsyncBucket getCachedBucket(final String name) {
         AsyncBucket cachedBucket = bucketCache.get(name);
 
         if(cachedBucket != null) {
             if (cachedBucket.isClosed()) {
-                LOGGER.debug(
-                    "Not returning cached async bucket \"{}\", because it is closed.",
-                    name
-                );
+                LOGGER.debug("Not returning cached async bucket \"{}\", because it is closed.", name);
                 bucketCache.remove(name);
-            } else {
+            } else if (environment.useBucketCache()) {
                 LOGGER.debug("Returning still open, cached async bucket \"{}\"", name);
                 return cachedBucket;
             }
@@ -445,6 +449,16 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         return Observable.just(
             (AsyncClusterManager) DefaultAsyncClusterManager.create(
                 username, password, connectionString, environment, core
+            )
+        );
+    }
+
+    @Override
+    public Observable<AsyncClusterManager> clusterManager() {
+        String[][] creds = this.credentialsManager().getCredentials(AuthenticationContext.CLUSTER_MANAGEMENT, null);
+        return Observable.just(
+            (AsyncClusterManager) DefaultAsyncClusterManager.create(
+                creds[0][0], creds[0][1], connectionString, environment, core
             )
         );
     }
@@ -490,5 +504,15 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                 return Observable.error(new CouchbaseException(throwable));
             }
         }
+    }
+
+    @Override
+    public CredentialsManager credentialsManager() {
+        return this.credentialsManager;
+    }
+
+    @Override
+    public void setCredentialsManager(CredentialsManager credentialsManager) {
+        this.credentialsManager = credentialsManager;
     }
 }

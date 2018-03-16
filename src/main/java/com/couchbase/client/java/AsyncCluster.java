@@ -112,6 +112,7 @@ public interface AsyncCluster {
      * @return the {@link AsyncClusterManager} if successful.
      */
     Observable<AsyncClusterManager> clusterManager(String username, String password);
+    Observable<AsyncClusterManager> clusterManager();
 
     /**
      * Disconnects form all open buckets and shuts down the {@link CouchbaseEnvironment} if it is the exclusive owner.
@@ -129,5 +130,8 @@ public interface AsyncCluster {
      * @return the underlying {@link ClusterFacade} from the "core-io" package.
      */
     Observable<ClusterFacade> core();
+
+    CredentialsManager credentialsManager();
+    void setCredentialsManager(CredentialsManager newManager);
 
 }

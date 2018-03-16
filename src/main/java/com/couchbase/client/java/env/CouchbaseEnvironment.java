@@ -24,6 +24,7 @@ package com.couchbase.client.java.env;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 
 /**
@@ -115,4 +116,13 @@ public interface CouchbaseEnvironment extends CoreEnvironment {
      * @see #coreBuild() for the same information but relative to the core layer.
      */
     String clientBuild();
+
+    /**
+     * Returns whether {@link Cluster} should internally cache {@link Bucket} instances
+     * it creates and automatically re-use them whenever the bucket is asked twice or
+     * more.
+     *
+     * @return true if bucket caching should be used when opening buckets, false otherwise.
+     */
+    boolean useBucketCache();
 }
