@@ -27,6 +27,9 @@ import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.internal.ObserveFuture;
 import com.couchbase.client.internal.ReplicaGetFuture;
 import com.couchbase.client.internal.ViewFuture;
+import com.couchbase.client.protocol.n1ql.N1qlFuture;
+import com.couchbase.client.protocol.n1ql.N1qlOperation;
+import com.couchbase.client.protocol.n1ql.N1qlResponse;
 import com.couchbase.client.protocol.views.AbstractView;
 import com.couchbase.client.protocol.views.DesignDocFetcherOperation;
 import com.couchbase.client.protocol.views.DesignDocFetcherOperationImpl;
@@ -790,7 +793,31 @@ public class CouchbaseClient extends MemcachedClient
     }
   }
 
-  @Override
+    @Override
+    public HttpFuture<N1qlResponse> asyncN1Query(String n1Query) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final N1qlFuture future = new N1qlFuture(latch, connFactory.getOperationTimeout(), executorService);
+        final HttpRequest request = new BasicHttpRequest("POST", "/query", HttpVersion.HTTP_1_1);
+        final HttpOperation op =  new N1qlOperation(request, /* callback */); //TODO: Implement N1ql Operation and call back.
+
+        future.setOperation(op);
+        addOp(op);
+        return future;
+    }
+
+
+    @Override
+  public N1qlResponse n1Query(String n1Query) {
+        try {
+            return asyncN1Query(n1Query).get();
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted while reading query response.");
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Failed to execute N1 query.");
+        }
+    }
+
+    @Override
   public Paginator paginatedQuery(View view, Query query, int docsPerPage) {
     return new Paginator(this, view, query, docsPerPage);
   }

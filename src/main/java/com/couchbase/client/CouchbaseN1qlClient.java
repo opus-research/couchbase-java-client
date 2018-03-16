@@ -1,6 +1,5 @@
 package com.couchbase.client;
 
-import com.couchbase.client.protocol.n1ql.N1qlResponse;
 import com.couchbase.client.protocol.n1ql.N1qlResponseHandler;
 import com.ning.http.client.*;
 import org.apache.http.*;
@@ -22,7 +21,7 @@ public class CouchbaseN1qlClient implements CouchbaseN1qlClientIF {
 
 
     @Override
-    public ListenableFuture<N1qlResponse> asyncQuery(String query) throws IOException {
+    public ListenableFuture<N1qlResponseOld> asyncQuery(String query) throws IOException {
         LOGGER.log(Level.INFO, "Connecting to: " + host.toURI());
         FluentStringsMap params = new FluentStringsMap().add("q", query);
         LOGGER.log(Level.INFO, "Executing Query: " + query);
@@ -32,7 +31,7 @@ public class CouchbaseN1qlClient implements CouchbaseN1qlClientIF {
     }
 
     @Override
-    public N1qlResponse query(String query) throws IOException, ExecutionException, InterruptedException {
+    public N1qlResponseOld query(String query) throws IOException, ExecutionException, InterruptedException {
         return asyncQuery(query).get();
     }
 

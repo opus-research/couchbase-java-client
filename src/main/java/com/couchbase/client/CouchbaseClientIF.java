@@ -24,6 +24,7 @@ package com.couchbase.client;
 
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.internal.ReplicaGetFuture;
+import com.couchbase.client.protocol.n1ql.N1qlResponse;
 import com.couchbase.client.protocol.views.AbstractView;
 import com.couchbase.client.protocol.views.DesignDocument;
 import com.couchbase.client.protocol.views.Paginator;
@@ -1454,6 +1455,20 @@ public interface CouchbaseClientIF extends MemcachedClientIF {
    * @throws java.util.concurrent.CancellationException if operation was canceled.
    */
   ViewResponse query(AbstractView view, Query query);
+
+  /**
+   * Queries Couchbase using N1QL asynchronously.
+   * @param n1Query the N1 Query as a String.
+   * @return a HttpFuture as a proxy for the N1qlResponse.
+   */
+  HttpFuture<N1qlResponse> asyncN1Query(String n1Query);
+
+  /**
+   * Queries Couchbase using N1QL.
+   * @param n1Query the N1 Query as a String.
+   * @return a N1qlResponse object that can be iterated over.
+   */
+  N1qlResponse n1Query(String n1Query);
 
   /**
    * A paginated query allows the user to get the results of a large query in
