@@ -20,23 +20,49 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.http;
+package com.couchbase.client.internal;
 
-import com.couchbase.client.ViewConnection;
-import com.couchbase.client.protocol.views.HttpOperation;
+import net.spy.memcached.internal.OperationFuture;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 /**
- * A callack to requeue a http operation.
+ * A future that allows to chain operations with observe calls.
  */
-public class RequeueOpCallback {
+public class ObserveFuture<T> extends OperationFuture<T> {
 
-  private final ViewConnection conn;
+  private volatile boolean cancelled;
+  private volatile boolean done;
 
-  public RequeueOpCallback(ViewConnection vc) {
-    conn = vc;
+  public ObserveFuture(final String k, final CountDownLatch l,
+    final long opTimeout, final ExecutorService service) {
+    super(k, l, opTimeout, service);
+
+    cancelled = false;
+    done = false;
   }
 
-  public void invoke(HttpOperation op) {
-    conn.addOp(op);
+  @Override
+  public boolean cancel() {
+    cancelled = true;
+    done = true;
+    notifyListeners();
+    return true;
+  }
+
+  @Override
+  public boolean cancel(boolean ign) {
+    return cancel();
+  }
+
+  @Override
+  public boolean isCancelled() {
+    return cancelled;
+  }
+
+  @Override
+  public boolean isDone() {
+    return done;
   }
 }
