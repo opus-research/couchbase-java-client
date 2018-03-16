@@ -33,7 +33,7 @@ import net.spy.memcached.HashAlgorithm;
  */
 public class CacheConfig implements Config {
 
-  private final HashAlgorithm hashAlgorithm = DefaultHashAlgorithm.NATIVE_HASH;
+  private final HashAlgorithm hashAlgorithm = DefaultHashAlgorithm.NATIVE_HASH;  // huh???
 
   private int vbucketsCount;
 
