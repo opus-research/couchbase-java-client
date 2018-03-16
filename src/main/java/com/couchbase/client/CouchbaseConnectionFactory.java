@@ -36,6 +36,7 @@ import com.couchbase.client.vbucket.config.ConfigType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -422,6 +423,54 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       clusterManager = new ClusterManager(storedBaseList, bucket, pass);
     }
     return clusterManager;
+  }
+
+  /**
+   * Updates the stored base list with a new one based on the config.
+   *
+   * @param config
+   */
+  public void updateStoredBaseList(Config config) {
+    List<String> bucketServers = config.getServers();
+    if (bucketServers.size() > 0) {
+      List<URI> newList = new ArrayList<URI>();
+      for (String bucketServer : bucketServers) {
+        String hostname = bucketServer.split(":")[0];
+        try {
+          newList.add(new URI("http://" + hostname + ":8091/pools"));
+        } catch(URISyntaxException ex) {
+          getLogger().info("Could not add node to updated bucket list because "
+            + "of a parsing exception.");
+        }
+      }
+
+      if (nodeListsAreDifferent(storedBaseList, newList)) {
+        getLogger().info("Replacing current streaming node list "
+          + storedBaseList + " with " + newList);
+        storedBaseList = newList;
+        getConfigurationProvider().updateBaseListFromConfig(newList);
+      }
+    }
+  }
+
+  /**
+   * Check if two given node lists are different.
+   *
+   * @param left one node list
+   * @param right the other node list
+   * @return true if they are different, false otherwise.
+   */
+  private boolean nodeListsAreDifferent(List<URI> left, List<URI> right) {
+    if (left.size() != right.size()) {
+      return true;
+    }
+
+    for (URI uri : left) {
+      if (!right.contains(uri)) {
+        return true;
+      }
+    }
+    return false;
   }
 
 }
