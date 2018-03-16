@@ -36,9 +36,9 @@ import net.spy.memcached.compat.SpyObject;
  *
  * This {@link Config} implementation is VBucket-aware and allows several
  * operations against a list of nodes and VBuckets. For "memcached" type
- * buckets, see the {@link MemcacheConfig} implementation.
+ * buckets, see the {@link CacheConfig} implementation.
  */
-public class CouchbaseConfig extends SpyObject implements Config {
+public class DefaultConfig extends SpyObject implements Config {
 
   private final HashAlgorithm hashAlgorithm;
 
@@ -60,7 +60,10 @@ public class CouchbaseConfig extends SpyObject implements Config {
 
   private final List<String> restEndpoints;
 
-  public CouchbaseConfig(HashAlgorithm hashAlgorithm, int serversCount, int replicasCount, int vbucketsCount, List<String> servers, List<VBucket> vbuckets, List<URL> couchServers, List<String> restEndpoints) {
+  public DefaultConfig(HashAlgorithm hashAlgorithm, int serversCount,
+      int replicasCount, int vbucketsCount, List<String> servers,
+      List<VBucket> vbuckets, List<URL> couchServers,
+      List<String> restEndpoints) {
     this.hashAlgorithm = hashAlgorithm;
     this.serversCount = serversCount;
     this.replicasCount = replicasCount;

@@ -36,9 +36,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Verifies the correct output for a initialized {@link CouchbaseConfig}.
+ * Verifies the correct output for a initialized {@link DefaultConfig}.
  */
-public class CouchbaseConfigTest {
+public class DefaultConfigTest {
 
   private final HashAlgorithm hashAlgorithm = DefaultHashAlgorithm.CRC_HASH;
 
@@ -62,7 +62,7 @@ public class CouchbaseConfigTest {
       vbuckets.add(new VBucket((short)(i % 2)));
     }
 
-    CouchbaseConfig config = new CouchbaseConfig(
+    DefaultConfig config = new DefaultConfig(
       hashAlgorithm, 3, 0, numVBuckets, servers, vbuckets, couchServers,
       endpoints);
     assertTrue(config.nodeHasActiveVBuckets(new InetSocketAddress("node1", 8092)));
