@@ -14,7 +14,10 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
-import com.couchbase.client.java.view.*;
+import com.couchbase.client.java.view.AsyncViewResult;
+import com.couchbase.client.java.view.DefaultViewResult;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewResult;
 import rx.functions.Func1;
 
 import java.util.List;
@@ -452,11 +455,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public SpatialViewResult query(SpatialViewQuery query) {
-        return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
-    }
-
-    @Override
     public ViewResult query(ViewQuery query, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
             .query(query)
@@ -466,21 +464,6 @@ public class CouchbaseBucket implements Bucket {
                     return new DefaultViewResult(environment, CouchbaseBucket.this,
                         asyncViewResult.rows(), asyncViewResult.totalRows(), asyncViewResult.success(),
                         asyncViewResult.error(), asyncViewResult.debug());
-                }
-            })
-            .single(), timeout, timeUnit);
-    }
-
-
-    @Override
-    public SpatialViewResult query(SpatialViewQuery query, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket
-            .query(query)
-            .map(new Func1<AsyncSpatialViewResult, SpatialViewResult>() {
-                @Override
-                public SpatialViewResult call(AsyncSpatialViewResult asyncSpatialViewResult) {
-                    return new DefaultSpatialViewResult(environment, CouchbaseBucket.this,
-                        asyncSpatialViewResult.rows(), asyncSpatialViewResult.success(), asyncSpatialViewResult.error(), asyncSpatialViewResult.debug());
                 }
             })
             .single(), timeout, timeUnit);
