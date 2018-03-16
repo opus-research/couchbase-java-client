@@ -39,7 +39,7 @@ public class DefaultKeysPath extends DefaultLetPath implements KeysPath {
         if (constantKeys.length == 1) {
             return onKeys(s(constantKeys[0]));
         } else {
-            return onKeys(JsonArray.from(constantKeys, (String) null));
+            return onKeys(JsonArray.from(constantKeys));
         }
     }
 
@@ -59,7 +59,7 @@ public class DefaultKeysPath extends DefaultLetPath implements KeysPath {
         if (keys.length == 1) {
             return useKeys(s(keys[0]));
         }
-        return useKeys(JsonArray.from(keys, (String) null));
+        return useKeys(JsonArray.from(keys));
     }
 
     @Override
