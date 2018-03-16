@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.message.observe.Observe;
-
 /**
  * Defines the possible disk persistence constraints to observe.
  *
@@ -34,32 +32,32 @@ public enum PersistTo {
     /**
      * Observe disk persistence to the master node of the document only.
      */
-    MASTER(Observe.PERSIST_TO_MASTER),
+    MASTER((short) -1),
 
     /**
      * Do not observe any disk persistence constraint.
      */
-    NONE(Observe.PERSIST_TO_NONE),
+    NONE((short) 0),
 
     /**
      * Observe disk persistence of one node (master or replica).
      */
-    ONE(Observe.PERSIST_TO_ONE),
+    ONE((short) 1),
 
     /**
      * Observe disk persistence of two nodes (master or replica).
      */
-    TWO(Observe.PERSIST_TO_TWO),
+    TWO((short) 2),
 
     /**
      * Observe disk persistence of three nodes (master or replica).
      */
-    THREE(Observe.PERSIST_TO_THREE),
+    THREE((short) 3),
 
     /**
      * Observe disk persistence of four nodes (one master and three replicas).
      */
-    FOUR(Observe.PERSIST_TO_FOUR);
+    FOUR((short) 4);
 
     /**
      * Contains the internal value to map onto.

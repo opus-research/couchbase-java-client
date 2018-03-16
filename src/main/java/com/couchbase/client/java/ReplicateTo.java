@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.message.observe.Observe;
-
 /**
  * Defines the possible replication constraints to observe.
  *
@@ -34,22 +32,22 @@ public enum ReplicateTo {
     /**
      * Do not observe any replication constraint.
      */
-    NONE(Observe.REPLICATE_TO_NONE),
+    NONE((short) 0),
 
     /**
      * Observe replication to one replica.
      */
-    ONE(Observe.REPLICATE_TO_ONE),
+    ONE((short) 1),
 
     /**
      * Observe replication to two replicas.
      */
-    TWO(Observe.REPLICATE_TO_TWO),
+    TWO((short) 2),
 
     /**
      * Observe replication to three replicas.
      */
-    THREE(Observe.REPLICATE_TO_THREE);
+    THREE((short) 3);
 
     /**
      * Contains the internal value to map onto.
