@@ -152,7 +152,8 @@ public class CouchbaseTestContext {
             bucketPassword = TestProperties.password();
             bucketSettingsBuilder = DefaultBucketSettings
                 .builder()
-                .quota(100)
+                .quota(256)
+                .enableFlush(true)
                 .type(BucketType.COUCHBASE);
             flushOnInit = true;
             this.createAdhocBucket = false;
@@ -249,14 +250,6 @@ public class CouchbaseTestContext {
          */
         public Builder flushOnInit(boolean flushOnInit) {
             this.flushOnInit = flushOnInit;
-            return this;
-        }
-
-        /**
-         * Set to true deactivates flush capabilities on the bucket.
-         */
-        public Builder enableFlush(boolean enableFlush) {
-            this.bucketSettingsBuilder.enableFlush(enableFlush);
             return this;
         }
 
