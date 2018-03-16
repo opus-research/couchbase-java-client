@@ -24,7 +24,6 @@ package com.couchbase.client;
 
 import com.couchbase.client.internal.AdaptiveThrottler;
 import com.couchbase.client.internal.ThrottleManager;
-import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -333,8 +332,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
           logRunException(e);
         } catch (ConcurrentModificationException e) {
           logRunException(e);
-        } catch (ConfigurationException e) {
-          getLogger().debug("Configuration unsuccessfull. Will retry.", e);
         }
       }
     }
