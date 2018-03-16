@@ -138,7 +138,15 @@ public class JsonObject extends JsonValue {
      * @return the result or null if it does not exist.
      */
     public Integer getInt(String name) {
-        return (Integer) content.get(name);
+        //let it fail in the more general case where it isn't actually a number
+        Number number = (Number) content.get(name);
+        if (number == null) {
+            return null;
+        } else if (number instanceof Integer) {
+            return (Integer) number;
+        } else {
+            return number.intValue(); //autoboxing to Integer
+        }
     }
 
     /**
@@ -160,7 +168,15 @@ public class JsonObject extends JsonValue {
      * @return the result or null if it does not exist.
      */
     public Long getLong(String name) {
-        return (Long) content.get(name);
+        //let it fail in the more general case where it isn't actually a number
+        Number number = (Number) content.get(name);
+        if (number == null) {
+            return null;
+        } else if (number instanceof Long) {
+            return (Long) number;
+        } else {
+            return number.longValue(); //autoboxing to Long
+        }
     }
 
     /**
@@ -182,7 +198,15 @@ public class JsonObject extends JsonValue {
      * @return the result or null if it does not exist.
      */
     public Double getDouble(String name) {
-        return (Double) content.get(name);
+        //let it fail in the more general case where it isn't actually a number
+        Number number = (Number) content.get(name);
+        if (number == null) {
+            return null;
+        } else if (number instanceof Double) {
+            return (Double) number;
+        } else {
+            return number.doubleValue(); //autoboxing to Double
+        }
     }
 
     /**
