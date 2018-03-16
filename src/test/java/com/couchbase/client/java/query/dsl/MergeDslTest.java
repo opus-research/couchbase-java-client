@@ -184,7 +184,7 @@ public class MergeDslTest {
   @Test
   public void shouldConvertFullMerge() {
     Statement statement = Merge
-      .mergeInto(x("product p"))
+      .mergeInto("product p")
       .using("orders o")
       .onKey("o.productId")
       .whenMatchedThenUpdate().set("p.lastSaleDate", x("o.orderDate"))
@@ -200,7 +200,7 @@ public class MergeDslTest {
     );
 
     statement = Merge
-      .mergeInto(x("all_empts a"))
+      .mergeInto("all_empts a")
       .using(x("emps_deptb").as("b"))
       .onKey("b.empId")
       .whenMatchedThenUpdate()

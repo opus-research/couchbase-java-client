@@ -32,7 +32,7 @@ import com.couchbase.client.java.query.dsl.Expression;
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class OnElement implements Element {
 
     private final String fullKeyspace;
