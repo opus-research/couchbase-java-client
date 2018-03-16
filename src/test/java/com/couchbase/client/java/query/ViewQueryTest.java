@@ -2,8 +2,6 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.view.Stale;
-import com.couchbase.client.java.view.ViewQuery;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertTrue;

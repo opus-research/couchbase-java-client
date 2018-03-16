@@ -1,9 +1,11 @@
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.view.Stale;
-import com.couchbase.client.java.view.ViewQuery;
-import com.couchbase.client.java.view.ViewResult;
+import com.couchbase.client.java.query.Stale;
+import com.couchbase.client.java.query.ViewQuery;
+import com.couchbase.client.java.query.ViewResult;
 import com.couchbase.client.java.util.ClusterDependentTest;
+import com.couchbase.client.java.util.TestProperties;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import rx.Observer;
 
