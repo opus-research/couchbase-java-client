@@ -532,7 +532,6 @@ public class BucketConfigurationProvider extends SpyObject
 
   @Override
   public void shutdown() {
-    observers.clear();
     shutdown = true;
     if (httpProvider.get() != null) {
       httpProvider.get().shutdown();
