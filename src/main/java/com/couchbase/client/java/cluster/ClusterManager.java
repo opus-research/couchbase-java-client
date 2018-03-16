@@ -19,7 +19,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.cluster.api.ClusterApiClient;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -270,10 +269,4 @@ public interface ClusterManager {
      * @return true if the removal was successful, false otherwise.
      */
     Boolean removeBucket(String name, long timeout, TimeUnit timeUnit);
-
-    /**
-     * @return a new {@link ClusterApiClient} to prepare and perform REST API synchronous requests on this cluster.
-     */
-    @InterfaceStability.Experimental
-    ClusterApiClient apiClient();
 }
