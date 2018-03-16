@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import com.couchbase.client.java.transcoder.JacksonTransformers;
-
 /**
  * Represents a JSON array that can be stored and loaded from Couchbase Server.
  *
@@ -442,11 +440,31 @@ public class JsonArray extends JsonValue implements Iterable<Object> {
      */
     @Override
     public String toString() {
-        try {
-            return JacksonTransformers.MAPPER.writeValueAsString(this);
-        } catch (Exception e) {
-            throw new IllegalStateException("Cannot convert JsonArray to Json String", e);
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < content.size(); i++) {
+            Object item = content.get(i);
+            boolean isString = item instanceof String;
+
+            if (isString) {
+                sb.append("\"");
+            }
+
+            if (item == null) {
+                sb.append("null");
+            } else {
+                sb.append(item.toString());
+            }
+
+            if (isString) {
+                sb.append("\"");
+            }
+            if (i < content.size()-1) {
+                sb.append(",");
+            }
         }
+        sb.append("]");
+        return sb.toString();
     }
 
     @Override
