@@ -43,6 +43,7 @@ import net.spy.memcached.compat.SpyObject;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -117,14 +118,6 @@ public class BucketConfigurationProvider extends SpyObject
     }
 
     bootstrapProvider = BootstrapProviderType.NONE;
-    CouchbaseConnection oldBinaryConnection = binaryConnection.getAndSet(null);
-    if (oldBinaryConnection != null) {
-      try {
-        oldBinaryConnection.shutdown();
-      } catch (IOException e) {
-        getLogger().warn("Failed to shutdown old binary config connection.", e);
-      }
-    }
     if (!bootstrapBinary() && !bootstrapHttp()) {
       throw new ConfigurationException("Could not fetch a valid Bucket "
         + "configuration.");
@@ -286,8 +279,6 @@ public class BucketConfigurationProvider extends SpyObject
     if (old != null) {
         old.shutdown();
     }
-
-    getLogger().debug("Properly bootstrapped carrier config through node: " + node.getHostName());
     binaryConnection.set(connection);
     return true;
   }
@@ -499,7 +490,7 @@ public class BucketConfigurationProvider extends SpyObject
       return;
     }
 
-    if (bootstrapProvider.isCarrier() || bootstrapProvider == BootstrapProviderType.NONE) {
+    if (bootstrapProvider.isCarrier()) {
       if (binaryConnection.get() == null) {
         bootstrap();
       } else {
@@ -675,16 +666,11 @@ public class BucketConfigurationProvider extends SpyObject
     }
   }
 
-  class ConfigurationConnectionFactory
+  static class ConfigurationConnectionFactory
     extends CouchbaseConnectionFactory {
     ConfigurationConnectionFactory(List<URI> baseList, String bucketName,
       String password) throws IOException {
       super(baseList, bucketName, password);
-    }
-
-    @Override
-    public synchronized ConfigurationProvider getConfigurationProvider() {
-      return BucketConfigurationProvider.this;
     }
 
     @Override
