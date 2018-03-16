@@ -41,7 +41,7 @@ public class MutationOptionBuilder {
     private long cas;
     private PersistTo persistTo;
     private ReplicateTo replicateTo;
-    private Boolean createDocument;
+    private boolean createDocument;
 
     private MutationOptionBuilder() {
         this.expiry = 0;
@@ -136,7 +136,7 @@ public class MutationOptionBuilder {
     /**
      * createDocument On true, creates the document if it does not exist
      */
-    public MutationOptionBuilder createDocument(Boolean createDoc) {
+    public MutationOptionBuilder createDocument(boolean createDoc) {
         this.createDocument = createDoc;
         return this;
     }
@@ -146,7 +146,7 @@ public class MutationOptionBuilder {
      *
      * Returns createDocument boolean
      */
-    public  Boolean createDocument() {
+    public  boolean createDocument() {
         return this.createDocument;
     }
 }
