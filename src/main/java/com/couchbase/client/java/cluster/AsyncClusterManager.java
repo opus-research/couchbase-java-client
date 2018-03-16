@@ -180,6 +180,19 @@ public interface AsyncClusterManager {
     Observable<User> getUsers();
 
     /**
+     * Get user info from Couchbase Server.
+     *
+     * The {@link Observable} can error under the following conditions:
+     *
+     * - com.couchbase.client.core.CouchbaseException: If the underlying resources could not be enabled properly.
+     * - com.couchbase.client.java.error.TranscodingException: If the server response could not be decoded.
+     *
+     * @return user info
+     */
+    @InterfaceStability.Experimental
+    Observable<User> getUser(String username);
+
+    /**
      * @return an {@link Observable} emitting a single new {@link AsyncClusterApiClient} to prepare and perform
      * REST API asynchronous requests on this cluster.
      */
