@@ -68,6 +68,8 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.PreparedPayload;
+import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.core.QueryExecutor;
@@ -151,7 +153,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         }
 
         bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
-        queryExecutor = new QueryExecutor(core, bucket, password);
+        queryExecutor = new QueryExecutor(core, bucket, password, environment);
     }
 
     @Override
@@ -762,16 +764,32 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Statement statement) {
-        return query(Query.simple(statement));
+        Query query;
+        if (statement instanceof PreparedPayload) {
+            PreparedPayload preparedPayload = (PreparedPayload) statement;
+            query = Query.prepared(preparedPayload);
+        } else {
+            query = Query.simple(statement);
+        }
+        return query(query);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * See also {@link QueryExecutor#executePreparedWithRetry(PreparedQuery)} and
+     * {@link QueryExecutor#executeRaw(String)}.
+     */
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
         if (!query.params().hasServerSideTimeout()) {
             query.params().serverSideTimeout(environment().queryTimeout(), TimeUnit.MILLISECONDS);
         }
 
-        return queryExecutor.execute(query);
+        if (query instanceof PreparedQuery) {
+            return queryExecutor().executePreparedWithRetry((PreparedQuery) query);
+        }
+        return queryExecutor().executeRaw(query.n1ql().toString());
     }
 
     @Override
@@ -928,6 +946,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
                         throw new CouchbaseOutOfMemoryException();
+                    case EXISTS:
+                        throw new CASMismatchException();
                     default:
                         throw new CouchbaseException(response.status().toString());
                 }
@@ -966,6 +986,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new TemporaryFailureException();
                     case OUT_OF_MEMORY:
                         throw new CouchbaseOutOfMemoryException();
+                    case EXISTS:
+                        throw new CASMismatchException();
                     default:
                         throw new CouchbaseException(response.status().toString());
                 }
@@ -1056,10 +1078,5 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     public String toString() {
         return "AsyncBucket[" + name() + "]";
-    }
-
-    @Override
-    public Observable<Integer> invalidateQueryCache() {
-        return Observable.just(queryExecutor.invalidateQueryCache());
     }
 }
