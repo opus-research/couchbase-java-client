@@ -10,10 +10,8 @@ import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.java.bucket.ViewQueryMapper;
 import com.couchbase.client.java.convert.Converter;
 import com.couchbase.client.java.convert.JacksonJsonConverter;
-import com.couchbase.client.java.convert.StringJsonConverter;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.StringDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
@@ -42,7 +40,6 @@ public class CouchbaseBucket implements Bucket {
 
     converters = new HashMap<Class<?>, Converter<?, ?>>();
     converters.put(JsonDocument.class, new JacksonJsonConverter());
-	converters.put(StringDocument.class, new StringJsonConverter());
   }
 
   @Override
