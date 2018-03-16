@@ -102,7 +102,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       AsyncConnectionManager connMgr) {
     return new ViewNode(addr, connMgr,
         new LinkedBlockingQueue<HttpOperation>(opQueueLen),
-        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
+        getOpQueueMaxBlockTime(), getOperationTimeout());
   }
 
   @Override
