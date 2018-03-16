@@ -757,7 +757,9 @@ public class CouchbaseClient extends MemcachedClient
       vconn.shutdown();
     } catch (IOException ex) {
       Logger.getLogger(
-         CouchbaseClient.class.getName()).log(Level.SEVERE, null, ex);
+         CouchbaseClient.class.getName()).log(Level.SEVERE,
+            "Unexpected IOException in shutdown", ex);
+      throw new RuntimeException(null,ex);
     }
     return shutdownResult;
   }
