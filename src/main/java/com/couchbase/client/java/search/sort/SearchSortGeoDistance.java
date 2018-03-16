@@ -24,14 +24,14 @@ import com.couchbase.client.java.document.json.JsonObject;
  * @author Michael Nitschinger
  * @since 2.4.5
  */
-public class SearchSortGeoDistance extends SearchSort {
+public class SearchSortGeo extends SearchSort {
 
     private final String field;
     private final double locationLon;
     private final double locationLat;
     private String unit;
 
-    public SearchSortGeoDistance(double locationLon, double locationLat, String field) {
+    public SearchSortGeo(double locationLon, double locationLat, String field) {
         this.field = field;
         this.locationLon = locationLon;
         this.locationLat = locationLat;
@@ -43,12 +43,12 @@ public class SearchSortGeoDistance extends SearchSort {
     }
 
     @Override
-    public SearchSortGeoDistance descending(boolean descending) {
+    public SearchSortGeo descending(boolean descending) {
         super.descending(descending);
         return this;
     }
 
-    public SearchSortGeoDistance unit(String unit) {
+    public SearchSortGeo unit(String unit) {
         this.unit = unit;
         return this;
     }
