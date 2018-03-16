@@ -30,7 +30,6 @@ import com.couchbase.client.java.document.*;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.*;
@@ -1967,37 +1966,7 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param statement the statement in a DSL form (start with a static select() import)
-     * @return a result containing all found rows and additional information.
-     */
-    QueryResult query(Statement statement);
-
-    /**
-     * Experimental: Queries a N1QL secondary index with a custom timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param statement the statement in a DSL form (start with a static select() import)
-     * @param timeout the custom timeout.
-     * @param timeUnit the unit for the timeout.
-     * @return a result containing all found rows and additional information.
-     */
-    QueryResult query(Statement statement, long timeout, TimeUnit timeUnit);
-
-    /**
-     * Experimental: Queries a N1QL secondary index with the default query timeout.
-     *
-     * This method throws under the following conditions:
-     *
-     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param query the full {@link Query}, including statement and any other additional parameter.
+     * @param query the query in a DSL form (start with a static select() import)
      * @return a result containing all found rows and additional information.
      */
     QueryResult query(Query query);
@@ -2011,7 +1980,7 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full {@link Query}, including statement and any other additional parameter.
+     * @param query the query in a DSL form (start with a static select() import)
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
      * @return a result containing all found rows and additional information.
@@ -2027,10 +1996,10 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full N1QL string, including statement and any other additional parameter.
+     * @param query the query in a plain N1QL String
      * @return a result containing all found rows and additional information.
      */
-    QueryResult queryRaw(String query);
+    QueryResult query(String query);
 
     /**
      * Experimental: Queries a N1QL secondary index with a custom timeout.
@@ -2041,12 +2010,12 @@ public interface Bucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the full N1QL string including statement and any other additional parameter.
+     * @param query the query in a plain N1QL String
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
      * @return a result containing all found rows and additional information.
      */
-    QueryResult queryRaw(String query, long timeout, TimeUnit timeUnit);
+    QueryResult query(String query, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
