@@ -19,30 +19,27 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.convert;
 
-import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.core.message.document.CoreDocument;
-import com.couchbase.client.java.document.Document;
+package com.couchbase.client.java.convert.example;
+
+import java.io.Serializable;
 
 /**
- * Generic interface for document body converters.
+ * Sample class to verify the functionality for the {@link com.couchbase.client.java.convert.BinaryConverter}.
+ *
+ * @author David Sondermann
+ * @since 2.0
  */
-public interface Converter {
+public class BinarySerializableSampleClass implements Serializable {
 
-  /**
-   * Converts decode the source format into a {@link CoreDocument}.
-   *
-   * @param document the document with the source content.
-   * @return the converted core document.
-   */
-  <D extends Document<?>> CoreDocument encode(D document);
+  private final String foo;
 
-  /**
-   * Converts decode a {@link CoreDocument} into the target format.
-   *
-   * @param coreDocument the core document to be decoded.
-   * @return the converted object.
-   */
-  <D extends Document<?>> D decode(String id, CoreDocument coreDocument, ResponseStatus status);
+  public BinarySerializableSampleClass(String foo) {
+    this.foo = foo;
+  }
+
+  public String getFoo() {
+    return foo;
+  }
+
 }
