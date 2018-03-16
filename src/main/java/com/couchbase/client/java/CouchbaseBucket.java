@@ -32,7 +32,9 @@ import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.DefaultQueryResult;
 import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -60,7 +62,7 @@ public class CouchbaseBucket implements Bucket {
 
     public CouchbaseBucket(final CouchbaseEnvironment env, final ClusterFacade core, final String name, final String password,
         final List<Transcoder<? extends Document, ?>> customTranscoders) {
-        asyncBucket = new CouchbaseAsyncBucket(core, env, name, password, customTranscoders);
+        asyncBucket = new CouchbaseAsyncBucket(core, name, password, customTranscoders);
         this.environment = env;
         this.kvTimeout = env.kvTimeout();
         this.name = name;
@@ -470,13 +472,18 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
+    public QueryResult query(Statement statement) {
+        return query(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
+
+    @Override
     public QueryResult query(Query query) {
         return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
-    public QueryResult query(String query) {
-        return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
+    public QueryPlan prepare(Statement statement) {
+        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
@@ -487,17 +494,17 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public ViewResult query(ViewQuery query, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
-            .query(query)
-            .map(new Func1<AsyncViewResult, ViewResult>() {
-                @Override
-                public ViewResult call(AsyncViewResult asyncViewResult) {
-                    return new DefaultViewResult(environment, CouchbaseBucket.this,
-                        asyncViewResult.rows(), asyncViewResult.totalRows(), asyncViewResult.success(),
-                        asyncViewResult.error(), asyncViewResult.debug()
-                    );
-                }
-            })
-            .single(), timeout, timeUnit);
+                .query(query)
+                .map(new Func1<AsyncViewResult, ViewResult>() {
+                    @Override
+                    public ViewResult call(AsyncViewResult asyncViewResult) {
+                        return new DefaultViewResult(environment, CouchbaseBucket.this,
+                                asyncViewResult.rows(), asyncViewResult.totalRows(), asyncViewResult.success(),
+                                asyncViewResult.error(), asyncViewResult.debug()
+                        );
+                    }
+                })
+                .single(), timeout, timeUnit);
     }
 
 
@@ -518,30 +525,39 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public QueryResult query(Query query, long timeout, TimeUnit timeUnit) {
+    public QueryResult query(Statement statement, final long timeout, final TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
-            .query(query)
+            .query(statement)
             .map(new Func1<AsyncQueryResult, QueryResult>() {
                 @Override
                 public QueryResult call(AsyncQueryResult asyncQueryResult) {
-                    return new DefaultQueryResult(environment, asyncQueryResult.rows(),
-                        asyncQueryResult.info(), asyncQueryResult.error(), asyncQueryResult.success());
+                    return new DefaultQueryResult(asyncQueryResult.rows(), asyncQueryResult.info(),
+                            asyncQueryResult.errors(), asyncQueryResult.finalSuccess(), asyncQueryResult.parseSuccess(),
+                            timeout, timeUnit);
                 }
             })
             .single(), timeout, timeUnit);
     }
 
     @Override
-    public QueryResult query(String query, long timeout, TimeUnit timeUnit) {
+    public QueryResult query(Query query, final long timeout, final TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
             .query(query)
             .map(new Func1<AsyncQueryResult, QueryResult>() {
                 @Override
                 public QueryResult call(AsyncQueryResult asyncQueryResult) {
-                    return new DefaultQueryResult(environment, asyncQueryResult.rows(),
-                        asyncQueryResult.info(), asyncQueryResult.error(), asyncQueryResult.success());
+                    return new DefaultQueryResult(asyncQueryResult.rows(), asyncQueryResult.info(),
+                            asyncQueryResult.errors(), asyncQueryResult.finalSuccess(), asyncQueryResult.parseSuccess(),
+                            timeout, timeUnit);
                 }
             })
+            .single(), timeout, timeUnit);
+    }
+
+    @Override
+    public QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .prepare(statement)
             .single(), timeout, timeUnit);
     }
 

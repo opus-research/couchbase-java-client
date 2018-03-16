@@ -29,7 +29,11 @@ import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.document.*;
 import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.PrepareStatement;
+import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryPlan;
+import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
 import com.couchbase.client.java.view.AsyncViewResult;
@@ -932,17 +936,17 @@ public interface AsyncBucket {
     Observable<AsyncSpatialViewResult> query(SpatialViewQuery query);
 
     /**
-     * Experimental: Queries a N1QL secondary index.
+     * Experimental: Queries a N1QL secondary index with a simple {@link Statement}.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the query in a DSL form (start with a static select() import)
+     * @param statement the statement in a DSL form (start with a static select() import).
      * @return a result containing all found rows and additional information.
      */
-    Observable<AsyncQueryResult> query(Query query);
+    Observable<AsyncQueryResult> query(Statement statement);
 
     /**
      * Experimental: Queries a N1QL secondary index.
@@ -952,10 +956,25 @@ public interface AsyncBucket {
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      *
-     * @param query the query in a plain N1QL String
+     * @param query the full {@link Query}.
      * @return a result containing all found rows and additional information.
      */
-    Observable<AsyncQueryResult> query(String query);
+    Observable<AsyncQueryResult> query(Query query);
+
+    /**
+     * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
+     * {@link Statement}.
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     *
+     * The returned {@link Observable} can error under the following conditions:
+     *
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     *
+     * @param statement the statement to prepare a plan for.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     */
+    Observable<QueryPlan> prepare(Statement statement);
 
     /**
      * Unlocks a write-locked {@link Document}.

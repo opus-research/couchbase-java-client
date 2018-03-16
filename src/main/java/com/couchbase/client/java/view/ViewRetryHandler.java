@@ -22,6 +22,7 @@
 package com.couchbase.client.java.view;
 
 import com.couchbase.client.core.CouchbaseException;
+import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
@@ -73,15 +74,17 @@ public class ViewRetryHandler {
                         .flatMap(new Func1<Throwable, Observable<?>>() {
                             @Override
                             public Observable<?> call(Throwable throwable) {
-                                if (throwable instanceof ShouldRetryViewRequestException) {
-                                    return Observable.interval(10, TimeUnit.MILLISECONDS);
+                                if (throwable instanceof ShouldRetryViewRequestException
+                                    || throwable instanceof RequestCancelledException) {
+                                    return Observable.timer(10, TimeUnit.MILLISECONDS);
                                 } else {
                                     return Observable.error(throwable);
                                 }
                             }
                         });
                 }
-            });
+            })
+            .last();
     }
 
     /**
@@ -100,19 +103,25 @@ public class ViewRetryHandler {
             .info()
             .map(new Func1<ByteBuf, ViewQueryResponse>() {
                 @Override
-                public ViewQueryResponse call(ByteBuf byteBuf) {
-                    ByteBuf infoCopy = byteBuf.copy();
+                public ViewQueryResponse call(ByteBuf infoBuffer) {
+                    ByteBuf infoBufferCopy = infoBuffer.copy();
                     JsonObject content = null;
                     try {
                         content =
-                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoCopy);
+                            CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufToJsonObject(infoBufferCopy);
                     } catch (Exception e) {
+                        if (infoBuffer.refCnt() > 0) {
+                            infoBuffer.release();
+                        }
                         throw new CouchbaseException("Could not parse View error message", e);
                     } finally {
-                        infoCopy.release();
+                        infoBufferCopy.release();
                     }
 
                     if (shouldRetry(responseCode, content)) {
+                        if (infoBuffer.refCnt() > 0) {
+                            infoBuffer.release();
+                        }
                         throw SHOULD_RETRY;
                     }
                     return response;
@@ -163,16 +172,21 @@ public class ViewRetryHandler {
     /**
      * Analyses the content of a 404 response to see if it is legible for retry.
      *
+     * If the content contains ""reason":"missing"", it is a clear indication that the responding node
+     * is unprovisioned and therefore it should be retried. All other cases indicate a provisioned node,
+     * but the design document/view is not found, which should not be retried.
+     *
      * @param content the parsed error content.
      * @return true if it needs to be retried, false otherwise.
      */
     private static boolean analyse404Response(final JsonObject content) {
         String stringified = content.toString();
-        if (stringified.contains("not_found") && (stringified.contains("missing") || stringified.contains("deleted"))) {
-            LOGGER.debug("Design document not found, error is {}", stringified);
-            return false;
+        if (stringified.contains("\"reason\":\"missing\"")) {
+            return true;
         }
-        return true;
+
+        LOGGER.debug("Design document not found, error is {}", stringified);
+        return false;
     }
 
     /**
