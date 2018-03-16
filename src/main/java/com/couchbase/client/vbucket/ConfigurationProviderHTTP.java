@@ -82,8 +82,8 @@ public class ConfigurationProviderHTTP extends SpyObject implements
       new ConfigurationParserJSON();
   private Map<String, BucketMonitor> monitors =
       new HashMap<String, BucketMonitor>();
-  private static String reSubBucket;
-  private static Reconfigurable reSubRec;
+  private String reSubBucket;
+  private Reconfigurable reSubRec;
 
   /**
    * Constructs a configuration provider with disabled authentication for the
