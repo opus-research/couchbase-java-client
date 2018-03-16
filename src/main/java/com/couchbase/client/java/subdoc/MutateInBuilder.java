@@ -278,11 +278,6 @@ public class MutateInBuilder {
         return this;
     }
 
-    public <T> MutateInBuilder arrayPrependAll(String path, boolean createParents, T... values) {
-        asyncBuilder.arrayPrependAll(path, createParents, values);
-        return this;
-    }
-
     /**
      * Append to an existing array, pushing the value to the back/last position in
      * the array.
@@ -296,11 +291,6 @@ public class MutateInBuilder {
         return this;
     }
 
-    public <T> MutateInBuilder arrayAppendAll(String path, boolean createParents, T... values) {
-        asyncBuilder.arrayAppendAll(path, createParents, values);
-        return this;
-    }
-
     /**
      * Insert into an existing array at a specific position
      * (denoted in the path, eg. "sub.array[2]").
@@ -310,11 +300,6 @@ public class MutateInBuilder {
      */
     public <T> MutateInBuilder arrayInsert(String path, T value) {
         asyncBuilder.arrayInsert(path, value);
-        return this;
-    }
-
-    public <T> MutateInBuilder arrayInsertAll(String path, T... values) {
-        asyncBuilder.arrayInsertAll(path, values);
         return this;
     }
 

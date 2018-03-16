@@ -30,7 +30,6 @@ import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.error.TranscodingException;
-import com.couchbase.client.java.subdoc.MultiValue;
 
 /**
  * An interface for transcoding sub-document fragments (as found in and used by {@link DocumentFragment#fragment()}).
@@ -83,7 +82,6 @@ public interface FragmentTranscoder {
      * @throws TranscodingException if the encoding couldn't happen.
      */
     <T> ByteBuf encode(T value) throws TranscodingException;
-
 
     /**
      * Encode a value (usually from a {@link DocumentFragment}) to a {@link ByteBuf} suitable for use in the
