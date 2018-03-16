@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.N1qlParams;
 import com.couchbase.client.java.query.N1qlQuery;
@@ -42,7 +41,6 @@ import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 import com.couchbase.client.java.util.CouchbaseTestContext;
-import com.couchbase.client.java.util.features.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -212,57 +210,5 @@ public class N1qlQueryTest {
         assertTrue(response.finalSuccess());
         assertTrue(secondResponse.finalSuccess());
         assertEquals("query cache was unexpectedly populated", 0, ctx.bucket().invalidateQueryCache());
-    }
-
-    @Test
-    public void testPreparedSumWorks() {
-        ctx.ignoreIfClusterUnder(new Version(4,1,0));
-
-        String statement = "SELECT sum(c1) FROM default";
-        N1qlQuery query = N1qlQuery.simple(statement, N1qlParams.build().adhoc(false));
-
-        ctx.bucket().invalidateQueryCache();
-        N1qlQueryResult response = ctx.bucket().query(query);
-        N1qlQueryResult secondResponse = ctx.bucket().query(query);
-
-        assertTrue(response.finalSuccess());
-        assertTrue(secondResponse.finalSuccess());
-        assertEquals(1, ctx.bucket().invalidateQueryCache());
-    }
-
-    @Test
-    public void testPreparedWithPositionalPlaceholdersExecute() {
-        String statement = "SELECT * FROM `beer-sample` WHERE abv = $1";
-        N1qlQuery query = N1qlQuery.parameterized(statement, JsonArray.from(1), N1qlParams.build().adhoc(false));
-        N1qlQuery query2 = N1qlQuery.parameterized(statement, JsonArray.from(9.9), N1qlParams.build().adhoc(false));
-
-        ctx.bucket().invalidateQueryCache();
-        N1qlQueryResult response = ctx.bucket().query(query);
-        N1qlQueryResult secondResponse = ctx.bucket().query(query2);
-
-        assertTrue(response.finalSuccess());
-        assertTrue(secondResponse.finalSuccess());
-        assertEquals(1, ctx.bucket().invalidateQueryCache());
-
-        assertFalse(response.allRows().isEmpty());
-        assertEquals(4, secondResponse.allRows().size());
-    }
-
-    @Test
-    public void testPreparedWithNamedPlaceholdersExecute() {
-        String statement = "SELECT * FROM `beer-sample` WHERE abv = $abv";
-        N1qlQuery query = N1qlQuery.parameterized(statement, JsonObject.create().put("abv", 1), N1qlParams.build().adhoc(false));
-        N1qlQuery query2 = N1qlQuery.parameterized(statement, JsonObject.create().put("abv", 9.9), N1qlParams.build().adhoc(false));
-
-        ctx.bucket().invalidateQueryCache();
-        N1qlQueryResult response = ctx.bucket().query(query);
-        N1qlQueryResult secondResponse = ctx.bucket().query(query2);
-
-        assertTrue(response.finalSuccess());
-        assertTrue(secondResponse.finalSuccess());
-        assertEquals(1, ctx.bucket().invalidateQueryCache());
-
-        assertFalse(response.allRows().isEmpty());
-        assertEquals(4, secondResponse.allRows().size());
     }
 }
