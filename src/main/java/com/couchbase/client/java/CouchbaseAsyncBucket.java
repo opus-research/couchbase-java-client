@@ -172,15 +172,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
                                 final String username, final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
-        this(core, environment, name, username, password, customTranscoders, null);
-    }
-
-    public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-                                final String username, final String password, final List<Transcoder<? extends Document, ?>> customTranscoders, final CoreHookAware hooks) {
         bucket = name;
         this.username = username;
         this.password = password;
-        this.core = hooks == null ? core : new HookAwareClusterFacade(core, hooks);
+        this.core = core;
         this.environment = environment;
         this.closed = false;
 
