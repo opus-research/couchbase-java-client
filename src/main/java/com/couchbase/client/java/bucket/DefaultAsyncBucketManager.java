@@ -68,7 +68,6 @@ import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.view.DesignDocument;
 import rx.Notification;
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
@@ -190,12 +189,10 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<DesignDocument> getDesignDocument(final String name, final boolean development) {
-        return deferAndWatch(new Func1<Subscriber, Observable<GetDesignDocumentResponse>>() {
+        return deferAndWatch(new Func0<Observable<GetDesignDocumentResponse>>() {
             @Override
-            public Observable<GetDesignDocumentResponse> call(Subscriber s) {
-                GetDesignDocumentRequest request = new GetDesignDocumentRequest(name, development, bucket, username, password);
-                request.subscriber(s);
-                return core.send(request);
+            public Observable<GetDesignDocumentResponse> call() {
+                return core.send(new GetDesignDocumentRequest(name, development, bucket, username, password));
             }
         }).filter(new Func1<GetDesignDocumentResponse, Boolean>() {
             @Override
@@ -275,12 +272,10 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }
 
         final String b = body;
-        return deferAndWatch(new Func1<Subscriber, Observable<UpsertDesignDocumentResponse>>() {
+        return deferAndWatch(new Func0<Observable<UpsertDesignDocumentResponse>>() {
             @Override
-            public Observable<UpsertDesignDocumentResponse> call(Subscriber s) {
-                UpsertDesignDocumentRequest request = new UpsertDesignDocumentRequest(designDocument.name(), b, development, bucket, username, password);
-                request.subscriber(s);
-                return core.send(request);
+            public Observable<UpsertDesignDocumentResponse> call() {
+                return core.send(new UpsertDesignDocumentRequest(designDocument.name(), b, development, bucket, username, password));
             }
         }).map(new Func1<UpsertDesignDocumentResponse, DesignDocument>() {
             @Override
@@ -307,12 +302,10 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<Boolean> removeDesignDocument(final String name, final boolean development) {
-        return deferAndWatch(new Func1<Subscriber, Observable<RemoveDesignDocumentResponse>>() {
+        return deferAndWatch(new Func0<Observable<RemoveDesignDocumentResponse>>() {
             @Override
-            public Observable<RemoveDesignDocumentResponse> call(Subscriber s) {
-                RemoveDesignDocumentRequest request = new RemoveDesignDocumentRequest(name, development, bucket, username, password);
-                request.subscriber(s);
-                return core.send(request);
+            public Observable<RemoveDesignDocumentResponse> call() {
+                return core.send(new RemoveDesignDocumentRequest(name, development, bucket, username, password));
             }
         }).map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
             @Override
