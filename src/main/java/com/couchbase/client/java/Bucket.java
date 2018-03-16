@@ -49,7 +49,6 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
@@ -2966,8 +2965,6 @@ public interface Bucket {
      * @return the bucket manager for administrative operations.
      */
     BucketManager bucketManager();
-
-    Repository repository();
 
     /**
      * Closes this bucket with the default disconnect timeout.
