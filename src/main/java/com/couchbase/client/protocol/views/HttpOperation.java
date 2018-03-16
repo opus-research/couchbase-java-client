@@ -20,52 +20,34 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.protocol.views;
 
-import com.couchbase.client.vbucket.config.Bucket;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationException;
 
-import java.util.Observable;
-import java.util.Observer;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * A Helper class for HttpOperation.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public interface HttpOperation {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
+  HttpRequest getRequest();
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
+  OperationCallback getCallback();
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
+  boolean isCancelled();
 
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
+  boolean hasErrored();
 
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
+  boolean isTimedOut();
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
-  }
+  void cancel();
+
+  void timeOut();
+
+  OperationException getException();
+
+  void handleResponse(HttpResponse response);
 }

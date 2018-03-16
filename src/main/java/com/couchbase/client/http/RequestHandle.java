@@ -20,52 +20,60 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.http;
 
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * A connection request.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class RequestHandle {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  private final AsyncConnectionManager connMgr;
+  private final NHttpClientConnection conn;
+
+  private volatile boolean completed;
+
+  public RequestHandle(AsyncConnectionManager connMgr,
+      NHttpClientConnection conn) {
+    super();
+    this.connMgr = connMgr;
+    this.conn = conn;
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+  public void completed() {
+    if (this.completed) {
+      return;
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
     }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
   }
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
+    }
+  }
+
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait();
+      }
+    }
   }
 }

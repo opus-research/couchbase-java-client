@@ -133,8 +133,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
 
   protected void syncGetTimeoutsInitClient() throws Exception {
     initClient(new CouchbaseConnectionFactory(Arrays.asList(URI
-        .create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")),
-        "default", "") {
+        .create("http://localhost:8091/pools")), "default", "") {
       @Override
       public long getOperationTimeout() {
         return 2;
