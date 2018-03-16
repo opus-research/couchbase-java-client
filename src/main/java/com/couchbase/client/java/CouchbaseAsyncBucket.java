@@ -400,7 +400,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }).flatMap(new Func1<BinaryRequest, Observable<GetResponse>>() {
                     @Override
                     public Observable<GetResponse> call(BinaryRequest req) {
-                        return core.send(req);
+                        return core.<GetResponse>send(req).onErrorResumeNext(Observable.<GetResponse>empty());
                     }
                 });
         } else {
