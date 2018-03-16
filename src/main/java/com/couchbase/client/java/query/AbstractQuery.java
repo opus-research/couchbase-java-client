@@ -21,6 +21,8 @@
  */
 package com.couchbase.client.java.query;
 
+import javax.swing.plaf.nimbus.State;
+
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.document.json.JsonValue;

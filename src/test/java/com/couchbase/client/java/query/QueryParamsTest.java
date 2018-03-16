@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.consistency.ScanConsistency;
 import org.junit.Test;
 
 /**
@@ -46,29 +45,36 @@ public class QueryParamsTest {
 
     @Test
     public void shouldInjectCorrectConsistencies() {
-        QueryParams p = QueryParams.build().consistency(ScanConsistency.NOT_BOUNDED);
+        QueryParams p = QueryParams.build().consistencyNotBounded();
 
         JsonObject actual = JsonObject.empty();
         p.injectParams(actual);
 
         assertEquals("not_bounded", actual.get("scan_consistency"));
 
-        p.consistency(ScanConsistency.REQUEST_PLUS);
+        p.consistencyRequestPlus();
         p.injectParams(actual);
         assertEquals(1, actual.size());
         assertEquals("request_plus", actual.getString("scan_consistency"));
 
-        p.consistency(ScanConsistency.STATEMENT_PLUS);
+        p.consistencyStatementPlus();
         p.injectParams(actual);
         assertEquals(1, actual.size());
         assertEquals("statement_plus", actual.getString("scan_consistency"));
+
+        Map<String, Integer> emptyVector = Collections.emptyMap();
+        p.consistencyAtPlus(emptyVector);
+        p.injectParams(actual);
+        assertEquals(2, actual.size());
+        assertEquals("at_plus", actual.getString("scan_consistency"));
+        assertNotNull(actual.get("scan_vector"));
     }
 
     @Test
     public void consistencyNotBoundedShouldEraseScanWaitAndVector() {
         QueryParams p = QueryParams.build()
             .scanWait(12, TimeUnit.SECONDS)
-            .consistency(ScanConsistency.NOT_BOUNDED);
+            .consistencyNotBounded();
 
         JsonObject expected = JsonObject.create()
             .put("scan_consistency", "not_bounded");
@@ -81,7 +87,7 @@ public class QueryParamsTest {
     @Test
     public void shouldIgnoreScanWaitIfConsistencyNotBounded() {
         QueryParams p = QueryParams.build()
-           .consistency(ScanConsistency.NOT_BOUNDED)
+           .consistencyNotBounded()
            .scanWait(12, TimeUnit.SECONDS);
 
         JsonObject expected = JsonObject.create()
@@ -92,27 +98,64 @@ public class QueryParamsTest {
         assertEquals(expected, actual);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldRejectAtPlusWithBadFullVector() {
+        QueryParams.build().consistencyAtPlus(new int[] { 1, 2, 3});
+    }
+
+
+    @Test
+    public void shouldProduceSparseVectorWithAtPlusMap() {
+        QueryParams p = QueryParams.build()
+            .consistencyAtPlus(Collections.singletonMap("5", 123));
+
+        JsonObject actual = JsonObject.empty();
+        p.injectParams(actual);
+
+        assertEquals("at_plus", actual.getString("scan_consistency"));
+        assertTrue(actual.get("scan_vector") instanceof JsonObject);
+        assertEquals(1, actual.getObject("scan_vector").size());
+        assertEquals(123, actual.getObject("scan_vector").get("5"));
+    }
+
+    @Test
+    public void shouldProduceFullVectorWithAtPlusArray() {
+        int[] vector = new int[1024];
+        Arrays.fill(vector, 22);
+        QueryParams p = QueryParams.build().consistencyAtPlus(vector);
+
+        JsonObject actual = JsonObject.empty();
+        p.injectParams(actual);
+
+        assertEquals("at_plus", actual.getString("scan_consistency"));
+        assertTrue(actual.get("scan_vector") instanceof JsonArray);
+        assertEquals(1024, actual.getArray("scan_vector").size());
+        assertEquals(22, actual.getArray("scan_vector").get(13));
+    }
+
     @Test
     public void shouldAllowScanWaitOnlyForCorrectConsistencies() {
         QueryParams p = QueryParams.build()
                                    .scanWait(12, TimeUnit.SECONDS)
-                                   .consistency(ScanConsistency.REQUEST_PLUS);
+                                   .consistencyAtPlus(Collections.singletonMap("5", 123));
 
         JsonObject actual = JsonObject.empty();
         p.injectParams(actual);
         assertEquals("12s", actual.getString("scan_wait"));
 
-        actual = JsonObject.empty();
-        p.injectParams(actual);
-        assertEquals("12s", actual.getString("scan_wait"));
-
-        p.consistency(ScanConsistency.STATEMENT_PLUS);
+        p.consistencyRequestPlus();
 
         actual = JsonObject.empty();
         p.injectParams(actual);
         assertEquals("12s", actual.getString("scan_wait"));
 
-        p.consistency(ScanConsistency.NOT_BOUNDED);
+        p.consistencyStatementPlus();
+
+        actual = JsonObject.empty();
+        p.injectParams(actual);
+        assertEquals("12s", actual.getString("scan_wait"));
+
+        p.consistencyNotBounded();
         actual = JsonObject.empty();
         assertFalse(actual.containsKey("scan_wait"));
 
@@ -202,6 +245,54 @@ public class QueryParamsTest {
         p.injectParams(actual);
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void shouldInjectLocalCredentialForBucket() {
+        QueryParams p = QueryParams.build()
+                                   .addCredential("bucket", "pwd");
+
+        JsonObject expectedCred = JsonObject.create()
+                .put("user", "local:bucket")
+                .put("pass", "pwd");
+
+        JsonObject actual = JsonObject.empty();
+        p.injectParams(actual);
+
+        assertTrue(actual.containsKey("creds"));
+        assertFalse(actual.getArray("creds").isEmpty());
+        assertEquals(expectedCred, actual.getArray("creds").get(0));
+    }
+
+    @Test
+    public void shouldInjectAdminCredentialForAdmin() {
+        QueryParams p = QueryParams.build()
+                                   .addAdminCredential("john", "pwd");
+
+        JsonObject expectedCred = JsonObject.create()
+                                            .put("user", "admin:john")
+                                            .put("pass", "pwd");
+
+        JsonObject actual = JsonObject.empty();
+        p.injectParams(actual);
+
+        assertTrue(actual.containsKey("creds"));
+        assertFalse(actual.getArray("creds").isEmpty());
+        assertEquals(expectedCred, actual.getArray("creds").get(0));
+    }
+
+    @Test
+    public void shouldAppendCredentials() {
+        QueryParams p = QueryParams.build()
+                .addCredential("bucket", "pwd")
+                .addAdminCredential("john", "pwd")
+                .addCredential("bucket2", "pwd2");
+
+        JsonObject actual = JsonObject.empty();
+        p.injectParams(actual);
+
+        assertNotNull(actual.getArray("creds"));
+        assertEquals(3, actual.getArray("creds").size());
     }
 
     @Test

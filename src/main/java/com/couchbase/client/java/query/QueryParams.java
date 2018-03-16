@@ -47,7 +47,9 @@ public class QueryParams {
 
     private String serverSideTimeout;
     private ScanConsistency consistency;
+    private JsonValue scanVector;
     private String scanWait;
+    private JsonArray creds;
     private String clientContextId;
 
     private QueryParams() { }
@@ -60,19 +62,26 @@ public class QueryParams {
         if (this.serverSideTimeout != null) {
             queryJson.put("timeout", this.serverSideTimeout);
         }
-        if (this.consistency != null) {
+        if (this.consistency == ScanConsistency.AT_PLUS && this.scanVector != null) {
+                queryJson.put("scan_consistency", this.consistency.n1ql());
+                queryJson.put("scan_vector", this.scanVector);
+        } else if (this.consistency != null) {
             queryJson.put("scan_consistency", this.consistency.n1ql());
         }
         if (this.scanWait != null
-                && (ScanConsistency.REQUEST_PLUS == this.consistency
+                && (ScanConsistency.AT_PLUS == this.consistency
+                || ScanConsistency.REQUEST_PLUS == this.consistency
                 || ScanConsistency.STATEMENT_PLUS == this.consistency)) {
             queryJson.put("scan_wait", this.scanWait);
+        }
+        if (this.creds != null && !this.creds.isEmpty()) {
+            queryJson.put("creds", this.creds);
         }
         if (this.clientContextId != null) {
             queryJson.put("client_context_id", this.clientContextId);
         }
     }
-
+    
     private static String durationToN1qlFormat(long duration, TimeUnit unit) {
         switch (unit) {
             case NANOSECONDS:
@@ -115,6 +124,39 @@ public class QueryParams {
     }
 
     /**
+     * Adds a bucket authentication credential to the list of credentials for the request.
+     *
+     * @param bucket the authenticated bucket name.
+     * @param password the password for the bucket.
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams addCredential(String bucket, String password) {
+        if (this.creds == null) {
+            this.creds = JsonArray.empty();
+        }
+        this.creds.add(JsonObject.create()
+            .put("user", "local:" + bucket)
+            .put("pass", password));
+        return this;
+    }
+
+    /** Adds an admin authentication credential to the list of credentials for the request.
+     *
+     * @param adminName the login of the administrator.
+     * @param password the password for the administrator.
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams addAdminCredential(String adminName, String password) {
+        if (this.creds == null) {
+            this.creds = JsonArray.empty();
+        }
+        this.creds.add(JsonObject.create()
+                                 .put("user", "admin:" + adminName)
+                                 .put("pass", password));
+        return this;
+    }
+
+    /**
      * Adds a client context ID to the request, that will be sent back in the response, allowing clients
      * to meaningfully trace requests/responses when many are exchanged.
      *
@@ -127,22 +169,93 @@ public class QueryParams {
     }
 
     /**
-     * Sets scan consistency.
+     * Sets scan consistency to AT_PLUS, using a full scan vector.
      *
-     * Note that {@link ScanConsistency#NOT_BOUNDED NOT_BOUNDED} will unset the {@link #scanWait} if it was set.
+     * This implements bounded consistency. The request includes a scan_vector parameter and value,
+     * which is used as a lower bound. This can be used to implement read-your-own-writes (RYOW).
      *
+     * @param scanVector an array of 1024 sequence numbers/timestamps, one for each vBucket.
      * @return this {@link QueryParams} for chaining.
+     * @throws IllegalArgumentException if the scanVector is not full (length != 1024).
      */
-    public QueryParams consistency(ScanConsistency consistency) {
-        this.consistency = consistency;
-        if (consistency == ScanConsistency.NOT_BOUNDED) {
-            this.scanWait = null;
+    public QueryParams consistencyAtPlus(int[] scanVector) {
+        if (scanVector.length != 1024) {
+            throw new IllegalArgumentException("Full Scan Vector must contain seqno for all 1024 vbuckets");
         }
+        this.consistency = ScanConsistency.AT_PLUS;
+        List<Integer> fullVector = new ArrayList<Integer>(scanVector.length);
+        for (int i : scanVector) {
+            fullVector.add(i);
+        }
+        this.scanVector = JsonArray.from(fullVector);
         return this;
     }
 
     /**
-     * If the {@link ScanConsistency#NOT_BOUNDED NOT_BOUNDED scan consistency} has been chosen, does nothing.
+     * Sets scan consistency to AT_PLUS, using a sparse scan vector.
+     *
+     * This implements bounded consistency. The request includes a scan_vector parameter and value,
+     * which is used as a lower bound. This can be used to implement read-your-own-writes (RYOW).
+     *
+     * @param sparseScanVector A {@link Map} giving the sequence number/timestamp for each vBucket number (String)
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams consistencyAtPlus(Map<String, Integer> sparseScanVector) {
+        this.consistency = ScanConsistency.AT_PLUS;
+        this.scanVector = JsonObject.from(sparseScanVector);
+        return this;
+    }
+
+    /**
+     * Sets scan consistency to NOT_BOUNDED and unsets the {@link #scanWait} if it was set.
+     *
+     * This is the default (for single-statement requests).
+     * No timestamp vector is used in the index scan.
+     * This is also the fastest mode, because we avoid the cost of obtaining the vector,
+     * and we also avoid any wait for the index to catch up to the vector.
+     *
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams consistencyNotBounded() {
+        this.consistency = ScanConsistency.NOT_BOUNDED;
+        this.scanVector = null;
+        this.scanWait = null;
+        return this;
+    }
+
+    /**
+     * Sets scan consistency to REQUEST_PLUS.
+     *
+     * This implements strong consistency per request.
+     * Before processing the request, a current vector is obtained.
+     * The vector is used as a lower bound for the statements in the request.
+     * If there are DML statements in the request, RYOW is also applied within the request.
+     *
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams consistencyRequestPlus() {
+        this.consistency = ScanConsistency.REQUEST_PLUS;
+        this.scanVector = null;
+        return this;
+    }
+
+    /**
+     * Sets scan consistency to STATEMENT_PLUS.
+     *
+     * This implements strong consistency per statement.
+     * Before processing each statement, a current vector is obtained
+     * and used as a lower bound for that statement.
+     *
+     * @return this {@link QueryParams} for chaining.
+     */
+    public QueryParams consistencyStatementPlus() {
+        this.consistency = ScanConsistency.STATEMENT_PLUS;
+        this.scanVector = null;
+        return this;
+    }
+
+    /**
+     * If the {@link #consistencyNotBounded() NOT_BOUNDED scan consistency} has been chosen, does nothing.
      *
      * Otherwise, sets the maximum time the client is willing to wait for an index to catch up to the
      * vector timestamp in the request.
