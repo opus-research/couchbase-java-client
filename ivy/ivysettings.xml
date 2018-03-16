@@ -28,7 +28,6 @@
   <property name="repo.couchbase"
     value="http://files.couchbase.com/maven2"
     override="false"/>
-
   <property name="maven2.pattern"
     value="[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier])"/>
   <property name="maven2.pattern.ext"  value="${maven2.pattern}.[ext]"/>
