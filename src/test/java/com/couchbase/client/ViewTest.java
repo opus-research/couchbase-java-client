@@ -24,10 +24,10 @@ package com.couchbase.client;
 
 
 import com.couchbase.client.internal.HttpFuture;
-import com.couchbase.client.protocol.views.ComplexKey;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.protocol.views.NoDocsOperationImpl;
+import com.couchbase.client.protocol.views.OnError;
 import com.couchbase.client.protocol.views.Paginator;
 import com.couchbase.client.protocol.views.Query;
 import com.couchbase.client.protocol.views.ReducedOperationImpl;
@@ -77,7 +77,6 @@ public class ViewTest {
   public static final String DESIGN_DOC_WO_REDUCE = "doc_without_view";
   public static final String VIEW_NAME_W_REDUCE = "view_with_reduce";
   public static final String VIEW_NAME_WO_REDUCE = "view_without_reduce";
-  public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
 
   static {
     ITEMS = new HashMap<String, Object>();
@@ -123,19 +122,18 @@ public class ViewTest {
 
     docUri = "/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_WO_REDUCE;
-    String view2 = "{\"language\":\"javascript\",\"views\":{\"" + VIEW_NAME_FOR_DATED
+    view = "{\"language\":\"javascript\",\"views\":{\"" + VIEW_NAME_WO_REDUCE
         + "\":{\"map\":\"function (doc) {  " + "emit(doc.type, 1)}\"}}}";
     for (Entry<String, Object> item : ITEMS.entrySet()) {
       assert c.set(item.getKey(), 0,
           (String) item.getValue()).get().booleanValue();
     }
-    HttpFuture<String> asyncHttpPut = c.asyncHttpPut(docUri, view2);
-
-    String view3 = "{\"language\":\"javascript\",\"views\":{\"" + VIEW_NAME_WO_REDUCE
-        + "\":{\"map\":\"function (doc) {  " + "emit(doc.type, 1)}\"}}}";
+    HttpFuture<String> asyncHttpPut = c.asyncHttpPut(docUri, view);
     String response = asyncHttpPut.get();
     OperationStatus status = asyncHttpPut.getStatus();
+    System.err.println("Operation Status is: " + status);
     if (!status.isSuccess()) {
+      System.err.println("Operation Status is: " + status);
       assert false : "Could not load views: " + status.getMessage()
               + " with response " + response;
     }
@@ -174,11 +172,6 @@ public class ViewTest {
   private static String generateDoc(String type, String small, String large) {
     return "{\"type\":\"" + type + "\"" + ",\"small range\":\"" + small + "\","
         + "\"large range\":\"" + large + "\"}";
-  }
-
-  private static String generateDatedDoc(int year, int month, int day) {
-    return "{\"type\":\"dated\",\"year\":" + year + ",\"month\":" + month + ","
-        + "\"day\":" + day + "}";
   }
 
   @Test
@@ -367,29 +360,6 @@ public class ViewTest {
     assert response != null : future.getStatus();
   }
 
-
-  @Test
-  public void testQuerySetRangeStartComplexKey() throws Exception {
-
-    // create a mess of stuff to query
-    for (int i = 2009; i<2013; i++) {
-      for (int j = 1; j<13; j++) {
-        for (int k = 1; k<32; k++) {
-          client.add("date" + i + j + k, 600, generateDatedDoc(i, j, k));
-        }
-      }
-    }
-
-    // now query it
-    Query query = new Query();
-    query.setReduce(false);
-    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    HttpFuture<ViewResponse> future =
-        client.asyncQuery(view, query.setRangeStart(ComplexKey.of(2012,9,5)));
-    ViewResponse response = future.get();
-    assert response != null : future.getStatus();
-  }
-
   @Test
   public void testQuerySetRangeEnd() throws Exception {
     Query query = new Query();
@@ -441,6 +411,17 @@ public class ViewTest {
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future =
         client.asyncQuery(view, query.setUpdateSeq(true));
+    ViewResponse response = future.get();
+    assert response != null : future.getStatus();
+  }
+
+  @Test
+  public void testQuerySetOnError() throws Exception {
+    Query query = new Query();
+    query.setReduce(false);
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    HttpFuture<ViewResponse> future =
+        client.asyncQuery(view, query.setOnError(OnError.CONTINUE));
     ViewResponse response = future.get();
     assert response != null : future.getStatus();
   }
@@ -566,14 +547,39 @@ public class ViewTest {
 
     int count = 0;
     while (op.hasNext()) {
-      ViewRow row = op.next();
-      if (!ITEMS.containsKey(row.getId())) {
-        assert false : "Got bad key: " + row.getId() + " during pagination";
+      ViewResponse response = op.next();
+      for (ViewRow row: response) {
+        if (!ITEMS.containsKey(row.getId())) {
+          assert false : "Got bad key: " + row.getId() + " during pagination";
+        }
+        count++;
       }
-      count++;
     }
     assert count == ITEMS.size() : "Got " + count + " items, wanted "
         + ITEMS.size();
+  }
+
+  @Test
+  public void testPaginationItemsLimit() throws Exception {
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    Query query = new Query();
+    final int limit = 0x45;
+    query.setReduce(false);
+    query.setLimit(limit);
+    Paginator op = client.paginatedQuery(view, query, 10);
+
+    int count = 0;
+    while (op.hasNext()) {
+      ViewResponse response = op.next();
+      for (ViewRow row: response) {
+        if (!ITEMS.containsKey(row.getId())) {
+          assert false : "Got bad key: " + row.getId() + " during pagination";
+        }
+        count++;
+      }
+    }
+    assert count == limit : "Got " + count + " items, wanted "
+        + limit;
   }
 
   @Test
@@ -595,11 +601,15 @@ public class ViewTest {
 
     int count = 0;
     while (op.hasNext()) {
-      String key = op.next().getId();
-      if (!ITEMS.containsKey(key)) {
-        assert false : "Got bad key: " + key + " during pagination";
+      ViewResponse response = op.next();
+      for (ViewRow row: response) {
+        String key = row.getId();
+        if (!ITEMS.containsKey(key)) {
+          assert false : "Got bad key: " + key + " during pagination";
+        }
+        count++;
       }
-      count++;
+
     }
     assert count == ITEMS.size() : "Got " + count + " items, wanted "
         + ITEMS.size();
@@ -622,13 +632,15 @@ public class ViewTest {
 
     int count = 0;
     while (op.hasNext()) {
-      op.next();
-      if (count == 5) {
-        assert client.delete("key112").get().booleanValue()
-            : "Deleteing key key112 failed";
-        Thread.sleep(1000);
+      ViewResponse response = op.next();
+      for(ViewRow row: response) {
+        if (count == 5) {
+          assert client.delete("key112").get().booleanValue()
+              : "Deleteing key key112 failed";
+          Thread.sleep(1000);
+        }
+        count++;
       }
-      count++;
     }
     assert count == ITEMS.size() - 1 : "Got " + count + " items, wanted "
         + (ITEMS.size() - 1);

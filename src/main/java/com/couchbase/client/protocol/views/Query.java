@@ -46,6 +46,7 @@ public class Query {
   private static final String STARTKEY = "startkey";
   private static final String STARTKEYDOCID = "startkey_docid";
   private static final String UPDATESEQ = "update_seq";
+  private static final String ONERROR = "on_error";
   private boolean includedocs = false;
 
   private Map<String, Object> args;
@@ -103,6 +104,14 @@ public class Query {
     return this;
   }
 
+  public int getLimit() {
+    if (args.containsKey(LIMIT)) {
+      return(((Integer)args.get(LIMIT)).intValue());
+    } else {
+      return -1;
+    }
+  }
+
   public Query setRange(String startkey, String endkey) {
     args.put(ENDKEY, endkey);
     args.put(STARTKEY, startkey);
@@ -111,11 +120,6 @@ public class Query {
 
   public Query setRangeStart(String startkey) {
     args.put(STARTKEY, startkey);
-    return this;
-  }
-
-  public Query setRangeStart(ComplexKey k) {
-    args.put(STARTKEY, k);
     return this;
   }
 
@@ -146,6 +150,11 @@ public class Query {
 
   public Query setUpdateSeq(boolean updateseq) {
     args.put(UPDATESEQ, Boolean.toString(updateseq));
+    return this;
+  }
+
+  public Query setOnError(OnError opt) {
+    args.put(ONERROR, opt);
     return this;
   }
 
@@ -194,6 +203,9 @@ public class Query {
     if (args.containsKey(UPDATESEQ)) {
       query.setUpdateSeq(((Boolean)args.get(UPDATESEQ)).booleanValue());
     }
+    if (args.containsKey(ONERROR)) {
+      query.setOnError(((OnError)args.get(ONERROR)));
+    }
     query.setIncludeDocs(willIncludeDocs());
 
     return query;
@@ -221,6 +233,8 @@ public class Query {
       return key + "=" + value;
     } else if (value instanceof Stale) {
       return key + "=" + ((Stale) value).toString();
+    } else if (value instanceof OnError) {
+      return key + "=" + value;
     } else if (StringUtils.isJsonObject(value.toString())) {
       return key + "=" + value.toString();
     } else {
