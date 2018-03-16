@@ -27,9 +27,6 @@ import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 import static org.junit.Assert.assertEquals;
 
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import org.junit.Test;
@@ -47,18 +44,18 @@ public class QueryToN1qlTest {
         SimpleQuery query = new SimpleQuery(select("*").from("tutorial").where(x("fname").eq(s("ian"))));
 
         //notice ian is between escaped quotes since inside json
-        assertEquals("{\"statement\":\"SELECT * FROM tutorial WHERE fname = \\\"ian\\\"\"}", query.n1ql().toString());
+        assertEquals("{\"statement\":\"SELECT * FROM tutorial WHERE fname = \\\"ian\\\"\"}", query.toN1QL());
     }
 
     @Test
     public void parametrizedQueryWithArrayShouldProduceStatementAndArgs() {
-        ParametrizedQuery query = new ParametrizedQuery(select("*"), JsonArray.from("aString", 123, true), null);
+        ParametrizedQuery query = new ParametrizedQuery(select("*"), JsonArray.from("aString", 123, true));
 
         JsonObject expected = JsonObject.create()
             .put("statement", "SELECT *")
             .put("args", JsonArray.from("aString", 123, true));
 
-        assertEquals(expected, query.n1ql());
+        assertEquals(expected.toString(), query.toN1QL());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -86,13 +83,13 @@ public class QueryToN1qlTest {
         JsonObject rawPlan = JsonObject.create().put("fake", "select *");
         QueryPlan fakePlan = new QueryPlan(rawPlan);
         JsonArray params =JsonArray.from("aString", 123, true);
-        PreparedQuery query = new PreparedQuery(fakePlan, params, null);
+        PreparedQuery query = new PreparedQuery(fakePlan, params);
 
         JsonObject expected = JsonObject.create()
             .put("prepared", rawPlan)
             .put("args", JsonArray.from("aString", 123, true));
 
-        assertEquals(expected, query.n1ql());
+        assertEquals(expected.toString(), query.toN1QL());
     }
 
     @Test
@@ -101,7 +98,7 @@ public class QueryToN1qlTest {
             .put("myParamString", "aString")
             .put("someInt", 123)
             .put("$fullN1qlParam", true);
-        ParametrizedQuery query = new ParametrizedQuery(select("*"), args, null);
+        ParametrizedQuery query = new ParametrizedQuery(select("*"), args);
 
         JsonObject expected = JsonObject.create()
             .put("statement", "SELECT *")
@@ -109,7 +106,7 @@ public class QueryToN1qlTest {
             .put("$someInt", 123)
             .put("$fullN1qlParam", true);
 
-        assertEquals(expected, query.n1ql());
+        assertEquals(expected.toString(), query.toN1QL());
     }
 
     @Test
@@ -120,7 +117,7 @@ public class QueryToN1qlTest {
             .put("myParamString", "aString")
             .put("someInt", 123)
             .put("$fullN1qlParam", true);
-        PreparedQuery query = new PreparedQuery(fakePlan, args, null);
+        PreparedQuery query = new PreparedQuery(fakePlan, args);
 
         JsonObject expected = JsonObject.create()
             .put("prepared", rawPlan)
@@ -128,41 +125,7 @@ public class QueryToN1qlTest {
             .put("$someInt", 123)
             .put("$fullN1qlParam", true);
 
-        assertEquals(expected, query.n1ql());
-    }
-
-    @Test
-    public void queryParamsShouldBeInjectedInQuery() {
-        QueryParams fullParams = QueryParams.build()
-                .consistencyAtPlus(Collections.singletonMap("5", 12345))
-                .scanWait(12, TimeUnit.SECONDS)
-                .addCredential("bucket", "pass")
-                .addAdminCredential("Admin", "pass")
-                .serverSideTimeout(20, TimeUnit.SECONDS)
-                .withContextId("test");
-
-        JsonObject expectedVector = JsonObject.create().put("5", 12345);
-        JsonObject expectedCred1 = JsonObject.create().put("user", "local:bucket").put("pass", "pass");
-        JsonObject expectedCred2 = JsonObject.create().put("user", "admin:Admin").put("pass", "pass");
-        JsonObject expected = JsonObject.create()
-                .put("statement", "SELECT * FROM default")
-                .put("scan_consistency", "at_plus")
-                .put("scan_vector", expectedVector)
-                .put("scan_wait", "12s")
-                .put("creds", JsonArray.create().add(expectedCred1).add(expectedCred2))
-                .put("timeout", "20s")
-                .put("client_context_id", "test");
-
-        SimpleQuery query1 = new SimpleQuery(select(x("*")).from("default"), fullParams);
-        assertEquals(expected, query1.n1ql());
-
-        ParametrizedQuery query2 = new ParametrizedQuery(select(x("*")).from("default"), JsonObject.empty(), fullParams);
-        assertEquals(expected, query2.n1ql());
-
-        JsonObject fakePlan = JsonObject.create().put("fake", "select *");
-        expected.removeKey("statement").put("prepared", fakePlan);
-        PreparedQuery query3 = new PreparedQuery(new QueryPlan(fakePlan), JsonArray.empty(), fullParams);
-        assertEquals(expected, query3.n1ql());
+        assertEquals(expected.toString(), query.toN1QL());
     }
 
 }
