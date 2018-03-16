@@ -56,7 +56,6 @@ import com.couchbase.client.core.message.search.SearchQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.DefaultAsyncBucketManager;
 import com.couchbase.client.java.bucket.ReplicaReader;
@@ -141,13 +140,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     private final CouchbaseEnvironment environment;
     /** the bucket's {@link N1qlQueryExecutor}. Prefer using {@link #n1qlQueryExecutor()} since it allows mocking and testing */
     private final N1qlQueryExecutor n1qlQueryExecutor;
-    private final Authenticator authenticator;
 
     private volatile boolean closed;
 
 
     public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-        final String password, final List<Transcoder<? extends Document, ?>> customTranscoders, final Authenticator auth) {
+        final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
         bucket = name;
         this.password = password;
         this.core = core;
@@ -174,8 +172,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         bucketManager = DefaultAsyncBucketManager.create(bucket, password, core);
 
         boolean n1qlPreparedEncodedPlanEnabled = "true".equalsIgnoreCase(System.getProperty(N1qlQueryExecutor.ENCODED_PLAN_ENABLED_PROPERTY, "true")); //active by default
-        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, password, auth, n1qlPreparedEncodedPlanEnabled);
-        authenticator = auth;
+        n1qlQueryExecutor = new N1qlQueryExecutor(core, bucket, password, n1qlPreparedEncodedPlanEnabled);
     }
 
     @Override

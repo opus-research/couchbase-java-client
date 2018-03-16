@@ -15,14 +15,14 @@
  */
 package com.couchbase.client.java.env;
 
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.DefaultCoreEnvironment;
+import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.DefaultCoreEnvironment;
-import org.junit.Test;
 
 /**
  * Verifies the functionality of a {@link DefaultCouchbaseEnvironment}.

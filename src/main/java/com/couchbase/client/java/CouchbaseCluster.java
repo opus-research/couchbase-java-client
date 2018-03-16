@@ -16,13 +16,8 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.java.auth.Authenticator;
-import com.couchbase.client.java.auth.Credential;
-import com.couchbase.client.java.auth.CredentialContext;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultClusterManager;
@@ -242,24 +237,22 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public Bucket openBucket() {
-        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET, "");
+        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET);
     }
 
     @Override
     public Bucket openBucket(long timeout, TimeUnit timeUnit) {
-        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET, "", timeout, timeUnit);
+        return openBucket(CouchbaseAsyncCluster.DEFAULT_BUCKET, timeout, timeUnit);
     }
 
     @Override
     public Bucket openBucket(String name) {
-        Credential cred = couchbaseAsyncCluster.getSingleCredential(CredentialContext.BUCKET_KV, name);
-        return openBucket(cred.login(), cred.password());
+        return openBucket(name, null);
     }
 
     @Override
     public Bucket openBucket(String name, long timeout, TimeUnit timeUnit) {
-        Credential cred = couchbaseAsyncCluster.getSingleCredential(CredentialContext.BUCKET_KV, name);
-        return openBucket(cred.login(), cred.password(), timeout, timeUnit);
+        return openBucket(name, null, timeout, timeUnit);
     }
 
     @Override
@@ -344,22 +337,6 @@ public class CouchbaseCluster implements Cluster {
     }
 
     @Override
-    public ClusterManager clusterManager() {
-        final Credential cred = couchbaseAsyncCluster.getSingleCredential(CredentialContext.CLUSTER_MANAGEMENT, null);
-        return couchbaseAsyncCluster
-                .clusterManager(cred.login(), cred.password())
-                .map(new Func1<AsyncClusterManager, ClusterManager>() {
-                    @Override
-                    public ClusterManager call(AsyncClusterManager asyncClusterManager) {
-                        return DefaultClusterManager.create(cred.login(), cred.password(), connectionString,
-                                environment, core());
-                    }
-                })
-                .toBlocking()
-                .single();
-    }
-
-    @Override
     public Boolean disconnect() {
         return disconnect(environment.disconnectTimeout(), TIMEOUT_UNIT);
     }
@@ -383,23 +360,5 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ClusterFacade core() {
         return couchbaseAsyncCluster.core().toBlocking().single();
-    }
-
-    @Override
-    public CouchbaseCluster authenticate(Authenticator auth) {
-        couchbaseAsyncCluster.authenticate(auth);
-        return this;
-    }
-
-    /**
-     * Get the {@link Authenticator} currently used when credentials are needed for an
-     * operation, but no explicit credentials are provided.
-     *
-     * @return the Authenticator currently used for this cluster.
-     */
-    @InterfaceStability.Uncommitted
-    @InterfaceAudience.Private
-    public Authenticator authenticator() {
-        return couchbaseAsyncCluster.authenticator();
     }
 }

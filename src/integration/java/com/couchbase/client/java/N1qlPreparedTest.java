@@ -63,7 +63,7 @@ public class N1qlPreparedTest {
                 .ignoreIfNoN1ql()
         .ensurePrimaryIndex();
 
-        executor = new N1qlQueryExecutor(ctx.cluster().core(), ctx.bucketName(), ctx.bucketPassword(), null, false);
+        executor = new N1qlQueryExecutor(ctx.cluster().core(), ctx.bucketName(), ctx.bucketPassword(), false);
 
         ctx.bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
         ctx.bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));

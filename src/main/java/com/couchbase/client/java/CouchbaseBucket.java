@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
@@ -71,11 +70,11 @@ public class CouchbaseBucket implements Bucket {
 
     /**
      * Create a {@link CouchbaseBucket} that doesn't reuse an existing {@link AsyncBucket} but rather creates one internally. Prefer using the alternative constructor
-     * {@link #CouchbaseBucket(AsyncBucket, CouchbaseEnvironment, ClusterFacade, String, String)} if you can obtain an AsyncBucket externally.
+     * {@link #CouchbaseBucket(CouchbaseEnvironment, ClusterFacade, String, String, List)} if you can obtain an AsyncBucket externally.
      */
     public CouchbaseBucket(final CouchbaseEnvironment env, final ClusterFacade core, final String name, final String password,
-                           final List<Transcoder<? extends Document, ?>> customTranscoders, Authenticator auth) {
-        this(new CouchbaseAsyncBucket(core, env, name, password, customTranscoders, auth), env, core, name, password);
+                           final List<Transcoder<? extends Document, ?>> customTranscoders) {
+        this(new CouchbaseAsyncBucket(core, env, name, password, customTranscoders), env, core, name, password);
     }
 
     /**

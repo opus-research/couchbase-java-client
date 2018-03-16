@@ -19,7 +19,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.auth.Authenticator;
 
 /**
  * The {@link CouchbaseEnvironment} which shares state across {@link Cluster}s.
