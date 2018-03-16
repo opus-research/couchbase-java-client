@@ -23,7 +23,6 @@ package com.couchbase.client.java.query.dsl;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.Insert;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.Upsert;
 import com.couchbase.client.java.query.dsl.path.DefaultInitialInsertPath;
@@ -38,12 +37,12 @@ import static com.couchbase.client.java.query.dsl.functions.StringFunctions.uppe
 import static org.junit.Assert.assertEquals;
 
 /**
- * Unit tests for the Insert Builder API.
+ * Unit tests for the Upsert Builder API.
  *
  * @author Michael Nitschinger
  * @since 2.2.3
  */
-public class InsertAndUpsertDslTest {
+public class UpsertDslTest {
 
   @Test
   public void shouldConvertRegularReturning() {
@@ -106,48 +105,6 @@ public class InsertAndUpsertDslTest {
 
   @Test
   public void shouldConvertFullInsertIntoValues() {
-    Statement statement = Insert
-      .insertInto("default")
-      .values("user", JsonObject.create().put("fname", "michael").put("age", 27))
-      .values("doc2", true)
-      .returning("fname");
-
-    assertEquals(
-      "INSERT INTO default VALUES (\"user\", {\"fname\":\"michael\"," +
-        "\"age\":27}) , (\"doc2\", TRUE) RETURNING fname",
-      statement.toString()
-    );
-  }
-
-  @Test
-  public void shouldConvertFullInsertIntoSelect() {
-    Statement statement = Insert
-      .insertInto(i("beer-sample"))
-      .select("code", select("`beer-sample`.*").from(i("beer-sample")).limit(1));
-
-    assertEquals(
-      "INSERT INTO `beer-sample` (KEY code) SELECT `beer-sample`.* FROM `beer-sample` LIMIT 1",
-      statement.toString()
-    );
-
-    statement = Insert
-      .insertInto(i("beer-sample"))
-      .select(
-        "code",
-        x(JsonObject.create().put("c", "city").put("n", "name")),
-        select("`beer-sample`.*").from(i("beer-sample")).limit(1)
-      );
-
-    assertEquals(
-      "INSERT INTO `beer-sample` (KEY code, VALUE {\"n\":\"name\",\"c\":\"city\"}) SELECT " +
-        "`beer-sample`.* FROM `beer-sample` LIMIT 1",
-      statement.toString()
-    );
-  }
-
-
-  @Test
-  public void shouldConvertFullUpsertIntoValues() {
     Statement statement = Upsert
       .upsertInto("default")
       .values("user", JsonObject.create().put("fname", "michael").put("age", 27))
@@ -162,7 +119,7 @@ public class InsertAndUpsertDslTest {
   }
 
   @Test
-  public void shouldConvertFullUpsertIntoSelect() {
+  public void shouldConvertFullInsertIntoSelect() {
     Statement statement = Upsert
       .upsertInto(i("beer-sample"))
       .select("code", select("`beer-sample`.*").from(i("beer-sample")).limit(1));

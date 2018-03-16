@@ -59,7 +59,7 @@ public class DefaultInitialInsertPath extends DefaultReturningPath implements In
 
   @Override
   public InsertValuesPath values(String id, String value) {
-    element(new InsertValueElement(POS, s(id), s(value)));
+    element(new InsertValueElement(POS, s(id), x(value)));
     return new DefaultInsertValuesPath(this);
   }
 
@@ -110,7 +110,7 @@ public class DefaultInitialInsertPath extends DefaultReturningPath implements In
 
   @Override
   public InsertValuesPath values(Expression id, String value) {
-    element(new InsertValueElement(POS, id, s(value)));
+    element(new InsertValueElement(POS, id, x(value)));
     return new DefaultInsertValuesPath(this);
   }
 
@@ -158,7 +158,7 @@ public class DefaultInitialInsertPath extends DefaultReturningPath implements In
 
   @Override
   public ReturningPath select(Expression key, String value, Statement select) {
-    element(new InsertSelectElement(key, s(value), select));
+    element(new InsertSelectElement(key, x(value), select));
     return new DefaultReturningPath(this);
   }
 
@@ -170,7 +170,7 @@ public class DefaultInitialInsertPath extends DefaultReturningPath implements In
 
   @Override
   public ReturningPath select(String key, String value, Statement select) {
-    element(new InsertSelectElement(x(key), s(value), select));
+    element(new InsertSelectElement(x(key), x(value), select));
     return new DefaultReturningPath(this);
   }
 
