@@ -33,7 +33,7 @@ import com.couchbase.client.java.ReplicateTo;
  * @since 2.3.5
  */
 
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class MutationOptionBuilder {
 

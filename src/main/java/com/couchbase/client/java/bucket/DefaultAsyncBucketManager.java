@@ -186,14 +186,14 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }).filter(new Func1<GetDesignDocumentResponse, Boolean>() {
             @Override
             public Boolean call(GetDesignDocumentResponse response) {
+                if (response.status() == ResponseStatus.NOT_EXISTS) {
+                    throw new DesignDocumentDoesNotExistException();
+                }
                 boolean success = response.status().isSuccess();
                 if (!success) {
                     if (response.content() != null && response.content().refCnt() > 0) {
                         response.content().release();
                     }
-                }
-                if (response.status() == ResponseStatus.NOT_EXISTS) {
-                    throw new DesignDocumentDoesNotExistException();
                 }
                 return success;
             }
@@ -299,11 +299,11 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }).map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
             @Override
             public Boolean call(RemoveDesignDocumentResponse response) {
-                if (response.content() != null && response.content().refCnt() > 0) {
-                    response.content().release();
-                }
                 if (response.status() == ResponseStatus.NOT_EXISTS) {
                     throw new DesignDocumentDoesNotExistException();
+                }
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
                 return response.status().isSuccess();
             }

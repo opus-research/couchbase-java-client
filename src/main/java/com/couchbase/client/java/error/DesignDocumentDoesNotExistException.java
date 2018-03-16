@@ -15,27 +15,27 @@
  */
 package com.couchbase.client.java.error;
 
+import com.couchbase.client.core.CouchbaseException;
+
 /**
- * Exception to indicate that Design document does not exist in the server
- *
  * @author Subhashni Balakrishnan
  * @since 2.4.0
  */
-public class DesignDocumentDoesNotExistException extends DesignDocumentException {
+public class DesignDocumentDoesNotExistException extends CouchbaseException {
 
-    public DesignDocumentDoesNotExistException() {
-        super();
-    }
+	public DesignDocumentDoesNotExistException() {
+		super();
+	}
 
-    public DesignDocumentDoesNotExistException(String message) {
-        super(message);
-    }
+	public DesignDocumentDoesNotExistException(String message) {
+		super(message);
+	}
 
-    public DesignDocumentDoesNotExistException(String message, Throwable cause) {
-        super(message, cause);
-    }
+	public DesignDocumentDoesNotExistException(String message, Throwable cause) {
+		super(message, cause);
+	}
 
-    public DesignDocumentDoesNotExistException(Throwable cause) {
-        super(cause);
-    }
+	public DesignDocumentDoesNotExistException(Throwable cause) {
+		super(cause);
+	}
 }
