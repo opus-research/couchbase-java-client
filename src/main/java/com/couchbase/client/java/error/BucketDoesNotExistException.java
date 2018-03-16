@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class BucketDoesNotExistException extends CouchbaseException {
 
     public BucketDoesNotExistException() {
-	super();
     }
 
     public BucketDoesNotExistException(String message) {

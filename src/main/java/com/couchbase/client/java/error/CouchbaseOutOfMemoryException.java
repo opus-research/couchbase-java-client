@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class CouchbaseOutOfMemoryException extends CouchbaseException {
 
     public CouchbaseOutOfMemoryException() {
-	super();
     }
 
     public CouchbaseOutOfMemoryException(String message) {

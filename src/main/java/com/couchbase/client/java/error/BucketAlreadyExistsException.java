@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class BucketAlreadyExistsException extends CouchbaseException {
 
     public BucketAlreadyExistsException() {
-	super();
     }
 
     public BucketAlreadyExistsException(String message) {

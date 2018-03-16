@@ -36,7 +36,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 public class IndexAlreadyExistsException extends CouchbaseException {
 
     public IndexAlreadyExistsException() {
-	super();
     }
 
     public IndexAlreadyExistsException(String message) {

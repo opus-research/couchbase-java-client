@@ -20,7 +20,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class RepositoryMappingException extends CouchbaseException {
 
     public RepositoryMappingException() {
-	super();
     }
 
     public RepositoryMappingException(String message) {

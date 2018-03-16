@@ -24,7 +24,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class ViewDoesNotExistException extends CouchbaseException {
 
     public ViewDoesNotExistException() {
-	super();
     }
 
     public ViewDoesNotExistException(String message) {

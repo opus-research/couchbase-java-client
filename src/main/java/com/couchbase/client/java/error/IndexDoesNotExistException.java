@@ -33,7 +33,6 @@ import com.couchbase.client.java.bucket.BucketManager;
 public class IndexDoesNotExistException extends CouchbaseException {
 
     public IndexDoesNotExistException() {
-	super();
     }
 
     public IndexDoesNotExistException(String message) {

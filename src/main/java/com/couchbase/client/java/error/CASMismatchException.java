@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class CASMismatchException extends CouchbaseException {
 
     public CASMismatchException() {
-	super();
     }
 
     public CASMismatchException(String message) {

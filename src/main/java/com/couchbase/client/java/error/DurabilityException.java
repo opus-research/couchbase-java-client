@@ -26,7 +26,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class DurabilityException extends CouchbaseException {
 
     public DurabilityException() {
-	super();
     }
 
     public DurabilityException(String message) {

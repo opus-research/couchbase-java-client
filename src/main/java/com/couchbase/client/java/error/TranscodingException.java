@@ -24,7 +24,6 @@ import com.couchbase.client.core.CouchbaseException;
 public class TranscodingException extends CouchbaseException {
 
     public TranscodingException() {
-	super();
     }
 
     public TranscodingException(String message) {
