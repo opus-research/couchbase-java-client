@@ -29,7 +29,6 @@ import java.util.Map;
  * @author Michael Nitschinger
  * @since 2.0
  */
-@Deprecated
 public class ConnectionString {
 
     public static final String DEFAULT_SCHEME = "couchbase://";
