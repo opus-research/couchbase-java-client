@@ -36,6 +36,11 @@ public class ViewResponseReduced extends ViewResponse {
     super(rows, errors);
   }
 
+  public ViewResponseReduced(final Collection<ViewRow> rows,
+      final Collection<RowError> errors, long totalViewRows) {
+    super(rows, errors, totalViewRows);
+  }
+
   @Override
   public Map<String, Object> getMap() {
     throw new UnsupportedOperationException("This view doesn't contain "

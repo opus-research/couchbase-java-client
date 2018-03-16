@@ -33,15 +33,28 @@ import java.util.Map;
 public abstract class ViewResponse implements Iterable<ViewRow> {
   protected final Collection<ViewRow> rows;
   protected final Collection<RowError> errors;
+  protected final long totalViewRows;
+
+  public static final long UNKNOWN_TOTAL_VIEW_ROWS = -1;
 
   public ViewResponse(final Collection<ViewRow> r,
       final Collection<RowError> e) {
+    this(r, e, UNKNOWN_TOTAL_VIEW_ROWS);
+  }
+
+  public ViewResponse(final Collection<ViewRow> r,
+      final Collection<RowError> e, long t) {
     rows = r;
     errors = e;
+    totalViewRows = t;
   }
 
   public Collection<RowError> getErrors() {
     return errors;
+  }
+
+  public long getTotalViewRows() {
+    return totalViewRows;
   }
 
   @Override

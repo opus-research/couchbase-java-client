@@ -36,9 +36,14 @@ public class ViewResponseNoDocs extends ViewResponse {
     super(rows, errors);
   }
 
+  public ViewResponseNoDocs(final Collection<ViewRow> rows,
+      final Collection<RowError> errors, long totalViewRows) {
+    super(rows, errors, totalViewRows);
+  }
+
   @Override
   public Map<String, Object> getMap() {
-    throw new UnsupportedOperationException("This view doesn't contain"
+    throw new UnsupportedOperationException("This view doesn't contain "
         + "documents");
   }
 
