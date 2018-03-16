@@ -16,16 +16,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Integration tests around the usage of a {@link ClassicAuthenticator}.
+ * Integration tests around the usage of a {@link PasswordAuthenticator}.
  */
-public class ClassicAuthenticatorTesst {
+public class PasswordAuthenticationTest {
 
     private CouchbaseCluster cluster;
-    private ClassicAuthenticator authenticator;
+    private PasswordAuthenticator authenticator;
 
     @Before
     public void init() {
-        this.authenticator = new ClassicAuthenticator();
+        this.authenticator = new PasswordAuthenticator();
         this.cluster = CouchbaseCluster.create(TestProperties.seedNode())
                 .authenticate(authenticator);
     }
@@ -133,7 +133,7 @@ public class ClassicAuthenticatorTesst {
     @Test
     public void shouldAllowToResetAuthenticator() {
         Authenticator auth1 = cluster.authenticator();
-        Authenticator auth2 = new ClassicAuthenticator();
+        Authenticator auth2 = new PasswordAuthenticator();
 
         Assertions.assertThat(cluster.authenticator()).isSameAs(auth1);
 

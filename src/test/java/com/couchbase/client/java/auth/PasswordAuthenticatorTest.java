@@ -6,11 +6,11 @@ import java.util.List;
 
 import org.junit.Test;
 
-public class ClassicAuthenticatorTest {
+public class PasswordAuthenticatorTest {
 
     @Test
     public void shouldReturnEmptyListForUnsetBucketCred() {
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .cluster("admin", "password"); //test that cluster creds don't leak
 
         assertThat(auth.getCredentials(CredentialContext.BUCKET_KV, "foo"))
@@ -25,7 +25,7 @@ public class ClassicAuthenticatorTest {
 
     @Test
     public void shouldReturnEmptyListForUnsetClusterCred() {
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .bucket("foo", "bar"); //test that bucket creds don't leak
 
         assertThat(auth.getCredentials(CredentialContext.CLUSTER_MANAGEMENT, null))
@@ -34,7 +34,7 @@ public class ClassicAuthenticatorTest {
 
     @Test
     public void shouldIgnoreSpecificForClusterManagement() {
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .cluster("foo", "bar");
 
         List<Credential> withoutSpecific = auth.getCredentials(CredentialContext.CLUSTER_MANAGEMENT, null);
@@ -49,7 +49,7 @@ public class ClassicAuthenticatorTest {
     @Test
     public void shouldReturnSingletonListForSetBucketCred() {
         final Credential expected = new Credential("foo", "bar");
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .bucket("foo", "bar")
                 .cluster("admin", "password"); //test that cluster creds don't leak
 
@@ -67,7 +67,7 @@ public class ClassicAuthenticatorTest {
 
     @Test
     public void shouldReturnSingletonListForSetClusterCred() {
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .cluster("admin", "password")
                 .bucket("foo", "bar"); //test that bucket creds don't leak
 
@@ -81,7 +81,7 @@ public class ClassicAuthenticatorTest {
         Credential c1 = new Credential("foo", "bar");
         Credential c2 = new Credential("fooz", "baz");
 
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .bucket("foo", "bar")
                 .bucket("fooz", "baz")
                 .cluster("admin", "password");
@@ -94,7 +94,7 @@ public class ClassicAuthenticatorTest {
 
     @Test
     public void shouldReturnEmptyListForUnsetClusterLevelContexts() {
-        ClassicAuthenticator auth = new ClassicAuthenticator();
+        PasswordAuthenticator auth = new PasswordAuthenticator();
 
         assertThat(auth.getCredentials(CredentialContext.CLUSTER_N1QL, null)).isEmpty();
         assertThat(auth.getCredentials(CredentialContext.CLUSTER_FTS, null)).isEmpty();
@@ -106,7 +106,7 @@ public class ClassicAuthenticatorTest {
         Credential c2 = new Credential("fooz", "baz");
         Credential c1bis = new Credential("foo", "oof");
 
-        ClassicAuthenticator auth = new ClassicAuthenticator()
+        PasswordAuthenticator auth = new PasswordAuthenticator()
                 .bucket("foo", "bar")
                 .bucket("fooz", "baz");
 
@@ -131,17 +131,17 @@ public class ClassicAuthenticatorTest {
 
     @Test
     public void shouldBeEmpty() {
-        assertThat(new ClassicAuthenticator().isEmpty()).isTrue();
+        assertThat(new PasswordAuthenticator().isEmpty()).isTrue();
     }
 
     @Test
     public void shouldNotBeEmptyWithClusterCredentials() {
-        assertThat(new ClassicAuthenticator().cluster("foo", "bar").isEmpty()).isFalse();
+        assertThat(new PasswordAuthenticator().cluster("foo", "bar").isEmpty()).isFalse();
     }
 
     @Test
     public void shouldNotBeEmptyWithOneBucketCredential() {
-        assertThat(new ClassicAuthenticator().bucket("foo", "bar").isEmpty()).isFalse();
+        assertThat(new PasswordAuthenticator().bucket("foo", "bar").isEmpty()).isFalse();
     }
 
 }

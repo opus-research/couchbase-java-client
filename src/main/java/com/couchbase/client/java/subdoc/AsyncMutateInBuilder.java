@@ -344,12 +344,7 @@ public class AsyncMutateInBuilder {
     /**
      * Change the expiry of the enclosing document as part of the mutation.
      *
-     * Note that if the document had an expiration time set, it needs to be set again
-     * at this operation otherwise it will be reset to 0 (this is similar to a regular
-     * mutation where a new expiration must be set as well).
-     *
-     * @param expiry the new expiry to apply (not setting it will disable expiration
-     *               for the full document)
+     * @param expiry the new expiry to apply (or 0 to avoid changing the expiry)
      * @return this builder for chaining.
      */
     public AsyncMutateInBuilder withExpiry(int expiry) {
