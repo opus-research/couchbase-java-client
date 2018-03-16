@@ -229,10 +229,10 @@ public abstract class Query implements Serializable {
      * Create a new prepared query without parameters (the original statement shouldn't contain
      * parameter placeholders).
      *
-     * @param payload the {@link PreparedPayload} to execute (containing no placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing no placeholders).
      */
-    public static PreparedQuery prepared(PreparedPayload payload) {
-        return new PreparedQuery(payload, null);
+    public static PreparedQuery prepared(QueryPlan plan) {
+        return new PreparedQuery(plan, null);
     }
 
     /**
@@ -240,11 +240,11 @@ public abstract class Query implements Serializable {
      * should not be mutated until {@link #n1ql()} is called since it backs the
      * creation of the query string.
      *
-     * @param payload the {@link PreparedPayload} to execute (containing positional placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing positional placeholders).
      * @param positionalParams the values for the positional placeholders in statement.
      */
-    public static PreparedQuery prepared(PreparedPayload payload, JsonArray positionalParams) {
-        return new PreparedQuery(payload, positionalParams, null);
+    public static PreparedQuery prepared(QueryPlan plan, JsonArray positionalParams) {
+        return new PreparedQuery(plan, positionalParams, null);
     }
 
     /**
@@ -252,22 +252,22 @@ public abstract class Query implements Serializable {
      * should not be mutated until {@link #n1ql()} is called since it backs the
      * creation of the query string.
      *
-     * @param payload the {@link PreparedPayload} to execute (containing named placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing named placeholders).
      * @param namedParams the values for the named placeholders in statement.
      */
-    public static PreparedQuery prepared(PreparedPayload payload, JsonObject namedParams) {
-        return new PreparedQuery(payload, namedParams, null);
+    public static PreparedQuery prepared(QueryPlan plan, JsonObject namedParams) {
+        return new PreparedQuery(plan, namedParams, null);
     }
 
     /**
      * Create a new prepared query without parameters (the original statement shouldn't contain
      * parameter placeholders).
      *
-     * @param payload the {@link PreparedPayload} to execute (containing no placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing no placeholders).
      * @param params the {@link QueryParams query parameters}.
      */
-    public static PreparedQuery prepared(PreparedPayload payload, QueryParams params) {
-        return new PreparedQuery(payload, params);
+    public static PreparedQuery prepared(QueryPlan plan, QueryParams params) {
+        return new PreparedQuery(plan, params);
     }
 
     /**
@@ -275,12 +275,12 @@ public abstract class Query implements Serializable {
      * should not be mutated until {@link #n1ql()} is called since it backs the
      * creation of the query string.
      *
-     * @param payload the {@link PreparedPayload} to execute (containing no placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing positional placeholders).
      * @param positionalParams the values for the positional placeholders in statement.
      * @param params the {@link QueryParams query parameters}.
      */
-    public static PreparedQuery prepared(PreparedPayload payload, JsonArray positionalParams, QueryParams params) {
-        return new PreparedQuery(payload, positionalParams, params);
+    public static PreparedQuery prepared(QueryPlan plan, JsonArray positionalParams, QueryParams params) {
+        return new PreparedQuery(plan, positionalParams, params);
     }
 
     /**
@@ -288,12 +288,12 @@ public abstract class Query implements Serializable {
      * should not be mutated until {@link #n1ql()} is called since it backs the
      * creation of the query string.
      *
-     * @param payload the {@link PreparedPayload} to execute (containing no placeholders).
+     * @param plan the prepared {@link QueryPlan} to execute (containing named placeholders).
      * @param namedParams the values for the named placeholders in statement.
      * @param params the {@link QueryParams query parameters}.
      */
-    public static PreparedQuery prepared(PreparedPayload payload, JsonObject namedParams, QueryParams params) {
-        return new PreparedQuery(payload, namedParams, params);
+    public static PreparedQuery prepared(QueryPlan plan, JsonObject namedParams, QueryParams params) {
+        return new PreparedQuery(plan, namedParams, params);
     }
 
 }
