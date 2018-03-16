@@ -133,7 +133,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                         List<BucketSettings> settings = new ArrayList<BucketSettings>();
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;
-
+                            /* Support ancient Membase servers that don't have controllers and index. */
+                            JsonObject controllers = bucket.getObject("controllers");
+                            boolean enableFlush = controllers != null && controllers.getString("flush") != null;
+                            String replicaIndex = bucket.getString("replicaIndex");
+                            boolean indexReplicas = replicaIndex != null ? Boolean.parseBoolean(replicaIndex) : false;
+                            
                             int ramQuota = 0;
                             if (bucket.getObject("quota").get("ram") instanceof Long) {
                                 ramQuota = (int) (bucket.getObject("quota").getLong("ram") / 1024 / 1024);
@@ -143,12 +148,12 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
                             settings.add(DefaultBucketSettings.builder()
                                 .name(bucket.getString("name"))
-                                .enableFlush(bucket.getObject("controllers").getString("flush") != null)
+                                .enableFlush(enableFlush)
                                 .type(bucket.getString("bucketType").equals("membase")
                                     ? BucketType.COUCHBASE : BucketType.MEMCACHED)
                                 .replicas(bucket.getInt("replicaNumber"))
                                 .quota(ramQuota)
-                                .indexReplicas(bucket.getBoolean("replicaIndex"))
+                                .indexReplicas(indexReplicas)
                                 .port(bucket.getInt("proxyPort"))
                                 .password(bucket.getString("saslPassword"))
                                 .build());
@@ -353,3 +358,4 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
     }
 
 }
+
