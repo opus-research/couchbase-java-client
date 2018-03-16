@@ -80,9 +80,6 @@ public class ViewTest {
   public static final String VIEW_NAME_WO_REDUCE = "view_without_reduce";
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   static {
     ITEMS = new HashMap<String, Object>();
     int d = 0;
@@ -688,25 +685,17 @@ public class ViewTest {
         : "Adding key key112 failed";
   }
 
-  @Test
+  @Test(expected = InvalidViewException.class)
   public void testInvalidViewHandling() {
     String designDoc = "invalid_design";
     String viewName = "invalid_view";
-
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load view \""
-                + viewName + "\" for design doc \"" + designDoc + "\"");
     View view = client.getView(designDoc, viewName);
     assertNull(view);
   }
 
-  @Test
+  @Test(expected = InvalidViewException.class)
   public void testInvalidDesignDocHandling() {
     String designDoc = "invalid_design";
-
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load views for design doc \""
-            + designDoc + "\"");
     List<View> views = client.getViews(designDoc);
     assertNull(views);
   }

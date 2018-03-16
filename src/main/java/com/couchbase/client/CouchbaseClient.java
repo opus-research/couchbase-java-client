@@ -1510,7 +1510,6 @@ public class CouchbaseClient extends MemcachedClient
         new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
     Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
       private Map<String, String> stats = new HashMap<String, String>();
-
       public void gotStat(String name, String val) {
         stats.put(name, val);
       }

@@ -191,7 +191,7 @@ public class ClusterManagerTest extends TestCase {
   public void testWithSomeBadAddrs() throws InterruptedException {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://badurl:8091/pools"));
-    uris.add(URI.create("http://localhost:8091/pools"));
+    uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
     uris.add(URI.create("http://anotherbadurl:8091/pools"));
 
     manager.shutdown();
