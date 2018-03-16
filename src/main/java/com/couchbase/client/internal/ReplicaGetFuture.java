@@ -58,29 +58,13 @@ public class ReplicaGetFuture<T extends Object>
     this.completedFuture = new AtomicReference<GetFuture<T>>();
   }
 
-  /**
-   * Add a {@link GetFuture} to mointor.
-   *
-   * Note that this method is for internal use only.
-   *
-   * @param future the future to monitor.
-   */
   public void addFutureToMonitor(GetFuture<T> future) {
     this.monitoredFutures.add(future);
   }
 
-  /**
-   * Mark a monitored future as complete.
-   *
-   * Note that this method is for internal use only. It will also cancel
-   * all other registered futures.
-   *
-   * @param future the future to mark as completed.
-   */
   public void setCompletedFuture(GetFuture<T> future) {
-    completedFuture.set(future);
-    cancelOtherFutures(completedFuture.get());
     notifyListeners();
+    completedFuture.set(future);
   }
 
   @Override
@@ -101,6 +85,7 @@ public class ReplicaGetFuture<T extends Object>
 
     while(System.currentTimeMillis() - start <= timeoutMs) {
       if (isDone() && !completedFuture.get().isCancelled()) {
+        cancelOtherFutures(completedFuture.get());
         return completedFuture.get().get();
       }
     }
@@ -109,12 +94,7 @@ public class ReplicaGetFuture<T extends Object>
       + "before timeout.");
   }
 
-  /**
-   * Cancel all other futures that are not completed.
-   *
-   * @param successFuture
-   */
-  private void cancelOtherFutures(GetFuture successFuture) {
+  public void cancelOtherFutures(GetFuture successFuture) {
     for(GetFuture future : monitoredFutures) {
       if(!future.equals(successFuture)) {
         future.cancel(true);
