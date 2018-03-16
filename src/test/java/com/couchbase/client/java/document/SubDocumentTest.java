@@ -20,12 +20,13 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.subdoc;
+package com.couchbase.client.java.document;
 
 import static org.junit.Assert.assertEquals;
 
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.Mutation;
+import com.couchbase.client.java.document.subdoc.ExtendDirection;
+import com.couchbase.client.java.document.subdoc.LookupSpec;
+import com.couchbase.client.java.document.subdoc.MutationSpec;
 import org.junit.Test;
 
 /**
@@ -37,8 +38,8 @@ public class SubDocumentTest {
 
     @Test
     public void testLookupSpecToString() {
-        LookupSpec spec1 = new LookupSpec(Lookup.EXIST, "some/path/\"e\"");
-        LookupSpec spec2 = new LookupSpec(Lookup.GET, "some/path/\"e\"");
+        LookupSpec spec1 = LookupSpec.exists("some/path/\"e\"");
+        LookupSpec spec2 = LookupSpec.get("some/path/\"e\"");
 
         assertEquals("{EXIST:some/path/\"e\"}", spec1.toString());
         assertEquals("{GET:some/path/\"e\"}", spec2.toString());
@@ -46,10 +47,10 @@ public class SubDocumentTest {
 
     @Test
     public void testMutationSpecToString() {
-        MutationSpec spec1 = new MutationSpec(Mutation.DICT_ADD, "some/path/\"e\"", "toto", false);
-        MutationSpec spec2 = new MutationSpec(Mutation.ARRAY_ADD_UNIQUE, "some/path/\"e\"", "toto", true);
-        MutationSpec spec3 = new MutationSpec(Mutation.ARRAY_PUSH_LAST, "path", "toto", false);
-        MutationSpec spec4 = new MutationSpec(Mutation.ARRAY_PUSH_FIRST, "path", "toto", true);
+        MutationSpec spec1 = MutationSpec.insert("some/path/\"e\"", "toto", false);
+        MutationSpec spec2 = MutationSpec.addUnique("some/path/\"e\"", "toto", true);
+        MutationSpec spec3 = MutationSpec.extend("path", "toto", ExtendDirection.BACK, false);
+        MutationSpec spec4 = MutationSpec.extend("path", "toto", ExtendDirection.FRONT, true);
 
         assertEquals("{DICT_ADD:some/path/\"e\"}", spec1.toString());
         assertEquals("{ARRAY_ADD_UNIQUE, createParents:some/path/\"e\"}", spec2.toString());
