@@ -22,43 +22,25 @@
 
 package com.couchbase.client.internal;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import net.spy.memcached.internal.AbstractListenableFuture;
-import net.spy.memcached.internal.GenericCompletionListener;
-import net.spy.memcached.internal.GetCompletionListener;
 import net.spy.memcached.internal.GetFuture;
 
 /**
  * Represents the future result of a ReplicaGet operation.
  */
-public class ReplicaGetFuture<T extends Object>
-  extends AbstractListenableFuture<T, ReplicaGetCompletionListener>
-  implements Future<T> {
+public class ReplicaGetFuture<T extends Object> implements Future<T> {
 
   private final long timeout;
-  private GetFuture<T> completedFuture;
-  private List<GetFuture<T>> monitoredFutures;
+  private final List<GetFuture<T>> futures;
   private boolean cancelled = false;
 
-  public ReplicaGetFuture(long timeout, ExecutorService service) {
-    super(service);
+  public ReplicaGetFuture(long timeout, List<GetFuture<T>> futures) {
     this.timeout = timeout;
-    this.monitoredFutures = new ArrayList<GetFuture<T>>();
-  }
-
-  public void addFutureToMonitor(GetFuture<T> future) {
-    this.monitoredFutures.add(future);
-  }
-
-  public void setCompletedFuture(GetFuture<T> future) {
-    notifyListeners();
-    this.completedFuture = future;
+    this.futures = futures;
   }
 
   @Override
@@ -78,10 +60,11 @@ public class ReplicaGetFuture<T extends Object>
     long timeoutMs = TimeUnit.MILLISECONDS.convert(userTimeout, unit);
 
     while(System.currentTimeMillis() - start <= timeoutMs) {
-      if (completedFuture != null && completedFuture.isDone()
-        && !completedFuture.isCancelled()) {
-        cancelOtherFutures(completedFuture);
-        return (T) completedFuture.get();
+      for(GetFuture future: futures) {
+        if(future.isDone() && !future.isCancelled()) {
+          cancelOtherFutures(future);
+          return (T) future.get();
+        }
       }
     }
 
@@ -90,7 +73,7 @@ public class ReplicaGetFuture<T extends Object>
   }
 
   public void cancelOtherFutures(GetFuture successFuture) {
-    for(GetFuture future : monitoredFutures) {
+    for(GetFuture future : futures) {
       if(!future.equals(successFuture)) {
         future.cancel(true);
       }
@@ -101,12 +84,11 @@ public class ReplicaGetFuture<T extends Object>
   public boolean cancel(boolean ign) {
     cancelled = true;
     boolean allCancelled = true;
-    for(GetFuture future : monitoredFutures) {
+    for(GetFuture future : futures) {
       if(!future.cancel(ign)) {
         allCancelled = false;
       }
     }
-    notifyListeners();
     return allCancelled;
   }
 
@@ -117,32 +99,13 @@ public class ReplicaGetFuture<T extends Object>
 
   @Override
   public boolean isDone() {
-    return completedFuture != null && completedFuture.isDone();
-  }
-
-  public boolean allDone() {
-     boolean allDone = true;
-    for(GetFuture future : monitoredFutures) {
+    boolean allDone = true;
+    for(GetFuture future : futures) {
       if(!future.isDone()) {
         allDone = false;
       }
     }
     return allDone;
   }
-
-  @Override
-  public ReplicaGetFuture<T> addListener(
-    ReplicaGetCompletionListener listener) {
-    super.addToListeners((GenericCompletionListener) listener);
-    return this;
-  }
-
-  @Override
-  public ReplicaGetFuture<T> removeListener(
-    ReplicaGetCompletionListener listener) {
-    super.removeFromListeners((GenericCompletionListener) listener);
-    return this;
-  }
-
 
 }
