@@ -74,209 +74,178 @@ public class ViewQueryTest {
         assertEquals("design", query.getDesign());
         assertEquals("view", query.getView());
         assertFalse(query.isDevelopment());
-        assertEquals("", query.toQueryString());
-        assertEquals("ViewQuery(design/view){params=\"\"}", query.toString());
+        assertTrue(query.toString().isEmpty());
     }
 
     @Test
     public void shouldReduce() {
         ViewQuery query = ViewQuery.from("design", "view").reduce();
-        assertEquals("reduce=true", query.toQueryString());
+        assertEquals("reduce=true", query.toString());
 
         query = ViewQuery.from("design", "view").reduce(true);
-        assertEquals("reduce=true", query.toQueryString());
+        assertEquals("reduce=true", query.toString());
 
         query = ViewQuery.from("design", "view").reduce(false);
-        assertEquals("reduce=false", query.toQueryString());
+        assertEquals("reduce=false", query.toString());
     }
 
     @Test
     public void shouldLimit() {
         ViewQuery query = ViewQuery.from("design", "view").limit(10);
-        assertEquals("limit=10", query.toQueryString());
+        assertEquals("limit=10", query.toString());
     }
 
     @Test
     public void shouldSkip() {
         ViewQuery query = ViewQuery.from("design", "view").skip(3);
-        assertEquals("skip=3", query.toQueryString());
+        assertEquals("skip=3", query.toString());
     }
 
     @Test
     public void shouldGroup() {
         ViewQuery query = ViewQuery.from("design", "view").group();
-        assertEquals("group=true", query.toQueryString());
+        assertEquals("group=true", query.toString());
 
         query = ViewQuery.from("design", "view").group(false);
-        assertEquals("group=false", query.toQueryString());
+        assertEquals("group=false", query.toString());
     }
 
     @Test
     public void shouldGroupLevel() {
         ViewQuery query = ViewQuery.from("design", "view").groupLevel(2);
-        assertEquals("group_level=2", query.toQueryString());
+        assertEquals("group_level=2", query.toString());
     }
 
     @Test
     public void shouldSetInclusiveEnd() {
         ViewQuery query = ViewQuery.from("design", "view").inclusiveEnd();
-        assertEquals("inclusive_end=true", query.toQueryString());
+        assertEquals("inclusive_end=true", query.toString());
 
         query = ViewQuery.from("design", "view").inclusiveEnd(false);
-        assertEquals("inclusive_end=false", query.toQueryString());
+        assertEquals("inclusive_end=false", query.toString());
     }
 
     @Test
     public void shouldSetStale() {
         ViewQuery query = ViewQuery.from("design", "view").stale(Stale.FALSE);
-        assertEquals("stale=false", query.toQueryString());
+        assertEquals("stale=false", query.toString());
 
         query = ViewQuery.from("design", "view").stale(Stale.TRUE);
-        assertEquals("stale=ok", query.toQueryString());
+        assertEquals("stale=ok", query.toString());
 
         query = ViewQuery.from("design", "view").stale(Stale.UPDATE_AFTER);
-        assertEquals("stale=update_after", query.toQueryString());
+        assertEquals("stale=update_after", query.toString());
     }
 
     @Test
     public void shouldSetOnError() {
         ViewQuery query = ViewQuery.from("design", "view").onError(OnError.CONTINUE);
-        assertEquals("on_error=continue", query.toQueryString());
+        assertEquals("on_error=continue", query.toString());
 
         query = ViewQuery.from("design", "view").onError(OnError.STOP);
-        assertEquals("on_error=stop", query.toQueryString());
+        assertEquals("on_error=stop", query.toString());
 
     }
 
     @Test
     public void shouldSetDebug() {
         ViewQuery query = ViewQuery.from("design", "view").debug();
-        assertEquals("debug=true", query.toQueryString());
+        assertEquals("debug=true", query.toString());
 
         query = ViewQuery.from("design", "view").debug(false);
-        assertEquals("debug=false", query.toQueryString());
+        assertEquals("debug=false", query.toString());
     }
 
     @Test
     public void shouldSetDescending() {
         ViewQuery query = ViewQuery.from("design", "view").descending();
-        assertEquals("descending=true", query.toQueryString());
+        assertEquals("descending=true", query.toString());
 
         query = ViewQuery.from("design", "view").descending(false);
-        assertEquals("descending=false", query.toQueryString());
+        assertEquals("descending=false", query.toString());
     }
 
     @Test
     public void shouldHandleKey() {
         ViewQuery query = ViewQuery.from("design", "view").key("key");
-        assertEquals("key=%22key%22", query.toQueryString());
+        assertEquals("key=%22key%22", query.toString());
 
         query = ViewQuery.from("design", "view").key(1);
-        assertEquals("key=1", query.toQueryString());
+        assertEquals("key=1", query.toString());
 
         query = ViewQuery.from("design", "view").key(true);
-        assertEquals("key=true", query.toQueryString());
+        assertEquals("key=true", query.toString());
 
         query = ViewQuery.from("design", "view").key(3.55);
-        assertEquals("key=3.55", query.toQueryString());
+        assertEquals("key=3.55", query.toString());
 
         query = ViewQuery.from("design", "view").key(JsonArray.from("foo", 3));
-        assertEquals("key=%5B%22foo%22%2C3%5D", query.toQueryString());
+        assertEquals("key=%5B%22foo%22%2C3%5D", query.toString());
 
         query = ViewQuery.from("design", "view").key(JsonObject.empty().put("foo", true));
-        assertEquals("key=%7B%22foo%22%3Atrue%7D", query.toQueryString());
+        assertEquals("key=%7B%22foo%22%3Atrue%7D", query.toString());
     }
 
     @Test
     public void shouldHandleKeys() {
         JsonArray keysArray = JsonArray.from("foo", 3, true);
         ViewQuery query = ViewQuery.from("design", "view").keys(keysArray);
-        assertEquals("", query.toQueryString());
+        assertEquals("", query.toString());
         assertEquals(keysArray.toString(), query.getKeys());
-    }
-
-    @Test
-    public void shouldOutputSmallKeysInToString() {
-        JsonArray keysArray = JsonArray.from("foo", 3, true);
-        ViewQuery query = ViewQuery.from("design", "view").keys(keysArray);
-        assertEquals("", query.toQueryString());
-        assertEquals("ViewQuery(design/view){params=\"\", keys=\"[\"foo\",3,true]\"}", query.toString());
-    }
-
-    @Test
-    public void shouldTruncateLargeKeysInToString() {
-        StringBuilder largeString = new StringBuilder(142);
-        for (int i = 0; i < 140; i++) {
-            largeString.append('a');
-        }
-        largeString.append("bc");
-        JsonArray keysArray = JsonArray.from(largeString.toString());
-        ViewQuery query = ViewQuery.from("design", "view").keys(keysArray);
-        assertEquals("", query.toQueryString());
-        assertEquals("ViewQuery(design/view){params=\"\", keys=\"[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaa...\"(146 chars total)}", query.toString());
-    }
-
-    @Test
-    public void shouldOutputDesignDocViewDevAndIncludeDocsInToString() {
-        ViewQuery query = ViewQuery.from("a", "b").includeDocs().development();
-        assertEquals("", query.toQueryString());
-        assertEquals("ViewQuery(a/b){params=\"\", dev, includeDocs}", query.toString());
     }
 
     @Test
     public void shouldHandleStartKey() {
         ViewQuery query = ViewQuery.from("design", "view").startKey("key");
-        assertEquals("startkey=%22key%22", query.toQueryString());
+        assertEquals("startkey=%22key%22", query.toString());
 
         query = ViewQuery.from("design", "view").startKey(1);
-        assertEquals("startkey=1", query.toQueryString());
+        assertEquals("startkey=1", query.toString());
 
         query = ViewQuery.from("design", "view").startKey(true);
-        assertEquals("startkey=true", query.toQueryString());
+        assertEquals("startkey=true", query.toString());
 
         query = ViewQuery.from("design", "view").startKey(3.55);
-        assertEquals("startkey=3.55", query.toQueryString());
+        assertEquals("startkey=3.55", query.toString());
 
         query = ViewQuery.from("design", "view").startKey(JsonArray.from("foo", 3));
-        assertEquals("startkey=%5B%22foo%22%2C3%5D", query.toQueryString());
+        assertEquals("startkey=%5B%22foo%22%2C3%5D", query.toString());
 
         query = ViewQuery.from("design", "view").startKey(JsonObject.empty().put("foo", true));
-        assertEquals("startkey=%7B%22foo%22%3Atrue%7D", query.toQueryString());
+        assertEquals("startkey=%7B%22foo%22%3Atrue%7D", query.toString());
     }
 
     @Test
     public void shouldHandleEndKey() {
         ViewQuery query = ViewQuery.from("design", "view").endKey("key");
-        assertEquals("endkey=%22key%22", query.toQueryString());
+        assertEquals("endkey=%22key%22", query.toString());
 
         query = ViewQuery.from("design", "view").endKey(1);
-        assertEquals("endkey=1", query.toQueryString());
+        assertEquals("endkey=1", query.toString());
 
         query = ViewQuery.from("design", "view").endKey(true);
-        assertEquals("endkey=true", query.toQueryString());
+        assertEquals("endkey=true", query.toString());
 
         query = ViewQuery.from("design", "view").endKey(3.55);
-        assertEquals("endkey=3.55", query.toQueryString());
+        assertEquals("endkey=3.55", query.toString());
 
         query = ViewQuery.from("design", "view").endKey(JsonArray.from("foo", 3));
-        assertEquals("endkey=%5B%22foo%22%2C3%5D", query.toQueryString());
+        assertEquals("endkey=%5B%22foo%22%2C3%5D", query.toString());
 
         query = ViewQuery.from("design", "view").endKey(JsonObject.empty().put("foo", true));
-        assertEquals("endkey=%7B%22foo%22%3Atrue%7D", query.toQueryString());
+        assertEquals("endkey=%7B%22foo%22%3Atrue%7D", query.toString());
     }
 
     @Test
     public void shouldHandleStartKeyDocID() {
         ViewQuery query = ViewQuery.from("design", "view").startKeyDocId("mykey");
-        assertEquals("startkey_docid=mykey", query.toQueryString());
+        assertEquals("startkey_docid=mykey", query.toString());
     }
 
     @Test
     public void shouldHandleEndKeyDocID() {
         ViewQuery query = ViewQuery.from("design", "view").endKeyDocId("mykey");
-        assertEquals("endkey_docid=mykey", query.toQueryString());
+        assertEquals("endkey_docid=mykey", query.toString());
     }
 
     @Test
@@ -298,7 +267,7 @@ public class ViewQueryTest {
             .reduce(false)
             .startKey(JsonArray.from("foo", true));
         assertEquals("reduce=false&group=true&debug=true&descending=true&startkey=%5B%22foo%22%2Ctrue%5D",
-                query.toQueryString());
+                query.toString());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -328,7 +297,6 @@ public class ViewQueryTest {
             .development()
             .group()
             .reduce(false)
-            .keys(JsonArray.from("1", "2"))
             .startKey(JsonArray.from("foo", true));
 
         byte[] serialized = SerializationHelper.serializeToBytes(query);
@@ -366,8 +334,8 @@ public class ViewQueryTest {
 
         query.keys(keys);
         assertEquals(keysJson, query.getKeys());
-        assertFalse(query.toQueryString().contains("keys="));
-        assertFalse(query.toQueryString().contains("3"));
+        assertFalse(query.toString().contains("keys="));
+        assertFalse(query.toString().contains("3"));
     }
 
     @Test
