@@ -1,6 +1,5 @@
 package com.couchbase.client.java.convert;
 
-import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -62,12 +61,12 @@ public class JacksonJsonConverter implements Converter<JsonDocument, JsonObject>
     }
   }
 
-    @Override
-    public JsonDocument newDocument(String id, JsonObject content, long cas, int expiry, ResponseStatus status) {
-        return JsonDocument.create(id, content, cas, expiry, status);
-    }
+  @Override
+  public JsonDocument newDocument() {
+    return new JsonDocument();
+  }
 
-    /**
+  /**
    *
    */
   static class JsonObjectSerializer extends JsonSerializer<JsonObject> {

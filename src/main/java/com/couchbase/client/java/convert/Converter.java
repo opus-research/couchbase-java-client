@@ -1,13 +1,11 @@
 package com.couchbase.client.java.convert;
 
-import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.java.document.Document;
 import io.netty.buffer.ByteBuf;
 
 /**
  * Generic interface for document body converters.
  */
-public interface Converter<D extends Document, T> {
+public interface Converter<D, T> {
 
   /**
    * Converts decode a {@link ByteBuf} into the target format.
@@ -30,6 +28,6 @@ public interface Converter<D extends Document, T> {
    *
    * @return a new document.
    */
-  D newDocument(String id, T content, long cas, int expiry, ResponseStatus status);
+  D newDocument();
 
 }
