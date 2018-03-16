@@ -20,44 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.document.subdoc;
+package com.couchbase.client.java.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.PersistTo;
+import com.couchbase.client.java.ReplicateTo;
 
 /**
- * Utility class to create specs for the sub-document API's multi-{@link LookupCommand lookup} operations.
+ * The direction for a sub-document array extension operation.
+ * See {@link MutateInBuilder#extend(String, Object, ExtendDirection, boolean)}.
  *
- * @author Michael Nitschinger
  * @author Simon Baslé
+ * @author Michael Nitschinger
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class LookupSpec extends LookupCommand {
-
-    private LookupSpec(Lookup type, String path) {
-        super(type, path);
-    }
-
-    @Override
-    public String toString() {
-        return "{" + lookup() + ":" + path() + "}";
-    }
-
+public enum ExtendDirection {
     /**
-     * Create a GET lookup specification.
+     * Extend the array by placing the value at the front of the array (index 0).
      */
-    public static LookupSpec get(String path) {
-        return new LookupSpec(Lookup.GET, path);
-    }
-
+    FRONT,
     /**
-     * Create an EXIST lookup specification.
+     * Extend the array by placing the value at the back of the array (largest index).
      */
-    public static LookupSpec exists(String path) {
-        return new LookupSpec(Lookup.EXIST, path);
-    }
+    BACK
 }

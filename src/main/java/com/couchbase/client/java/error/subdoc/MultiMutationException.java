@@ -28,7 +28,7 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.ResponseStatus;
-import com.couchbase.client.java.document.subdoc.MutationSpec;
+import com.couchbase.client.java.subdoc.MutationSpec;
 
 /**
  * Exception denoting that at least one error occurred when applying
