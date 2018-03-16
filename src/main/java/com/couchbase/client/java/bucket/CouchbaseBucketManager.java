@@ -71,7 +71,7 @@ public class CouchbaseBucketManager implements BucketManager {
                 @Override
                 public BucketInfo call(BucketConfigResponse response) {
                     try {
-                        return DefaultBucketInfo.create(CouchbaseBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(response.config()));
+                        return DefaultBucketInfo.create(CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
                     } catch (Exception ex) {
                         throw new CouchbaseException("Could not parse bucket info.", ex);
                     }
@@ -119,7 +119,7 @@ public class CouchbaseBucketManager implements BucketManager {
                 public Observable<DesignDocument> call(GetDesignDocumentsResponse response) {
                     JsonObject converted = null;
                     try {
-                        converted = CouchbaseBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(response.content());
+                        converted = CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.content());
                     } catch (Exception e) {
                         throw new TranscodingException("Could not decode design document.", e);
                     }
@@ -161,7 +161,7 @@ public class CouchbaseBucketManager implements BucketManager {
                 public DesignDocument call(GetDesignDocumentResponse response) {
                     JsonObject converted = null;
                     try {
-                        converted = CouchbaseBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(response.content().toString(CharsetUtil.UTF_8));
+                        converted = CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.content().toString(CharsetUtil.UTF_8));
                     } catch (Exception e) {
                         throw new TranscodingException("Could not decode design document.", e);
                     }
@@ -200,7 +200,7 @@ public class CouchbaseBucketManager implements BucketManager {
     public Observable<DesignDocument> upsertDesignDocument(final DesignDocument designDocument, boolean development) {
         String body = null;
         try {
-            body = CouchbaseBucket.JSON_OBJECT_TRANSCODER.jsonObjectToString(designDocument.toJsonObject());
+            body = CouchbaseBucket.JSON_TRANSCODER.jsonObjectToString(designDocument.toJsonObject());
         } catch (Exception e) {
             throw new TranscodingException("Could not encode design document: ", e);
         }
