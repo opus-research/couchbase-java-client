@@ -125,7 +125,7 @@ public class ConfigurationParserJSON extends SpyObject
 
       for (int i = 0; i < allBuckets.length(); i++) {
         JSONObject currentBucket = allBuckets.getJSONObject(i);
-        Bucket bucket = parseBucketFromJSON(currentBucket, null);
+        Bucket bucket = parseBucketFromJSON(currentBucket);
         bucketsMap.put(bucket.getName(), bucket);
       }
 
@@ -144,24 +144,7 @@ public class ConfigurationParserJSON extends SpyObject
    */
   public Bucket parseBucket(String bucketJson) throws ParseException {
     try {
-      return parseBucketFromJSON(new JSONObject(bucketJson), null);
-    } catch (JSONException e) {
-      throw new ParseException(e.getMessage(), 0);
-    }
-  }
-
-  /**
-   * Parse a raw bucket config and update an old bucket with the new infos.
-   *
-   * @param bucketJson the new JSON information.
-   * @param currentBucket the current bucket to update.
-   * @return the parsed configuration.
-   * @throws ParseException if the JSON could not be parsed properly.
-   */
-  public Bucket updateBucket(String bucketJson, Bucket currentBucket)
-    throws ParseException {
-    try {
-      return parseBucketFromJSON(new JSONObject(bucketJson), currentBucket);
+      return parseBucketFromJSON(new JSONObject(bucketJson));
     } catch (JSONException e) {
       throw new ParseException(e.getMessage(), 0);
     }
@@ -170,25 +153,16 @@ public class ConfigurationParserJSON extends SpyObject
   /**
    * Helper method to create a {@link Bucket} config from JSON.
    *
-   * Note that a new bucket is currently always returned, the optional bucket
-   * that can be passed in is used to reuse already existing {@link VBucket}
-   * to reduce GC pressure in rebalance phases.
-   *
    * @param bucketJson the input as a {@link JSONObject}.
-   * @param current the optional current bucket.
    * @return a parsed {@link Bucket} configuration.
    * @throws ParseException if the JSON could not be parsed properly.
    */
-  private Bucket parseBucketFromJSON(JSONObject bucketJson, Bucket current)
+  private Bucket parseBucketFromJSON(JSONObject bucketJson)
     throws ParseException {
     try {
       String bucketName = bucketJson.getString("name");
       URI streamingUri = new URI(bucketJson.getString("streamingUri"));
-      Config currentConfig = null;
-      if (current != null) {
-        currentConfig = current.getConfig();
-      }
-      Config config = configFactory.create(bucketJson, currentConfig);
+      Config config = configFactory.create(bucketJson);
 
       List<Node> nodes = new ArrayList<Node>();
       JSONArray allNodes = bucketJson.getJSONArray("nodes");
