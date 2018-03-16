@@ -32,7 +32,9 @@ import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.view.*;
+import com.couchbase.client.java.view.View;
+import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 
 import java.util.List;
@@ -1908,8 +1910,6 @@ public interface Bucket {
      */
     ViewResult query(ViewQuery query);
 
-    SpatialViewResult query(SpatialViewQuery query);
-
     /**
      * Queries a Couchbase Server {@link View} with a custom timeout.
      *
@@ -1926,8 +1926,6 @@ public interface Bucket {
      * @return a result containing all the found rows and additional information.
      */
     ViewResult query(ViewQuery query, long timeout, TimeUnit timeUnit);
-
-    SpatialViewResult query(SpatialViewQuery query, long timeout, TimeUnit timeUnit);
 
     /**
      * Experimental: Queries a N1QL secondary index with the default query timeout.
