@@ -8,8 +8,11 @@ import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.java.bucket.ViewQueryMapper;
+import com.couchbase.client.java.convert.BinaryConverter;
+import com.couchbase.client.java.convert.CachedData;
 import com.couchbase.client.java.convert.Converter;
 import com.couchbase.client.java.convert.JacksonJsonConverter;
+import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -40,6 +43,7 @@ public class CouchbaseBucket implements Bucket {
 
     converters = new HashMap<Class<?>, Converter<?, ?>>();
     converters.put(JsonDocument.class, new JacksonJsonConverter());
+    converters.put(BinaryDocument.class, new BinaryConverter());
   }
 
   @Override
@@ -50,76 +54,80 @@ public class CouchbaseBucket implements Bucket {
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
-    return core.<GetResponse>send(new GetRequest(id, bucket)).map(new Func1<GetResponse, D>() {
-        @Override
-        public D call(final GetResponse response) {
-          Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
-          Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
-          return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
-        }
-      }
-    );
+    return core
+        .<GetResponse>send(new GetRequest(id, bucket))
+        .map(new Func1<GetResponse, D>() {
+               @Override
+               public D call(final GetResponse response) {
+                 final Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
+                 final Object content = (response.status() == ResponseStatus.SUCCESS) ? converter.decode(response.content(), response.flags()) : null;
+                 return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
+               }
+             }
+        );
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> insert(final D document) {
     final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
-    ByteBuf content = converter.encode(document.content());
+    final CachedData cachedData = converter.encode(document.content());
+
     return core
-      .<InsertResponse>send(new InsertRequest(document.id(), content, bucket))
-      .map(new Func1<InsertResponse, D>() {
-        @Override
-        public D call(InsertResponse response) {
-          return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
-              response.status());
-        }
-      });
+        .<InsertResponse>send(new InsertRequest(document.id(), cachedData.getBuffer(), 0, cachedData.getFlags(), bucket))
+        .map(new Func1<InsertResponse, D>() {
+          @Override
+          public D call(final InsertResponse response) {
+            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(), response.status());
+          }
+        });
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> upsert(final D document) {
     final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
-    ByteBuf content = converter.encode(document.content());
-    return core.<UpsertResponse>send(new UpsertRequest(document.id(), content, bucket))
-      .map(new Func1<UpsertResponse, D>() {
-        @Override
-        public D call(UpsertResponse response) {
-            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
-                response.status());
-        }
-      });
+    final CachedData cachedData = converter.encode(document.content());
+
+    return core
+        .<UpsertResponse>send(new UpsertRequest(document.id(), cachedData.getBuffer(), 0, cachedData.getFlags(), bucket))
+        .map(new Func1<UpsertResponse, D>() {
+          @Override
+          public D call(final UpsertResponse response) {
+            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(), response.status());
+          }
+        });
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> replace(final D document) {
     final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
-    ByteBuf content = converter.encode(document.content());
-    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), content, bucket))
-      .map(new Func1<ReplaceResponse, D>() {
-        @Override
-        public D call(ReplaceResponse response) {
-            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
-                response.status());
-        }
-      });
+    final CachedData cachedData = converter.encode(document.content());
+
+    return core
+        .<ReplaceResponse>send(new ReplaceRequest(document.id(), cachedData.getBuffer(), 0, 0, cachedData.getFlags(), bucket))
+        .map(new Func1<ReplaceResponse, D>() {
+          @Override
+          public D call(final ReplaceResponse response) {
+            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(), response.status());
+          }
+        });
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> remove(final D document) {
-      final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
-    RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
-      bucket);
-    return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
-      @Override
-      public D call(RemoveResponse response) {
-          return (D) converter.newDocument(document.id(), document.content(), document.cas(), document.expiry(),
-              response.status());
-      }
-    });
+    final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
+    final RemoveRequest request = new RemoveRequest(document.id(), document.cas(), bucket);
+
+    return core
+        .<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
+          @Override
+          public D call(final RemoveResponse response) {
+            return (D) converter.newDocument(document.id(), document.content(), document.cas(), document.expiry(), response.status());
+          }
+        });
   }
 
   @Override
@@ -130,52 +138,53 @@ public class CouchbaseBucket implements Bucket {
   @Override
   @SuppressWarnings("unchecked")
   public <D extends Document<?>> Observable<D> remove(final String id, final Class<D> target) {
-    Converter<?, ?> converter = converters.get(target);
+    final Converter<?, ?> converter = converters.get(target);
+
     return remove((D) converter.newDocument(id, null, 0, 0, null));
   }
 
   @Override
   public Observable<ViewResult> query(final ViewQuery query) {
-    final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
-        query.toString(), bucket, password);
+    final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(), query.toString(), bucket, password);
 
     return core
         .<ViewQueryResponse>send(request)
         .flatMap(new ViewQueryMapper(converters))
         .map(new Func1<JsonObject, ViewResult>() {
-            @Override
-            public ViewResult call(JsonObject object) {
-                return new ViewResult(object.getString("id"), object.getString("key"), object.get("value"));
-            }
-        }
-    );
+               @Override
+               public ViewResult call(final JsonObject object) {
+                 return new ViewResult(object.getString("id"), object.getString("key"), object.get("value"));
+               }
+             }
+        );
   }
 
-    @Override
-    public Observable<QueryResult> query(final Query query) {
-        return query(query.toString());
-    }
+  @Override
+  public Observable<QueryResult> query(final Query query) {
+    return query(query.toString());
+  }
 
-    @Override
-    public Observable<QueryResult> query(final String query) {
-        final Converter<?, ?> converter = converters.get(JsonDocument.class);
-        GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
-        return core
-            .<GenericQueryResponse>send(request)
-            .filter(new Func1<GenericQueryResponse, Boolean>() {
-                @Override
-                public Boolean call(GenericQueryResponse response) {
-                    return response.content() != null;
-                }
-            })
-            .map(new Func1<GenericQueryResponse, QueryResult>() {
-                @Override
-                public QueryResult call(GenericQueryResponse response) {
-                    ByteBuf content = Unpooled.copiedBuffer(response.content(), CharsetUtil.UTF_8);
-                    QueryResult result = new QueryResult((JsonObject) converter.decode(content));
-                    content.release();
-                    return result;
-                }
-            });
-    }
+  @Override
+  public Observable<QueryResult> query(final String query) {
+    final Converter<?, ?> converter = converters.get(JsonDocument.class);
+    final GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
+
+    return core
+        .<GenericQueryResponse>send(request)
+        .filter(new Func1<GenericQueryResponse, Boolean>() {
+          @Override
+          public Boolean call(final GenericQueryResponse response) {
+            return response.content() != null;
+          }
+        })
+        .map(new Func1<GenericQueryResponse, QueryResult>() {
+          @Override
+          public QueryResult call(final GenericQueryResponse response) {
+            final ByteBuf content = Unpooled.copiedBuffer(response.content(), CharsetUtil.UTF_8);
+            final QueryResult result = new QueryResult((JsonObject) converter.decode(content, 0));
+            content.release();
+            return result;
+          }
+        });
+  }
 }
