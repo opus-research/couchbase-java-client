@@ -2281,9 +2281,27 @@ public interface Bucket {
      */
     QueryResult query(Query query, long timeout, TimeUnit timeUnit);
 
+
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
-     * {@link Statement}, with the default timeout.
+     * {@link String} statement, with the default timeout. Statement can contain placeholders.
+     *
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     *
+     * @param statement the statement to prepare a plan for.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     */
+    QueryPlan prepare(String statement);
+
+    /**
+     * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
+     * {@link Statement}, with the default timeout. Statement can contain placeholders.
      *
      * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
@@ -2300,7 +2318,26 @@ public interface Bucket {
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
-     * {@link Statement}, with a custom timeout.
+     * {@link String} statement, with a custom timeout. Statement can contain placeholders.
+     *
+     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     *
+     * @param statement the statement to prepare a plan for.
+     * @param timeout the custom timeout.
+     * @param timeUnit the unit for the timeout.
+     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     */
+    QueryPlan prepare(String statement, long timeout, TimeUnit timeUnit);
+
+    /**
+     * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
+     * {@link Statement}, with a custom timeout. Statement can contain placeholders.
      *
      * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
      *
