@@ -273,17 +273,6 @@ public class N1qlQueryTest {
     }
 
     @Test
-    public void shouldDisableMetrics() {
-        N1qlQuery query = N1qlQuery.simple(
-            select("*").fromCurrentBucket().limit(1),
-            N1qlParams.build().enableMetrics(false)
-        );
-
-        N1qlQueryResult result = ctx.bucket().query(query);
-        assertNull(result.info());
-    }
-
-    @Test
     public void shouldSelectByteArrayEagerlyAndJsonObjectLazily() throws NoSuchFieldException, IllegalAccessException {
         N1qlQuery query = N1qlQuery.simple(select("*").from(i(ctx.bucketName())).limit(3), WITH_CONSISTENCY);
 

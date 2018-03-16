@@ -50,7 +50,7 @@ public class N1qlParams implements Serializable {
     private String scanWait;
     private String clientContextId;
     private Integer maxParallelism;
-    private boolean enableMetrics;
+
     private MutationState mutationState;
 
     /**
@@ -60,7 +60,6 @@ public class N1qlParams implements Serializable {
 
     private N1qlParams() {
         adhoc = true;
-        enableMetrics = true;
     }
 
     /**
@@ -84,9 +83,6 @@ public class N1qlParams implements Serializable {
         }
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
-        }
-        if (!this.enableMetrics) {
-            queryJson.put("metrics", false);
         }
 
         if (this.mutationState != null) {
@@ -149,19 +145,6 @@ public class N1qlParams implements Serializable {
      */
     public N1qlParams withContextId(String clientContextId) {
         this.clientContextId = clientContextId;
-        return this;
-    }
-
-    /**
-     * If set to false (true being the default), the metrics object will not be returned from N1QL and
-     * as a result be more efficient. Note that if metrics are disabled you are loosing information
-     * to diagnose problems - so use with care!
-     *
-     * @param enableMetrics true if enabled, false otherwise (true = default).
-     * @return this {@link N1qlParams} for chaining.
-     */
-    public N1qlParams enableMetrics(boolean enableMetrics) {
-        this.enableMetrics = enableMetrics;
         return this;
     }
 
