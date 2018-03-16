@@ -63,14 +63,14 @@ import static org.mockito.Mockito.mock;
 /**
  * Tests the ViewNodes for their correct behavior.
  */
-public class DefaultViewNodeTest {
+public class ViewNodeTest {
 
   /**
    * This test tries to retrieve unresponsive node by establishing an HTTP
    * connection to a single Couchbase node.
    *
    * @pre Build a connection manager and socket address using the server
-   * configurations. Pass these to DefaultViewNode to retrieve its new instance.
+   * configurations. Pass these to ViewNode to retrieve its new instance.
    * Call writeOp to request for connection.
    * @post Asserts false if its not able to get connection.
    */
@@ -78,7 +78,7 @@ public class DefaultViewNodeTest {
   public void testUnresponsiveViewNode() throws IOReactorException {
     AsyncConnectionManager mgr = createConMgr(TestConfig.IPV4_ADDR, 8091);
     InetSocketAddress addr = new InetSocketAddress(TestConfig.IPV4_ADDR, 8091);
-    DefaultViewNode viewNode = new DefaultViewNode(addr, mgr, 0, 0, 0, "", "");
+    ViewNode viewNode = new ViewNode(addr, mgr, 0, 0, 0, "", "");
 
     assertFalse("View node has write ops.", viewNode.hasWriteOps());
 
@@ -148,12 +148,12 @@ public class DefaultViewNodeTest {
 
     AsyncNHttpClientHandler protocolHandler = new AsyncNHttpClientHandler(
       httpproc,
-      new DefaultViewNode.MyHttpRequestExecutionHandler(mock(DefaultViewConnection.class)),
+      new ViewNode.MyHttpRequestExecutionHandler(mock(ViewConnection.class)),
       new DefaultConnectionReuseStrategy(),
       new DirectByteBufferAllocator(), params
     );
 
-    protocolHandler.setEventListener(new DefaultViewNode.EventLogger());
+    protocolHandler.setEventListener(new ViewNode.EventLogger());
     RequeueOpCallback callback = mock(RequeueOpCallback.class);
     AsyncConnectionManager manager = new AsyncConnectionManager(
       target,

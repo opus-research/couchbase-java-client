@@ -211,22 +211,9 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       new ConfigurationProviderHTTP(baseList, bucket, password);
   }
 
-  /**
-   * Returns a {@link DefaultViewNode} based on the given address.
-   *
-   * Note that this method is deprecated because it mixes concerns with
-   * the factory and the {@link ViewConnection}. It is currently only called
-   * within the {@link ViewConnection} and will be removed once transitioned
-   * over to a new system.
-   *
-   * @param addr the address of the node.
-   * @param connMgr the connection manager to use.
-   * @return a created view node.
-   * @deprecated do not call this method directly.
-   */
-  public DefaultViewNode createDefaultViewNode(InetSocketAddress addr,
-    AsyncConnectionManager connMgr) {
-    return new DefaultViewNode(addr, connMgr, opQueueLen,
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
         getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
   }
 
@@ -248,7 +235,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public ViewConnection createViewConnection(
       List<InetSocketAddress> addrs) throws IOException {
-    return new DefaultViewConnection(this, addrs, getInitialObservers());
+    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
