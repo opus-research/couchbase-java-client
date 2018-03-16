@@ -456,18 +456,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder dcpConnectionBufferSize(int dcpConnectionBufferSize) {
-            super.dcpConnectionBufferSize(dcpConnectionBufferSize);
-            return this;
-        }
-
-        @Override
-        public Builder dcpConnectionBufferAckThreshold(int dcpConnectionBufferAckThreshold) {
-            super.dcpConnectionBufferAckThreshold(dcpConnectionBufferAckThreshold);
-            return this;
-        }
-
-        @Override
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }
