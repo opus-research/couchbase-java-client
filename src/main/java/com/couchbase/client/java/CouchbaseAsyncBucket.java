@@ -62,7 +62,6 @@ import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
-import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
@@ -86,6 +85,7 @@ import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.AsyncQueryRow;
 import com.couchbase.client.java.query.DefaultAsyncQueryResult;
 import com.couchbase.client.java.query.DefaultAsyncQueryRow;
+import com.couchbase.client.java.query.NamedPreparedStatementException;
 import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
@@ -115,7 +115,6 @@ import com.couchbase.client.java.view.ViewQueryResponseMapper;
 import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.exceptions.CompositeException;
-import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -210,8 +209,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
-        return core
-            .<GetResponse>send(new GetRequest(id, bucket))
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
+                @Override
+                public Observable<GetResponse> call() {
+                    return core.send(new GetRequest(id, bucket));
+                }
+            })
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -247,9 +250,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<Boolean> exists(String id) {
-        return core
-            .<ObserveResponse>send(new ObserveRequest(id, 0, true, (short) 0, bucket))
+    public Observable<Boolean> exists(final String id) {
+        return Observable.defer(new Func0<Observable<ObserveResponse>>() {
+                @Override
+                public Observable<ObserveResponse> call() {
+                    return core.send(new ObserveRequest(id, 0, true, (short) 0, bucket));
+                }
+            })
             .map(new Func1<ObserveResponse, Boolean>() {
                 @Override
                 public Boolean call(ObserveResponse response) {
@@ -288,7 +295,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
-        return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime))
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
+                @Override
+                public Observable<GetResponse> call() {
+                    return core.send(new GetRequest(id, bucket, true, false, lockTime));
+                }
+            })
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -300,7 +312,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         content.release();
                     }
 
-                    switch(response.status()) {
+                    switch (response.status()) {
                         case NOT_EXISTS:
                             return false;
                         case TEMPORARY_FAILURE:
@@ -338,7 +350,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
-        return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry))
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
+                @Override
+                public Observable<GetResponse> call() {
+                    return core.send(new GetRequest(id, bucket, false, true, expiry));
+                }
+            })
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
                 public Boolean call(GetResponse response) {
@@ -350,7 +367,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         content.release();
                     }
 
-                    switch(response.status()) {
+                    switch (response.status()) {
                         case NOT_EXISTS:
                             return false;
                         case TEMPORARY_FAILURE:
@@ -397,43 +414,48 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(),
                         response.status());
                 }
-            });
+            })
+            .cache(type.maxAffectedNodes());
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> insert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return core
-            .<InsertResponse>send(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
-            .map(new Func1<InsertResponse, D>() {
-                @Override
-                public D call(InsertResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
 
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                                document.content(), response.cas());
-                    }
-
-                    switch (response.status()) {
-                        case TOO_BIG:
-                            throw new RequestTooBigException();
-                        case EXISTS:
-                            throw new DocumentAlreadyExistsException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<InsertResponse>>() {
+            @Override
+            public Observable<InsertResponse> call() {
+                Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+                return core.send(new InsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket));
+            }
+        }).map(new Func1<InsertResponse, D>() {
+            @Override
+            public D call(InsertResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), document.expiry(),
+                        document.content(), response.cas());
+                }
+
+                switch (response.status()) {
+                    case TOO_BIG:
+                        throw new RequestTooBigException();
+                    case EXISTS:
+                        throw new DocumentAlreadyExistsException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -472,36 +494,40 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> upsert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return core
-            .<UpsertResponse>send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket))
-            .map(new Func1<UpsertResponse, D>() {
-                @Override
-                public D call(UpsertResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
 
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(),
-                                document.content(), response.cas());
-                    }
-
-                    switch (response.status()) {
-                        case TOO_BIG:
-                            throw new RequestTooBigException();
-                        case EXISTS:
-                            throw new CASMismatchException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<UpsertResponse>>() {
+            @Override
+            public Observable<UpsertResponse> call() {
+                Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+                return core.send(new UpsertRequest(document.id(), encoded.value1(), document.expiry(), encoded.value2(), bucket));
+            }
+        }).map(new Func1<UpsertResponse, D>() {
+            @Override
+            public D call(UpsertResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), document.expiry(),
+                        document.content(), response.cas());
+                }
+
+                switch (response.status()) {
+                    case TOO_BIG:
+                        throw new RequestTooBigException();
+                    case EXISTS:
+                        throw new CASMismatchException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -541,39 +567,42 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> replace(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
 
-        return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(),
-            encoded.value2(), bucket))
-            .map(new Func1<ReplaceResponse, D>() {
-                @Override
-                public D call(ReplaceResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(),
-                                response.cas());
-                    }
-
-                    switch (response.status()) {
-                        case TOO_BIG:
-                            throw new RequestTooBigException();
-                        case NOT_EXISTS:
-                            throw new DocumentDoesNotExistException();
-                        case EXISTS:
-                            throw new CASMismatchException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<ReplaceResponse>>() {
+            @Override
+            public Observable<ReplaceResponse> call() {
+                Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+                return core.send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket));
+            }
+        }).map(new Func1<ReplaceResponse, D>() {
+            @Override
+            public D call(ReplaceResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(),
+                        response.cas());
+                }
+
+                switch (response.status()) {
+                    case TOO_BIG:
+                        throw new RequestTooBigException();
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException();
+                    case EXISTS:
+                        throw new CASMismatchException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -611,36 +640,38 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        return core
-            .<RemoveResponse>send(new RemoveRequest(document.id(), document.cas(), bucket))
-            .map(new Func1<RemoveResponse, D>() {
-                @Override
-                public D call(final RemoveResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    }
-
-                    switch(response.status()) {
-                        case NOT_EXISTS:
-                            throw new DocumentDoesNotExistException();
-                        case EXISTS:
-                            throw new CASMismatchException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        return Observable.defer(new Func0<Observable<RemoveResponse>>() {
+            @Override
+            public Observable<RemoveResponse> call() {
+                return core.send(new RemoveRequest(document.id(), document.cas(), bucket));
+            }
+        }).map(new Func1<RemoveResponse, D>() {
+            @Override
+            public D call(final RemoveResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
+                }
+
+                switch (response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException();
+                    case EXISTS:
+                        throw new CASMismatchException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -744,68 +775,18 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public Observable<AsyncQueryResult> query(final Statement statement) {
         if (statement instanceof PreparedPayload) {
             PreparedPayload preparedPayload = (PreparedPayload) statement;
-            Query preparedQuery = Query.prepared(preparedPayload);
-            return query(preparedQuery);
+            PreparedQuery preparedQuery = Query.prepared(preparedPayload);
+            return queryPrepared(preparedQuery);
         }
         return query(Query.simple(statement));
     }
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
-        Observable<AsyncQueryResult> result = queryRaw(query.n1ql().toString());
-
-        if (query instanceof PreparedQuery && environment().retryStrategy() == BestEffortRetryStrategy.INSTANCE) {
-            /*
-            retry handling for prepared statements:
-             - the statement() is a PreparedPayload (with a name and the original statement)
-             - attempting to prepare a PreparedPayload will reuse the name and original statement
-             - this will update the query node's cache with the same info as the node on which we previously prepared
-             */
-            result = result.flatMap(new Func1<AsyncQueryResult, Observable<? extends AsyncQueryResult>>() {
-                @Override
-                public Observable<? extends AsyncQueryResult> call(AsyncQueryResult aqr) {
-                    //cache errors so that peeking into it then re-emitting them works
-                    Observable<JsonObject> errors = aqr.errors().cache();
-                    //peek at errors
-                    return errors
-                            //only take interest in the 4040 error (prepared statement name doesn't exist)
-                            .filter(new Func1<JsonObject, Boolean>() {
-                                @Override
-                                public Boolean call(JsonObject error) {
-                                    return error.getInt("code") == 4040;
-                                }
-                            })
-                            .doOnNext(new Action1<JsonObject>() {
-                                @Override
-                                public void call(JsonObject planNotFound) {
-                                    LOGGER.warn("Re-prepared a named prepared statement, " + planNotFound.getString("msg"));
-                                }
-                            })
-                            //if 4040 encountered, re-prepare...
-                            .flatMap(new Func1<JsonObject, Observable<PreparedPayload>>() {
-                                @Override
-                                public Observable<PreparedPayload> call(JsonObject planNotFound) {
-                                    return CouchbaseAsyncBucket.this.prepare(query.statement());
-                                }
-                            })
-                            //...and reissue the query as is (this allows to include params as well...
-                            // the name should now be valid)
-                            .flatMap(new Func1<PreparedPayload, Observable<AsyncQueryResult>>() {
-                                @Override
-                                public Observable<AsyncQueryResult> call(PreparedPayload newPlan) {
-                                    return queryRaw(query.n1ql().toString());
-                                }
-                            })
-                            //...otherwise filtered errors will be empty. Recreate result from original
-                            // but with the cached errors (since original.errors() will have been consumed)
-                            .defaultIfEmpty(new DefaultAsyncQueryResult(aqr.rows(), aqr.signature(),
-                                    aqr.info(), errors, aqr.finalSuccess(), aqr.parseSuccess(),
-                                    aqr.requestId(), aqr.clientContextId()));
-                }
-            });
-
+        if (query instanceof PreparedQuery) {
+            return queryPrepared((PreparedQuery) query);
         }
-        return result;
+        return queryRaw(query.n1ql().toString());
     }
 
     /**
@@ -820,82 +801,84 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
      * @return a result containing all found rows and additional information.
      */
     /* package */ Observable<AsyncQueryResult> queryRaw(final String query) {
-        GenericQueryRequest request = GenericQueryRequest.jsonQuery(query, bucket, password);
-        return core
-            .<GenericQueryResponse>send(request)
-            .flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {
-                @Override
-                public Observable<AsyncQueryResult> call(final GenericQueryResponse response) {
-                    final Observable<AsyncQueryRow> rows = response.rows().map(new Func1<ByteBuf, AsyncQueryRow>() {
-                        @Override
-                        public AsyncQueryRow call(ByteBuf byteBuf) {
-                            try {
-                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                return new DefaultAsyncQueryRow(value);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
-                            }
+        return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
+            @Override
+            public Observable<GenericQueryResponse> call() {
+                return core.send(GenericQueryRequest.jsonQuery(query, bucket, password));
+            }
+        }).flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {
+            @Override
+            public Observable<AsyncQueryResult> call(final GenericQueryResponse response) {
+                final Observable<AsyncQueryRow> rows = response.rows().map(new Func1<ByteBuf, AsyncQueryRow>() {
+                    @Override
+                    public AsyncQueryRow call(ByteBuf byteBuf) {
+                        try {
+                            JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                            return new DefaultAsyncQueryRow(value);
+                        } catch (Exception e) {
+                            throw new TranscodingException("Could not decode N1QL Query Row.", e);
+                        } finally {
+                            byteBuf.release();
                         }
-                    });
-                    final Observable<Object> signature = response.signature().map(new Func1<ByteBuf, Object>() {
-                        @Override
-                        public Object call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_OBJECT_TRANSCODER.byteBufJsonValueToObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode N1QL Query Signature", e);
-                            } finally {
-                                byteBuf.release();
-                            }
+                    }
+                });
+                final Observable<Object> signature = response.signature().map(new Func1<ByteBuf, Object>() {
+                    @Override
+                    public Object call(ByteBuf byteBuf) {
+                        try {
+                            return JSON_OBJECT_TRANSCODER.byteBufJsonValueToObject(byteBuf);
+                        } catch (Exception e) {
+                            throw new TranscodingException("Could not decode N1QL Query Signature", e);
+                        } finally {
+                            byteBuf.release();
                         }
-                    });
-                    final Observable<QueryMetrics> info = response.info().map(new Func1<ByteBuf, JsonObject>() {
-                        @Override
-                        public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
-                            }
+                    }
+                });
+                final Observable<QueryMetrics> info = response.info().map(new Func1<ByteBuf, JsonObject>() {
+                    @Override
+                    public JsonObject call(ByteBuf byteBuf) {
+                        try {
+                            return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                        } catch (Exception e) {
+                            throw new TranscodingException("Could not decode N1QL Query Info.", e);
+                        } finally {
+                            byteBuf.release();
                         }
-                    })
-                    .map(new Func1<JsonObject, QueryMetrics>() {
-                        @Override
-                        public QueryMetrics call(JsonObject jsonObject) {
-                            return new QueryMetrics(jsonObject);
+                    }
+                })
+                .map(new Func1<JsonObject, QueryMetrics>() {
+                    @Override
+                    public QueryMetrics call(JsonObject jsonObject) {
+                        return new QueryMetrics(jsonObject);
+                    }
+                });
+                final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
+                    @Override
+                    public Boolean call(String s) {
+                        return "success".equalsIgnoreCase(s) || "completed".equalsIgnoreCase(s);
+                    }
+                });
+                final Observable<JsonObject> errors = response.errors().map(new Func1<ByteBuf, JsonObject>() {
+                    @Override
+                    public JsonObject call(ByteBuf byteBuf) {
+                        try {
+                            return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                        } catch (Exception e) {
+                            throw new TranscodingException("Could not decode View Info.", e);
+                        } finally {
+                            byteBuf.release();
                         }
-                    });
-                    final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
-                        @Override
-                        public Boolean call(String s) {
-                            return "success".equalsIgnoreCase(s) || "completed".equalsIgnoreCase(s);
-                        }
-                    });
-                    final Observable<JsonObject> errors = response.errors().map(new Func1<ByteBuf, JsonObject>() {
-                        @Override
-                        public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            } finally {
-                                byteBuf.release();
-                            }
-                        }
-                    });
-                    boolean parseSuccess = response.status().isSuccess();
-                    String contextId = response.clientRequestId() == null ? "" : response.clientRequestId();
-                    String requestId = response.requestId();
+                    }
+                });
+                boolean parseSuccess = response.status().isSuccess();
+                String contextId = response.clientRequestId() == null ? "" : response.clientRequestId();
+                String requestId = response.requestId();
 
-                    AsyncQueryResult r = new DefaultAsyncQueryResult(rows, signature, info, errors,
-                            finalSuccess, parseSuccess, requestId, contextId);
-                    return Observable.just(r);
-                }
-            });
+                AsyncQueryResult r = new DefaultAsyncQueryResult(rows, signature, info, errors,
+                    finalSuccess, parseSuccess, requestId, contextId);
+                return Observable.just(r);
+            }
+        });
     }
 
     @Override
@@ -904,83 +887,128 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<PreparedPayload> prepare(final Statement statement) {
+    public Observable<PreparedPayload> prepare(Statement statement) {
         final PrepareStatement prepared;
         if (statement instanceof PrepareStatement) {
             prepared = (PrepareStatement) statement;
         } else {
             prepared = PrepareStatement.prepare(statement);
         }
-        SimpleQuery query = Query.simple(prepared);
+        final SimpleQuery query = Query.simple(prepared);
 
-        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
-            bucket, password);
-        return core
-            .<GenericQueryResponse>send(prepareRequest)
-            .flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
-                @Override
-                public Observable<PreparedPayload> call(GenericQueryResponse r) {
-                    if (r.status().isSuccess()) {
-                        r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        r.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        return r.rows().map(new Func1<ByteBuf, PreparedPayload>() {
-                            @Override
-                            public PreparedPayload call(ByteBuf byteBuf) {
-                                try {
-                                    JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    String serverName = value.getString("name");
-                                    if (prepared.preparedName() != null && !prepared.preparedName().equals(serverName)) {
-                                        throw new IllegalStateException("Prepared statement name from server differs: " +
-                                        serverName + ", expected " + prepared.preparedName());
-                                    }
-                                    return new PreparedPayload(prepared.originalStatement(), prepared.preparedName());
-                                } catch (Exception e) {
-                                    throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                } finally {
-                                    byteBuf.release();
+        return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
+            @Override
+            public Observable<GenericQueryResponse> call() {
+                return core.send(GenericQueryRequest.jsonQuery(query.n1ql().toString(), bucket, password));
+            }
+        }).flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
+            @Override
+            public Observable<PreparedPayload> call(GenericQueryResponse r) {
+                if (r.status().isSuccess()) {
+                    r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    r.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    return r.rows().map(new Func1<ByteBuf, PreparedPayload>() {
+                        @Override
+                        public PreparedPayload call(ByteBuf byteBuf) {
+                            try {
+                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                String serverName = value.getString("name");
+                                if (prepared.preparedName() != null && !prepared.preparedName().equals(serverName)) {
+                                    throw new IllegalStateException("Prepared statement name from server differs: " +
+                                            serverName + ", expected " + prepared.preparedName());
                                 }
+                                return new PreparedPayload(prepared.originalStatement(), prepared.preparedName());
+                            } catch (Exception e) {
+                                throw new TranscodingException("Could not decode N1QL Query Plan.", e);
+                            } finally {
+                                byteBuf.release();
                             }
-                        });
-                    } else {
-                        r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        r.rows().subscribe(Buffers.BYTE_BUF_RELEASER);
-                        return r.errors().map(new Func1<ByteBuf, Exception>() {
-                            @Override
-                            public Exception call(ByteBuf byteBuf) {
-                                try {
-                                    JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    return new CouchbaseException("Query Error - " + value.toString());
-                                } catch (Exception e) {
-                                    throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                } finally {
-                                    byteBuf.release();
+                        }
+                    });
+                } else {
+                    r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    r.rows().subscribe(Buffers.BYTE_BUF_RELEASER);
+                    return r.errors().map(new Func1<ByteBuf, Exception>() {
+                        @Override
+                        public Exception call(ByteBuf byteBuf) {
+                            try {
+                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                return new CouchbaseException("Query Error - " + value.toString());
+                            } catch (Exception e) {
+                                throw new TranscodingException("Could not decode N1QL Query Plan.", e);
+                            } finally {
+                                byteBuf.release();
+                            }
+                        }
+                    })
+                    .reduce(new ArrayList<Throwable>(),
+                            new Func2<ArrayList<Throwable>, Exception, ArrayList<Throwable>>() {
+                                @Override
+                                public ArrayList<Throwable> call(ArrayList<Throwable> throwables,
+                                        Exception error) {
+                                    throwables.add(error);
+                                    return throwables;
                                 }
+                            })
+                    .flatMap(new Func1<ArrayList<Throwable>, Observable<PreparedPayload>>() {
+                        @Override
+                        public Observable<PreparedPayload> call(ArrayList<Throwable> errors) {
+                            if (errors.size() == 1) {
+                                return Observable.error(new CouchbaseException(
+                                        "Error while preparing plan", errors.get(0)));
+                            } else {
+                                return Observable.error(new CompositeException(
+                                        "Multiple errors while preparing plan", errors));
                             }
-                        }).reduce(new ArrayList<Throwable>(),
-                                new Func2<ArrayList<Throwable>, Exception, ArrayList<Throwable>>() {
-                                    @Override
-                                    public ArrayList<Throwable> call(ArrayList<Throwable> throwables,
-                                            Exception error) {
-                                        throwables.add(error);
-                                        return throwables;
-                                    }
-                                }).flatMap(new Func1<ArrayList<Throwable>, Observable<PreparedPayload>>() {
-                            @Override
-                            public Observable<PreparedPayload> call(ArrayList<Throwable> errors) {
-                                if (errors.size() == 1) {
-                                    return Observable.error(new CouchbaseException(
-                                            "Error while preparing plan", errors.get(0)));
-                                } else {
-                                    return Observable.error(new CompositeException(
-                                            "Multiple errors while preparing plan", errors));
-                                }
-                            }
-                        });
-                    }
+                        }
+                    });
                 }
-            });
+            }
+        });
+    }
+
+    /**
+     * Experimental, Internal: Execute a prepared query.
+     *
+     * The returned {@link Observable} can error under the following conditions:
+     *
+     * - The prepared statement's name was not known on the server and it was re-prepared:
+     * {@link NamedPreparedStatementException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     *
+     * @param query the prepared query (including parameters).
+     * @return a result similar to {@link #queryRaw(String)} if the prepared query could be executed,
+     * or similar to {@link #prepare(String)} if it had to be re-prepared on the node.
+     */
+    /* package */ Observable<AsyncQueryResult> queryPrepared(final PreparedQuery query) {
+        return queryRaw(query.n1ql().toString())
+        .flatMap(new Func1<AsyncQueryResult, Observable<AsyncQueryResult>>() {
+            @Override
+            public Observable<AsyncQueryResult> call(final AsyncQueryResult aqr) {
+                final Observable<AsyncQueryRow> cachedRows = aqr.rows().cache();
+                return cachedRows
+                        .firstOrDefault(null)
+                        .flatMap(new Func1<AsyncQueryRow, Observable<AsyncQueryResult>>() {
+                            @Override
+                            public Observable<AsyncQueryResult> call(AsyncQueryRow row) {
+                                if (row != null && row.value().containsKey("operator")
+                                        && row.value().getObject("operator").containsKey("#operator")) {
+                                    return Observable.error(new NamedPreparedStatementException("Named prepared statement "
+                                        + query.statement().preparedName() + " not found, it has been re-prepared"));
+                                }
+
+                                AsyncQueryResult copyResult = new DefaultAsyncQueryResult(cachedRows,
+                                        aqr.signature(), aqr.info(), aqr.errors(), aqr.finalSuccess(),
+                                        aqr.parseSuccess(), aqr.requestId(), aqr.clientContextId());
+
+                                return Observable.just(copyResult);
+                            }
+                        });
+            }
+        });
     }
 
     @Override
@@ -995,64 +1023,70 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
-        return core
-            .<CounterResponse>send(new CounterRequest(id, initial, delta, expiry, bucket))
-            .map(new Func1<CounterResponse, JsonLongDocument>() {
-                @Override
-                public JsonLongDocument call(CounterResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-
-                    if (response.status().isSuccess()) {
-                        int returnedExpiry = expiry == COUNTER_NOT_EXISTS_EXPIRY ? 0 : expiry;
-                        return JsonLongDocument.create(id, returnedExpiry, response.value(), response.cas());
-                    }
-
-                    switch(response.status()) {
-                        case NOT_EXISTS:
-                            throw new DocumentDoesNotExistException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<CounterResponse>>() {
+            @Override
+            public Observable<CounterResponse> call() {
+                return core.send(new CounterRequest(id, initial, delta, expiry, bucket));
+            }
+        }).map(new Func1<CounterResponse, JsonLongDocument>() {
+            @Override
+            public JsonLongDocument call(CounterResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    int returnedExpiry = expiry == COUNTER_NOT_EXISTS_EXPIRY ? 0 : expiry;
+                    return JsonLongDocument.create(id, returnedExpiry, response.value(), response.cas());
+                }
+
+                switch (response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
-    public Observable<Boolean> unlock(String id, final long cas) {
-        return core
-            .<UnlockResponse>send(new UnlockRequest(id, cas, bucket))
-            .map(new Func1<UnlockResponse, Boolean>() {
-                @Override
-                public Boolean call(UnlockResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-
-                    if (response.status().isSuccess()) {
-                        return true;
-                    }
-
-                    switch(response.status()) {
-                        case NOT_EXISTS:
-                            throw new DocumentDoesNotExistException();
-                        case TEMPORARY_FAILURE:
-                            throw new TemporaryLockFailureException();
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+    public Observable<Boolean> unlock(final String id, final long cas) {
+        return Observable.defer(new Func0<Observable<UnlockResponse>>() {
+            @Override
+            public Observable<UnlockResponse> call() {
+                return core.send(new UnlockRequest(id, cas, bucket));
+            }
+        }).map(new Func1<UnlockResponse, Boolean>() {
+            @Override
+            public Boolean call(UnlockResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return true;
+                }
+
+                switch (response.status()) {
+                    case NOT_EXISTS:
+                        throw new DocumentDoesNotExistException();
+                    case TEMPORARY_FAILURE:
+                        throw new TemporaryLockFailureException();
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -1061,8 +1095,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<Boolean> touch(String id, int expiry) {
-        return core.<TouchResponse>send(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
+    public Observable<Boolean> touch(final String id, final int expiry) {
+        return Observable.defer(new Func0<Observable<TouchResponse>>() {
+            @Override
+            public Observable<TouchResponse> call() {
+                return core.send(new TouchRequest(id, expiry, bucket));
+            }
+        }).map(new Func1<TouchResponse, Boolean>() {
             @Override
             public Boolean call(TouchResponse response) {
                 if (response.content() != null && response.content().refCnt() > 0) {
@@ -1073,7 +1112,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     return true;
                 }
 
-                switch(response.status()) {
+                switch (response.status()) {
                     case NOT_EXISTS:
                         throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
@@ -1097,70 +1136,77 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> append(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return core
-            .<AppendResponse>send(new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket))
-            .map(new Func1<AppendResponse, D>() {
-                @Override
-                public D call(final AppendResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
 
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    }
-
-                    switch(response.status()) {
-                        case TOO_BIG:
-                            throw new RequestTooBigException();
-                        case NOT_STORED:
-                            throw new DocumentDoesNotExistException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<AppendResponse>>() {
+            @Override
+            public Observable<AppendResponse> call() {
+                Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+                return core.send(new AppendRequest(document.id(), document.cas(), encoded.value1(), bucket));
+            }
+        }).map(new Func1<AppendResponse, D>() {
+            @Override
+            public D call(final AppendResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
+                }
+
+                switch (response.status()) {
+                    case TOO_BIG:
+                        throw new RequestTooBigException();
+                    case NOT_STORED:
+                        throw new DocumentDoesNotExistException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> prepend(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-        return core
-            .<PrependResponse>send(new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket))
-            .map(new Func1<PrependResponse, D>() {
-                @Override
-                public D call(final PrependResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-
-                    if (response.status().isSuccess()) {
-                        return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                    }
-
-                    switch(response.status()) {
-                        case TOO_BIG:
-                            throw new RequestTooBigException();
-                        case NOT_STORED:
-                            throw new DocumentDoesNotExistException();
-                        case TEMPORARY_FAILURE:
-                        case SERVER_BUSY:
-                            throw new TemporaryFailureException();
-                        case OUT_OF_MEMORY:
-                            throw new CouchbaseOutOfMemoryException();
-                        default:
-                            throw new CouchbaseException(response.status().toString());
-                    }
+        return Observable.defer(new Func0<Observable<PrependResponse>>() {
+            @Override
+            public Observable<PrependResponse> call() {
+                Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
+                return core.send(new PrependRequest(document.id(), document.cas(), encoded.value1(), bucket));
+            }
+        }).map(new Func1<PrependResponse, D>() {
+            @Override
+            public D call(final PrependResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+
+                if (response.status().isSuccess()) {
+                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
+                }
+
+                switch (response.status()) {
+                    case TOO_BIG:
+                        throw new RequestTooBigException();
+                    case NOT_STORED:
+                        throw new DocumentDoesNotExistException();
+                    case TEMPORARY_FAILURE:
+                    case SERVER_BUSY:
+                        throw new TemporaryFailureException();
+                    case OUT_OF_MEMORY:
+                        throw new CouchbaseOutOfMemoryException();
+                    default:
+                        throw new CouchbaseException(response.status().toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -1230,13 +1276,17 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> close() {
-        return core.<CloseBucketResponse>send(new CloseBucketRequest(bucket))
-            .map(new Func1<CloseBucketResponse, Boolean>() {
-                @Override
-                public Boolean call(CloseBucketResponse response) {
-                    return response.status().isSuccess();
-                }
-            });
+        return Observable.defer(new Func0<Observable<CloseBucketResponse>>() {
+            @Override
+            public Observable<CloseBucketResponse> call() {
+                return core.send(new CloseBucketRequest(bucket));
+            }
+        }).map(new Func1<CloseBucketResponse, Boolean>() {
+            @Override
+            public Boolean call(CloseBucketResponse response) {
+                return response.status().isSuccess();
+            }
+        });
     }
 
     @Override

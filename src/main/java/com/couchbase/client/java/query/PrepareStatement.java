@@ -88,6 +88,29 @@ public class PrepareStatement implements SerializableStatement {
     }
 
     /**
+     * Construct a {@link PrepareStatement} from a select-like {@link Statement} and give it a name.
+     *
+     * Note that passing a {@link PrepareStatement} or a {@link PreparedPayload} will reuse the
+     * {@link PrepareStatement#originalStatement() original statement} but use the given name.
+     *
+     * @param statement the {@link Statement} to prepare.
+     * @param preparedName the name to give to the prepared statement
+     * @return the prepared statement.
+     * @throws IllegalArgumentException when statement cannot be prepared.
+     */
+    public static PrepareStatement prepare(Statement statement, String preparedName) {
+        Statement original;
+        if (statement instanceof PrepareStatement) {
+            original = ((PrepareStatement) statement).originalStatement();
+        } else if (statement instanceof PreparedPayload) {
+            original = ((PreparedPayload) statement).originalStatement();
+        } else {
+            original = statement;
+        }
+        return new PrepareStatement(original, preparedName);
+    }
+
+    /**
      * Construct a {@link PrepareStatement} from a statement in {@link String} format.
      * Statement shouldn't begin with "PREPARE", otherwise a syntax error may be returned by the server.
      *

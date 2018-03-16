@@ -29,13 +29,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.NamedPreparedStatementException;
+import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
@@ -65,7 +70,7 @@ public class QueryTest extends ClusterDependentTest {
     public static void init() throws InterruptedException {
         Assume.assumeTrue( //skip tests unless...
                 clusterManager().info().checkAvailable(CouchbaseFeature.N1QL) //...version >= 3.5.0 (packaged)
-                || env().queryEnabled()); //... or forced in environment by user
+                        || env().queryEnabled()); //... or forced in environment by user
 
         Thread.sleep(1500);//attempt to avoid GSI "indexer rollback" error after flush
         bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
@@ -84,7 +89,7 @@ public class QueryTest extends ClusterDependentTest {
         //each time the method is called.
         assertEquals(1, indexResult.errors().size());
         assertEquals("GSI CreatePrimaryIndex() - cause: Index #primary already exist.",
-            indexResult.errors().get(0).getString("msg"));
+                indexResult.errors().get(0).getString("msg"));
     }
 
     @Test
@@ -171,14 +176,18 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldProduceAndExecutePlan() {
+        String preparedName = "testPreparedNamed";
+
         Statement statement = select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1")));
-        PreparedPayload payload = bucket().prepare(statement);
+        PrepareStatement prepareStatement = PrepareStatement.prepare(statement, preparedName);
+        PreparedPayload payload = bucket().prepare(prepareStatement);
         assertNotNull(bucket().get("test2"));
 
         assertNotNull(payload);
         assertNotNull(payload.originalStatement());
         assertNotNull(payload.preparedName());
         assertEquals(statement.toString(), payload.originalStatement().toString());
+        assertEquals(preparedName, payload.preparedName());
 
         PreparedQuery preparedQuery = Query.prepared(payload,
                 JsonArray.from(123),
@@ -191,17 +200,23 @@ public class QueryTest extends ClusterDependentTest {
         assertTrue(rows.get(0).value().toString().contains("123"));
     }
 
-    //FIXME this is impossible to test twice in a row without a mean of evicting named prepared statements... Chicken and Egg problem
-    //this test also allowed to detect UnicastAutoReleaseSubject multiple subscriptions in the case where the first
-    //  AsyncQueryResult is valid (no need to retry prepare) => had to recreate aqr with error().cache()...
     @Test
-    public void shouldRetryPrepareIfPlanNameNotFound() {
-        Statement st = select("*").from(i("beer-sample")).limit(10);
-        PreparedPayload nonExistingPayload = new PreparedPayload(st, "nonExistingName");
+    public void shouldFailToExecuteUnknownNamedPreparedStatement() {
+        SimpleDateFormat sdf = new SimpleDateFormat("YYYYMMddHHmmss");
+        String preparedName = "testPreparedNamed" + sdf.format(new Date());
 
-        QueryResult response = bucket().query(nonExistingPayload);
-        assertTrue(response.errors().toString(), response.finalSuccess());
-        List<QueryRow> rows = response.allRows();
-        assertEquals(10, rows.size());
+        Statement statement = select(x("*")).from(i(bucketName())).where(x("item").eq(x("$1")));
+        PrepareStatement prepareStatement = PrepareStatement.prepare(statement, preparedName);
+        PreparedPayload payload = new PreparedPayload(prepareStatement, preparedName);
+        PreparedQuery preparedQuery = Query.prepared(payload,
+                JsonArray.from(123),
+                QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
+        try {
+            QueryResult response = bucket().query(preparedQuery);
+            fail("Expected NamedPreparedStatementException, got: " + response.allRows().toString() + ", errors: "
+                + response.errors().toString());
+        } catch (NamedPreparedStatementException e) {
+            //success
+        }
     }
 }

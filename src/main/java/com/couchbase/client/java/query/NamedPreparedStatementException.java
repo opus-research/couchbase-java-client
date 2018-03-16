@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 Couchbase, Inc.
+ * Copyright (C) 2015 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,43 +19,24 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java;
+package com.couchbase.client.java.query;
+
+import com.couchbase.client.core.CouchbaseException;
 
 /**
- * Represents the different modes to read from replica nodes.
+ * An exception marking the fact that a Named Prepared Statement in N1QL couldn't be executed and
+ * that there was a fallback to re-preparing it.
  *
- * @author Michael Nitschinger
- * @since 2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public enum ReplicaMode {
+public class NamedPreparedStatementException extends CouchbaseException {
 
-    /**
-     * Get from all replicas and the active node.
-     */
-    ALL(4),
-
-    /**
-     * Get only from the first replica configured for the document.
-     */
-    FIRST(1),
-
-    /**
-     * Get only from the second replica configured for the document.
-     */
-    SECOND(1),
-
-    /**
-     * Get only from the third replica configured for the document.
-     */
-    THIRD(1);
-
-    private int maxAffectedNodes;
-
-    ReplicaMode(int maxAffectedNodes) {
-        this.maxAffectedNodes = maxAffectedNodes;
+    public NamedPreparedStatementException(String message) {
+        super(message);
     }
 
-    public int maxAffectedNodes() {
-        return maxAffectedNodes;
+    public NamedPreparedStatementException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
