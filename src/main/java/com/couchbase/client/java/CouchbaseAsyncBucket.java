@@ -916,7 +916,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(String id, long delta) {
-        return counter(id, delta, 0);
+        return counter(id, delta, delta);
     }
 
     @Override
