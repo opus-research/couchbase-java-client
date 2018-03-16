@@ -70,8 +70,6 @@ public class CouchbaseConnectionFactoryBuilderTest {
     long timeInterval = 600L;
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
-    assertEquals("Did the test run with obsPollInterval=444",
-            444L, instance.getObsPollInterval());
     CouchbaseConnectionFactoryBuilder instanceResult =
       instance.setObsPollInterval(timeInterval);
     assertEquals("Failed to set observe poll interval.", 600L,
@@ -89,8 +87,6 @@ public class CouchbaseConnectionFactoryBuilderTest {
     int maxPoll = 40;
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
-    assertEquals("Did the test run with ObsPollMax=99",
-            99L, instance.getObsPollMax());
     CouchbaseConnectionFactoryBuilder instanceResult
       = instance.setObsPollMax(maxPoll);
     assertEquals(instance, instanceResult);
