@@ -66,8 +66,8 @@ public class Blocking {
     public static <T> T blockForSingle(final Observable<? extends T> observable, final long timeout,
         final TimeUnit tu) {
         final CountDownLatch latch = new CountDownLatch(1);
-
         TrackingSubscriber<T> subscriber = new TrackingSubscriber<T>(latch);
+
         observable.subscribe(subscriber);
 
         try {
@@ -101,7 +101,7 @@ public class Blocking {
      *
      * @since 2.2.0
      */
-    private static class TrackingSubscriber<T> extends Subscriber<T> {
+    private final static class TrackingSubscriber<T> extends Subscriber<T> {
 
         private final CountDownLatch latch;
         private volatile T returnItem = null;
