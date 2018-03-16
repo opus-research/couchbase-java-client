@@ -76,6 +76,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   private final boolean enableThrottling;
 
   private volatile long lastWrite;
+  private final boolean enableWakeup;
 
   public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
       List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
@@ -85,6 +86,13 @@ public class CouchbaseConnection extends MemcachedConnection  implements
 
     enableThrottling = Boolean.parseBoolean(
       CouchbaseProperties.getProperty("enable_throttle", false));
+    enableWakeup = Boolean.parseBoolean(
+        CouchbaseProperties.getProperty("enable_wakeup", "true", false));
+
+    if (!enableWakeup) {
+      getLogger().info("Manually disabled wakeup NOOP broadcasting through system property.");
+    }
+
     if(enableThrottling) {
       this.throttleManager = new ThrottleManager<AdaptiveThrottler>(
         a, AdaptiveThrottler.class, this, opfactory);
@@ -425,6 +433,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
    */
   @Override
   protected void handleWokenUpSelector() {
+    if (!enableWakeup) {
+      return;
+    }
+
     long now = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime());
     long diff = now - lastWrite;
     if (lastWrite > 0 && diff >= ALLOWED_IDLE_TIME) {
