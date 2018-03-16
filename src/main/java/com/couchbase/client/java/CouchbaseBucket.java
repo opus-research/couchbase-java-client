@@ -76,68 +76,20 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public Observable<JsonDocument> getAndLock(String id, int lockTime) {
-        return getAndLock(id, lockTime, JsonDocument.class);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getAndLock(D document, int lockTime) {
-        return (Observable<D>) getAndLock(document.id(), lockTime, document.getClass());
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
-        return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime)).map(new Func1<GetResponse, D>() {
-            @Override
-            public D call(final GetResponse response) {
-                Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
-                Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
-                return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
-            }
-        });
-    }
-
-    @Override
-    public Observable<JsonDocument> getAndTouch(String id, int expiry) {
-        return getAndTouch(id, expiry, JsonDocument.class);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getAndTouch(D document) {
-        return (Observable<D>) getAndTouch(document.id(), document.expiry(), document.getClass());
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
-        return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry)).map(new Func1<GetResponse, D>() {
-            @Override
-            public D call(final GetResponse response) {
-                Converter<?, Object> converter = (Converter<?, Object>) converters.get(target);
-                Object content = response.status() == ResponseStatus.SUCCESS ? converter.decode(response.content()) : null;
-                return (D) converter.newDocument(id, content, response.cas(), 0, response.status());
-            }
-        });
-    }
-
-    @Override
     public Observable<JsonDocument> getReplica(final String id, final ReplicaMode type) {
-        return getReplica(id, type, JsonDocument.class);
+        return getReplica(id, JsonDocument.class, type);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getReplica(final D document, final ReplicaMode type) {
-        return (Observable<D>) getReplica(document.id(), type, document.getClass());
+        return (Observable<D>) getReplica(document.id(), document.getClass(), type);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <D extends Document<?>> Observable<D> getReplica(final String id, final ReplicaMode type,
-        final Class<D> target) {
+    public <D extends Document<?>> Observable<D> getReplica(final String id, final Class<D> target,
+        final ReplicaMode type) {
 
         Observable<GetResponse> incoming;
         if (type == ReplicaMode.ALL) {
@@ -186,7 +138,7 @@ public class CouchbaseBucket implements Bucket {
         final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
         ByteBuf content = converter.encode(document.content());
         return core
-            .<InsertResponse>send(new InsertRequest(document.id(), content, document.expiry(), 0, bucket))
+            .<InsertResponse>send(new InsertRequest(document.id(), content, bucket))
             .map(new Func1<InsertResponse, D>() {
                 @Override
                 public D call(InsertResponse response) {
@@ -202,7 +154,7 @@ public class CouchbaseBucket implements Bucket {
         final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
         ByteBuf content = converter.encode(document.content());
         return core
-            .<UpsertResponse>send(new UpsertRequest(document.id(), content, document.expiry(), 0, bucket))
+            .<UpsertResponse>send(new UpsertRequest(document.id(), content, bucket))
             .map(new Func1<UpsertResponse, D>() {
                 @Override
                 public D call(UpsertResponse response) {
@@ -217,13 +169,13 @@ public class CouchbaseBucket implements Bucket {
   public <D extends Document<?>> Observable<D> replace(final D document) {
     final Converter<?, Object> converter = (Converter<?, Object>) converters.get(document.getClass());
     ByteBuf content = converter.encode(document.content());
-    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), content, document.cas(), document.expiry(), 0, bucket))
+    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), content, bucket))
       .map(new Func1<ReplaceResponse, D>() {
-          @Override
-          public D call(ReplaceResponse response) {
-              return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
-                  response.status());
-          }
+        @Override
+        public D call(ReplaceResponse response) {
+            return (D) converter.newDocument(document.id(), document.content(), response.cas(), document.expiry(),
+                response.status());
+        }
       });
   }
 
