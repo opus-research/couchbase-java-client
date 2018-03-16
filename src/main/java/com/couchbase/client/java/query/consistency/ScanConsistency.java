@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2014 Couchbase, Inc.
+ * Copyright (C) 2015 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,40 +19,22 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
-
-import com.couchbase.client.java.document.json.JsonObject;
+package com.couchbase.client.java.query.consistency;
 
 /**
- * Interface to describe N1QL queries. Queries are formed of a mandatory {@link Statement}
- * and optionally can have other components, as described in each implementation of this.
+ * The possible values for scan_consistency in a N1QL request.
  *
  * @author Simon Baslé
  * @since 2.1
  */
-public interface Query {
+public enum ScanConsistency {
 
-    /**
-     * Returns the {@link Statement} from this query. Note that this is the only mandatory
-     * part of a N1QL query.
-     *
-     * @return the statement that forms the base of this query
-     */
-    public Statement statement();
+    NOT_BOUNDED,
+    REQUEST_PLUS,
+    STATEMENT_PLUS,
+    AT_PLUS;
 
-    /**
-     * Returns the {@link QueryParams} representing customization of the N1QL query.
-     *
-     * Note that this is different from named or positional parameters (which relate to the statement).
-     *
-     * @return the {@link QueryParams} for this query, null if none.
-     */
-    public QueryParams params();
-
-    /**
-     * Convert this query to a full N1QL query in Json form.
-     *
-     * @return the json representation of this query (including all relevant parameters)
-     */
-    public JsonObject n1ql();
+    public String n1ql() {
+        return this.name().toLowerCase();
+    }
 }
