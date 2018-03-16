@@ -15,32 +15,14 @@
  */
 package com.couchbase.client.java.cluster;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.message.config.BucketsConfigRequest;
-import com.couchbase.client.core.message.config.BucketsConfigResponse;
-import com.couchbase.client.core.message.config.ClusterConfigRequest;
-import com.couchbase.client.core.message.config.ClusterConfigResponse;
-import com.couchbase.client.core.message.config.InsertBucketRequest;
-import com.couchbase.client.core.message.config.InsertBucketResponse;
-import com.couchbase.client.core.message.config.RemoveBucketRequest;
-import com.couchbase.client.core.message.config.RemoveBucketResponse;
-import com.couchbase.client.core.message.config.RestApiRequest;
-import com.couchbase.client.core.message.config.RestApiResponse;
-import com.couchbase.client.core.message.config.UpdateBucketRequest;
-import com.couchbase.client.core.message.config.UpdateBucketResponse;
+import com.couchbase.client.core.message.config.*;
 import com.couchbase.client.core.message.internal.AddNodeRequest;
 import com.couchbase.client.core.message.internal.AddNodeResponse;
 import com.couchbase.client.core.message.internal.AddServiceRequest;
 import com.couchbase.client.core.message.internal.AddServiceResponse;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.java.ConnectionString;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.bucket.BucketType;
@@ -54,6 +36,12 @@ import com.couchbase.client.java.error.TranscodingException;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class DefaultAsyncClusterManager implements AsyncClusterManager {
 
@@ -362,8 +350,4 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
             });
     }
 
-    @Override
-    public ClusterApiClient apiClient() {
-        return new ClusterApiClient(username, password, core, environment);
-    }
 }

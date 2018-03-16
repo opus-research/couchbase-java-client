@@ -115,9 +115,4 @@ public class DefaultClusterManager implements ClusterManager {
     public Boolean removeBucket(String name, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncClusterManager.removeBucket(name).single(), timeout, timeUnit);
     }
-
-    @Override
-    public ClusterApiClient apiClient() {
-        return asyncClusterManager.apiClient();
-    }
 }
