@@ -79,9 +79,6 @@ public class ViewTest {
   public static final String VIEW_NAME_W_REDUCE = "view_with_reduce";
   public static final String VIEW_NAME_WO_REDUCE = "view_without_reduce";
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
-  public static final String VIEWMODE_DEV = "development";
-  public static final String DEV_PREFIX = "dev_";
-  public static final String PROD_PREFIX = "";
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -121,16 +118,14 @@ public class ViewTest {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create(SERVER_URI));
     TestingClient c = new TestingClient(uris, "default", "");
-    String docUri = "/default/_design/"
-        + (c.getViewMode().equals(VIEWMODE_DEV) ? DEV_PREFIX : PROD_PREFIX)
+    String docUri = "/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_W_REDUCE;
     String view = "{\"language\":\"javascript\",\"views\":{\""
-        + VIEW_NAME_W_REDUCE + "\":{\"map\":\"function (doc) { "
-        + "if(doc.type != \\\"dated\\\") {emit(doc.type, 1)}}\",\"reduce\":\"_sum\" }}}";
+        + VIEW_NAME_W_REDUCE + "\":{\"map\":\"function (doc) {  "
+        + "emit(doc.type, 1)}\",\"reduce\":\"_sum\" }}}";
     c.asyncHttpPut(docUri, view);
 
-    docUri = "/default/_design/"
-        + (c.getViewMode().equals(VIEWMODE_DEV) ? DEV_PREFIX : PROD_PREFIX)
+    docUri = "/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_WO_REDUCE;
     String view2 = "{\"language\":\"javascript\",\"views\":{\""
         + VIEW_NAME_FOR_DATED + "\":{\"map\":\"function (doc) {  "
@@ -175,12 +170,10 @@ public class ViewTest {
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create(SERVER_URI));
     TestingClient c = new TestingClient(uris, "default", "");
-    c.asyncHttpDelete("/default/_design/"
-        + (c.getViewMode().equals(VIEWMODE_DEV) ? DEV_PREFIX : PROD_PREFIX)
+    c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_W_REDUCE).get();
 
-    c.asyncHttpDelete("/default/_design/"
-        + (c.getViewMode().equals(VIEWMODE_DEV) ? DEV_PREFIX : PROD_PREFIX)
+    c.asyncHttpDelete("/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_WO_REDUCE).get();
   }
 

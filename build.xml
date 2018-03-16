@@ -129,7 +129,6 @@
 
   <path id="compile.classpath">
     <pathelement location="${build.classes}"/>
-    <pathelement location="${basedir}"/>
     <path refid="lib.path"/>
     <path refid="${name}.common.classpath"/>
   </path>
