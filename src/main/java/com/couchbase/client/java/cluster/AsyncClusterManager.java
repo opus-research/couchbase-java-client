@@ -130,4 +130,10 @@ public interface AsyncClusterManager {
      * @return true if the removal was successful, false otherwise.
      */
     Observable<Boolean> removeBucket(String name);
+
+    /**
+     * @return a new {@link ClusterApiClient} to prepare and perform REST API requests on this cluster (both
+     * sync and async).
+     */
+    ClusterApiClient apiClient();
 }
