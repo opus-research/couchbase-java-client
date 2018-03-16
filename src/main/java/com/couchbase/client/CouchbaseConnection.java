@@ -43,7 +43,6 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.OperationFactory;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
@@ -56,13 +55,12 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
-  private final CouchbaseConnectionFactory cf;
 
-  public CouchbaseConnection(int bufSize, CouchbaseConnectionFactory f,
-      List<InetSocketAddress> a, Collection<ConnectionObserver> obs,
-      FailureMode fm, OperationFactory opfactory) throws IOException {
-    super(bufSize, f, a, obs, fm, opfactory);
-    this.cf = f;
+  public CouchbaseConnection(CouchbaseConnectionFactory cf,
+      List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
+    throws IOException {
+    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(),
+        cf.getOperationFactory());
   }
 
   public void reconfigure(Bucket bucket) {
@@ -137,7 +135,6 @@ public class CouchbaseConnection extends MemcachedConnection  implements
    * @param key the key the operation is operating upon
    * @param o the operation
    */
-  @Override
   public void addOperation(final String key, final Operation o) {
     MemcachedNode placeIn = null;
     MemcachedNode primary = locator.getPrimary(key);
@@ -159,10 +156,8 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       if (placeIn == null) {
         placeIn = primary;
         this.getLogger().warn(
-            "Node exepcted to receive data is inactive.  This could be due to "
-            + "a failure within the cluster.  Will check for updated "
-            + "configuration.  Key without a configured node is: %s.", key);
-        cf.checkConfigUpdate();
+            "Could not redistribute "
+                + "to another node, retrying primary node for %s.", key);
       }
     }
 
