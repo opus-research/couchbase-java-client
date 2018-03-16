@@ -33,6 +33,11 @@ public class UserRole {
 
     final String bucket;
 
+    public UserRole(String role) {
+        this.role = role;
+        this.bucket = "";
+    }
+
     public UserRole(String role, String bucket) {
         this.role = role;
         this.bucket = bucket;

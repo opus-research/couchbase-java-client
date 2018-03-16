@@ -32,6 +32,8 @@ public class UserSettings {
 
     private List<UserRole> roles;
 
+    private UserSettings() {}
+
     public static UserSettings build() {
         return new UserSettings();
     }

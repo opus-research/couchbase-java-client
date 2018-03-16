@@ -273,7 +273,7 @@ public interface ClusterManager {
     Boolean removeBucket(String name, long timeout, TimeUnit timeUnit);
 
     /**
-     * Creates/Updates a user with its {@link UserSettings}
+     * Creates/Updates a user with its {@link UserSettings} with default management timeout.
      *
      * This method throws:
      *
@@ -291,7 +291,7 @@ public interface ClusterManager {
     Boolean upsertUser(String username, UserSettings settings);
 
     /**
-     * Creates/Updates a user with its {@link UserSettings}
+     * Creates/Updates a user with its {@link UserSettings} with custom timeout.
      *
      * This method throws:
      *
@@ -347,7 +347,7 @@ public interface ClusterManager {
     Boolean removeUser(String username, long timeout, TimeUnit timeUnit);
 
     /**
-     * Get all users in Couchbase
+     * Get all users in Couchbase with default management timeout.
      *
      * This method throws:
      *
@@ -361,7 +361,7 @@ public interface ClusterManager {
     List<User> getUsers();
 
     /**
-     * Get all users in Couchbase
+     * Get all users in Couchbase with a custom timeout.
      *
      * This method throws:
      *

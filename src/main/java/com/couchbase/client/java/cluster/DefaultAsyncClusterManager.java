@@ -366,16 +366,13 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                                     userRoles[i] = new UserRole(((JsonObject)role).getString("role"), ((JsonObject)role).getString("bucket_name"));
                                     i++;
                                 }
-                                User user = new User();
-                                user.name(userJsonObj.getString("name"));
-                                user.userId(userJsonObj.getString("id"));
-                                user.type(userJsonObj.getString("type"));
-                                user.roles(userRoles);
+                                User user = new User(userJsonObj.getString("name"), userJsonObj.getString("id"),
+                                        userJsonObj.getString("type"), userRoles);
                                 users.add(user);
                             }
                             return Observable.from(users);
                         } catch (Exception e) {
-                            throw new TranscodingException("Could not decode cluster info.", e);
+                            throw new TranscodingException("Could not decode user info.", e);
                         }
                     }
                 });
@@ -432,7 +429,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                 sb.append(userRole.role());
                 if (userRole.bucket() != null && !userRole.bucket().equals("")) {
                     sb.append("[");
-                    sb.append(userRole.bucket());
+                    sb.append(userRole.bucket().replace("%", "%25"));
                     sb.append("]");
                 }
             }
