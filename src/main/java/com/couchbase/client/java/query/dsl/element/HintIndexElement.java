@@ -32,7 +32,7 @@ import com.couchbase.client.java.query.dsl.path.index.IndexReference;
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class HintIndexElement implements Element {
 
     private final IndexReference[] indexReferences;
