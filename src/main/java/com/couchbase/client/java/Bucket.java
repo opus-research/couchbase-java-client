@@ -2713,7 +2713,7 @@ public interface Bucket {
     N1qlQueryResult query(N1qlQuery query, long timeout, TimeUnit timeUnit);
 
     /**
-     * Queries a Full-Text Index
+     * Experimental: Queries a Full-Text Index
      *
      * This method throws under the following conditions:
      *
@@ -2728,7 +2728,7 @@ public interface Bucket {
     SearchQueryResult query(SearchQuery query);
 
     /**
-     * Queries a Full-Text Index
+     * Experimental: Queries a Full-Text Index
      *
      * This method throws under the following conditions:
      *
