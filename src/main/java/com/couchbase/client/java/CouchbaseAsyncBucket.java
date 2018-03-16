@@ -25,6 +25,7 @@ import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.ResponseStatus;
+import com.couchbase.client.core.message.ResponseStatusDetails;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.kv.AppendRequest;
@@ -923,7 +924,9 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     case OUT_OF_MEMORY:
                         throw new CouchbaseOutOfMemoryException();
                     default:
-                        throw new CouchbaseException(response.status().toString());
+                        throw new CouchbaseException(
+                            ResponseStatusDetails.stringify(response.status(), response.statusDetails())
+                        );
                 }
             }
         });
