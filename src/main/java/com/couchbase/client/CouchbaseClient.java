@@ -47,7 +47,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -56,17 +55,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.BroadcastOpFactory;
+import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.CachedData;
 import net.spy.memcached.MemcachedClient;
@@ -103,6 +101,7 @@ public class CouchbaseClient extends MemcachedClient
 
   private ViewConnection vconn;
   protected volatile boolean reconfiguring = false;
+  private final CouchbaseConnectionFactory cbConnFactory;
 
   /**
    * Properties priority from highest to lowest:
@@ -226,6 +225,7 @@ public class CouchbaseClient extends MemcachedClient
   public CouchbaseClient(CouchbaseConnectionFactory cf)
     throws IOException {
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
+    cbConnFactory = cf;
     List<InetSocketAddress> addrs =
       AddrUtil.getAddressesFromURL(cf.getVBucketConfig().getCouchServers());
 
@@ -817,23 +817,32 @@ public class CouchbaseClient extends MemcachedClient
    */
   public OperationFuture<Boolean> delete(String key,
           PersistTo req, ReplicateTo rep) {
+
     OperationFuture<Boolean> deleteOp = delete(key);
+    boolean deleteStatus = false;
+
     try {
-      deleteOp.get();
-      deleteOp.set(true, deleteOp.getStatus());
-      observePoll(key, 0L, req, rep);
+      deleteStatus = deleteOp.get();
     } catch (InterruptedException e) {
-      deleteOp.set(false, deleteOp.getStatus());
+      deleteOp.set(false, new OperationStatus(false, "Delete get timed out"));
     } catch (ExecutionException e) {
-      deleteOp.set(false, deleteOp.getStatus());
-    } catch (TimeoutException e) {
-      deleteOp.set(false, deleteOp.getStatus());
-    } catch (IllegalArgumentException e) {
-      deleteOp.set(false, deleteOp.getStatus());
-    } catch (RuntimeException e) {
-      deleteOp.set(false, deleteOp.getStatus());
+      deleteOp.set(false, new OperationStatus(false, "Delete get "
+              + "execution exception "));
     }
-    return (deleteOp);
+    if (!deleteStatus) {
+      return deleteOp;
+    }
+    try {
+      observePoll(key, 0x0L, req, rep);
+      deleteOp.set(true, deleteOp.getStatus());
+    } catch (ObservedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return deleteOp;
   }
 /**
    * Delete a value with Observe.
@@ -860,23 +869,33 @@ public class CouchbaseClient extends MemcachedClient
    */
   public OperationFuture<Boolean> set(String key, int exp,
           String value, PersistTo req, ReplicateTo rep) {
+
     OperationFuture<Boolean> setOp = set(key, exp, value);
+
+    boolean setStatus = false;
+
     try {
-      if (setOp.get()) {
-        observePoll(key, setOp.getCas(), req, rep);
-      }
+      setStatus = setOp.get();
     } catch (InterruptedException e) {
-      setOp.set(false, setOp.getStatus());
+      setOp.set(false, new OperationStatus(false, "Set get timed out"));
     } catch (ExecutionException e) {
-      setOp.set(false, setOp.getStatus());
-    } catch (TimeoutException e) {
-      setOp.set(false, setOp.getStatus());
-    } catch (IllegalArgumentException e) {
-      setOp.set(false, setOp.getStatus());
-    } catch (RuntimeException e) {
-      setOp.set(false, setOp.getStatus());
+      setOp.set(false, new OperationStatus(false, "Set get "
+              + "execution exception "));
     }
-    return (setOp);
+    if (!setStatus) {
+      return setOp;
+    }
+    try {
+      observePoll(key, 0x0L, req, rep);
+      setOp.set(true, setOp.getStatus());
+    } catch (ObservedException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return setOp;
   }
 /**
    * Set a value with Observe.
@@ -893,6 +912,172 @@ public class CouchbaseClient extends MemcachedClient
     return set(key, exp, value, req, ReplicateTo.ZERO);
   }
   /**
+   * Add a value and Observe.
+   *
+   * @param key the key to set
+   * @param exp the Expiry value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @param rep the Persistence to Replicas
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> add(String key, int exp,
+          String value, PersistTo req, ReplicateTo rep) {
+
+    OperationFuture<Boolean> addOp = add(key, exp, value);
+
+    boolean addStatus = false;
+
+    try {
+      addStatus = addOp.get();
+    } catch (InterruptedException e) {
+      addOp.set(false, new OperationStatus(false, "Add get timed out"));
+    } catch (ExecutionException e) {
+      addOp.set(false, new OperationStatus(false, "Add get "
+              + "execution exception "));
+    }
+    if (!addStatus) {
+      return addOp;
+    }
+    try {
+      observePoll(key, 0x0L, req, rep);
+      addOp.set(true, addOp.getStatus());
+    } catch (ObservedException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return addOp;
+  }
+
+/**
+   * Add a value with Observe.
+   *
+   * @param key the key to set
+   * @param exp the Expiry value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> add(String key, int exp,
+          String value, PersistTo req) {
+    return add(key, exp, value, req, ReplicateTo.ZERO);
+  }
+
+  /**
+   * Replace a value and Observe.
+   *
+   * @param key the key to set
+   * @param exp the Expiry value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @param rep the Persistence to Replicas
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> replace(String key, int exp,
+          String value, PersistTo req, ReplicateTo rep) {
+
+    OperationFuture<Boolean> replaceOp = replace(key, exp, value);
+
+    boolean replaceStatus = false;
+
+    try {
+      replaceStatus = replaceOp.get();
+    } catch (InterruptedException e) {
+      replaceOp.set(false, new OperationStatus(false, "Replace get timed out"));
+    } catch (ExecutionException e) {
+      replaceOp.set(false, new OperationStatus(false, "Replace get "
+              + "execution exception "));
+    }
+    if (!replaceStatus) {
+      return replaceOp;
+    }
+    try {
+      observePoll(key, 0x0L, req, rep);
+      replaceOp.set(true, replaceOp.getStatus());
+    } catch (ObservedException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return replaceOp;
+
+  }
+/**
+   * Replace a value with Observe.
+   *
+   * @param key the key to set
+   * @param exp the Expiry value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @return whether or not the operation was performed
+   *
+   */
+  public OperationFuture<Boolean> replace(String key, int exp,
+          String value, PersistTo req) {
+    return replace(key, exp, value, req, ReplicateTo.ZERO);
+  }
+
+  /**
+   * Set a value with a CAS and Observe.
+   *
+   * @param key the key to set
+   * @param cas the CAS value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @param rep the Persistence to Replicas
+   * @return whether or not the operation was performed
+   *
+   */
+  public CASResponse cas(String key, long cas,
+          String value, PersistTo req, ReplicateTo rep) {
+
+    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, value);
+    CASResponse casr = null;
+    try {
+      casr = casOp.get();
+    } catch (InterruptedException e) {
+      casr = CASResponse.EXISTS;
+    } catch (ExecutionException e) {
+      casr = CASResponse.EXISTS;
+    }
+    if (casr != CASResponse.OK) {
+      return casr;
+    }
+    try {
+      observePoll(key, casOp.getCas(), req, rep);
+    } catch (ObservedException e) {
+      casr = CASResponse.OBSERVE_ERROR_IN_ARGS;
+    } catch (ObservedTimeoutException e) {
+      casr = CASResponse.OBSERVE_TIMEOUT;
+    } catch (ObservedModifiedException e) {
+      casr = CASResponse.OBSERVE_MODIFIED;
+    }
+    return casr;
+  }
+/**
+   * Set a value with a CAS and Observe.
+   *
+   * @param key the key to set
+   * @param casv the CAS value
+   * @param value the Key value
+   * @param req the Persistence to Master value
+   * @return whether or not the operation was performed
+   *
+   */
+  public CASResponse cas(String key, long casv,
+          String value, PersistTo req) {
+    return cas(key, casv, value, req, ReplicateTo.ZERO);
+  }
+
+  /**
    * Observe a key with a CAS.
    *
    * @param key the Key
@@ -908,13 +1093,6 @@ public class CouchbaseClient extends MemcachedClient
     for (int i=0; i < VBucket.MAX_REPLICAS; i++) {
       ora[i] = ObserveResponse.UNINITIALIZED;
     }
-    final CountDownLatch latch = new CountDownLatch(1);
-    final OperationFuture<ObserveResponse> rv =
-        new OperationFuture<ObserveResponse>(key, latch, operationTimeout);
-    final AtomicReference<ObserveResponse> observeResult =
-        new AtomicReference<ObserveResponse>(null);
-    final ConcurrentLinkedQueue<Operation> ops =
-        new ConcurrentLinkedQueue<Operation>();
     final int vb = ((VBucketNodeLocator)
             ((CouchbaseConnection) mconn).getLocator()).getVBucketIndex(key);
 
@@ -924,8 +1102,6 @@ public class CouchbaseClient extends MemcachedClient
             connFactory).getVBucketConfig().getMaster(vb);
     replicas = ((CouchbaseConnectionFactory)
             connFactory).getVBucketConfig().getReplicasCount();
-
-    Collection allNodes = (mconn.getLocator()).getAll();
 
     List<MemcachedNode> masterList = new
             ArrayList<MemcachedNode>(1);
@@ -951,10 +1127,7 @@ public class CouchbaseClient extends MemcachedClient
     CountDownLatch blatch = broadcastOp(new BroadcastOpFactory() {
       public Operation newOp(final MemcachedNode n,
           final CountDownLatch latch) {
-        final SocketAddress sa = n.getSocketAddress();
-        // rv.put(sa, new HashMap<String, String>());
         return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
-          private ObserveResponse r = null;
 
           public void receivedStatus(OperationStatus s) {
           }
@@ -988,7 +1161,6 @@ public class CouchbaseClient extends MemcachedClient
 
       public Operation newOp(final MemcachedNode n,
               final CountDownLatch latch) {
-        final SocketAddress sa = n.getSocketAddress();
         return opFact.observe(key, cas, vb, new ObserveOperation.Callback() {
 
           public void receivedStatus(OperationStatus s) {
@@ -1009,7 +1181,6 @@ public class CouchbaseClient extends MemcachedClient
                 break;
               }
             }
-
           }
 
           public void complete() {
@@ -1020,8 +1191,6 @@ public class CouchbaseClient extends MemcachedClient
     }, replicaList);
     try {
       blatch.await(operationTimeout, TimeUnit.MILLISECONDS);
-      //       return rv.get(operationTimeout,
-      //    TimeUnit.MILLISECONDS);
       return ora;
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted waiting for value", e);
@@ -1057,11 +1226,14 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   private void observePoll(String key, long cas,
-          PersistTo persist, ReplicateTo replicate) throws TimeoutException {
+          PersistTo persist, ReplicateTo replicate) {
     int persists, replicates;
     int totPersists, totReplicas;
     boolean masterPersisted;
     int loop = 0;
+    long obsPollInt = cbConnFactory.getObsPollInterval();
+    int obsPollMax = cbConnFactory.getObsPollMax();
+
 
     int replicas = ((CouchbaseConnectionFactory)
             connFactory).getVBucketConfig().getReplicasCount();
@@ -1099,7 +1271,7 @@ public class CouchbaseClient extends MemcachedClient
 
     if (replicates > replicas
             || persists > replicas) {
-      throw new IllegalArgumentException("Requested Persists and "
+      throw new ObservedException("Requested Persists and "
               + "Requested Replicates exceed number of replicas =  "
               + replicas);
     }
@@ -1118,7 +1290,8 @@ public class CouchbaseClient extends MemcachedClient
         masterPersisted = true;
       }
       if ((or[0]) == ObserveResponse.MODIFIED) { // Master
-        throw new RuntimeException("Observe - the key was modified");
+        throw new ObservedModifiedException("Observe - the key was modified on "
+                + key);
       }
 
       for (int i=1; i < or.length; i++) {
@@ -1137,14 +1310,14 @@ public class CouchbaseClient extends MemcachedClient
         return;
       }
       try {
-        Thread.sleep(400);
+        Thread.sleep(obsPollInt);
       } catch (InterruptedException e) {
         getLogger().error("Interrupted while in observe loop.", e);
+        throw new ObservedException("Observe was Interrupted ");
       }
-    } while (loop++ < 10);
+    } while (loop++ < obsPollMax);
 
-    throw new TimeoutException("Observe - Polled for Maximum retries of "
-            + loop);
+    throw new ObservedTimeoutException("Observe Timeout - Polled"
+            + " Unsuccessfully for over 4 seconds");
   }
-
 }
