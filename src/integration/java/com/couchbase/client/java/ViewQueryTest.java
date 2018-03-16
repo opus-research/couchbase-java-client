@@ -62,7 +62,7 @@ public class ViewQueryTest extends ClusterDependentTest {
                         .put("name", "Mr. Foo Bar " + id)
                         .put("age", id % 100)
                         .put("active", (id % 2) == 0);
-                    return bucket().async().upsert(JsonDocument.create("user-" + id, content));
+                    return bucket().async().insert(JsonDocument.create("user-" + id, content));
                 }
             })
             .last()
