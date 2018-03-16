@@ -17,12 +17,12 @@ package com.couchbase.client.java;
 
 import static org.junit.Assert.*;
 
+import com.couchbase.client.java.datastructures.*;
 import com.couchbase.client.java.error.subdoc.PathInvalidException;
 import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.datastructures.MutationOptionBuilder;
 import com.couchbase.client.java.document.JsonArrayDocument;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
@@ -30,6 +30,7 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.RequestTooBigException;
+import com.couchbase.client.java.error.subdoc.PathNotFoundException;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import com.couchbase.client.java.util.features.CouchbaseFeature;
 import org.junit.*;
@@ -97,8 +98,8 @@ public class DataStructuresTest {
         assertEquals(result, true);
     }
 
-    @Test(expected = CouchbaseException.class)
-    public void testMapGetInvalidKey() {
+    @Test(expected = PathNotFoundException.class)
+    public void testMapGetNonExistentKey() {
         ctx.bucket().mapGet("dsmap", "9999", String.class);
     }
 
@@ -139,6 +140,25 @@ public class DataStructuresTest {
         } catch (InterruptedException ex) {
         }
         ctx.bucket().mapSize("dsmapShortLived");
+    }
+
+    @Test
+    public void testMapCollection() {
+        CouchbaseMap<String> map = new CouchbaseMap<String>(ctx.bucket(), "dsmapColl", String.class);
+        map.add("foo", "bar");
+        String val = map.get("foo");
+        assertEquals(val, "bar");
+        boolean result = map.remove("foo");
+        assertEquals(result, true);
+        result = map.remove("foo");
+        assertEquals(result, true);
+        int size = map.size();
+        map.add("foo", "bar", MutationOptionBuilder.builder().persistTo(PersistTo.MASTER));
+        int newSize = map.size();
+        assert (newSize == size + 1);
+        result = map.add("foo", null);
+        assertEquals(result, true);
+        ctx.bucket().remove("dsmapColl");
     }
 
     @Test
@@ -184,7 +204,7 @@ public class DataStructuresTest {
     }
 
 
-    @Test(expected = CouchbaseException.class)
+    @Test(expected = PathNotFoundException.class)
     public void testListRemoveNonExistentIndex() {
         ctx.bucket().listGet("dslist", 2, Object.class);
     }
@@ -216,6 +236,22 @@ public class DataStructuresTest {
         } catch (InterruptedException ex) {
         }
         ctx.bucket().listSize("dslistShortLived");
+    }
+
+    @Test
+    public void testListCollection() {
+        CouchbaseList<String> list = new CouchbaseList<String>(ctx.bucket(), "dslistColl", String.class);
+        list.add("foo");
+        String val = list.get(0);
+        assertEquals(val, "foo");
+        list.set(1, "bar");
+        assertEquals(list.get(1), "bar");
+        int size = list.size();
+        assert (size > 0);
+        list.remove(1);
+        int newSize = list.size();
+        assertEquals(size - 1, newSize);
+        ctx.bucket().remove("dslistColl");
     }
 
     @Test
@@ -281,6 +317,17 @@ public class DataStructuresTest {
         } catch (InterruptedException ex) {
         }
         ctx.bucket().queueSize("dsqueueShortLived");
+    }
+
+
+    @Test
+    public void testQueueCollection() {
+        CouchbaseQueue<String> queue = new CouchbaseQueue<String>(ctx.bucket(), "dsqueueColl", String.class);
+        queue.add("val1");
+        queue.add("val2");
+        assertEquals("val1", queue.remove());
+        assertEquals("val2", queue.remove());
+        ctx.bucket().remove("dsqueueColl");
     }
 
     @Test
@@ -354,5 +401,17 @@ public class DataStructuresTest {
     @Test(expected = DocumentDoesNotExistException.class)
     public void testSetSizeOnNonExistentDocument() {
         ctx.bucket().setSize("dssetRandom");
+    }
+
+    @Test
+    public void testSetCollection() {
+        CouchbaseSet<String> set = new CouchbaseSet<String>(ctx.bucket(), "dssetColl", String.class);
+        set.add("foo");
+        assertEquals(false, set.add("foo"));
+        set.remove("foo");
+        assertEquals(true, set.add("foo"));
+        assertEquals(true, set.exists("foo"));
+        assertEquals(1, set.size());
+        ctx.bucket().remove("dssetColl");
     }
 }
