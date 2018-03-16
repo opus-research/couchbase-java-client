@@ -21,17 +21,24 @@
  */
 package com.couchbase.client.java.cluster;
 
-import rx.Observable;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public interface ClusterManager {
 
-    Observable<ClusterInfo> info();
-
-    Observable<BucketSettings> getBuckets();
-    Observable<BucketSettings> getBucket(String name);
-    Observable<Boolean> hasBucket(String name);
-    Observable<BucketSettings> insertBucket(BucketSettings settings);
-    Observable<BucketSettings> updateBucket(BucketSettings settings);
-    Observable<Boolean> removeBucket(String name);
-
+    AsyncClusterManager async();
+    ClusterInfo info();
+    ClusterInfo info(long timeout, TimeUnit timeUnit);
+    List<BucketSettings> getBuckets();
+    List<BucketSettings> getBuckets(long timeout, TimeUnit timeUnit);
+    BucketSettings getBucket(String name);
+    BucketSettings getBucket(String name, long timeout, TimeUnit timeUnit);
+    Boolean hasBucket(String name);
+    Boolean hasBucket(String name, long timeout, TimeUnit timeUnit);
+    BucketSettings insertBucket(BucketSettings settings);
+    BucketSettings insertBucket(BucketSettings settings, long timeout, TimeUnit timeUnit);
+    BucketSettings updateBucket(BucketSettings settings);
+    BucketSettings updateBucket(BucketSettings settings, long timeout, TimeUnit timeUnit);
+    Boolean removeBucket(String name);
+    Boolean removeBucket(String name, long timeout, TimeUnit timeUnit);
 }

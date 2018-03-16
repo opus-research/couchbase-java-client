@@ -21,12 +21,12 @@
  */
 package com.couchbase.client.java.util;
 
-import com.couchbase.client.java.Bucket;
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.CouchbaseCluster;
+import com.couchbase.client.java.AsyncBucket;
+import com.couchbase.client.java.AsyncCluster;
+import com.couchbase.client.java.CouchbaseAsyncCluster;
 
 import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.cluster.ClusterManager;
+import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,13 +44,13 @@ public class ClusterDependentTest {
     private static final String adminName = TestProperties.adminName();
     private static final String adminPassword = TestProperties.adminPassword();
 
-    private static Cluster cluster;
-    private static Bucket bucket;
-    private static ClusterManager clusterManager;
+    private static AsyncCluster cluster;
+    private static AsyncBucket bucket;
+    private static AsyncClusterManager clusterManager;
 
     @BeforeClass
     public static void connect() {
-        cluster = CouchbaseCluster.create(seedNode);
+        cluster = CouchbaseAsyncCluster.create(seedNode);
         clusterManager = cluster.clusterManager(adminName, adminPassword).toBlocking().single();
         boolean exists = clusterManager.hasBucket(bucketName).toBlocking().single();
         if (!exists) {
@@ -77,11 +77,11 @@ public class ClusterDependentTest {
         return password;
     }
 
-    public static Cluster cluster() {
+    public static AsyncCluster cluster() {
         return cluster;
     }
 
-    public static Bucket bucket() {
+    public static AsyncBucket bucket() {
         return bucket;
     }
 
@@ -89,7 +89,7 @@ public class ClusterDependentTest {
         return bucketName;
     }
 
-    public static ClusterManager clusterManager() {
+    public static AsyncClusterManager clusterManager() {
         return clusterManager;
     }
 }

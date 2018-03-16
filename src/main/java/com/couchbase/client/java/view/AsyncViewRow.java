@@ -27,15 +27,13 @@ import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import rx.Observable;
 
-import java.util.concurrent.TimeUnit;
-
 /**
- * Represents a {@link ViewRow} fetched from the View.
+ * Represents a {@link AsyncViewRow} fetched from the View.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-public interface ViewRow {
+public interface AsyncViewRow {
 
     /**
      * The id of the document, if not reduced.
@@ -67,9 +65,7 @@ public interface ViewRow {
      *
      * @return a {@link Observable} containing the document once loaded.
      */
-    JsonDocument document();
-
-    JsonDocument document(long timeout, TimeUnit timeUnit);
+    Observable<JsonDocument> document();
 
     /**
      * Load the underlying document, if not reduced.
@@ -77,8 +73,6 @@ public interface ViewRow {
      * @param target class to use a different {@link Document}.
      * @return a {@link Observable} containing the document once loaded.
      */
-    <D extends Document<?>> D document(final Class<D> target);
-
-    <D extends Document<?>> D document(final Class<D> target, long timeout, TimeUnit timeUnit);
+    <D extends Document<?>> Observable<D> document(final Class<D> target);
 
 }
