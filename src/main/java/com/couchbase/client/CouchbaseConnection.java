@@ -232,15 +232,11 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         if (o instanceof VBucketAware) {
           VBucketAware vbucketAwareOp = (VBucketAware) o;
           vbucketAwareOp.setVBucket(key, vbucketIndex);
-          Collection<MemcachedNode> notMyVbucketNodes =
-            vbucketAwareOp.getNotMyVbucketNodes();
-          if (!notMyVbucketNodes.isEmpty()) {
-            cf.checkConfigUpdate();
-            MemcachedNode alternative = vbucketLocator.getAlternative(key,
-              notMyVbucketNodes);
-            if (alternative == null) {
-              notMyVbucketNodes.clear();
-            } else {
+          if (!vbucketAwareOp.getNotMyVbucketNodes().isEmpty()) {
+            MemcachedNode alternative =
+                vbucketLocator.getAlternative(key,
+                    vbucketAwareOp.getNotMyVbucketNodes());
+            if (alternative != null) {
               placeIn = alternative;
             }
           }
