@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2015 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,40 +19,25 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
+package com.couchbase.client.java.query.dsl.path.index;
 
-package com.couchbase.client.java.query.dsl.functions;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
-import static com.couchbase.client.java.query.dsl.Expression.x;
-import static com.couchbase.client.java.query.dsl.functions.MetaFunctions.base64;
-import static com.couchbase.client.java.query.dsl.functions.MetaFunctions.meta;
-import static com.couchbase.client.java.query.dsl.functions.MetaFunctions.uuid;
-import static org.junit.Assert.*;
+/**
+ * Using path of the secondary Index creation DSL.
+ *
+ * @author Simon Baslé
+ * @since 2.2
+ */
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface UsingWherePath extends WherePath {
 
-import com.couchbase.client.java.query.dsl.Expression;
-import org.junit.Test;
-
-public class MetaFunctionsTest {
-
-    @Test
-    public void testMeta() throws Exception {
-        Expression e1 = meta(x(1));
-        Expression e2 = meta("1");
-
-        assertEquals(e1.toString(), e2.toString());
-        assertEquals("META(1)", e1.toString());
-    }
-
-    @Test
-    public void testBase64() throws Exception {
-        Expression e1 = base64(x(1));
-        Expression e2 = base64("1" );
-
-        assertEquals(e1.toString(), e2.toString());
-        assertEquals("BASE64(1)", e1.toString());
-    }
-
-    @Test
-    public void testUuid() throws Exception {
-        assertEquals("UUID()", uuid().toString());
-    }
+    /**
+     * Describes what kind of index to create.
+     *
+     * @param indexType the type of index to create.
+     */
+    WherePath using(IndexType indexType);
 }

@@ -19,37 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query.dsl.functions;
-
-import static com.couchbase.client.java.query.dsl.Expression.x;
+package com.couchbase.client.java.query.dsl.path.index;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.query.dsl.Expression;
+import com.couchbase.client.java.query.dsl.element.UsingElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
 /**
- * DSL for N1QL functions in the Numbers category.
+ * See {@link UsingWherePath}.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Public
-public class NumberFunctions {
-
-    public static Expression round(Expression expression) {
-        return x("ROUND(" + expression.toString() + ")");
+@InterfaceAudience.Private
+public class DefaultUsingWherePath extends DefaultWherePath implements UsingWherePath {
+    protected DefaultUsingWherePath(AbstractPath parent) {
+        super(parent);
     }
 
-    public static Expression round(Expression expression, int digits) {
-        return x("ROUND(" + expression.toString() + ", " + digits + ")");
-    }
-
-    public static Expression round(Number expression) {
-        return round(x(expression));
-    }
-
-    public static Expression round(Number expression, int digits) {
-        return round(x(expression), digits);
+    @Override
+    public WherePath using(IndexType indexType) {
+        element(new UsingElement(indexType));
+        return new DefaultWherePath(this);
     }
 }
