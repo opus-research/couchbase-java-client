@@ -20,20 +20,26 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+
+import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.message.config.RestApiRequest;
 import com.couchbase.client.core.message.config.RestApiResponse;
 import com.couchbase.client.deps.io.netty.handler.codec.http.HttpHeaders;
+import com.couchbase.client.java.cluster.ClusterInfo;
+import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.BucketSettings;
+import com.couchbase.client.java.cluster.DefaultBucketSettings;
+import com.couchbase.client.java.cluster.UserSettings;
+import com.couchbase.client.java.cluster.UserRole;
+import com.couchbase.client.java.cluster.User;
 import com.couchbase.client.java.cluster.api.AsyncClusterApiClient;
 import com.couchbase.client.java.cluster.api.AsyncRestBuilder;
 import com.couchbase.client.java.cluster.api.ClusterApiClient;
-import com.couchbase.client.java.cluster.ClusterInfo;
-import com.couchbase.client.java.cluster.ClusterManager;
-import com.couchbase.client.java.cluster.DefaultBucketSettings;
 import com.couchbase.client.java.cluster.api.RestBuilder;
 import com.couchbase.client.java.error.InvalidPasswordException;
 import com.couchbase.client.java.util.TestProperties;
@@ -243,5 +249,4 @@ public class ClusterManagerTest {
                 .contains("enabled")
                 .contains("count");
     }
-
 }
