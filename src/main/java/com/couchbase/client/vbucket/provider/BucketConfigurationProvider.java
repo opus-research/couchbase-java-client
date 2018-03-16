@@ -490,7 +490,7 @@ public class BucketConfigurationProvider extends SpyObject
       return;
     }
 
-    if (bootstrapProvider.isCarrier() || bootstrapProvider == BootstrapProviderType.NONE) {
+    if (bootstrapProvider.isCarrier()) {
       if (binaryConnection.get() == null) {
         bootstrap();
       } else {
