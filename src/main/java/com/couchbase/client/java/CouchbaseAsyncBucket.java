@@ -461,6 +461,11 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   }
 
     @Override
+    public Observable<AsyncSpatialViewResult> query(final SpatialViewQuery query) {
+        return null;
+    }
+
+    @Override
     public Observable<AsyncQueryResult> query(final Query query) {
         return query(query.toString());
     }

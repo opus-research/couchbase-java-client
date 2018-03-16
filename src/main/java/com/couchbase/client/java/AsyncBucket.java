@@ -31,9 +31,7 @@ import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.view.AsyncViewResult;
-import com.couchbase.client.java.view.View;
-import com.couchbase.client.java.view.ViewQuery;
+import com.couchbase.client.java.view.*;
 import rx.Observable;
 
 import java.util.concurrent.TimeUnit;
@@ -914,6 +912,18 @@ public interface AsyncBucket {
      * @return a result containing all the found rows and additional information.
      */
     Observable<AsyncViewResult> query(ViewQuery query);
+
+    /**
+     * Queries a Spatial Couchbase Server {@link View}.
+     *
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     * - If the design document or view is not found: {@link ViewDoesNotExistException}
+     *
+     * @param query the query to perform.
+     * @return a result containing all the found rows and additional information.
+     */
+    Observable<AsyncSpatialViewResult> query(SpatialViewQuery query);
 
     /**
      * Experimental: Queries a N1QL secondary index.
