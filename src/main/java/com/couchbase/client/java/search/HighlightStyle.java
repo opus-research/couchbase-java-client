@@ -29,6 +29,5 @@ import com.couchbase.client.core.annotations.InterfaceStability;
 @InterfaceAudience.Public
 public enum HighlightStyle {
     HTML,
-    ANSI,
-    SERVER_DEFAULT
+    ANSI
 }
