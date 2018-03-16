@@ -35,7 +35,6 @@ import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.QueryExecutionException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.AsyncQueryRow;
@@ -52,7 +51,6 @@ import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.util.LRUCache;
 import rx.Observable;
 import rx.exceptions.CompositeException;
-import rx.functions.Action0;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -78,83 +76,6 @@ public class QueryExecutor {
      * The maximum number of cached queries after which the eldest will be evicted.
      */
     private static final int QUERY_CACHE_SIZE = 5000;
-
-    private static final String ERROR_FIELD_CODE = "code";
-    private static final String ERROR_FIELD_MSG = "msg";
-    private static final String ERROR_5000_SPECIFIC_MESSAGE = "index deleted or node hosting the index is down " +
-            "- cause: queryport.indexNotFound";
-
-    /**
-     * Tests a N1QL error JSON for conditions warranting a prepared statement retry.
-     */
-    private static boolean shouldRetry(JsonObject errorJson) {
-        if (errorJson == null) return false;
-        Integer code = errorJson.getInt(ERROR_FIELD_CODE);
-        String msg = errorJson.getString(ERROR_FIELD_MSG);
-
-        if (code == null || msg == null) return false;
-
-        if (code == 4050 || code == 4070 ||
-                (code == 5000 && msg.contains(ERROR_5000_SPECIFIC_MESSAGE))) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Retries a limited number of times, only if the N1QL error code correspond to either 4050, 4070
-     * or 5000 (with the limitation on the latest that the error message matches a known message corresponding
-     * to prepare needing to be retried, see {@link #ERROR_5000_SPECIFIC_MESSAGE}).
-     */
-    private static final Func2 PREPARED_NOT_FOUND_RETRY_CONDITION = new Func2<Integer, Throwable, Boolean>() {
-        @Override
-        public Boolean call(Integer attempt, Throwable error) {
-            return attempt < 2 && error instanceof QueryExecutionException &&
-                    shouldRetry(((QueryExecutionException) error).getN1qlError());
-        }
-    };
-
-    /**
-     * Peeks into the error stream of the {@link AsyncQueryResult} and reemit a copy of it if no retry condition for
-     * prepared statement execution is found, otherwise emit an error than will trigger a retry
-     * (see {@link #PREPARED_NOT_FOUND_RETRY_CONDITION}).
-     */
-    private static final Func1<AsyncQueryResult, Observable<AsyncQueryResult>> QUERY_RESULT_PEEK_FOR_RETRY =
-            new Func1<AsyncQueryResult, Observable<AsyncQueryResult>>() {
-                @Override
-                public Observable<AsyncQueryResult> call(final AsyncQueryResult aqr) {
-                    final Observable<JsonObject> cachedErrors = aqr.errors().cache();
-
-                    return cachedErrors
-                            //only keep errors that triggers a prepared statement retry
-                            .filter(new Func1<JsonObject, Boolean>() {
-                                @Override
-                                public Boolean call(JsonObject e) {
-                                    return shouldRetry(e);
-                                }
-                            })
-                            //if none, will emit null
-                            .lastOrDefault(null)
-                            //... in which case a copy of the AsyncQueryResult is propagated, otherwise an retry
-                            // triggering exception is propagated.
-                            .flatMap(new Func1<JsonObject, Observable<AsyncQueryResult>>() {
-                                @Override
-                                public Observable<AsyncQueryResult> call(JsonObject errorJson) {
-                                    if (errorJson == null) {
-                                        AsyncQueryResult copyResult = new DefaultAsyncQueryResult(
-                                                aqr.rows(), aqr.signature(), aqr.info(),
-                                                cachedErrors,
-                                                aqr.finalSuccess(), aqr.parseSuccess(), aqr.requestId(),
-                                                aqr.clientContextId());
-                                        return Observable.just(copyResult);
-                                    } else {
-                                        return Observable.error(new QueryExecutionException("Error with prepared query",
-                                                errorJson));
-                                    }
-                                }
-                            });
-                }
-            };
 
     private final ClusterFacade core;
     private final String bucket;
@@ -188,9 +109,7 @@ public class QueryExecutor {
                     @Override
                     public Observable<AsyncQueryResult> call(PreparedPayload payload) {
                         queryCache.put(query.statement().toString(), payload);
-                        return executePrepared(query, payload)
-                                .flatMap(QUERY_RESULT_PEEK_FOR_RETRY)
-                                .retry(PREPARED_NOT_FOUND_RETRY_CONDITION);
+                        return executePrepared(query, payload);
                     }
                 });
         }
