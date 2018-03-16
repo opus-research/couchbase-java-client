@@ -108,11 +108,6 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
   private final HttpAsyncRequester requester;
 
   /**
-   * The connection factory for other references.
-   */
-  private final CouchbaseConnectionFactory connectionFactory;
-
-  /**
    * The thread where the {@link #ioReactor} executes in.
    */
   private volatile Thread reactorThread;
@@ -146,7 +141,6 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
     nextNode = 0;
     this.user = user;
     this.password = password;
-    connectionFactory = cf;
 
     viewNodes = Collections.synchronizedList(new ArrayList<HttpHost>());
     for (InetSocketAddress addr : seedAddrs) {
@@ -224,14 +218,6 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
         new HttpResponseCallback(op, this, httpHost)
       );
     }
-  }
-
-  /**
-   * Helper method to signal an outdated config and potentially force a
-   * refresh of the connection provider.
-   */
-  public void signalOutdatedConfig() {
-    connectionFactory.checkConfigUpdate();
   }
 
   /**
