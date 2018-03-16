@@ -27,7 +27,6 @@ import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
-import com.couchbase.client.java.cluster.UserRole;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;

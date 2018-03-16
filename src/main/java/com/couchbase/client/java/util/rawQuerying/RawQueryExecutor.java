@@ -56,12 +56,9 @@ public class RawQueryExecutor {
     }
 
     public RawQueryExecutor(String bucket, String password, ClusterFacade core, CouchbaseEnvironment env) {
-        this(bucket, bucket, password, core, env);
+        this(new AsyncRawQueryExecutor(bucket, password, core), env);
     }
 
-    public RawQueryExecutor(String bucket, String username, String password, ClusterFacade core, CouchbaseEnvironment env) {
-        this(new AsyncRawQueryExecutor(bucket, username, password, core), env);
-    }
 
     /**
      * Synchronously perform a {@link N1qlQuery} and return the raw N1QL response as a {@link JsonObject}.
