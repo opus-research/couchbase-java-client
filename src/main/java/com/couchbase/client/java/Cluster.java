@@ -27,6 +27,8 @@ import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.AuthenticatorException;
+import com.couchbase.client.java.query.N1qlQuery;
+import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 
 /**
@@ -176,6 +178,36 @@ public interface Cluster {
     Bucket openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders,
         long timeout, TimeUnit timeUnit);
 
+    /**
+     * Synchronously perform a N1QL query that can span multiple buckets, with the default
+     * {@link CouchbaseEnvironment#queryTimeout() timeout}.
+     *
+     * The query will use any credential set through this cluster's {@link #authenticate(Authenticator) Authenticator}.
+     * In order to use that method, at least one {@link Bucket} must currently be opened.
+     *
+     * The Observable can fail in the following notable conditions:
+     *  - {@link UnsupportedOperationException}: no bucket is currently opened.
+     *
+     * @param query the {@link N1qlQuery} to execute.
+     * @return the {@link N1qlQueryResult query result}.
+     */
+    N1qlQueryResult query(N1qlQuery query);
+
+    /**
+     * Synchronously perform a N1QL query that can span multiple buckets, with a custom timeout.
+     *
+     * The query will use any credential set through this cluster's {@link #authenticate(Authenticator) Authenticator}.
+     * In order to use that method, at least one {@link Bucket} must currently be opened.
+     *
+     * The Observable can fail in the following notable conditions:
+     *  - {@link UnsupportedOperationException}: no bucket is currently opened.
+     *
+     * @param query the {@link N1qlQuery} to execute.
+     * @param timeout the custom timeout.
+     * @param timeUnit the unit for the timeout.
+     * @return the {@link N1qlQueryResult query result}.
+     */
+    N1qlQueryResult query(N1qlQuery query, long timeout, TimeUnit timeUnit);
 
     /**
      * Provides access to the {@link ClusterManager} to perform cluster-wide operations.

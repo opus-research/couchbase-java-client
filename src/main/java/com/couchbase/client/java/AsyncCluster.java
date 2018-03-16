@@ -24,6 +24,8 @@ import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.AuthenticatorException;
+import com.couchbase.client.java.query.AsyncN1qlQueryResult;
+import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.transcoder.Transcoder;
 import rx.Observable;
 
@@ -101,6 +103,20 @@ public interface AsyncCluster {
      * @return the opened bucket if successful.
      */
     Observable<AsyncBucket> openBucket(String name, String password, List<Transcoder<? extends Document, ?>> transcoders);
+
+    /**
+     * Asynchronously perform a N1QL query that can span multiple buckets. The query will use any credential set
+     * through this cluster's {@link #authenticate(Authenticator) Authenticator}.
+     *
+     * In order to use that method, at least one {@link AsyncBucket} must currently be opened.
+     *
+     * The Observable can fail in the following notable conditions:
+     *  - {@link UnsupportedOperationException}: no bucket is currently opened.
+     *
+     * @param query the {@link N1qlQuery} to execute.
+     * @return an observable emitting at most a single {@link AsyncN1qlQueryResult query result}.
+     */
+    Observable<AsyncN1qlQueryResult> query(N1qlQuery query);
 
     /**
      * Provides access to the {@link AsyncClusterManager} to perform cluster-wide operations.
