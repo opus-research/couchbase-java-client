@@ -28,7 +28,6 @@ import static com.couchbase.client.java.query.dsl.Expression.x;
 import static com.couchbase.client.java.util.retry.RetryBuilder.anyOf;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -353,7 +352,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         };
 
     @Override
-    public Observable<IndexInfo> listN1qlIndexes() {
+    public Observable<IndexInfo> listIndexes() {
         Expression whereClause = x("keyspace_id").eq(s(bucket))
                 .and(i("using").eq(s("gsi")));
 
@@ -384,7 +383,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createN1qlPrimaryIndex(final boolean ignoreIfExist, boolean defer) {
+    public Observable<Boolean> createPrimaryIndex(final boolean ignoreIfExist, boolean defer) {
         Statement createIndex;
         UsingWithPath usingWithPath = Index.createPrimaryIndex().on(bucket);
         if (defer) {
@@ -398,7 +397,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createN1qlPrimaryIndex(final String customName, final boolean ignoreIfExist, boolean defer) {
+    public Observable<Boolean> createPrimaryIndex(final String customName, final boolean ignoreIfExist, boolean defer) {
         Statement createIndex;
         UsingWithPath usingWithPath = Index.createNamedPrimaryIndex(customName).on(bucket);
         if (defer) {
@@ -422,39 +421,19 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> createN1qlIndex(final String indexName, final boolean ignoreIfExist, boolean defer, Object... fields) {
+    public Observable<Boolean> createIndex(final String indexName, final boolean ignoreIfExist, boolean defer, Object... fields) {
         if (fields == null || fields.length < 1) {
             throw new IllegalArgumentException("At least one field is required for secondary index");
         }
 
-        return createN1qlIndex(indexName,  Arrays.asList(fields), null, ignoreIfExist, defer);
-    }
-
-    @Override
-    public Observable<Boolean> createN1qlIndex(final String indexName, List<Object> fields, Expression whereClause,
-            final boolean ignoreIfExist, boolean defer) {
-        if (fields == null || fields.isEmpty()) {
-            throw new IllegalArgumentException("At least one field is required for secondary index");
-        }
-
-        int i = -1;
-        Expression firstExpression = expressionOrIdentifier(fields.get(0));
-        Expression[] otherExpressions = new Expression[fields.size() - 1];
-        for (Object field : fields) {
-            if (i > -1) {
-                otherExpressions[i] = expressionOrIdentifier(field);
-            } //otherwise skip first expression, already processed
-            i++;
+        Expression firstExpression = expressionOrIdentifier(fields[0]);
+        Expression[] otherExpressions = new Expression[fields.length - 1];
+        for (int i = 1; i < fields.length; i++) {
+            otherExpressions[i - 1] = expressionOrIdentifier(fields[i]);
         }
 
         Statement createIndex;
-        UsingWithPath usingWithPath;
-        if (whereClause != null) {
-            usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions).where(whereClause);
-        } else {
-            usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions);
-        }
-
+        UsingWithPath usingWithPath = Index.createIndex(indexName).on(bucket, firstExpression, otherExpressions);
         if (defer) {
             createIndex = usingWithPath.withDefer();
         } else {
@@ -467,18 +446,18 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
 
     @Override
-    public Observable<Boolean> dropN1qlPrimaryIndex(final boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropPrimaryIndex(final boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropPrimaryIndex(bucket).using(IndexType.GSI), "Error dropping primary index");
     }
 
     @Override
-    public Observable<Boolean> dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropPrimaryIndex(String customName, boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropNamedPrimaryIndex(bucket, customName).using(IndexType.GSI),
                 "Error dropping custom primary index \"" + customName + "\"");
     }
 
     @Override
-    public Observable<Boolean> dropN1qlIndex(String name, boolean ignoreIfNotExist) {
+    public Observable<Boolean> dropIndex(String name, boolean ignoreIfNotExist) {
         return drop(ignoreIfNotExist, Index.dropIndex(bucket, name).using(IndexType.GSI), "Error dropping index \"" + name + "\"");
     }
 
@@ -518,12 +497,12 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
 
     @Override
-    public Observable<List<String>> buildN1qlDeferredIndexes() {
+    public Observable<List<String>> buildDeferredIndexes() {
 
         final Func1<List<JsonObject>, Observable<List<String>>> errorHandler = errorsToThrowable(
                 "Error while triggering index build: ");
 
-        return listN1qlIndexes()
+        return listIndexes()
                 .filter(new Func1<IndexInfo, Boolean>() {
                     @Override
                     public Boolean call(IndexInfo indexInfo) {
@@ -572,11 +551,14 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<IndexInfo> watchN1qlIndexes(List<String> watchList, final long watchTimeout,
+    public Observable<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, final long watchTimeout,
             final TimeUnit watchTimeUnit) {
         final Set<String> watchSet = new HashSet<String>(watchList);
+        if (watchPrimary) {
+            watchSet.add(Index.PRIMARY_NAME);
+        }
 
-        return listN1qlIndexes()
+        return listIndexes()
                 .flatMap(new Func1<IndexInfo, Observable<IndexInfo>>() {
                     @Override
                     public Observable<IndexInfo> call(IndexInfo i) {
