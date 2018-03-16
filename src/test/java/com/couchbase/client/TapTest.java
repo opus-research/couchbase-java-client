@@ -45,14 +45,6 @@ public class TapTest extends ClientBaseCase {
 
   @Override
   protected void initClient() throws Exception {
-
-    TestAdmin testAdmin = new TestAdmin(TestConfig.IPV4_ADDR,
-            CbTestConfig.CLUSTER_ADMINNAME,
-            CbTestConfig.CLUSTER_PASS,
-            "default",
-            "");
-    TestAdmin.reCreateDefaultBucket();
-
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
     client = new CouchbaseClient(uris, "default", "");
@@ -82,7 +74,7 @@ public class TapTest extends ClientBaseCase {
       }
     }
     checkTapKeys(items);
-    // assertTrue(client.flush().get().booleanValue());
+    assertTrue(client.flush().get().booleanValue());
     tc.shutdown();
   }
 
@@ -113,7 +105,7 @@ public class TapTest extends ClientBaseCase {
       }
     }
     checkTapKeys(items);
-    // assertTrue(client.flush().get().booleanValue());
+    assertTrue(client.flush().get().booleanValue());
     tapClient.shutdown();
   }
 
