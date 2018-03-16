@@ -20,24 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client.vbucket.provider;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpClientCodec;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.protocol.binary.OperationImpl;
 
-/**
- * Initializes the Channel Pipeline with Handlers.
- */
-public class BucketMonitorChannelInitializer extends ChannelInitializer<Channel> {
+public class GetConfigOperationImpl extends OperationImpl {
+
+  private static final byte CMD = (byte) 0xb5;
+
+  public GetConfigOperationImpl(OperationCallback cb) {
+    super(CMD, 0, cb);
+  }
 
   @Override
-  protected void initChannel(Channel channel) throws Exception {
-    ChannelPipeline pipeline = channel.pipeline();
-
-    pipeline
-      .addLast("codec", new HttpClientCodec())
-      .addLast("handler", new BucketMonitorHandler());
+  public void initialize() {
+    prepareBuffer("", 0, EMPTY_BYTES);
   }
+
+  @Override
+  protected void decodePayload(byte[] pl) {
+    getCallback().receivedStatus(new OperationStatus(true, new String(pl)));
+  }
+
 }

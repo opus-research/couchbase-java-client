@@ -20,48 +20,30 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.protocol.views;
-
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
+package com.couchbase.client.vbucket;
 
 /**
- * Holds the response of a queried view.
+ * portions Copyright 2009 Red Hat, Inc. as provided under an Apache 2.0 license
+ * from the netty project.
  */
-public abstract class ViewResponse implements Iterable<ViewRow> {
-  protected final Collection<ViewRow> rows;
-  protected final Collection<RowError> errors;
-  protected final long totalRows;
 
-  public ViewResponse(final Collection<ViewRow> r,
-      final Collection<RowError> e, long t) {
-    rows = r;
-    errors = e;
-    totalRows = t;
-  }
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 
-  public Collection<RowError> getErrors() {
-    return errors;
-  }
+import static org.jboss.netty.channel.Channels.pipeline;
 
-  public long getTotalRows() {
-    return totalRows;
-  }
+/**
+ * A BucketMonitorPipelineFactory.
+ */
+public class BucketMonitorPipelineFactory implements ChannelPipelineFactory {
 
-  @Override
-  public Iterator<ViewRow> iterator() {
-    return rows.iterator();
-  }
-
-  public int size() {
-    return rows.size();
-  }
-
-  public abstract Map<String, Object> getMap();
-
-  public ViewRow removeLastElement() {
-    return ((LinkedList<ViewRow>) rows).removeLast();
+  public ChannelPipeline getPipeline() {
+    ChannelPipeline pipeline = pipeline();
+    pipeline.addLast("decoder", new HttpResponseDecoder());
+    pipeline.addLast("encoder", new HttpRequestEncoder());
+    pipeline.addLast("handler", new BucketUpdateResponseHandler());
+    return pipeline;
   }
 }
