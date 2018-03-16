@@ -1,5 +1,6 @@
 package com.couchbase.client.java.repository.mapping;
 
+import com.couchbase.client.java.repository.annotation.CAS;
 import com.couchbase.client.java.repository.annotation.Id;
 
 import java.lang.reflect.Field;
@@ -15,6 +16,7 @@ public class ReflectionBasedPropertyMetadata implements PropertyMetadata {
     private final Field fieldReference;
     private final boolean isId;
     private final boolean isField;
+    private final boolean isCas;
     private final String name;
     private final String realName;
 
@@ -23,6 +25,7 @@ public class ReflectionBasedPropertyMetadata implements PropertyMetadata {
 
         isId = fieldReference.isAnnotationPresent(Id.class);
         isField = fieldReference.isAnnotationPresent(com.couchbase.client.java.repository.annotation.Field.class);
+        isCas = fieldReference.isAnnotationPresent(CAS.class);
         realName = fieldReference.getName();
         name = extractName(fieldReference);
 
@@ -32,6 +35,11 @@ public class ReflectionBasedPropertyMetadata implements PropertyMetadata {
     @Override
     public boolean isId() {
         return isId;
+    }
+
+    @Override
+    public boolean isCAS() {
+        return isCas;
     }
 
     @Override
