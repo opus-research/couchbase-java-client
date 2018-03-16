@@ -29,7 +29,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-import net.spy.memcached.ClientBaseCase;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.tapmessage.ResponseMessage;
 
@@ -39,12 +38,20 @@ import net.spy.memcached.tapmessage.ResponseMessage;
 /**
  * A TapTest.
  */
-public class TapTest extends ClientBaseCase {
+public class TapTest extends CouchbaseClientBaseCase {
 
   private static final long TAP_DUMP_TIMEOUT = 2000;
 
   @Override
   protected void initClient() throws Exception {
+
+    TestAdmin testAdmin = new TestAdmin(TestConfig.IPV4_ADDR,
+            CbTestConfig.CLUSTER_ADMINNAME,
+            CbTestConfig.CLUSTER_PASS,
+            "default",
+            "");
+    TestAdmin.reCreateDefaultBucket();
+
     List<URI> uris = new LinkedList<URI>();
     uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
     client = new CouchbaseClient(uris, "default", "");
@@ -74,7 +81,7 @@ public class TapTest extends ClientBaseCase {
       }
     }
     checkTapKeys(items);
-    assertTrue(client.flush().get().booleanValue());
+    // assertTrue(client.flush().get().booleanValue());
     tc.shutdown();
   }
 
@@ -105,7 +112,7 @@ public class TapTest extends ClientBaseCase {
       }
     }
     checkTapKeys(items);
-    assertTrue(client.flush().get().booleanValue());
+    // assertTrue(client.flush().get().booleanValue());
     tapClient.shutdown();
   }
 

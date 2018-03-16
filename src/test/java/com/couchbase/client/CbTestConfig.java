@@ -22,40 +22,19 @@
 
 package com.couchbase.client;
 
-import java.util.concurrent.Future;
-
-import net.spy.memcached.CASValue;
-import net.spy.memcached.MemcachedClientIF;
-import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.transcoders.Transcoder;
-
-
 /**
- * This interface is provided as a helper for testing clients of the
- * CouchbaseClient.
+ * A testConfig.
  */
-public interface CouchbaseClientIF extends MemcachedClientIF {
+public final class CbTestConfig {
+  public static final String CLUSTER_PASS_PROP = "cluster.password";
+  public static final String CLUSTER_ADMINNAME_PROP = "cluster.adminname";
+  public static final String CLUSTER_PASS = 
+    System.getProperty(CLUSTER_PASS_PROP, "password");
+  public static final String CLUSTER_ADMINNAME =
+    System.getProperty(CLUSTER_ADMINNAME_PROP, "Administrator");
 
-  Future<CASValue<Object>> asyncGetAndLock(final String key, int exp);
+  private CbTestConfig() {
+    // Empty
+  }
 
-  <T> Future<CASValue<T>> asyncGetAndLock(final String key, int exp,
-      final Transcoder<T> tc);
-
-  <T> CASValue<T> getAndLock(String key, int exp, Transcoder<T> tc);
-
-  CASValue<Object> getAndLock(String key, int exp);
-  <T> OperationFuture<Boolean> asyncUnlock(final String key,
-          long casId, final Transcoder<T> tc);
-
-  OperationFuture<Boolean> asyncUnlock(final String key,
-          long casId);
-
-  <T> Boolean unlock(final String key,
-          long casId, final Transcoder<T> tc);
-
-  Boolean unlock(final String key,
-          long casId);
-
-
-  int getNumVBuckets();
 }

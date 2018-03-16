@@ -22,6 +22,7 @@
 
 package com.couchbase.client.vbucket;
 
+import com.couchbase.client.http.HttpUtil;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.ConfigurationParser;
 
@@ -49,7 +50,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 /**
  * The BucketMonitor will open an HTTP comet stream to monitor for changes to
- * the list of nodes. If the list of nodes changes
+ * the list of nodes. If the list of nodes changes, it will notify observers.
  */
 public class BucketMonitor extends Observable {
 
@@ -64,6 +65,8 @@ public class BucketMonitor extends Observable {
   private ConfigurationParser configParser;
   private BucketUpdateResponseHandler handler;
   private final HttpMessageHeaders headers;
+  private static final Logger LOGGER =
+      Logger.getLogger(BucketMonitor.class.getName());
   /**
    * The specification version which this client meets. This will be included in
    * requests to the server.
@@ -88,7 +91,6 @@ public class BucketMonitor extends Observable {
         : cometStreamURI.getScheme();
     if (!scheme.equals("http")) {
       // an SslHandler is needed in the pipeline
-      // System.err.println("Only HTTP is supported.");
       throw new UnsupportedOperationException("Only http is supported.");
     }
 
@@ -101,6 +103,19 @@ public class BucketMonitor extends Observable {
     factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool());
     this.headers = new HttpMessageHeaders();
+  }
+
+  /**
+   * Take any action required when the monitor appears to be disconnected.
+   */
+  protected void notifyDisconnected() {
+    this.bucket.setIsNotUpdating();
+    setChanged();
+    LOGGER.log(Level.FINE, "Marked bucket " + this.bucket.getName()
+      + " as not updating.  Notifying observers.");
+    LOGGER.log(Level.FINER, "There appear to be " + this.countObservers()
+      + " observers waiting for notification");
+    notifyObservers(this.bucket);
   }
 
   /**
@@ -176,8 +191,8 @@ public class BucketMonitor extends Observable {
         "Invalid client configuration received from server. Staying with "
         + "existing configuration.", ex);
       Logger.getLogger(BucketMonitor.class.getName()).log(Level.FINE,
-        "Invalid client configuration received:\n" + handler.getLastResponse()
-        + "\n");
+        "Invalid client configuration received:\n{0}",
+        handler.getLastResponse());
     }
   }
 
@@ -195,7 +210,8 @@ public class BucketMonitor extends Observable {
     channel = future.awaitUninterruptibly().getChannel();
     if (!future.isSuccess()) {
       bootstrap.releaseExternalResources();
-      throw new ConnectionException("Could not connect to any pool member.");
+      throw new ConnectionException("Could not connect to any cluster pool "
+        + "member.");
     }
     assert (channel != null);
   }
@@ -209,7 +225,7 @@ public class BucketMonitor extends Observable {
       String basicAuthHeader;
       try {
         basicAuthHeader =
-          ConfigurationProviderHTTP.buildAuthHeader(getHttpUser(),
+          HttpUtil.buildAuthHeader(getHttpUser(),
             getHttpPass());
         headers.setHeader(request, HttpHeaders.Names.AUTHORIZATION,
           basicAuthHeader);
@@ -282,7 +298,10 @@ public class BucketMonitor extends Observable {
     factory.releaseExternalResources();
   }
 
-  protected void invalidate() {
+  /**
+   * Replace the previously received configuration with the current one.
+   */
+  protected void replaceConfig() {
     try {
       String response = handler.getLastResponse();
       Bucket updatedBucket = this.configParser.parseBucket(response);

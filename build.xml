@@ -110,6 +110,7 @@
   <property name="server.address_v4" value="127.0.0.1"/>
   <property name="server.address_v6" value="::1"/>
   <property name="server.type" value="memcached"/>
+  <property name="test.type" value="unit"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern"
@@ -237,7 +238,7 @@
     <echo>Test Type (unit|ci) ${test.type}</echo>
     <delete dir="${junit.dir}"/>
     <mkdir  dir="${junit.dir}/data"/>
-    <junit fork="yes" timeout="60000" failureproperty="junit.failure">
+    <junit fork="yes" timeout="5400000" failureproperty="junit.failure" showoutput="true">
       <batchtest todir="${junit.dir}/data" fork="yes">
         <fileset dir="${test.dir}">
           <include name="**/*Test.java"/>

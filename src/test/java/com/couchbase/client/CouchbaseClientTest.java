@@ -23,24 +23,37 @@
 
 package com.couchbase.client;
 
+import java.net.SocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import net.spy.memcached.BinaryClientTest;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.PersistTo;
-import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.internal.OperationFuture;
+import org.junit.Ignore;
 
 /**
  * A CouchbaseClientTest.
  */
 public class CouchbaseClientTest extends BinaryClientTest {
+
   @Override
   protected void initClient() throws Exception {
-    initClient(new CouchbaseConnectionFactory(Arrays.asList(URI.create("http://"
-        + TestConfig.IPV4_ADDR + ":8091/pools")), "default", ""));
+    TestAdmin testAdmin = new TestAdmin(TestConfig.IPV4_ADDR,
+              CbTestConfig.CLUSTER_ADMINNAME,
+              CbTestConfig.CLUSTER_PASS,
+              "default",
+              "");
+    TestAdmin.reCreateDefaultBucket();
+
+    initClient(new CouchbaseConnectionFactory(
+            Arrays.asList(URI.create("http://"
+          + TestConfig.IPV4_ADDR + ":8091/pools")), "default", ""));
   }
 
   @Override
@@ -65,8 +78,40 @@ public class CouchbaseClientTest extends BinaryClientTest {
     } catch (InterruptedException e) {
       fail("Interrupted while client was warming up");
     }
+
+    StringBuilder availableServers = new StringBuilder();
+    for(SocketAddress sa : client.getAvailableServers()) {
+      if (availableServers.length() > 0) {
+        availableServers.append(";");
+      }
+      availableServers.append(sa.toString());
+    }
+
     assert (client.getAvailableServers().size() % 2) ==  0 : "Num servers "
-            + client.getAvailableServers().size();
+      + client.getAvailableServers().size() + ".  They are: "
+      + availableServers;
+  }
+
+  @Override
+  public void testGracefulShutdown() throws Exception {
+    for (int i = 0; i < 1000; i++) {
+      client.set("t" + i, 10, i);
+    }
+    assertTrue("Couldn't shut down within five seconds",
+        client.shutdown(5, TimeUnit.SECONDS));
+    // Initialize without recreating a bucket
+    initClient(new CouchbaseConnectionFactory(
+          Arrays.asList(URI.create("http://"
+          + TestConfig.IPV4_ADDR + ":8091/pools")), "default", ""));
+    Collection<String> keys = new ArrayList<String>();
+    for (int i = 0; i < 1000; i++) {
+      keys.add("t" + i);
+    }
+    Map<String, Object> m = client.getBulk(keys);
+    assertEquals(1000, m.size());
+    for (int i = 0; i < 1000; i++) {
+      assertEquals(i, m.get("t" + i));
+    }
   }
 
   public void testNumVBuckets() throws Exception {
@@ -118,20 +163,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
     assert client.set("getunltest", 1, "newvalue").get().booleanValue()
       : "Key was locked for too long";
   }
-
-  public void testObserve() throws Exception {
-    assertNull(client.get("observetest"));
-    OperationFuture<Boolean> setOp =
-            (((CouchbaseClient)client).set("observetest", 0, "value",
-                PersistTo.MASTER));
-    assert setOp.get().booleanValue()
-            : "Key was not persisted to master";
-    setOp = (((CouchbaseClient)client).set("observetest", 0, "value",
-            PersistTo.FOUR, ReplicateTo.THREE));
-    assert !setOp.get().booleanValue()
-            : "Was there really 4 servers with 3 replicas"
-            + "for a testing system?";
-  }
   public void testGetStatsSlabs() throws Exception {
     // Empty
   }
@@ -150,7 +181,8 @@ public class CouchbaseClientTest extends BinaryClientTest {
 
   protected void syncGetTimeoutsInitClient() throws Exception {
     initClient(new CouchbaseConnectionFactory(Arrays.asList(URI
-        .create("http://localhost:8091/pools")), "default", "") {
+        .create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")),
+        "default", "") {
       @Override
       public long getOperationTimeout() {
         return 2;
@@ -161,5 +193,29 @@ public class CouchbaseClientTest extends BinaryClientTest {
         return 1000000;
       }
     });
+  }
+
+  @Ignore
+  @Override
+  public void testDelayedFlush() throws Exception {
+    // TODO: re-add after RESTful flush added: Couchbase MB-5170
+  }
+
+  @Ignore
+  @Override
+  public void testFlush() throws Exception {
+    // TODO: re-add after RESTful flush added: Couchbase MB-5170
+  }
+
+  @Override
+  protected void tearDown() throws Exception {
+    // Can't use our CouchbaseClientBaseCase easily owing to inheritance.
+
+    // Shut down, null things out. Error tests have
+    // unpredictable timing issues.  See test from Spymemcached
+    // net.spy.memcached.ClientBaseCase
+    client.shutdown(200, TimeUnit.MILLISECONDS);
+    client = null;
+    System.gc();
   }
 }

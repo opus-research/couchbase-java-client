@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,12 @@
 package com.couchbase.client;
 
 import com.couchbase.client.protocol.views.HttpOperationImpl;
+import java.io.IOException;
+import java.io.InputStream;
 
 import java.net.HttpURLConnection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.spy.memcached.ops.OperationStatus;
 
@@ -32,25 +36,44 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 
 /**
- * A TestOperationImpl.
+ * A TestOperationPutImpl.
  */
-public class TestOperationImpl extends HttpOperationImpl implements
+public class TestOperationPutImpl extends HttpOperationImpl implements
     TestOperation {
 
-  public TestOperationImpl(HttpRequest r, TestCallback testCallback) {
+  public TestOperationPutImpl(HttpRequest r, TestCallback testCallback) {
     super(r, testCallback);
   }
 
   @Override
   public void handleResponse(HttpResponse response) {
-    String json = getEntityString(response);
+    StringBuilder json = new StringBuilder("");  // workaround for null returns
+    json.append(getEntityString(response));
     int errorcode = response.getStatusLine().getStatusCode();
-    if (errorcode == HttpURLConnection.HTTP_OK) {
-      ((TestCallback) callback).getData(json);
+    // read the response into a string
+    InputStream bi;
+    StringBuffer responseContent = new StringBuffer("");
+    try {
+      bi = response.getEntity().getContent();
+      byte[] buffer = new byte[bi.available() ];
+      int bytesRead = bi.read(buffer);
+      responseContent.append(new String(buffer));
+    } catch (IOException ex) {
+      Logger.getLogger(TestOperationImpl.class.getName()).log(
+              Level.SEVERE, "Could not read test response.", ex);
+    } catch (IllegalStateException ex) {
+      Logger.getLogger(TestOperationImpl.class.getName()).log(
+              Level.SEVERE, null, ex);
+    }
+
+
+
+    if (errorcode == HttpURLConnection.HTTP_CREATED) {
+      ((TestCallback) callback).getData(json.toString());
       callback.receivedStatus(new OperationStatus(true, "OK"));
     } else {
       callback.receivedStatus(new OperationStatus(false,
-          Integer.toString(errorcode)));
+          Integer.toString(errorcode) + ": " + responseContent));
     }
     callback.complete();
   }
