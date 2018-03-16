@@ -3,7 +3,6 @@ package com.couchbase.client.java.query;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.document.json.JsonArray;
 import rx.Observable;
 
 /**
@@ -22,10 +21,9 @@ public interface AsyncQueryResult {
 
     /**
      * @return an async single-item representing the signature of the results, that can be used to
-     * learn about the common structure of each {@link #rows() row}. This signature is usually a
-     * {@link JsonObject}, but could also be any JSON-valid type like a boolean scalar, {@link JsonArray}...
+     * learn about the common structure of each {@link #rows() row}.
      */
-    Observable<Object> signature();
+    Observable<JsonObject> signature();
 
     /**
      * @return an async single item describing some metrics/info about the execution of the query.

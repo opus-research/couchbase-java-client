@@ -21,16 +21,12 @@
  */
 package com.couchbase.client.java.transcoder;
 
-import java.util.List;
-import java.util.Map;
-
 import com.couchbase.client.core.lang.Tuple;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.TranscodingException;
 
@@ -82,7 +78,14 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
         return JacksonTransformers.MAPPER.readValue(input, JsonObject.class);
     }
 
-    private <T> T byteBufToClass(ByteBuf input, Class<? extends T> clazz) throws Exception {
+    /**
+     * Converts a {@link ByteBuf} to a {@link JsonObject}, <b>without releasing the buffer</b>
+     *
+     * @param input the buffer to convert. It won't be cleared (contrary to {@link #doDecode(String, ByteBuf, long, int, int, ResponseStatus) classical decode})
+     * @return a JsonObject decoded from the buffer
+     * @throws Exception
+     */
+    public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
         byte[] inputBytes;
         int offset = 0;
         int length = input.readableBytes();
@@ -93,36 +96,8 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
             inputBytes = new byte[length];
             input.getBytes(input.readerIndex(), inputBytes);
         }
-        return JacksonTransformers.MAPPER.readValue(inputBytes, offset, length, clazz);
+        return JacksonTransformers.MAPPER.readValue(inputBytes, offset, length, JsonObject.class);
     }
 
-    /**
-     * Converts a {@link ByteBuf} to a {@link JsonObject}, <b>without releasing the buffer</b>
-     *
-     * @param input the buffer to convert. It won't be cleared (contrary to {@link #doDecode(String, ByteBuf, long, int, int, ResponseStatus) classical decode})
-     * @return a JsonObject decoded from the buffer
-     * @throws Exception
-     */
-    public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
-        return byteBufToClass(input, JsonObject.class);
-    }
-
-    /**
-     * Converts a {@link ByteBuf} to a generic {@link Object}, <b>without releasing the buffer</b>
-     *
-     * @param input the buffer to convert. It won't be cleared (contrary to {@link #doDecode(String, ByteBuf, long, int, int, ResponseStatus) classical decode})
-     * @return a Object decoded from the buffer
-     * @throws Exception
-     */
-    public Object byteBufJsonValueToObject(ByteBuf input) throws Exception {
-        Object value = byteBufToClass(input, Object.class);
-        if (value instanceof Map) {
-            return JsonObject.from((Map<String, ?>) value);
-        } else if (value instanceof List) {
-            return JsonArray.from((List<?>) value);
-        } else {
-            return value;
-        }
-    }
 
 }
