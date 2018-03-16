@@ -40,11 +40,13 @@ import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryRow;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.util.ClusterDependentTest;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Integration tests of the N1QL Query functionalities.
+ * Integration tests of the N1QL Query features.
  *
  * @author Simon Baslé
  * @since 2.1
@@ -70,7 +72,7 @@ public class QueryTest extends ClusterDependentTest {
         assertFalse(plan.plan().getObject("operator").isEmpty());
 
         QueryResult response = bucket().query(new PreparedQuery(plan, JsonArray.from(123)));
-        assertTrue(response.success());
+        assertTrue(response.finalSuccess());
         List<QueryRow> rows = response.allRows();
         assertEquals(1, rows.size());
         assertTrue(rows.get(0).value().toString().contains("123"));
