@@ -49,7 +49,6 @@ public class LookupInBuilder {
     private final AsyncLookupInBuilder async;
     private final long defaultTimeout;
     private final TimeUnit defaultTimeUnit;
-    private boolean accessDeleted;
 
     /**
      * Instances of this builder should be obtained through {@link Bucket#lookupIn(String)} rather than directly
@@ -60,17 +59,6 @@ public class LookupInBuilder {
         this.async = async;
         this.defaultTimeout = defaultTimeout;
         this.defaultTimeUnit = defaultTimeUnit;
-    }
-
-    /**
-     * Set accessDeleted to true, if the document has been deleted to access xattrs
-     *
-     * @param accessDeleted true to access deleted document xattrs
-     */
-    @InterfaceStability.Experimental
-    public LookupInBuilder accessDeleted(boolean accessDeleted) {
-        async.accessDeleted(accessDeleted);
-        return this;
     }
 
     /**
