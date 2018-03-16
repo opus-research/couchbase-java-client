@@ -87,16 +87,13 @@ public class JsonTranscoder extends AbstractTranscoder<JsonDocument, JsonObject>
      */
     public JsonObject byteBufToJsonObject(ByteBuf input) throws Exception {
         byte[] inputBytes;
-        int offset = 0;
-        int length = input.readableBytes();
         if (input.hasArray()) {
             inputBytes = input.array();
-            offset = input.arrayOffset() + input.readerIndex();
         } else {
-            inputBytes = new byte[length];
-            input.getBytes(input.readerIndex(), inputBytes);
+            inputBytes = new byte[input.readableBytes()];
+            input.getBytes(0, inputBytes);
         }
-        return JacksonTransformers.MAPPER.readValue(inputBytes, offset, length, JsonObject.class);
+        return JacksonTransformers.MAPPER.readValue(inputBytes, JsonObject.class);
     }
 
 
