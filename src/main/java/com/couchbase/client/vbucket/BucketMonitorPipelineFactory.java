@@ -22,22 +22,28 @@
 
 package com.couchbase.client.vbucket;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpClientCodec;
+/**
+ * portions Copyright 2009 Red Hat, Inc. as provided under an Apache 2.0 license
+ * from the netty project.
+ */
+
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
+import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+
+import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
- * Initializes the Channel Pipeline with Handlers.
+ * A BucketMonitorPipelineFactory.
  */
-public class BucketMonitorChannelInitializer extends ChannelInitializer<Channel> {
+public class BucketMonitorPipelineFactory implements ChannelPipelineFactory {
 
-  @Override
-  protected void initChannel(Channel channel) throws Exception {
-    ChannelPipeline pipeline = channel.pipeline();
-
-    pipeline
-      .addLast("codec", new HttpClientCodec())
-      .addLast("handler", new BucketMonitorHandler());
+  public ChannelPipeline getPipeline() {
+    ChannelPipeline pipeline = pipeline();
+    pipeline.addLast("decoder", new HttpResponseDecoder());
+    pipeline.addLast("encoder", new HttpRequestEncoder());
+    pipeline.addLast("handler", new BucketUpdateResponseHandler());
+    return pipeline;
   }
 }
