@@ -99,7 +99,6 @@ configurations {
 
 dependencies {
     compile group: 'com.couchbase.client', name: 'core-io', version: coreVersion, changing: true
-    compile project(':compiler')
 
     optional group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
     optional group: 'commons-logging', name: 'commons-logging', version: commonsVersion

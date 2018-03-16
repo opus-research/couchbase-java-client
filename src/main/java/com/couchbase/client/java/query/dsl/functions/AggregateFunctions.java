@@ -26,7 +26,6 @@ import static com.couchbase.client.java.query.dsl.Expression.x;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.query.dsl.Expression;
-import com.couchbase.client.preprocessing.query.GenerateDsl;
 
 /**
  * DSL for N1QL functions in the aggregate category.
@@ -72,7 +71,6 @@ public class AggregateFunctions {
     /**
      * prefixes an expression with DISTINCT, useful for example for distinct count "COUNT(DISTINCT expression)".
      */
-    @GenerateDsl
     public static Expression distinct(String expression) {
         return x("DISTINCT " + expression);
     }
