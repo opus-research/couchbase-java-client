@@ -268,6 +268,7 @@ public class CouchbaseClient extends MemcachedClient
     try {
       cbConnFactory.getConfigurationProvider().updateBucket(
         cbConnFactory.getBucketName(), bucket);
+      cbConnFactory.updateStoredBaseList(bucket.getConfig());
 
       if(vconn != null) {
         vconn.reconfigure(bucket);
@@ -2327,10 +2328,7 @@ public class CouchbaseClient extends MemcachedClient
 
       Map<MemcachedNode, ObserveResponse> response = observe(key, cas);
 
-      int vb = locator.getVBucketIndex(key);
-      int index = ((CouchbaseConnectionFactory) connFactory)
-        .getVBucketConfig().getMaster(vb);
-      MemcachedNode master = locator.getServerByIndex(index);
+      MemcachedNode master = locator.getPrimary(key);
 
       replicaPersistedTo = 0;
       replicatedTo = 0;
