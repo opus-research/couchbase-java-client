@@ -24,6 +24,7 @@ package com.couchbase.client;
 
 import com.couchbase.client.clustermanager.FlushResponse;
 import com.couchbase.client.internal.HttpFuture;
+import com.couchbase.client.internal.ReplicaGetFuture;
 import com.couchbase.client.internal.ViewFuture;
 import com.couchbase.client.protocol.views.AbstractView;
 import com.couchbase.client.protocol.views.DesignDocFetcherOperation;
@@ -67,6 +68,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -82,12 +84,15 @@ import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
+import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
+import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.ObserveOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.ops.ReplicaGetOperation;
 import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.transcoders.Transcoder;
 import org.apache.http.HttpRequest;
@@ -963,6 +968,117 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
+   * Get a document from a replica node.
+   *
+   * This method allows you to explicitly load a document from a replica
+   * instead of the master node.
+   *
+   * This command only works on couchbase type buckets.
+   *
+   * @param key the key to fetch.
+   * @return the fetched document or null when no document available.
+   * @throws RuntimeException when less replicas available then in the index
+   *         argument defined.
+   */
+  public Object getFromReplica(String key) {
+    return getFromReplica(key, transcoder);
+  }
+
+  /**
+   * Get a document from a replica node.
+   *
+   * This method allows you to explicitly load a document from a replica
+   * instead from the master node.
+   *
+   * This command only works on couchbase type buckets.
+   *
+   * @param key the key to fetch.
+   * @param tc a custom document transcoder.
+   * @return the fetched document or null when no document available.
+   * @throws RuntimeException when less replicas available then in the index
+   *         argument defined.
+   */
+  public <T> T getFromReplica(String key, Transcoder<T> tc) {
+    try {
+      return asyncGetFromReplica(key, tc).get(operationTimeout,
+        TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted waiting for value", e);
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Exception waiting for value", e);
+    } catch (TimeoutException e) {
+      throw new OperationTimeoutException("Timeout waiting for value", e);
+    }
+  }
+
+  /**
+   * Get a document from a replica node asynchronously.
+   *
+   * This method allows you to explicitly load a document from a replica
+   * instead from the master node. This command only works on couchbase
+   * type buckets.
+   *
+   * @param key the key to fetch.
+   * @return a future containing the fetched document or null when no document
+   *         available.
+   * @throws RuntimeException when less replicas available then in the index
+   *         argument defined.
+   */
+  public ReplicaGetFuture<Object> asyncGetFromReplica(final String key) {
+    return asyncGetFromReplica(key, transcoder);
+  }
+
+  /**
+   * Get a document from a replica node asynchronously.
+   *
+   * This method allows you to explicitly load a document from a replica
+   * instead from the master node. This command only works on couchbase
+   * type buckets.
+   *
+   * @param key the key to fetch.
+   * @param tc a custom document transcoder.
+   * @return a future containing the fetched document or null when no document
+   *         available.
+   * @throws RuntimeException when less replicas available then in the index
+   *         argument defined.
+   */
+  public <T> ReplicaGetFuture<T> asyncGetFromReplica(final String key, final Transcoder<T> tc) {
+    int replicaCount = cbConnFactory.getVBucketConfig().getReplicasCount();
+    if(replicaCount == 0) {
+      throw new RuntimeException("Currently, there is no replica available for"
+        + " the given key (\"" + key + "\").");
+    }
+
+    List<GetFuture<T>> futures = new ArrayList<GetFuture<T>>();
+    for(int index=0; index < replicaCount; index++) {
+      final CountDownLatch latch = new CountDownLatch(1);
+      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
+      Operation op = opFact.replicaGet(key, index, new ReplicaGetOperation.Callback() {
+        private Future<T> val = null;
+
+        public void receivedStatus(OperationStatus status) {
+          rv.set(val, status);
+        }
+
+        public void gotData(String k, int flags, byte[] data) {
+          assert key.equals(k) : "Wrong key returned";
+          val =
+              tcService.decode(tc, new CachedData(flags, data, tc.getMaxSize()));
+        }
+
+        public void complete() {
+          latch.countDown();
+        }
+      });
+      rv.setOperation(op);
+      mconn.enqueueOperation(key, op);
+      futures.add(rv);
+    }
+
+    return new ReplicaGetFuture<T>(operationTimeout, futures);
+  }
+
+  /**
    * Getl with a single key. By default the maximum allowed timeout is 30
    * seconds. Timeouts greater than this will be set to 30 seconds.
    *
@@ -1116,6 +1232,11 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> delete(String key,
           PersistTo req, ReplicateTo rep) {
 
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
+
     OperationFuture<Boolean> deleteOp = delete(key);
 
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
@@ -1247,6 +1368,11 @@ public class CouchbaseClient extends MemcachedClient
    */
   public OperationFuture<Boolean> set(String key, int exp,
           Object value, PersistTo req, ReplicateTo rep) {
+
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
 
     OperationFuture<Boolean> setOp = set(key, exp, value);
 
@@ -1470,6 +1596,11 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> add(String key, int exp,
           Object value, PersistTo req, ReplicateTo rep) {
 
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
+
     OperationFuture<Boolean> addOp = add(key, exp, value);
 
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
@@ -1692,6 +1823,11 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> replace(String key, int exp,
           Object value, PersistTo req, ReplicateTo rep) {
 
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
+
     OperationFuture<Boolean> replaceOp = replace(key, exp, value);
 
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
@@ -1896,6 +2032,11 @@ public class CouchbaseClient extends MemcachedClient
   public CASResponse cas(String key, long cas,
           Object value, PersistTo req, ReplicateTo rep) {
 
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
+
     OperationFuture<CASResponse> casOp = asyncCAS(key, cas, value);
     CASResponse casr = null;
     try {
@@ -2081,9 +2222,8 @@ public class CouchbaseClient extends MemcachedClient
       int vBucketIndex = locator.getVBucketIndex(key);
       int currentReplicaNum = cfg.getReplica(vBucketIndex, numReplica-1);
       if (currentReplicaNum < 0) {
-        throw new ObservedException("Currently, there is no replica available "
-          + "for the given replica index. This can be the case because of a "
-          + "failed over node which has not yet been rebalanced.");
+        throw new ObservedException("Currently, there is no replica node "
+          + "available for the given replication index (" + numReplica + ").");
       }
     }
 
@@ -2093,9 +2233,9 @@ public class CouchbaseClient extends MemcachedClient
 
     if (numReplica > replicaCount) {
       throw new ObservedException("Requested replication to " + numReplica
-          + " node(s), but only " + replicaCount + " are avaliable");
+          + " node(s), but only " + replicaCount + " are available.");
     } else if (numPersist > replicaCount + 1) {
-      throw new ObservedException("Requested persistence to " + numPersist
+      throw new ObservedException("Requested persistence to " + (numPersist + 1)
           + " node(s), but only " + (replicaCount + 1) + " are available.");
     }
   }
@@ -2126,8 +2266,6 @@ public class CouchbaseClient extends MemcachedClient
     if(replicate == null) {
       replicate = ReplicateTo.ZERO;
     }
-    ((CouchbaseConnectionFactory)connFactory).
-      checkConfigAgainstPersistence(persist, replicate);
 
     int persistReplica = persist.getValue() > 0 ? persist.getValue() - 1 : 0;
     int replicateTo = replicate.getValue();
@@ -2252,6 +2390,9 @@ public class CouchbaseClient extends MemcachedClient
    */
   @Override
   public OperationFuture<Boolean> flush(final int delay) {
+    if(((CouchbaseConnection)mconn).isShutDown()) {
+      throw new IllegalStateException("Flush can not be used after shutdown.");
+    }
 
     final CountDownLatch latch = new CountDownLatch(1);
     final FlushRunner flushRunner = new FlushRunner(latch);

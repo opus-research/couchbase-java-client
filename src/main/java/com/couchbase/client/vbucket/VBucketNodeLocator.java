@@ -73,11 +73,12 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
     int serverNumber = config.getMaster(vbucket);
 
     if(serverNumber == -1) {
-      throw new RuntimeException("The key "+ k +" pointed to vbucket "+ vbucket
-        + ", for which no server is responsible in the cluster map. This "
+      getLogger().warn("The key "+ k +" pointed to vbucket "+ vbucket
+        + ", for which no server is responsible in the cluster map (-1). This "
         + "can be an indication that either no replica is defined for a "
         + "failed server or more nodes have been failed over than replicas "
         + "defined.");
+      return null;
     }
 
     String server = config.getServer(serverNumber);
@@ -101,6 +102,39 @@ public class VBucketNodeLocator extends SpyObject implements NodeLocator {
       }
     }
     assert (pNode != null);
+    return pNode;
+  }
+
+  /**
+   * Return a replica node for the given key and replica index.
+   *
+   * Based on the ReplicaIndex ID given, this method calculates the
+   * replica node. It works similar to the getMaster method, but has the
+   * additional capability to find the node based on the given replica
+   * index.
+   *
+   * @param key the key to find the node for.
+   * @param index the Nth replica number
+   * @return the node where the given replica exists
+   * @throws RuntimeException when no replica is defined for the given key
+   */
+  public MemcachedNode getReplica(String key, int index) {
+     TotalConfig totConfig = fullConfig.get();
+    Config config = totConfig.getConfig();
+    Map<String, MemcachedNode> nodesMap = totConfig.getNodesMap();
+    int vbucket = config.getVbucketByKey(key);
+    int serverNumber = config.getReplica(vbucket, index);
+
+    if(serverNumber == -1) {
+      throw new RuntimeException("The key " + key + " pointed to vbucket "
+        + vbucket + ", for which no server is responsible in the cluster map."
+        + "This can be an indication that either no replica is defined for a "
+        + "failed server or more nodes have been failed over than replicas "
+        + "defined.");
+    }
+
+    String server = config.getServer(serverNumber);
+    MemcachedNode pNode = nodesMap.get(server);
     return pNode;
   }
 

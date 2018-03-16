@@ -25,7 +25,7 @@ If you are using Apache Maven, add the following repository and depencendy in to
   		<dependency>
   			<groupId>couchbase</groupId>
 			<artifactId>couchbase-client</artifactId>
-			<version>1.1.6</version>
+			<version>1.1.7</version>
 			<type>jar</type>
 		</dependency>
     </dependencies>
