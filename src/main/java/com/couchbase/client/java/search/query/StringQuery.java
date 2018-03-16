@@ -1,16 +1,16 @@
-/*
- * Copyright (C) 2016 Couchbase, Inc.
- *
+/**
+ * Copyright (C) 2015 Couchbase, Inc.
+ * <p/>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p/>
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p/>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,44 +20,57 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.document.subdoc;
+package com.couchbase.client.java.search.query;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * Utility class to create specs for the sub-document API's multi-{@link LookupCommand lookup} operations.
- *
- * @author Michael Nitschinger
- * @author Simon Baslé
- * @since 2.2
+ * @author Sergey Avseyev
  */
-@InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class LookupSpec extends LookupCommand {
+@InterfaceStability.Experimental
+public class StringQuery extends SearchQuery {
+    private final String query;
 
-    private LookupSpec(Lookup type, String path) {
-        super(type, path);
+    protected StringQuery(Builder builder) {
+        super(builder);
+        query = builder.query;
+    }
+
+    public static Builder on(String index) {
+        return new Builder(index);
+    }
+
+    public String query() {
+        return query;
+    }
+
+    public double boost() {
+        return boost;
     }
 
     @Override
-    public String toString() {
-        return "{" + lookup() + ":" + path() + "}";
+    public JsonObject queryJson() {
+        return JsonObject.create()
+                .put("query", query);
     }
 
-    /**
-     * Create a GET lookup specification.
-     */
-    public static LookupSpec get(String path) {
-        return new LookupSpec(Lookup.GET, path);
-    }
+    public static class Builder extends SearchQuery.Builder {
+        private String query;
 
-    /**
-     * Create an EXIST lookup specification.
-     */
-    public static LookupSpec exists(String path) {
-        return new LookupSpec(Lookup.EXIST, path);
+        protected Builder(String index) {
+            super(index);
+        }
+
+        public StringQuery build() {
+            return new StringQuery(this);
+        }
+
+        public Builder query(String query) {
+            this.query = query;
+            return this;
+        }
     }
 }
