@@ -21,6 +21,7 @@
  */
 package com.couchbase.client.java.query;
 
+import com.couchbase.client.core.message.kv.MutationToken;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 
@@ -48,6 +49,7 @@ public class N1qlParams implements Serializable {
     private String scanWait;
     private String clientContextId;
     private Integer maxParallelism;
+    private MutationToken[] mutationTokens;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -79,6 +81,22 @@ public class N1qlParams implements Serializable {
         }
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
+        }
+        if (this.consistency == ScanConsistency.AT_PLUS) {
+            if (this.mutationTokens == null || this.mutationTokens.length == 0) {
+                throw new IllegalArgumentException("If ScanConsistency.AT_PLUS is used, at least "
+                    + "one scanToken needs to be specified.");
+            }
+            JsonObject vectors = JsonObject.create();
+            for (MutationToken token : this.mutationTokens) {
+                vectors.put(
+                    String.valueOf(token.vbucketID()),
+                    JsonObject.create()
+                        .put("guard", String.valueOf(token.vbucketUUID()))
+                        .put("value", token.sequenceNumber())
+                );
+            }
+            queryJson.put("scan_vector", vectors);
         }
     }
 
@@ -147,6 +165,18 @@ public class N1qlParams implements Serializable {
         if (consistency == ScanConsistency.NOT_BOUNDED) {
             this.scanWait = null;
         }
+        return this;
+    }
+
+    /**
+     * Sets the supplemental scan tokens when {@link ScanConsistency#AT_PLUS} is used.
+     *
+     * @param mutationTokens the tokens which should be supplied as a lower index bound.
+     *
+     * @return this {@link N1qlParams} for chaining.
+     */
+    public N1qlParams scanTokens(MutationToken... mutationTokens) {
+        this.mutationTokens = mutationTokens;
         return this;
     }
 
