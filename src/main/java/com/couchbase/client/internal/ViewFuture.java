@@ -37,8 +37,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.internal.BulkFuture;
+import net.spy.memcached.internal.CheckedOperationTimeoutException;
+import net.spy.memcached.ops.ErrorCode;
+import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationStatus;
 
 /**
@@ -61,24 +63,26 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
       if (op != null) {
         op.timeOut();
       }
-      status = new OperationStatus(false, "Timed out");
+      status = new OperationStatus(false, "Timed out", ErrorCode.TIMED_OUT);
       throw new TimeoutException("Timed out waiting for operation");
     }
 
     if (op != null && op.hasErrored()) {
-      status = new OperationStatus(false, op.getException().getMessage());
+      status = new OperationStatus(false, op.getException().getMessage(),
+          ErrorCode.EXCEPTION);
       throw new ExecutionException(op.getException());
     }
 
-    if (op.isCancelled()) {
-      status = new OperationStatus(false, "Operation Cancelled");
+    if (op != null && op.isCancelled()) {
+      status = new OperationStatus(false, "Operation Cancelled",
+          ErrorCode.CANCELLED);
       throw new ExecutionException(new RuntimeException("Cancelled"));
     }
 
     if (op != null && op.isTimedOut()) {
-      status = new OperationStatus(false, "Timed out");
-      throw new ExecutionException(new OperationTimeoutException(
-          "Operation timed out."));
+      status = new OperationStatus(false, "Timed out", ErrorCode.TIMED_OUT);
+      throw new ExecutionException(new CheckedOperationTimeoutException(
+          "Operation timed out.", (Operation)op));
     }
 
     if (multigetRef.get() == null) {

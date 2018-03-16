@@ -78,8 +78,7 @@ public class Query {
     return this;
   }
 
-  public Query setGroup(boolean group, int grouplevel) {
-    args.put(GROUP, new Boolean(group));
+  public Query setGroupLevel(int grouplevel) {
     args.put(GROUPLEVEL, Integer.valueOf((grouplevel)));
     return this;
   }
@@ -131,13 +130,7 @@ public class Query {
   }
 
   public Query setStale(Stale stale) {
-    if (stale == Stale.OK) {
-      args.put(STALE, stale);
-    } else if (stale == Stale.UPDATE_AFTER) {
-      args.put(STALE, stale);
-    } else if (stale == Stale.FALSE) {
-      args.put(STALE, stale);
-    }
+    args.put(STALE, stale);
     return this;
   }
 
@@ -167,8 +160,7 @@ public class Query {
       query.setGroup(((Boolean)args.get(GROUP)).booleanValue());
     }
     if (args.containsKey(GROUPLEVEL)) {
-      query.setGroup(((Boolean)args.get(GROUP)).booleanValue(),
-          ((Integer)args.get(GROUPLEVEL)).intValue());
+      query.setGroupLevel(((Integer)args.get(GROUPLEVEL)).intValue());
     }
     if (args.containsKey(INCLUSIVEEND)) {
       query.setInclusiveEnd(((Boolean)args.get(INCLUSIVEEND)).booleanValue());
@@ -197,7 +189,7 @@ public class Query {
     if (args.containsKey(UPDATESEQ)) {
       query.setUpdateSeq(((Boolean)args.get(UPDATESEQ)).booleanValue());
     }
-    setIncludeDocs(willIncludeDocs());
+    query.setIncludeDocs(willIncludeDocs());
 
     return query;
   }
