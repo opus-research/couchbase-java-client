@@ -38,7 +38,6 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.ReplicaGetOperation;
-import net.spy.memcached.ops.ReplicaGetsOperation;
 import net.spy.memcached.ops.VBucketAware;
 
 import java.io.IOException;
@@ -199,12 +198,8 @@ public class CouchbaseConnection extends MemcachedConnection  implements
     MemcachedNode primary;
     if(o instanceof ReplicaGetOperation
       && locator instanceof VBucketNodeLocator) {
-      primary = ((VBucketNodeLocator) locator).getReplica(key,
-        ((ReplicaGetOperation) o).getReplicaIndex());
-    } else if(o instanceof ReplicaGetsOperation
-      && locator instanceof VBucketNodeLocator) {
-      primary = ((VBucketNodeLocator) locator).getReplica(key,
-        ((ReplicaGetsOperation) o).getReplicaIndex());
+      primary = ((VBucketNodeLocator)locator).getReplica(key,
+        ((ReplicaGetOperation)o).getReplicaIndex());
     } else {
       primary = locator.getPrimary(key);
     }
