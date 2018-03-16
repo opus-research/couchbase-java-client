@@ -51,9 +51,13 @@ public class ReducedOperationImpl extends ViewOperationImpl {
     throws ParseException {
     final Collection<ViewRow> rows = new LinkedList<ViewRow>();
     final Collection<RowError> errors = new LinkedList<RowError>();
+    long totalViewRows = ViewResponse.UNKNOWN_TOTAL_VIEW_ROWS;
     if (json != null) {
       try {
         JSONObject base = new JSONObject(json);
+        if (base.has("total_rows")) {
+          totalViewRows = (long)base.getDouble("total_rows");
+        }
         if (base.has("rows")) {
           JSONArray ids = base.getJSONArray("rows");
           for (int i = 0; i < ids.length(); i++) {
@@ -80,7 +84,7 @@ public class ReducedOperationImpl extends ViewOperationImpl {
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseReduced(rows, errors);
+    return new ViewResponseReduced(rows, errors, totalViewRows);
   }
 
   @Override
