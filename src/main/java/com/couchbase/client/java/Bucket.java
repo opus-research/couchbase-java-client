@@ -49,6 +49,7 @@ import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
@@ -244,6 +245,82 @@ public interface Bucket {
      * @return the found {@link Document} or null.
      */
     <D extends Document<?>> D get(String id, Class<D> target, long timeout, TimeUnit timeUnit);
+
+    /**
+     * Check whether a document with the given ID does exist in the bucket.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
+     *   retrying: {@link RequestCancelledException}
+     * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
+     * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
+     * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
+     *
+     * @param id the id of the document.
+     * @return true if it exists, false otherwise.
+     */
+    boolean exists(String id);
+
+    /**
+     * Check whether a document with the given ID does exist in the bucket.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
+     *   retrying: {@link RequestCancelledException}
+     * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
+     * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
+     * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
+     *
+     * @param id the id of the document.
+     * @param timeout the custom timeout.
+     * @param timeUnit the unit for the timeout.
+     * @return true if it exists, false otherwise.
+     */
+    boolean exists(String id, long timeout, TimeUnit timeUnit);
+
+    /**
+     * Check whether a document with the given ID does exist in the bucket.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
+     *   retrying: {@link RequestCancelledException}
+     * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
+     * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
+     * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
+     *
+     * @param document the document where the ID is extracted from.
+     * @return true if it exists, false otherwise.
+     */
+    <D extends Document<?>> boolean exists(D document);
+
+    /**
+     * Check whether a document with the given ID does exist in the bucket.
+     *
+     * This method throws under the following conditions:
+     *
+     * - The operation takes longer than the specified timeout: {@link TimeoutException} wrapped in a {@link RuntimeException}
+     * - The producer outpaces the SDK: {@link BackpressureException}
+     * - The operation had to be cancelled while on the wire or the retry strategy cancelled it instead of
+     *   retrying: {@link RequestCancelledException}
+     * - The server is currently not able to process the request, retrying may help: {@link TemporaryFailureException}
+     * - The server is out of memory: {@link CouchbaseOutOfMemoryException}
+     * - Unexpected errors are caught and contained in a generic {@link CouchbaseException}.
+     *
+     * @param document the document where the ID is extracted from.
+     * @param timeout the custom timeout.
+     * @param timeUnit the unit for the timeout.
+     * @return true if it exists, false otherwise.
+     */
+    <D extends Document<?>> boolean exists(D document, long timeout, TimeUnit timeUnit);
 
     /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID with the
@@ -2953,6 +3030,16 @@ public interface Bucket {
      * @return the bucket manager for administrative operations.
      */
     BucketManager bucketManager();
+
+    /**
+     * The {@link Repository} provides access to full object document mapping (ODM) capabilities.
+     *
+     * It allows you to work with POJO entities only and use annotations to customize the behaviour and mapping
+     * characteristics.
+     *
+     * @return the repository for ODM capabilities.
+     */
+    Repository repository();
 
     /**
      * Closes this bucket with the default disconnect timeout.

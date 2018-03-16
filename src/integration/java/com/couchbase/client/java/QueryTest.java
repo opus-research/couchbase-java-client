@@ -39,6 +39,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.couchbase.client.java.query.Index.createPrimaryIndex;
 import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.x;
@@ -72,14 +73,15 @@ public class QueryTest extends ClusterDependentTest {
 
     @Test
     public void shouldAlreadyHaveCreatedIndex() {
-        QueryResult indexResult = bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
+        QueryResult indexResult = bucket().query(Query.simple(createPrimaryIndex().on(bucketName())));
         assertFalse(indexResult.finalSuccess());
         assertEquals(0, indexResult.allRows().size());
         assertNotNull(indexResult.info());
         //having two calls to errors() here validates that there's not a reference to the async stream
         //each time the method is called.
         assertEquals(1, indexResult.errors().size());
-        assertEquals("View index exists #primary", indexResult.errors().get(0).getString("msg"));
+        assertEquals("GSI CreatePrimaryIndex() - cause: Index #primary already exist.",
+            indexResult.errors().get(0).getString("msg"));
     }
 
     @Test

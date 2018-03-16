@@ -40,6 +40,7 @@ import org.junit.Test;
 import java.io.Serializable;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -82,12 +83,15 @@ public class KeyValueTest extends ClusterDependentTest {
         JsonDocument response = bucket().get("upsert");
         assertEquals(content.getString("hello"), response.content().getString("hello"));
 
+        assertTrue(bucket().exists("upsert"));
+
         JsonDocument removed = bucket().remove(doc);
         assertEquals(doc.id(), removed.id());
         assertNull(removed.content());
         assertEquals(0, removed.expiry());
         assertTrue(removed.cas() != 0);
 
+        assertFalse(bucket().exists("upsert"));
         assertNull(bucket().get("upsert"));
     }
 
@@ -199,19 +203,16 @@ public class KeyValueTest extends ClusterDependentTest {
         assertEquals(doc6.cas(), doc5.cas());
     }
 
-    @Test
-    public void shouldHaveCounterInitialZero() throws Exception {
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldThrowIfNotExistsIncrementing() throws Exception {
         JsonLongDocument doc1 = bucket().counter("defincr-key", 10);
         assertEquals(0, (long) doc1.content());
+    }
 
-        JsonLongDocument doc2 = bucket().get("defincr-key", JsonLongDocument.class);
-        assertEquals(0, (long) doc2.content());
-
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldThrowIfNotExistsDecrementing() throws Exception {
         JsonLongDocument doc3 = bucket().counter("defdecr-key", -10);
         assertEquals(0, (long) doc3.content());
-
-        JsonLongDocument doc4 = bucket().get("defdecr-key", JsonLongDocument.class);
-        assertEquals(0, (long) doc4.content());
     }
 
     @Test

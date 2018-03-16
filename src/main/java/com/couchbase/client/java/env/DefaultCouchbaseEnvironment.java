@@ -382,10 +382,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         @Override
         public Builder dcpEnabled(boolean dcpEnabled) {
-            if (dcpEnabled) {
-                throw new IllegalArgumentException("DCP is not supported from the Java SDK.");
-            }
-
             super.dcpEnabled(dcpEnabled);
             return this;
         }
@@ -461,6 +457,18 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         public Builder dnsSrvEnabled(boolean dnsSrvEnabled) {
             this.dnsSrvEnabled = dnsSrvEnabled;
+            return this;
+        }
+
+        @Override
+        public Builder mutationTokensEnabled(boolean mutationTokensEnabled) {
+            super.mutationTokensEnabled(mutationTokensEnabled);
+            return this;
+        }
+
+        @Override
+        public Builder tcpNodelayEnabled(boolean tcpNodelayEnabled) {
+            super.tcpNodelayEnabled(tcpNodelayEnabled);
             return this;
         }
 
