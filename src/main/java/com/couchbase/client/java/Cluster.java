@@ -179,7 +179,6 @@ public interface Cluster {
      * @return the {@link ClusterManager} if successful.
      */
     ClusterManager clusterManager(String username, String password);
-    ClusterManager clusterManager();
 
     /**
      * Disconnects form all open buckets and shuts down the {@link CouchbaseEnvironment} if it is the exclusive owner
@@ -206,7 +205,5 @@ public interface Cluster {
      * @return the underlying {@link ClusterFacade} from the "core-io" package.
      */
     ClusterFacade core();
-
-    CredentialsManager credentialsManager();
 
 }

@@ -20,49 +20,59 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java;
+package com.couchbase.client.java.subdoc;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 
 /**
- * An enum of the various contexts of authentication that can be stored in a {@link CredentialsManager}.
+ * An internal representation of multiple values to insert in an array via the sub-document API.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
-@InterfaceAudience.Public
-public enum AuthenticationContext {
+@InterfaceAudience.Private
+public class MultiValue<T> implements Iterable<T> {
+
+    private final List<T> values;
 
     /**
-     * Bucket-level credentials for Key/Value operations.
+     * Create MultiValue out of an enumeration of objects (as a vararg).
      */
-    BUCKET_KEYVALUE("bucket-kv"),
-    /**
-     * Bucket-level credentials for N1QL querying on that single bucket.
-     */
-    BUCKET_N1QL("bucket-n1ql"),
-    /**
-     * Cluster-level credentials that can be used to perform N1QL queries on the whole cluster.
-     */
-    CLUSTER_N1QL("cluster-n1ql"),
-    /**
-     * Cluster-level credentials to perform FTS queris on the whole cluster.
-     */
-    CLUSTER_FTS("cluster-cbft"),
-    /**
-     * Cluster-level credentials used for cluster management operations.
-     */
-    CLUSTER_MANAGEMENT("cluster-mgmt");
-
-    private final String sdkCompatibleRepresentation;
-
-    AuthenticationContext(String sdkCompatibleRepresentation) {
-        this.sdkCompatibleRepresentation = sdkCompatibleRepresentation;
+    public MultiValue(T... values) {
+        if (values == null || values.length < 1) {
+            throw new IllegalArgumentException("MultiValue does not make sense with a null or empty array of elements");
+        }
+        this.values = new ArrayList<T>(values.length);
+        Collections.addAll(this.values, values);
     }
 
-    public String getSdkCompatibleRepresentation() {
-        return sdkCompatibleRepresentation;
+    /**
+     * Create MultiValue out of a Collection of objects.
+     */
+    public MultiValue(Collection<T> values) {
+        if (values == null || values.size() < 1) {
+            throw new IllegalArgumentException("MultiValue does not make sense with a null or empty collection of elements");
+        }
+        this.values = new ArrayList<T>(values);
+    }
+
+    /**
+     * @return the size of this {@link MultiValue}, the number of iterable elements in it.
+     */
+    public int size() {
+        return values.size();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        return values.iterator();
     }
 }
