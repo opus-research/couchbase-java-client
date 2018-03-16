@@ -278,8 +278,6 @@
   <target name="compile-test" depends="compile"
       description="Compile test classes">
     <mkdir dir="${build.test.classes}" />
-    <touch file="${build.test.classes}/cbGenerate.xml"></touch>
-    <touch file="${build.test.classes}/cfbGenerate.xml"></touch>
     <javac
         encoding="${build.encoding}"
         srcdir="${test.dir}"
