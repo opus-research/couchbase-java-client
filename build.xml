@@ -31,9 +31,10 @@
     </classpath>
   </taskdef>
 
-  <property name="name"      value="couchbase-client"                           />
-  <property name="copyright" value="2006-2013 Dustin Sallings, Matt Ingenthron" />
-  <property name="group"     value="couchbase"                                  />
+  <property name="name"        value="couchbase-client"                           />
+  <property name="docsjarname" value="couchbase-java-client"                      />
+  <property name="copyright"   value="2006-2013 Dustin Sallings, Matt Ingenthron" />
+  <property name="group"       value="couchbase"                                  />
   
   <property name="extern.root"       location="../spymemcached"                                 />
   <property name="extern.bld"        location="${extern.root}/build/docs"                       />
@@ -302,13 +303,17 @@
        ======================================= -->
 
   <target name="javadoc-uptodate" depends="init">
-    <uptodate property="javadoc.is.uptodate">
-    <srcfiles dir="${src.dir}">
-        <include name="**/*.java" />
-        <include name="**/*.html" />
-      </srcfiles>
-      <mapper type="merge" to="${build.javadoc}/index.html" />
-    </uptodate>
+      <uptodate property="javadoc.is.uptodate">
+          <srcfiles dir="${extern.src.main}">
+              <include name="**/*.java" />
+              <include name="**/*.html" />
+          </srcfiles>
+          <srcfiles dir="${src.dir}">
+              <include name="**/*.java" />
+              <include name="**/*.html" />
+          </srcfiles>
+          <mapper type="merge" to="${build.javadoc}/index.html" />
+      </uptodate>
   </target>
 
   <target name="docs" depends="init,javadoc-uptodate,compile,compile-extern" unless="javadoc.is.uptodate"
@@ -329,7 +334,9 @@
           <packageset dir="${src.dir}">
               <include name="**" />
           </packageset>
-          <link href="${extern.bld}" />
+          <packageset dir="${extern.src.main}">
+              <include name="**" />
+          </packageset>
           <classpath>
             <path        refid="${name}.common.classpath"        />
             <pathelement location="${ivy.artifact.retrieve.dir}" />
@@ -340,10 +347,10 @@
   <target name="docsjar" depends="docs"
       description="Create the documentation jar">
     <mkdir dir="${build.dir}/javadocs"  />
-    <jar destfile="${build.dir}/javadocs/${name}-${version}.jar">
+    <zip destfile="${build.dir}/javadocs/${docsjarname}-${version}.zip" duplicate="preserve">
         <fileset dir="${build.javadoc}" />
         <fileset dir="${extern.bld}"    />
-    </jar>
+    </zip>
   </target>
 
   <!-- =======================================
