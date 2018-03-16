@@ -28,7 +28,8 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import net.spy.memcached.tapmessage.ResponseMessage;
+// TBD - Uncomment this line when the TAP tests are complete
+// import net.spy.memcached.tapmessage.ResponseMessage;
 
 /**
  * A TapTest.
@@ -51,8 +52,8 @@ public class TapTest extends ClientBaseCase {
       }
     });
   }
-  
-/* -- commented out until TAP is completed 
+
+/* -- commented out until TAP is completed
   public void testBackfill() throws Exception {
     if (TestConfig.isMembase()) {
       TapClient tc =
@@ -113,7 +114,7 @@ public class TapTest extends ClientBaseCase {
   }
 
 */
-  
+
   public void testTapBucketDoesNotExist() throws Exception {
     if (TestConfig.isMembase()) {
       TapClient client =

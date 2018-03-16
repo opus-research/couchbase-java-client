@@ -58,7 +58,8 @@ public class MembaseClientTest extends BinaryClientTest {
     } catch (InterruptedException e) {
       fail("Interrupted while client was warming up");
     }
-    assert client.getAvailableServers().size() == 1 : "Num servers " + client.getAvailableServers().size();
+    assert client.getAvailableServers().size() == 1 : "Num servers "
+            + client.getAvailableServers().size();
   }
 
   public void testNumVBuckets() throws Exception {

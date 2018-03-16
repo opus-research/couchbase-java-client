@@ -1,4 +1,3 @@
-package net.spy.memcached;
 /**
  * Copyright (C) 2009-2011 Couchbase, Inc.
  *
@@ -21,6 +20,7 @@ package net.spy.memcached;
  * IN THE SOFTWARE.
  */
 
+package net.spy.memcached;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -87,10 +87,10 @@ public class MembaseConnectionFactory extends BinaryConnectionFactory {
 
   @Override
   public MemcachedConnection createConnection(List<InetSocketAddress> addrs)
-  throws IOException {
-  return new MembaseConnection(getReadBufSize(), this, addrs,
+    throws IOException {
+    return new MembaseConnection(getReadBufSize(), this, addrs,
       getInitialObservers(), getFailureMode(), getOperationFactory());
-}
+  }
 
   @Override
   public NodeLocator createLocator(List<MemcachedNode> nodes) {
