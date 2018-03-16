@@ -200,13 +200,7 @@ public class SelectDslTest {
         Statement statement = new DefaultFromPath(null)
             .from("beer-sample")
             .as("b")
-            .useKeys("a.id");
-        assertEquals("FROM beer-sample AS b USE KEYS a.id", statement.toString());
-
-        statement = new DefaultFromPath(null)
-            .from("beer-sample")
-            .as("b")
-            .useKeysValues("my-brewery");
+            .useKeys("my-brewery");
         assertEquals("FROM beer-sample AS b USE KEYS \"my-brewery\"", statement.toString());
 
         statement = new DefaultFromPath(null)
@@ -216,7 +210,7 @@ public class SelectDslTest {
 
         statement = new DefaultFromPath(null)
             .from("beer-sample")
-            .useKeysValues("key1", "key2");
+            .useKeys("key1", "key2");
         assertEquals("FROM beer-sample USE KEYS [\"key1\",\"key2\"]", statement.toString());
     }
 
@@ -286,20 +280,6 @@ public class SelectDslTest {
             .onKeys(x(JsonArray.from("key1", "key2")));
         assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS [\"key1\",\"key2\"]",
             statement.toString());
-
-        statement = new DefaultFromPath(null)
-                .from("users_with_orders").as("user")
-                .join("orders_with_users").as("orders")
-                .onKeys(JsonArray.from("key1", "key2"));
-        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS [\"key1\",\"key2\"]",
-                statement.toString());
-
-        statement = new DefaultFromPath(null)
-                .from("users_with_orders").as("user")
-                .join("orders_with_users").as("orders")
-                .onKeys("orders.id");
-        assertEquals("FROM users_with_orders AS user JOIN orders_with_users AS orders ON KEYS orders.id",
-                statement.toString());
     }
 
 }

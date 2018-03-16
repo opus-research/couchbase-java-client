@@ -23,8 +23,6 @@ package com.couchbase.client.java.query.dsl.functions;
 
 import static com.couchbase.client.java.query.dsl.Expression.x;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.query.dsl.Expression;
 
 /**
@@ -34,8 +32,6 @@ import com.couchbase.client.java.query.dsl.Expression;
  * @author Michael Nitschinger
  * @since 2.2
  */
-@InterfaceStability.Experimental
-@InterfaceAudience.Public
 public class MetaFunctions {
 
     /**
