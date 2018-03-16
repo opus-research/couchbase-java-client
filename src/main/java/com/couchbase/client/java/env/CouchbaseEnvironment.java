@@ -109,4 +109,9 @@ public interface CouchbaseEnvironment extends CoreEnvironment {
      * @see #coreBuild() for the same information but relative to the core layer.
      */
     String clientBuild();
+
+    /**
+     * True if advanced debugging through jHiccup for JVM and OS-level stalls is enabled.
+     */
+    boolean jHiccupEnabled();
 }
