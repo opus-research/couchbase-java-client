@@ -1,8 +1,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.message.observe.PersistTo;
-import com.couchbase.client.core.message.observe.ReplicateTo;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
