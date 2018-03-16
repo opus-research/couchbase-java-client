@@ -36,7 +36,9 @@ public enum CouchbaseFeature {
     DCP(3, 0, 0),
     N1QL(4, 0, 0),
     SPATIAL_VIEW(4, 0, 0),
-    SUBDOC(4, 5, 0);
+    SUBDOC(4, 5, 0),
+    @Deprecated
+    FTS_BETA(4, 5, 0);
 
     private final Version availableFrom;
 
