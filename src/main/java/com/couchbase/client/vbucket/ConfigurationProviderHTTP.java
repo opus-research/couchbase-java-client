@@ -36,7 +36,6 @@ import java.io.UnsupportedEncodingException;
 
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -217,8 +216,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
   }
 
   public void markForResubscribe(String bucketName, Reconfigurable rec) {
-    getLogger().debug("Marking bucket " + bucketName
-      + " for resubscribe with reconfigurable " + rec);
     reSubBucket = bucketName; // can't subscribe here, must from user request
     reSubRec = rec;
   }
@@ -230,25 +227,10 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * @param rec reconfigurable that will receive updates
    */
   public void subscribe(String bucketName, Reconfigurable rec) {
-    // this seems odd, and it is, but this code was taken from outside the
-    // client where it supported multiple buckets and was now shoved down in.
-    // recent changes don't support multiple, so we validate
-    /* @TODO: refactor all of this bucket and subscription behind the
-     *        node locator
-     */
-    if (null == bucketName || bucketName != reSubBucket) {
-      throw new IllegalArgumentException("Bucket name cannot be null and must"
-        + " never be re-set to a new object.");
-    }
-    if (null == rec || rec != reSubRec) {
-      throw new IllegalArgumentException("Reconfigurable cannot be null and"
-        + " must never be re-set to a new object");
-    }
-    reSubBucket = bucketName;  // More than one subscriber, would be an error
-    reSubRec = rec;
+    Bucket bucket = getBucketConfiguration(bucketName);
+
     getLogger().debug("Subscribing an object for reconfiguration updates "
       + rec.getClass().getName());
-    Bucket bucket = getBucketConfiguration(bucketName);
 
     ReconfigurableObserver obs = new ReconfigurableObserver(rec);
     BucketMonitor monitor = this.monitors.get(bucketName);
@@ -311,9 +293,8 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     }
     URL specURL = resource.toURL();
     URLConnection connection = specURL.openConnection();
-    connection.setConnectTimeout(500); // All conns are on local LAN
     connection.setRequestProperty("Accept", "application/json");
-    connection.setRequestProperty("user-agent", "Couchbase Java Client");
+    connection.setRequestProperty("user-agent", "spymemcached vbucket client");
     connection.setRequestProperty("X-memcachekv-Store-Client-"
       + "Specification-Version", CLIENT_SPEC_VER);
     if (restUsr != null) {
@@ -337,10 +318,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    */
   private String readToString(URLConnection connection) throws IOException {
     BufferedReader reader = null;
-    getLogger().debug("Attempting to read configuration from URI: "
-      + connection.getURL());
     try {
-      connection.setConnectTimeout(500);
       InputStream inStream = connection.getInputStream();
       if (connection instanceof java.net.HttpURLConnection) {
         HttpURLConnection httpConnection = (HttpURLConnection) connection;
@@ -363,10 +341,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
         buffer.append(str);
       }
       return buffer.toString();
-    } catch (SocketTimeoutException ex) {
-      String msg = "Timed out while reading configuration over HTTP";
-      getLogger().warn(msg, ex);
-      throw new IOException(msg, ex);
     } finally {
       if (reader != null) {
         reader.close();
