@@ -177,8 +177,7 @@ public class PaginatorTest {
     client.asyncHttpPut(docUri, view);
 
     for(City city : CITY_DOCS) {
-      client.set(city.getKey(), 0, city.toJson(), PersistTo.MASTER)
-        .get(10, TimeUnit.SECONDS);
+      client.set(city.getKey(), 0, city.toJson(), PersistTo.MASTER);
     }
 
     System.out.println("Setup of design docs complete, "

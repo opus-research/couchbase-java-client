@@ -24,7 +24,6 @@ package com.couchbase.client;
 
 import com.couchbase.client.clustermanager.FlushResponse;
 import com.couchbase.client.internal.HttpFuture;
-import com.couchbase.client.internal.ObserveFuture;
 import com.couchbase.client.internal.ReplicaGetFuture;
 import com.couchbase.client.internal.ViewFuture;
 import com.couchbase.client.protocol.views.AbstractView;
@@ -66,7 +65,6 @@ import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.internal.GetFuture;
-import net.spy.memcached.internal.OperationCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetlOperation;
@@ -88,7 +86,6 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -104,7 +101,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -250,8 +246,6 @@ public class CouchbaseClient extends MemcachedClient
   public CouchbaseClient(CouchbaseConnectionFactory cf)
     throws IOException {
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
-    getLogger().info(cf.toString());
-
     cbConnFactory = cf;
 
     if(cf.getVBucketConfig().getConfigType() == ConfigType.COUCHBASE) {
@@ -328,7 +322,6 @@ public class CouchbaseClient extends MemcachedClient
               @Override
               public void complete() {
                 couchLatch.countDown();
-                crv.signalComplete();
               }
 
               @Override
@@ -369,7 +362,6 @@ public class CouchbaseClient extends MemcachedClient
               @Override
               public void complete() {
                 couchLatch.countDown();
-                crv.signalComplete();
               }
 
               @Override
@@ -384,7 +376,7 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public HttpFuture<DesignDocument> asyncGetDesignDoc(
+  public HttpFuture<DesignDocument> asyncGetDesignDocument(
     String designDocumentName) {
     designDocumentName = MODE_PREFIX + designDocumentName;
     String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
@@ -409,7 +401,6 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void complete() {
             couchLatch.countDown();
-            crv.signalComplete();
           }
 
           @Override
@@ -465,7 +456,7 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public DesignDocument getDesignDoc(final String designDocumentName) {
+  public DesignDocument getDesignDocument(final String designDocumentName) {
     try {
       DesignDocument design = asyncGetDesignDocument(designDocumentName).get();
       if(design == null) {
@@ -482,19 +473,6 @@ public class CouchbaseClient extends MemcachedClient
         throw new RuntimeException("Failed getting design document", e);
       }
     }
-  }
-
-  @Override
-  @Deprecated
-  public HttpFuture<DesignDocument> asyncGetDesignDocument(
-    final String designDocumentName) {
-    return asyncGetDesignDoc(designDocumentName);
-  }
-
-  @Override
-  @Deprecated
-  public DesignDocument getDesignDocument(final String designDocumentName) {
-    return getDesignDoc(designDocumentName);
   }
 
   @Override
@@ -540,7 +518,6 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void complete() {
           couchLatch.countDown();
-          crv.signalComplete();
         }
       });
 
@@ -597,7 +574,6 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void complete() {
           couchLatch.countDown();
-          crv.signalComplete();
         }
       });
 
@@ -669,7 +645,6 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void complete() {
           couchLatch.countDown();
-          crv.signalComplete();
         }
 
         @Override
@@ -714,7 +689,6 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void complete() {
             couchLatch.countDown();
-            crv.signalComplete();
           }
 
           @Override
@@ -760,7 +734,6 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void complete() {
             couchLatch.countDown();
-            crv.signalComplete();
           }
 
           @Override
@@ -798,6 +771,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   protected void addOp(final HttpOperation op) {
     if(vconn != null) {
+      vconn.checkState();
       vconn.addOp(op);
     }
   }
@@ -830,7 +804,6 @@ public class CouchbaseClient extends MemcachedClient
 
       public void complete() {
         latch.countDown();
-        rv.signalComplete();
       }
     });
     rv.setOperation(op);
@@ -946,14 +919,13 @@ public class CouchbaseClient extends MemcachedClient
     if (replica) {
       return opFact.replicaGet(key, replicaIndex,
         new ReplicaGetOperation.Callback() {
-          private Future<T> val;
-          private boolean usedFuture;
+          private Future<T> val = null;
 
           @Override
           public void receivedStatus(OperationStatus status) {
             future.set(val, status);
             if (!replicaFuture.isDone() && status.isSuccess()) {
-              usedFuture = replicaFuture.setCompletedFuture(future);
+              replicaFuture.setCompletedFuture(future);
             }
           }
 
@@ -967,21 +939,17 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void complete() {
             latch.countDown();
-            if (usedFuture) {
-              replicaFuture.signalComplete();
-            }
           }
         });
     } else {
       return opFact.get(key, new GetOperation.Callback() {
         private Future<T> val = null;
-        private boolean usedFuture;
 
         @Override
         public void receivedStatus(OperationStatus status) {
           future.set(val, status);
           if (!replicaFuture.isDone() && status.isSuccess()) {
-            usedFuture = replicaFuture.setCompletedFuture(future);
+            replicaFuture.setCompletedFuture(future);
           }
         }
 
@@ -995,9 +963,6 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void complete() {
           latch.countDown();
-          if (usedFuture) {
-            replicaFuture.signalComplete();
-          }
         }
       });
     }
@@ -1042,7 +1007,6 @@ public class CouchbaseClient extends MemcachedClient
       @Override
       public void complete() {
         latch.countDown();
-        rv.signalComplete();
       }
     });
     rv.setOperation(op);
@@ -1092,11 +1056,40 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> deleteOp = delete(key);
+
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return deleteOp;
     }
 
-    return asyncObserveStore(key, deleteOp, req, rep, "Delete", true);
+    boolean deleteStatus = false;
+
+    try {
+      deleteStatus = deleteOp.get();
+    } catch (InterruptedException e) {
+      deleteOp.set(false, new OperationStatus(false, "Delete get timed out"));
+    } catch (ExecutionException e) {
+      if(e.getCause() instanceof CancellationException) {
+        deleteOp.set(false, new OperationStatus(false, "Delete get "
+          + "cancellation exception "));
+      } else {
+        deleteOp.set(false, new OperationStatus(false, "Delete get "
+          + "execution exception "));
+      }
+    }
+    if (!deleteStatus) {
+      return deleteOp;
+    }
+    try {
+      observePoll(key, deleteOp.getCas(), req, rep, true);
+      deleteOp.set(true, deleteOp.getStatus());
+    } catch (ObservedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return deleteOp;
   }
 
   @Override
@@ -1124,11 +1117,40 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> setOp = set(key, exp, value);
+
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return setOp;
     }
 
-    return asyncObserveStore(key, setOp, req, rep, "Set", false);
+    boolean setStatus = false;
+
+    try {
+      setStatus = setOp.get();
+    } catch (InterruptedException e) {
+      setOp.set(false, new OperationStatus(false, "Set get timed out"));
+    } catch (ExecutionException e) {
+      if(e.getCause() instanceof CancellationException) {
+        setOp.set(false, new OperationStatus(false, "Set get "
+          + "cancellation exception "));
+      } else {
+        setOp.set(false, new OperationStatus(false, "Set get "
+          + "execution exception "));
+      }
+    }
+    if (!setStatus) {
+      return setOp;
+    }
+    try {
+      observePoll(key, setOp.getCas(), req, rep, false);
+      setOp.set(true, setOp.getStatus());
+    } catch (ObservedException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      setOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return setOp;
   }
 
   @Override
@@ -1175,11 +1197,40 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> addOp = add(key, exp, value);
+
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return addOp;
     }
 
-    return asyncObserveStore(key, addOp, req, rep, "Add", false);
+    boolean addStatus = false;
+
+    try {
+      addStatus = addOp.get();
+    } catch (InterruptedException e) {
+      addOp.set(false, new OperationStatus(false, "Add get timed out"));
+    } catch (ExecutionException e) {
+      if(e.getCause() instanceof CancellationException) {
+        addOp.set(false, new OperationStatus(false, "Add get "
+          + "cancellation exception "));
+      } else {
+        addOp.set(false, new OperationStatus(false, "Add get "
+          + "execution exception "));
+      }
+    }
+    if (!addStatus) {
+      return addOp;
+    }
+    try {
+      observePoll(key, addOp.getCas(), req, rep, false);
+      addOp.set(true, addOp.getStatus());
+    } catch (ObservedException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      addOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return addOp;
   }
 
   @Override
@@ -1220,87 +1271,47 @@ public class CouchbaseClient extends MemcachedClient
   public OperationFuture<Boolean> replace(String key, int exp,
     Object value, PersistTo req, ReplicateTo rep) {
 
-    if(mconn instanceof CouchbaseMemcachedConnection) {
+    if (mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
         + " on memcached type buckets.");
     }
 
     OperationFuture<Boolean> replaceOp = replace(key, exp, value);
+
     if (req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return replaceOp;
     }
 
-    return asyncObserveStore(key, replaceOp, req, rep, "Replace", false);
-  }
+    boolean replaceStatus = false;
 
-  /**
-   * Helper method to chain asynchronous observe calls.
-   *
-   * @param key the key of the document.
-   * @param original the original mutation future.
-   * @param req the persistence setting
-   * @param rep the replication setting
-   * @param prefix the prefix for log messages
-   * @param delete if it is a delete command
-   *
-   * @return a future containing the observed result.
-   */
-  private ObserveFuture<Boolean> asyncObserveStore(final String key,
-    final OperationFuture<Boolean> original, final PersistTo req,
-    final ReplicateTo rep, final String prefix, final boolean delete) {
-
-    final CountDownLatch latch = new CountDownLatch(1);
-
-    final ObserveFuture<Boolean> observeFuture = new ObserveFuture<Boolean>(
-      key, latch, cbConnFactory.getObsTimeout(), executorService);
-
-    original.addListener(new OperationCompletionListener() {
-      @Override
-      public void onComplete(final OperationFuture<?> future) throws Exception {
-        boolean replaceStatus = false;
-
-        try {
-          replaceStatus = (Boolean) future.get();
-          observeFuture.set(replaceStatus, future.getStatus());
-          if (future.getCas() != null) {
-            observeFuture.setCas(future.getCas());
-          }
-        } catch (InterruptedException e) {
-          observeFuture.set(false, new OperationStatus(false, prefix + " get "
-            + "timed out"));
-        } catch (ExecutionException e) {
-          if(e.getCause() instanceof CancellationException) {
-            observeFuture.set(false, new OperationStatus(false, prefix + " get "
-              + "cancellation exception "));
-          } else {
-            observeFuture.set(false, new OperationStatus(false, prefix + " get "
-              + "execution exception "));
-          }
-        }
-
-        if (!replaceStatus) {
-          latch.countDown();
-          observeFuture.signalComplete();
-          return;
-        }
-
-        try {
-          observePoll(key, future.getCas(), req, rep, delete);
-          observeFuture.set(true, future.getStatus());
-        } catch (ObservedException e) {
-          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
-        } catch (ObservedTimeoutException e) {
-          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
-        } catch (ObservedModifiedException e) {
-          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
-        }
-
-        latch.countDown();
-        observeFuture.signalComplete();
+    try {
+      replaceStatus = replaceOp.get();
+    } catch (InterruptedException e) {
+      replaceOp.set(false, new OperationStatus(false, "Replace get timed out"));
+    } catch (ExecutionException e) {
+      if(e.getCause() instanceof CancellationException) {
+        replaceOp.set(false, new OperationStatus(false, "Replace get "
+          + "cancellation exception "));
+      } else {
+        replaceOp.set(false, new OperationStatus(false, "Replace get "
+          + "execution exception "));
       }
-    });
+    }
+    if (!replaceStatus) {
+      return replaceOp;
+    }
+    try {
+      observePoll(key, replaceOp.getCas(), req, rep, false);
+      replaceOp.set(true, replaceOp.getStatus());
+    } catch (ObservedException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedTimeoutException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    } catch (ObservedModifiedException e) {
+      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
+    }
+    return replaceOp;
 
-    return observeFuture;
   }
 
   @Override
@@ -1342,30 +1353,40 @@ public class CouchbaseClient extends MemcachedClient
   @Override
   public CASResponse cas(String key, long cas, int exp,
           Object value, PersistTo req, ReplicateTo rep) {
+
+    if(mconn instanceof CouchbaseMemcachedConnection) {
+      throw new IllegalArgumentException("Durability options are not supported"
+        + " on memcached type buckets.");
+    }
+
+    OperationFuture<CASResponse> casOp =
+      asyncCAS(key, cas, exp, value, transcoder);
     CASResponse casr = null;
+    try {
+      casr = casOp.get();
+    } catch (InterruptedException e) {
+      casr = CASResponse.EXISTS;
+    } catch (ExecutionException e) {
+      casr = CASResponse.EXISTS;
+    }
+    if (casr != CASResponse.OK) {
+      return casr;
+    }
+
+    if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
+      return casr;
+    }
 
     try {
-      OperationFuture<CASResponse> casOp = asyncCas(key, cas, exp, value, req,
-        rep);
-
-      long timeout = cbConnFactory.getObsTimeout();
-      if (req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
-        timeout = operationTimeout;
-      }
-
-      casr = casOp.get(timeout, TimeUnit.MILLISECONDS);
-      return casr;
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted waiting for value", e);
-    } catch (ExecutionException e) {
-      if(e.getCause() instanceof CancellationException) {
-        throw (CancellationException) e.getCause();
-      } else {
-        throw new RuntimeException("Exception waiting for value", e);
-      }
-    } catch (TimeoutException e) {
-      throw new OperationTimeoutException("Timeout waiting for value: ", e);
+      observePoll(key, casOp.getCas(), req, rep, false);
+    } catch (ObservedException e) {
+      casr = CASResponse.OBSERVE_ERROR_IN_ARGS;
+    } catch (ObservedTimeoutException e) {
+      casr = CASResponse.OBSERVE_TIMEOUT;
+    } catch (ObservedModifiedException e) {
+      casr = CASResponse.OBSERVE_MODIFIED;
     }
+    return casr;
   }
 
   @Override
@@ -1390,99 +1411,6 @@ public class CouchbaseClient extends MemcachedClient
   public CASResponse cas(String key, long cas, int exp,
           Object value, ReplicateTo rep) {
     return cas(key, cas, exp, value, PersistTo.ZERO, rep);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas,
-    Object value, PersistTo req, ReplicateTo rep) {
-    return asyncCas(key, cas, 0, value, req, rep);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas,
-    Object value, PersistTo req) {
-    return asyncCas(key, cas, value, req, ReplicateTo.ZERO);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas,
-    Object value, ReplicateTo rep) {
-    return asyncCas(key, cas, value, PersistTo.ZERO, rep);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, PersistTo req) {
-    return asyncCas(key, cas, exp, value, req, ReplicateTo.ZERO);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(String key, long cas, int exp,
-    Object value, ReplicateTo rep) {
-    return asyncCas(key, cas, exp, value, PersistTo.ZERO, rep);
-  }
-
-  @Override
-  public OperationFuture<CASResponse> asyncCas(final String key, long cas,
-    int exp, Object value, final PersistTo req, final ReplicateTo rep) {
-
-    if (mconn instanceof CouchbaseMemcachedConnection) {
-      throw new IllegalArgumentException("Durability options are not supported"
-        + " on memcached type buckets.");
-    }
-
-    OperationFuture<CASResponse> casOp = asyncCAS(key, cas, exp, value,
-      transcoder);
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    final ObserveFuture<CASResponse> observeFuture =
-      new ObserveFuture<CASResponse>(key, latch, cbConnFactory.getObsTimeout(),
-        executorService);
-
-    casOp.addListener(new OperationCompletionListener() {
-      @Override
-      public void onComplete(OperationFuture<?> future) throws Exception {
-        CASResponse casr;
-
-        try {
-          casr = (CASResponse) future.get();
-          observeFuture.set(casr, future.getStatus());
-          if (future.getCas() != null) {
-            observeFuture.setCas(future.getCas());
-          }
-        } catch (InterruptedException e) {
-          casr = CASResponse.EXISTS;
-        } catch (ExecutionException e) {
-          casr = CASResponse.EXISTS;
-        }
-
-        if((casr != CASResponse.OK)
-          || (req == PersistTo.ZERO && rep == ReplicateTo.ZERO)) {
-          latch.countDown();
-          observeFuture.signalComplete();
-          return;
-        }
-
-        try {
-          observePoll(key, future.getCas(), req, rep, false);
-          observeFuture.set(casr, future.getStatus());
-        } catch (ObservedException e) {
-          observeFuture.set(CASResponse.OBSERVE_ERROR_IN_ARGS,
-            new OperationStatus(false, e.getMessage()));
-        } catch (ObservedTimeoutException e) {
-          observeFuture.set(CASResponse.OBSERVE_TIMEOUT,
-            new OperationStatus(false, e.getMessage()));
-        } catch (ObservedModifiedException e) {
-          observeFuture.set(CASResponse.OBSERVE_MODIFIED,
-            new OperationStatus(false, e.getMessage()));
-        }
-
-        latch.countDown();
-        observeFuture.signalComplete();
-      }
-    });
-
-    return observeFuture;
   }
 
   private Map<MemcachedNode, ObserveResponse> observe(final String key,
@@ -1714,7 +1642,6 @@ public class CouchbaseClient extends MemcachedClient
 
       public void complete() {
         latch.countDown();
-        rv.signalComplete();
       }
     });
     rv.setOperation(op);
@@ -1749,10 +1676,10 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     final CountDownLatch latch = new CountDownLatch(1);
-    final AtomicReference<OperationFuture<Boolean>> rv =
-      new AtomicReference<OperationFuture<Boolean>>();
-    final FlushRunner flushRunner = new FlushRunner(latch, rv);
-    rv.set(new OperationFuture<Boolean>("", latch, operationTimeout,
+    final FlushRunner flushRunner = new FlushRunner(latch);
+
+    final OperationFuture<Boolean> rv =
+      new OperationFuture<Boolean>("", latch, operationTimeout,
         executorService) {
         private final CouchbaseConnectionFactory factory =
           (CouchbaseConnectionFactory) connFactory;
@@ -1814,13 +1741,13 @@ public class CouchbaseClient extends MemcachedClient
           throw new UnsupportedOperationException("Flush cannot be"
             + " canceled.");
         }
-      });
+      };
 
     Thread flusher = new Thread(flushRunner, "Temporary Flusher");
     flusher.setDaemon(true);
     flusher.start();
 
-    return rv.get();
+    return rv;
   }
 
   /**
@@ -1838,20 +1765,14 @@ public class CouchbaseClient extends MemcachedClient
 
     private final CountDownLatch flatch;
     private Boolean flushStatus = false;
-    private AtomicReference<OperationFuture<Boolean>>  future;
 
-    public FlushRunner(CountDownLatch latch,
-      AtomicReference<OperationFuture<Boolean>> rv) {
+    public FlushRunner(CountDownLatch latch) {
       flatch = latch;
-      future = rv;
     }
 
     public void run() {
       flushStatus = flushBucket();
       flatch.countDown();
-      if (future.get() != null) {
-        future.get().signalComplete();
-      }
     }
 
     private boolean status() {
@@ -1869,5 +1790,4 @@ public class CouchbaseClient extends MemcachedClient
         + mconn.getClass().getCanonicalName());
     }
   }
-
 }

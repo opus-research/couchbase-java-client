@@ -33,19 +33,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import net.spy.memcached.BinaryClientTest;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
 import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.internal.OperationCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 
@@ -433,19 +429,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
       + noPersistOp.getStatus().getMessage(), noPersistOp.get());
   }
 
-  public void testObserveWithSpecialChar() throws Exception {
-    String key = "special£";
-    OperationFuture<Boolean> future = ((CouchbaseClient) client).set(key,
-      "value", PersistTo.MASTER);
-    assertTrue(future.get());
-    assertTrue(future.getStatus().isSuccess());
-
-
-    Map<MemcachedNode, ObserveResponse> nodes =
-      ((CouchbaseClient) client).observe(key, future.getCas());
-    assertFalse(nodes.isEmpty());
-  }
-
   /**
    * Test observe with zero in both rep and persist.
    *
@@ -463,29 +446,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
       PersistTo.ZERO, ReplicateTo.ZERO));
     assertTrue("Key not added and not persisted to master : "
       + noPersistRep.getStatus().getMessage(), noPersistRep.get());
-  }
-
-  public void testAsyncCASObserve() throws Exception {
-    CouchbaseClient client = (CouchbaseClient) this.client;
-    String key = "asyncCASObserve";
-
-    OperationFuture<Boolean> setFuture = client.set(key, "value",
-      PersistTo.MASTER);
-    assertTrue(setFuture.get());
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    client.asyncCas(key, setFuture.getCas(), "value2", PersistTo.MASTER)
-      .addListener(new OperationCompletionListener() {
-        @Override
-        public void onComplete(OperationFuture<?> future) throws Exception {
-          if (future.getStatus().isSuccess()) {
-            latch.countDown();
-          }
-        }
-      }
-    );
-
-    assertTrue(latch.await(10, TimeUnit.SECONDS));
   }
 
   /**

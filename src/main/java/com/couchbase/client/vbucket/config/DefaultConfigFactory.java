@@ -144,8 +144,7 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
       throw new ConfigParsingException("Empty nodes list.");
     }
 
-    final List<String> populatedRestEndpoints = populateRestEndpoints(nodes);
-    CacheConfig config = new CacheConfig(amountOfNodes, populatedRestEndpoints);
+    CacheConfig config = new CacheConfig(amountOfNodes);
     populateServersForMemcacheBucket(config, nodes);
     return config;
   }
@@ -222,31 +221,10 @@ public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
       populateServersForCouchbaseBucket(servers);
     final List<VBucket> populatedVBuckets = populateVBuckets(vBuckets, oldConfig);
     final List<URL> populatedViewServers = populateViewServers(viewServers);
-    final List<String> populatedRestEndpoints =
-      populateRestEndpoints(viewServers);
 
     return new DefaultConfig(hashAlgorithm, serversCount, replicasCount,
       vBucketsCount, populatedServers, populatedVBuckets,
-      populatedViewServers, populatedRestEndpoints);
-  }
-
-  /**
-   * Creates a list of REST Endpoints to use.
-   *
-   * @param nodes the list of nodes in the cluster.
-   * @return a list of pouplates endpoints.
-   */
-  private List<String> populateRestEndpoints(final JSONArray nodes)
-    throws JSONException {
-    int nodeSize = nodes.length();
-    List<String> endpoints = new ArrayList<String>(nodeSize);
-    for (int i = 0; i < nodeSize; i++) {
-      JSONObject node = nodes.getJSONObject(i);
-      if (node.has("hostname")) {
-        endpoints.add("http://" + node.getString("hostname") + "/pools");
-      }
-    }
-    return endpoints;
+      populatedViewServers);
   }
 
   /**

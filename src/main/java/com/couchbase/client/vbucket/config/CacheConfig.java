@@ -42,15 +42,8 @@ public class CacheConfig implements Config {
 
   private List<VBucket> vbuckets;
 
-  private final List<String> restEndpoints;
-
-  public CacheConfig(int serversCount, List<String> restEndpoints) {
+  public CacheConfig(int serversCount) {
     this.serversCount = serversCount;
-    this.restEndpoints = restEndpoints;
-  }
-
-  public List<String> getRestEndpoints() {
-    return restEndpoints;
   }
 
   public int getReplicasCount() {

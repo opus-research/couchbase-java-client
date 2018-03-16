@@ -30,7 +30,9 @@ import java.util.logging.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -38,7 +40,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.util.CharsetUtil;
 
 /**
  * A BucketUpdateResponseHandler.
@@ -67,7 +68,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
       if (chunk.isLast()) {
         readingChunks = false;
       } else {
-        String curChunk = chunk.getContent().toString(CharsetUtil.UTF_8);
+        String curChunk = chunk.getContent().toString("UTF-8");
         /*
          * Server sends four new lines in a chunk as a sentinal between
          * responses.
@@ -113,7 +114,7 @@ public class BucketUpdateResponseHandler extends SimpleChannelUpstreamHandler {
       ChannelBuffer content = response.getContent();
       if (content.readable()) {
         finerLog("CONTENT {");
-        finerLog(content.toString(CharsetUtil.UTF_8));
+        finerLog(content.toString("UTF-8"));
         finerLog("} END OF CONTENT");
       }
     } else {

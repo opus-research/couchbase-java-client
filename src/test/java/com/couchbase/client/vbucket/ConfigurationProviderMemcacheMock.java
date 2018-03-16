@@ -51,12 +51,9 @@ public class ConfigurationProviderMemcacheMock
 
   public Bucket getBucketConfiguration(String bucketname) {
 
-    String uri = "http://"+TestConfig.IPV4_ADDR+":8091";
-    URI streamingURI = URI.create(uri);
-    List<String> restEndpoints = Arrays.asList(uri + "/pools");
-    CacheConfig config = new CacheConfig(1, restEndpoints);
+    CacheConfig config = new CacheConfig(1);
     config.setServers(nodeList);
-
+    URI streamingURI = URI.create("http://"+TestConfig.IPV4_ADDR+":8091");
     List<Node> nodes = new ArrayList<Node>();
 
     return new Bucket(bucketname, config, streamingURI, nodes);
@@ -91,7 +88,4 @@ public class ConfigurationProviderMemcacheMock
   public void updateBaseListFromConfig(List<URI> baseList) {
     baseListUpdated = true;
   }
-
-  @Override
-  public void updateBucket(String config) { }
 }

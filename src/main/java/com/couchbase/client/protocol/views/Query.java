@@ -29,8 +29,6 @@ import java.text.ParsePosition;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.regex.Pattern;
-
 import net.spy.memcached.util.StringUtils;
 
 /**
@@ -54,8 +52,6 @@ import net.spy.memcached.util.StringUtils;
  * query.setIncludeDocs(true);
  */
 public class Query {
-
-  private static final Pattern bboxSplit = Pattern.compile(",");
   private static final String DESCENDING = "descending";
   private static final String ENDKEY = "endkey";
   private static final String ENDKEYDOCID = "endkey_docid";
@@ -73,7 +69,7 @@ public class Query {
   private static final String ONERROR = "on_error";
   private static final String BBOX = "bbox";
   private static final String DEBUG = "debug";
-  private boolean includedocs;
+  private boolean includedocs = false;
 
   private final Map<String, Object> args;
 
@@ -90,7 +86,7 @@ public class Query {
    * @return Whether reduce is enabled or not.
    */
   public boolean willReduce() {
-    return args.containsKey(REDUCE)
+    return (args.containsKey(REDUCE))
       ? ((Boolean)args.get(REDUCE)).booleanValue() : false;
   }
 
@@ -128,11 +124,6 @@ public class Query {
   /**
    * Group the results using the reduce function to a group or single row.
    *
-   * Important: this setter and {@link #setGroupLevel(int)} should not be used
-   * together in the same {@link Query}. It is sufficient to only set the
-   * grouping level only and use this setter in cases where you always want the
-   * highest group level implictly.
-   *
    * @param group True when grouping should be enabled.
    * @return The Query instance.
    */
@@ -144,16 +135,11 @@ public class Query {
   /**
    * Specify the group level to be used.
    *
-   * Important: {@link #setGroup(boolean)} and this setter should not be used
-   * together in the same {@link Query}. It is sufficient to only use this
-   * setter and use {@link #setGroup(boolean)} in cases where you always want
-   * the highest group level implictly.
-   *
    * @param grouplevel How deep the grouping level should be.
    * @return The Query instance.
    */
   public Query setGroupLevel(int grouplevel) {
-    args.put(GROUPLEVEL, Integer.valueOf(grouplevel));
+    args.put(GROUPLEVEL, Integer.valueOf((grouplevel)));
     return this;
   }
 
@@ -164,7 +150,7 @@ public class Query {
    * @return The Query instance.
    */
   public Query setIncludeDocs(boolean include) {
-    includedocs = include;
+    this.includedocs = include;
     return this;
   }
 
@@ -258,7 +244,7 @@ public class Query {
    */
   public int getLimit() {
     if (args.containsKey(LIMIT)) {
-      return ((Integer)args.get(LIMIT)).intValue();
+      return(((Integer)args.get(LIMIT)).intValue());
     } else {
       return -1;
     }
@@ -423,8 +409,8 @@ public class Query {
    */
   public Query setBbox(double lowerLeftLong, double lowerLeftLat,
     double upperRightLong, double upperRightLat) {
-    String combined = lowerLeftLong + "," + lowerLeftLat + ','
-      + upperRightLong + ',' + upperRightLat;
+    String combined = lowerLeftLong + "," + lowerLeftLat + ","
+      + upperRightLong + "," + upperRightLat;
     args.put(BBOX, combined);
     return this;
   }
@@ -453,10 +439,10 @@ public class Query {
       query.setDescending(((Boolean)args.get(DESCENDING)).booleanValue());
     }
     if (args.containsKey(ENDKEY)) {
-      query.setRangeEnd((String)args.get(ENDKEY));
+      query.setRangeEnd(((String)args.get(ENDKEY)));
     }
     if (args.containsKey(ENDKEYDOCID)) {
-      query.setEndkeyDocID((String)args.get(ENDKEYDOCID));
+      query.setEndkeyDocID(((String)args.get(ENDKEYDOCID)));
     }
     if (args.containsKey(GROUP)) {
       query.setGroup(((Boolean)args.get(GROUP)).booleanValue());
@@ -468,10 +454,10 @@ public class Query {
       query.setInclusiveEnd(((Boolean)args.get(INCLUSIVEEND)).booleanValue());
     }
     if (args.containsKey(KEY)) {
-      query.setKey((String)args.get(KEY));
+      query.setKey(((String)args.get(KEY)));
     }
     if (args.containsKey(KEYS)) {
-      query.setKeys((String)args.get(KEYS));
+      query.setKeys(((String)args.get(KEYS)));
     }
     if (args.containsKey(LIMIT)) {
       query.setLimit(((Integer)args.get(LIMIT)).intValue());
@@ -483,19 +469,19 @@ public class Query {
       query.setSkip(((Integer)args.get(SKIP)).intValue());
     }
     if (args.containsKey(STALE)) {
-      query.setStale((Stale)args.get(STALE));
+      query.setStale(((Stale)args.get(STALE)));
     }
     if (args.containsKey(STARTKEY)) {
-      query.setRangeStart((String)args.get(STARTKEY));
+      query.setRangeStart(((String)args.get(STARTKEY)));
     }
     if (args.containsKey(STARTKEYDOCID)) {
-      query.setStartkeyDocID((String)args.get(STARTKEYDOCID));
+      query.setStartkeyDocID(((String)args.get(STARTKEYDOCID)));
     }
     if (args.containsKey(ONERROR)) {
-      query.setOnError((OnError)args.get(ONERROR));
+      query.setOnError(((OnError)args.get(ONERROR)));
     }
     if (args.containsKey(BBOX)) {
-      String[] bbox = bboxSplit.split((CharSequence) args.get(BBOX));
+      String[] bbox = ((String)args.get(BBOX)).split(",");
       query.setBbox(Double.parseDouble(bbox[0]), Double.parseDouble(bbox[1]),
         Double.parseDouble(bbox[2]), Double.parseDouble(bbox[3]));
     }
@@ -515,17 +501,17 @@ public class Query {
   @Override
   public String toString() {
     boolean first = true;
-    StringBuilder result = new StringBuilder();
+    StringBuffer result = new StringBuffer();
     for (Entry<String, Object> arg : args.entrySet()) {
       if (first) {
-        result.append('?');
+        result.append("?");
         first = false;
       } else {
-        result.append('&');
+        result.append("&");
       }
       String argument;
       try {
-        argument = arg.getKey() + '=' + prepareValue(
+        argument = arg.getKey() + "=" + prepareValue(
           arg.getKey(), arg.getValue()
         );
       } catch (Exception ex) {
@@ -553,7 +539,7 @@ public class Query {
    * @param value The value to prepared.
    * @return The correctly formatted and encoded value.
    */
-  private static String prepareValue(String key, Object value)
+  private String prepareValue(String key, Object value)
     throws UnsupportedEncodingException {
     String encoded;
 
@@ -574,7 +560,7 @@ public class Query {
       if (pp.getIndex() == value.toString().length()) {
         encoded = result.toString();
       } else {
-        encoded = '"' + value.toString() + '"';
+        encoded = "\"" + value.toString() + "\"";
       }
     }
 

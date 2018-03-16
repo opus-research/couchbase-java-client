@@ -20,47 +20,60 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket.config;
+package com.couchbase.client.http;
 
-import java.net.URL;
-import java.util.List;
-
-import net.spy.memcached.HashAlgorithm;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * A Config.
+ * An AsyncConnectionRequest.
  */
-public interface Config {
+public class AsyncConnectionRequest {
 
-  // Config access
+  private volatile boolean completed;
+  private volatile NHttpClientConnection conn;
 
-  int getReplicasCount();
+  public AsyncConnectionRequest() {
+    super();
+  }
 
-  int getVbucketsCount();
+  public boolean isCompleted() {
+    return this.completed;
+  }
 
-  int getServersCount();
+  public void setConnection(NHttpClientConnection newConn) {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      this.conn = newConn;
+      notifyAll();
+    }
+  }
 
-  HashAlgorithm getHashAlgorithm();
+  public NHttpClientConnection getConnection() {
+    return this.conn;
+  }
 
-  String getServer(int serverIndex);
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
+    }
+  }
 
-  // VBucket access
-
-  int getVbucketByKey(String key);
-
-  int getMaster(int vbucketIndex);
-
-  int getReplica(int vbucketIndex, int replicaIndex);
-
-  int foundIncorrectMaster(int vbucket, int wrongServer);
-
-  ConfigDifference compareTo(Config config);
-
-  List<String> getServers();
-
-  List<URL> getCouchServers();
-
-  List<VBucket> getVbuckets();
-
-  ConfigType getConfigType();
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait(5000);
+        this.completed = true;
+      }
+    }
+  }
 }

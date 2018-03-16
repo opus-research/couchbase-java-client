@@ -20,47 +20,61 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket.config;
+package com.couchbase.client.http;
 
-import java.net.URL;
-import java.util.List;
-
-import net.spy.memcached.HashAlgorithm;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * A Config.
+ * A connection request.
  */
-public interface Config {
+public class RequestHandle {
 
-  // Config access
+  private final AsyncConnectionManager connMgr;
+  private final NHttpClientConnection conn;
 
-  int getReplicasCount();
+  private volatile boolean completed;
 
-  int getVbucketsCount();
+  public RequestHandle(AsyncConnectionManager connMgr,
+      NHttpClientConnection conn) {
+    super();
+    this.connMgr = connMgr;
+    this.conn = conn;
+  }
 
-  int getServersCount();
+  public boolean isCompleted() {
+    return this.completed;
+  }
 
-  HashAlgorithm getHashAlgorithm();
+  public void completed() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
+  }
 
-  String getServer(int serverIndex);
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
+  }
 
-  // VBucket access
-
-  int getVbucketByKey(String key);
-
-  int getMaster(int vbucketIndex);
-
-  int getReplica(int vbucketIndex, int replicaIndex);
-
-  int foundIncorrectMaster(int vbucket, int wrongServer);
-
-  ConfigDifference compareTo(Config config);
-
-  List<String> getServers();
-
-  List<URL> getCouchServers();
-
-  List<VBucket> getVbuckets();
-
-  ConfigType getConfigType();
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait();
+      }
+    }
+  }
 }
