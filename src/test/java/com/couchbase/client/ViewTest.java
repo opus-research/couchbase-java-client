@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.ops.OperationStatus;
 import org.apache.http.HttpResponse;
@@ -66,9 +67,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 /**
  * A CouchbaseClientTest.
@@ -89,9 +88,6 @@ public class ViewTest {
   public static final String VIEW_NAME_FOR_DATED = "view_emitting_dated";
   public static final String VIEW_NAME_OBSERVE = "view_staletest";
   public static final String VIEW_NAME_BINARY = "view_binary";
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   static {
     ITEMS = new HashMap<String, Object>();
@@ -636,6 +632,21 @@ public class ViewTest {
     op.handleResponse(response);
   }
 
+  @Test(expected = InvalidViewException.class)
+  public void testInvalidViewHandling() {
+    String designDoc = "invalid_design";
+    String viewName = "invalid_view";
+    View view = client.getView(designDoc, viewName);
+    assertNull(view);
+  }
+
+  @Test(expected = InvalidViewException.class)
+  public void testInvalidDesignDocHandling() {
+    String designDoc = "invalid_design";
+    List<View> views = client.getViews(designDoc);
+    assertNull(views);
+  }
+
   /**
    * This test case acts as an integration test to verify that adding
    * data with the given integrity constraints in combination with the
@@ -701,29 +712,6 @@ public class ViewTest {
         assertEquals(42, row.getDocument());
       }
     }
-  }
-
-  @Test
-  public void testInvalidViewHandling() {
-    String designDoc = "invalid_design";
-    String viewName = "invalid_view";
-
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load view \""
-                + viewName + "\" for design doc \"" + designDoc + "\"");
-    View view = client.getView(designDoc, viewName);
-    assertNull(view);
-  }
-
-  @Test
-  public void testInvalidDesignDocHandling() {
-    String designDoc = "invalid_design";
-
-    exception.expect(InvalidViewException.class);
-    exception.expectMessage("Could not load views for design doc \""
-            + designDoc + "\"");
-    List<View> views = client.getViews(designDoc);
-    assertNull(views);
   }
 
 }
