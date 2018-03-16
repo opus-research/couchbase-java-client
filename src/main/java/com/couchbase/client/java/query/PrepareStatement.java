@@ -30,6 +30,9 @@ package com.couchbase.client.java.query;
  */
 public class PrepareStatement implements Statement {
 
+    /** a prefix to be used in order to prepare a query plan for a statement */
+    public static final String PREPARE_PREFIX = "PREPARE ";
+
     private final Statement toPrepare;
 
     private PrepareStatement(Statement toPrepare) {
@@ -38,7 +41,7 @@ public class PrepareStatement implements Statement {
 
     @Override
     public String toString() {
-        return "PREPARE " + toPrepare.toString();
+        return PREPARE_PREFIX + toPrepare.toString();
     }
 
     /**
