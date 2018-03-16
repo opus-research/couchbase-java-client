@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search;
+package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * Enumeration of the highlighting styles recognized by the FTS engine.
+ * A FTS query that performs a search according to the "query string" syntax.
  *
  * @author Simon Baslé
  * @author Michael Nitschinger
@@ -27,8 +28,23 @@ import com.couchbase.client.core.annotations.InterfaceStability;
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public enum HighlightStyle {
-    HTML,
-    ANSI,
-    SERVER_DEFAULT
+public class QueryStringQuery extends AbstractFtsQuery {
+
+    private final String query;
+
+    public QueryStringQuery(String query) {
+        super();
+        this.query = query;
+    }
+
+    @Override
+    public QueryStringQuery boost(double boost) {
+        super.boost(boost);
+        return this;
+    }
+
+    @Override
+    protected void injectParams(JsonObject input) {
+        input.put("query", query);
+    }
 }
