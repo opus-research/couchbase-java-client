@@ -26,7 +26,7 @@ import rx.functions.Func1;
  *
  * @author Michael Nitschinger
  */
-@InterfaceStability.Committed
+@InterfaceStability.Uncommitted
 @InterfaceAudience.Public
 public class DefaultAsyncN1qlQueryResult implements AsyncN1qlQueryResult {
 
