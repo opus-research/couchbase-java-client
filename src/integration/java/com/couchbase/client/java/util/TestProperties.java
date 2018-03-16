@@ -34,6 +34,7 @@ public class TestProperties {
     private static String password;
     private static String adminName;
     private static String adminPassword;
+    private static int thinkTime;
 
     /**
     * Initialize static the properties.
@@ -44,6 +45,7 @@ public class TestProperties {
         password = System.getProperty("password", "");
         adminName = System.getProperty("adminName", "Administrator");
         adminPassword = System.getProperty("adminPassword", "password");
+        thinkTime = Integer.parseInt(System.getProperty("thinkTime", "5000"));
     }
 
     /**
@@ -91,4 +93,12 @@ public class TestProperties {
         return adminPassword;
     }
 
+    /**
+     * The think time to wait when a bucket got create to make sure its usable.
+     *
+     * @return the think time.
+     */
+    public static int thinkTime() {
+        return thinkTime;
+    }
 }
