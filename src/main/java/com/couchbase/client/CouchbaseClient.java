@@ -87,7 +87,13 @@ import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
-import net.spy.memcached.ops.*;
+import net.spy.memcached.ops.GetlOperation;
+import net.spy.memcached.ops.ObserveOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.ops.ReplicaGetOperation;
+import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.transcoders.Transcoder;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
@@ -1117,36 +1123,8 @@ public class CouchbaseClient extends MemcachedClient
 
     }
 
-    final CountDownLatch latch = new CountDownLatch(1);
-    final GetFuture<T> additionalActiveGet = new GetFuture<T>(latch, operationTimeout, key,
-      executorService);
-    Operation op = opFact.get(key, new GetOperation.Callback() {
-        private Future<T> val = null;
-
-        @Override
-        public void receivedStatus(OperationStatus status) {
-          additionalActiveGet.set(val, status);
-          if (!replicaFuture.isDone()) {
-            replicaFuture.setCompletedFuture(additionalActiveGet);
-          }
-        }
-
-        @Override
-        public void gotData(String k, int flags, byte[] data) {
-          assert key.equals(k) : "Wrong key returned";
-          val = tcService.decode(tc, new CachedData(flags, data,
-            tc.getMaxSize()));
-        }
-
-        @Override
-        public void complete() {
-          latch.countDown();
-        }
-      });
-    additionalActiveGet.setOperation(op);
-    mconn.enqueueOperation(key, op);
-
-    if (op.isCancelled()) {
+    GetFuture<T> additionalActiveGet = asyncGet(key, tc);
+    if (additionalActiveGet.isCancelled()) {
       discardedOps++;
       getLogger().debug("Silently discarding replica (active) get for key \""
         + key + "\" (cancelled).");
