@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.consistency.ScanConsistency;
 import org.junit.Test;
 
 /**
@@ -44,7 +45,7 @@ public class QueryToN1qlTest {
 
     @Test
     public void simpleQueryShouldJustProduceStatement() {
-        SimpleQuery query = new SimpleQuery(select("*").from("tutorial").where(x("fname").eq(s("ian"))), null);
+        SimpleQuery query = new SimpleQuery(select("*").from("tutorial").where(x("fname").eq(s("ian"))));
 
         //notice ian is between escaped quotes since inside json
         assertEquals("{\"statement\":\"SELECT * FROM tutorial WHERE fname = \\\"ian\\\"\"}", query.n1ql().toString());
@@ -134,22 +135,15 @@ public class QueryToN1qlTest {
     @Test
     public void queryParamsShouldBeInjectedInQuery() {
         QueryParams fullParams = QueryParams.build()
-                .consistencyAtPlus(Collections.singletonMap("5", 12345))
+                .consistency(ScanConsistency.REQUEST_PLUS)
                 .scanWait(12, TimeUnit.SECONDS)
-                .addCredential("bucket", "pass")
-                .addAdminCredential("Admin", "pass")
                 .serverSideTimeout(20, TimeUnit.SECONDS)
                 .withContextId("test");
 
-        JsonObject expectedVector = JsonObject.create().put("5", 12345);
-        JsonObject expectedCred1 = JsonObject.create().put("user", "local:bucket").put("pass", "pass");
-        JsonObject expectedCred2 = JsonObject.create().put("user", "admin:Admin").put("pass", "pass");
         JsonObject expected = JsonObject.create()
                 .put("statement", "SELECT * FROM default")
-                .put("scan_consistency", "at_plus")
-                .put("scan_vector", expectedVector)
+                .put("scan_consistency", "request_plus")
                 .put("scan_wait", "12s")
-                .put("creds", JsonArray.create().add(expectedCred1).add(expectedCred2))
                 .put("timeout", "20s")
                 .put("client_context_id", "test");
 
