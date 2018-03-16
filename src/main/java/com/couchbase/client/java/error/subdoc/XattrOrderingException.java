@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (c) 2017 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,38 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.java.search.queries;
+package com.couchbase.client.java.error.subdoc;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * A FTS query that performs a search according to the "query string" syntax.
+ * This exception is raised when non-xattr based commands are set before xattr-based ones.
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
- * @since 2.3.0
+ * The server is expecting xattr commands at the very beginning and if this is not the case it will fail
+ * with an error.
  */
-@InterfaceStability.Uncommitted
+@InterfaceStability.Committed
 @InterfaceAudience.Public
-public class QueryStringQuery extends AbstractFtsQuery {
+public class XattrOrderingException extends SubDocumentException {
 
-    private final String query;
-
-    public QueryStringQuery(String query) {
-        super();
-        this.query = query;
+    public XattrOrderingException(String message) {
+        super(message);
     }
 
-    @Override
-    public QueryStringQuery boost(double boost) {
-        super.boost(boost);
-        return this;
+    public XattrOrderingException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    @Override
-    protected void injectParams(JsonObject input) {
-        input.put("query", query);
+    public XattrOrderingException(Throwable cause) {
+        super(cause);
     }
+
 }
