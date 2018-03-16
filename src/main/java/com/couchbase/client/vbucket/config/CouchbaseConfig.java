@@ -60,23 +60,17 @@ public class CouchbaseConfig extends SpyObject implements Config {
 
   private final List<String> restEndpoints;
 
-  private final boolean tainted;
-
-  public CouchbaseConfig(HashAlgorithm hashAlgorithm, int serversCount,
-    int replicasCount, int vbucketsCount, List<String> servers,
-    List<VBucket> vbuckets, List<URL> couchServers,
-    List<String> restEndpoints, boolean hasForwardMap) {
+  public CouchbaseConfig(HashAlgorithm hashAlgorithm, int serversCount, int replicasCount, int vbucketsCount, List<String> servers, List<VBucket> vbuckets, List<URL> couchServers, List<String> restEndpoints) {
     this.hashAlgorithm = hashAlgorithm;
     this.serversCount = serversCount;
     this.replicasCount = replicasCount;
     this.vbucketsCount = vbucketsCount;
-    mask = vbucketsCount - 1;
+    this.mask = vbucketsCount - 1;
     this.servers = servers;
     this.vbuckets = vbuckets;
     this.couchServers = couchServers;
-    serversWithVBuckets = new HashSet<String>();
+    this.serversWithVBuckets = new HashSet<String>();
     this.restEndpoints = restEndpoints;
-    tainted = hasForwardMap;
 
     cacheServersWithVBuckets();
   }
@@ -240,11 +234,6 @@ public class CouchbaseConfig extends SpyObject implements Config {
   @Override
   public ConfigType getConfigType() {
     return ConfigType.COUCHBASE;
-  }
-
-  @Override
-  public boolean isTainted() {
-    return tainted;
   }
 
   @Override
