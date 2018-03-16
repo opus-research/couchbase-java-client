@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.java.query.core;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -30,7 +31,10 @@ import static org.mockito.Mockito.verify;
 import java.util.Arrays;
 import java.util.List;
 
+import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.QueryExecutionException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
@@ -61,7 +65,7 @@ public class N1qlQueryExecutorTest {
     public void testPreparedStatementInCacheBypassesPreparation() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -90,7 +94,7 @@ public class N1qlQueryExecutorTest {
     public void testPreparedStatementNotInCacheTriggersPreparation() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -124,7 +128,7 @@ public class N1qlQueryExecutorTest {
     public void testExtractionOfPayloadFromPrepareResponse() {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = new N1qlQueryExecutor(mockFacade, "default", "", cache, true);
+        N1qlQueryExecutor executor = new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true);
 
         JsonObject prepareResponse = JsonObject.create()
                 .put("encoded_plan", "encoded123")
@@ -145,7 +149,7 @@ public class N1qlQueryExecutorTest {
     public void testCachedPlanExecutionErrorTriggersRetry() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -180,7 +184,7 @@ public class N1qlQueryExecutorTest {
     public void testUncachedPlanExecutionErrorTriggersRetry() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -230,7 +234,7 @@ public class N1qlQueryExecutorTest {
     public void testUncachedPlanExecutionDoubleErrorTriggersRetryThenFails() throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -284,7 +288,7 @@ public class N1qlQueryExecutorTest {
     private void testRetryCondition(int code, String msg, boolean retryExpected) throws Exception {
         LRUCache<String, PreparedPayload> cache = new LRUCache<String, PreparedPayload>(3);
         CouchbaseCore mockFacade = mock(CouchbaseCore.class);
-        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", cache, true));
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(mockFacade, "default", "", null, cache, true));
 
         Statement st = Select.select("*");
         N1qlQuery q = N1qlQuery.simple(st, N1qlParams.build().adhoc(false));
@@ -359,5 +363,64 @@ public class N1qlQueryExecutorTest {
     @Test
     public void testNoRetryOn5000WithRandomMessage() throws Exception {
         testRetryCondition(5000, "notRelevant", false);
+    }
+
+    @Test
+    public void testAuthenticatorWithMultipleCredentialsAddsCreds() {
+        Authenticator auth = new PasswordAuthenticator()
+                .bucket("foo", "a")
+                .bucket("bar", "b");
+
+        JsonObject expected1 = JsonObject.create().put("user", "foo").put("pass", "a");
+        JsonObject expected2 = JsonObject.create().put("user", "bar").put("pass", "b");
+
+        ClusterFacade core = mock(ClusterFacade.class);
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM somewhere");
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(core,
+                "main", "", auth,
+                new LRUCache<String, PreparedPayload>(2), false));
+
+        executor.execute(query);
+        JsonObject n1ql = query.n1ql();
+
+        assertTrue(n1ql.containsKey("creds"));
+        assertThat(n1ql.getArray("creds")).containsOnly(expected1, expected2);
+    }
+
+    @Test
+    public void testAuthenticatorWithSingleDifferentCredentialAddsCreds() {
+        Authenticator auth = new PasswordAuthenticator()
+                .bucket("foo", "a");
+
+        JsonObject expected1 = JsonObject.create().put("user", "foo").put("pass", "a");
+
+        ClusterFacade core = mock(ClusterFacade.class);
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM somewhere");
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(core,
+                "main", "", auth,
+                new LRUCache<String, PreparedPayload>(2), false));
+
+        executor.execute(query);
+        JsonObject n1ql = query.n1ql();
+
+        assertTrue(n1ql.containsKey("creds"));
+        assertThat(n1ql.getArray("creds")).containsOnly(expected1);
+    }
+
+    @Test
+    public void testAuthenticatorWithSingleCredentialSameAsBucketDoesntAddCreds() {
+        Authenticator auth = new PasswordAuthenticator()
+                .bucket("main", "a");
+
+        ClusterFacade core = mock(ClusterFacade.class);
+        N1qlQuery query = N1qlQuery.simple("SELECT * FROM somewhere");
+        N1qlQueryExecutor executor = spy(new N1qlQueryExecutor(core,
+                "main", "", auth,
+                new LRUCache<String, PreparedPayload>(2), false));
+
+        executor.execute(query);
+        JsonObject n1ql = query.n1ql();
+
+        assertFalse(n1ql.containsKey("creds"));
     }
 }

@@ -87,7 +87,7 @@ public class BucketManagerIndexManagementTests {
         clusterManager.insertBucket(DefaultBucketSettings.builder()
                 .name(indexedBucketName)
                 .quota(100));
-        indexedBucket = cluster.openBucket(indexedBucketName);
+        indexedBucket = cluster.openBucket(indexedBucketName, "");
         LOGGER.info(indexedBucket + " created and opened");
         List<IndexInfo> initialIndexes = indexedBucket.bucketManager().listN1qlIndexes();
         assertEquals("Newly created bucket unexpectedly has indexes: " + initialIndexes, 0, initialIndexes.size());

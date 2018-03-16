@@ -15,6 +15,15 @@
  */
 package com.couchbase.client.java.query.core;
 
+import static com.couchbase.client.java.CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER;
+
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
@@ -32,6 +41,9 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.Credential;
+import com.couchbase.client.java.auth.CredentialContext;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.QueryExecutionException;
@@ -41,6 +53,7 @@ import com.couchbase.client.java.query.AsyncN1qlQueryRow;
 import com.couchbase.client.java.query.DefaultAsyncN1qlQueryResult;
 import com.couchbase.client.java.query.DefaultAsyncN1qlQueryRow;
 import com.couchbase.client.java.query.N1qlMetrics;
+import com.couchbase.client.java.query.N1qlParams;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.ParameterizedN1qlQuery;
 import com.couchbase.client.java.query.PrepareStatement;
@@ -55,14 +68,6 @@ import rx.exceptions.CompositeException;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
-
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-
-import static com.couchbase.client.java.CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER;
 
 /**
  * A class used to execute various N1QL queries.
@@ -92,6 +97,7 @@ public class N1qlQueryExecutor {
     private final String password;
     private final Map<String, PreparedPayload> queryCache;
     private final boolean encodedPlanEnabled;
+    private final Authenticator authenticator;
 
     /**
      * Construct a new N1qlQueryExecutor that will send requests through the given {@link ClusterFacade}. For queries that
@@ -102,7 +108,7 @@ public class N1qlQueryExecutor {
      * @param password the password for the bucket.
      */
     public N1qlQueryExecutor(ClusterFacade core, String bucket, String password) {
-        this(core, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true);
+        this(core, bucket, password, null, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true);
     }
 
     /**
@@ -112,30 +118,57 @@ public class N1qlQueryExecutor {
      * @param core the core through which to send requests.
      * @param bucket the bucket to bootstrap from.
      * @param password the password for the bucket.
+     * @param auth the {@link Authenticator} from which to extract additional credentials, or null if not needed.
      * @param encodedPlanEnabled true to include an encoded plan when running prepared queries, false otherwise.
      */
-    public N1qlQueryExecutor(ClusterFacade core, String bucket, String password, boolean encodedPlanEnabled) {
-        this(core, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled);
+    public N1qlQueryExecutor(ClusterFacade core, String bucket, String password, Authenticator auth, boolean encodedPlanEnabled) {
+        this(core, bucket, password, auth, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled);
     }
 
     /**
      * This constructor is for testing purpose, prefer using {@link #N1qlQueryExecutor(ClusterFacade, String, String)}.
      */
-    protected N1qlQueryExecutor(ClusterFacade core, String bucket, String password,
+    protected N1qlQueryExecutor(ClusterFacade core, String bucket, String password, Authenticator auth,
             LRUCache<String, PreparedPayload> lruCache, boolean encodedPlanEnabled) {
         this.core = core;
         this.bucket = bucket;
         this.password = password;
         this.encodedPlanEnabled = encodedPlanEnabled;
+        this.authenticator = auth;
 
         queryCache = Collections.synchronizedMap(lruCache);
     }
 
     public Observable<AsyncN1qlQueryResult> execute(final N1qlQuery query) {
+        addCredentialsIfNeeded(query);
+
         if (query.params().isAdhoc()) {
             return executeQuery(query);
         } else {
             return dispatchPrepared(query);
+        }
+    }
+
+    /**
+     * This method adds credentials to the {@link N1qlParams} of a query from an
+     * {@link Authenticator} if needed, that is:
+     *
+     *  - if the authenticator is not null
+     *  - and it has more that one credential set
+     *  - or it has a single credential for a bucket that is different from that executor's bucket of origin.
+     * @param query
+     */
+    protected void addCredentialsIfNeeded(N1qlQuery query) {
+        if (authenticator == null)
+            return;
+
+        List<Credential> creds = authenticator.getCredentials(CredentialContext.CLUSTER_N1QL, null);
+        if (creds == null || creds.isEmpty())
+            return;
+
+        if (creds.size() > 1 || !bucket.equals(creds.get(0).login())) {
+            //multiple credentials or single credential but different from the original bucket's name
+            query.params().withCredentials(creds);
         }
     }
 

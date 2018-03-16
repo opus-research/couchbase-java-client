@@ -15,16 +15,18 @@
  */
 package com.couchbase.client.java;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.CredentialContext;
 import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.transcoder.Transcoder;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Represents a Couchbase Server {@link Cluster}.
@@ -70,7 +72,9 @@ public interface Cluster {
     Bucket openBucket(long timeout, TimeUnit timeUnit);
 
     /**
-     * Opens a bucket identified by its name with an empty password and with the default connect timeout.
+     * Opens the bucket with the given name, using the default timeout and the password from the {@link Authenticator}
+     * that was last {@link #authenticate(Authenticator) set}
+     * (in the {@link CredentialContext#BUCKET_KV BUCKET_KV context}).
      *
      * This method throws:
      *
@@ -84,7 +88,9 @@ public interface Cluster {
     Bucket openBucket(String name);
 
     /**
-     * Opens a bucket identified by its name with an empty password and with a custom timeout.
+     * Opens the bucket with the given name, using a custom timeout and the password from the {@link Authenticator}
+     * that was last {@link #authenticate(Authenticator) set}
+     * (in the {@link CredentialContext#BUCKET_KV BUCKET_KV context}).
      *
      * This method throws:
      *
@@ -175,6 +181,15 @@ public interface Cluster {
     ClusterManager clusterManager(String username, String password);
 
     /**
+     * Provides access to the {@link ClusterManager} to perform cluster-wide operations, using the credentials set
+     * through the configured {@link Authenticator} (see {@link #authenticate(Authenticator)}), for the
+     * {@link CredentialContext#CLUSTER_MANAGEMENT} context.
+     *
+     * @return the {@link ClusterManager} if successful.
+     */
+    ClusterManager clusterManager();
+
+    /**
      * Disconnects form all open buckets and shuts down the {@link CouchbaseEnvironment} if it is the exclusive owner
      * with the default disconnect timeout.
      *
@@ -200,4 +215,16 @@ public interface Cluster {
      */
     ClusterFacade core();
 
+    /**
+     * Sets the {@link Authenticator} to use when credentials are needed for an operation
+     * but no explicit credentials are provided.
+     *
+     * Note that setting a new Authenticator will not be propagated to any {@link Bucket} that
+     * has been opened with the previous Authenticator, as the instance is passed to the Bucket
+     * for its own use.
+     *
+     * @param auth the new {@link Authenticator} to use.
+     * @return this Cluster instance for chaining.
+     */
+    Cluster authenticate(Authenticator auth);
 }
