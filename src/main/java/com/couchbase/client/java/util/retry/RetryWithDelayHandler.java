@@ -56,8 +56,7 @@ public class RetryWithDelayHandler implements Func1<Tuple2<Integer, Throwable>, 
     /**
      * Construct a {@link RetryWithDelayHandler retry handler} that will retry on all errors.
      *
-     * @param maxAttempts the maximum number of retries before a {@link CannotRetryException} is thrown. It will be
-     *                    capped at <code>{@link Integer#MAX_VALUE} - 1</code>.
+     * @param maxAttempts the maximum number of retries before a {@link CannotRetryException} is thrown.
      * @param retryDelay the {@link Delay} to apply between each retry (can grow,
      *  eg. by using {@link ExponentialDelay}).
      */
@@ -68,8 +67,7 @@ public class RetryWithDelayHandler implements Func1<Tuple2<Integer, Throwable>, 
     /**
      * Construct a {@link RetryWithDelayHandler retry handler} that will retry on most errors but will stop on specific errors.
      *
-     * @param maxAttempts the maximum number of retries before a {@link CannotRetryException} is thrown. It will be
-     *                    capped at <code>{@link Integer#MAX_VALUE} - 1</code>.
+     * @param maxAttempts the maximum number of retries before a {@link CannotRetryException} is thrown.
      * @param retryDelay the {@link Delay} to apply between each retry (can grow,
      *  eg. by using {@link ExponentialDelay}).
      * @param stoppingErrorFilter a predicate that determine if an error must stop the retry cycle (when true),
@@ -82,9 +80,9 @@ public class RetryWithDelayHandler implements Func1<Tuple2<Integer, Throwable>, 
     /**
      * Protected constructor that also allows to set a {@link Scheduler} for the delay, especially useful for tests.
      */
-    protected RetryWithDelayHandler(int maxAttempts, Delay retryDelay, Func1<Throwable, Boolean> stoppingErrorFilter,
+    public RetryWithDelayHandler(int maxAttempts, Delay retryDelay, Func1<Throwable, Boolean> stoppingErrorFilter,
         Scheduler scheduler) {
-        this.maxAttempts = Math.min(Integer.MAX_VALUE - 1, maxAttempts);
+        this.maxAttempts = maxAttempts;
         this.retryDelay = retryDelay;
         this.stoppingErrorFilter = stoppingErrorFilter;
         this.optionalScheduler = scheduler;

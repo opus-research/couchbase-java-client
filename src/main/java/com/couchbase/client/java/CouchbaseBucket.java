@@ -30,15 +30,14 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
-import com.couchbase.client.java.query.AsyncN1qlQueryResult;
-import com.couchbase.client.java.query.AsyncN1qlQueryRow;
-import com.couchbase.client.java.query.DefaultN1qlQueryResult;
-import com.couchbase.client.java.query.N1qlMetrics;
-import com.couchbase.client.java.query.N1qlQuery;
-import com.couchbase.client.java.query.N1qlQueryResult;
+import com.couchbase.client.java.query.AsyncQueryResult;
+import com.couchbase.client.java.query.AsyncQueryRow;
+import com.couchbase.client.java.query.DefaultQueryResult;
+import com.couchbase.client.java.query.Query;
+import com.couchbase.client.java.query.QueryMetrics;
+import com.couchbase.client.java.query.QueryPlan;
+import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.repository.CouchbaseRepository;
-import com.couchbase.client.java.repository.Repository;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -51,9 +50,8 @@ import com.couchbase.client.java.view.ViewQuery;
 import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
 import rx.functions.Func1;
-import rx.functions.Func6;
+import rx.functions.Func5;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -67,20 +65,9 @@ public class CouchbaseBucket implements Bucket {
     private final String password;
     private final ClusterFacade core;
 
-    /**
-     * Create a {@link CouchbaseBucket} that doesn't reuse an existing {@link AsyncBucket} but rather creates one internally. Prefer using the alternative constructor
-     * {@link #CouchbaseBucket(CouchbaseEnvironment, ClusterFacade, String, String, List)} if you can obtain an AsyncBucket externally.
-     */
     public CouchbaseBucket(final CouchbaseEnvironment env, final ClusterFacade core, final String name, final String password,
         final List<Transcoder<? extends Document, ?>> customTranscoders) {
-        this(new CouchbaseAsyncBucket(core, env, name, password, customTranscoders), env, core, name, password);
-    }
-
-    /**
-     * Create a {@link CouchbaseBucket} that relies on the provided {@link AsyncBucket}.
-     */
-    public CouchbaseBucket(AsyncBucket asyncBucket, final CouchbaseEnvironment env, final ClusterFacade core, final String name, final String password) {
-        this.asyncBucket = asyncBucket;
+        asyncBucket = new CouchbaseAsyncBucket(core, env, name, password, customTranscoders);
         this.environment = env;
         this.kvTimeout = env.kvTimeout();
         this.name = name;
@@ -101,16 +88,6 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public ClusterFacade core() {
         return asyncBucket.core().toBlocking().single();
-    }
-
-    @Override
-    public CouchbaseEnvironment environment() {
-        return environment;
-    }
-
-    @Override
-    public Repository repository() {
-        return new CouchbaseRepository(this, environment);
     }
 
     @Override
@@ -144,26 +121,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public boolean exists(String id) {
-        return exists(id, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public boolean exists(String id, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.exists(id), timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> boolean exists(D document) {
-        return exists(document.id());
-    }
-
-    @Override
-    public <D extends Document<?>> boolean exists(D document, long timeout, TimeUnit timeUnit) {
-        return exists(document.id(), timeout, timeUnit);
-    }
-
-    @Override
     public List<JsonDocument> getFromReplica(String id, ReplicaMode type) {
         return getFromReplica(id, type, kvTimeout, TIMEOUT_UNIT);
     }
@@ -191,48 +148,6 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public <D extends Document<?>> List<D> getFromReplica(String id, ReplicaMode type, Class<D> target, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.getFromReplica(id, type, target).toList(), timeout, timeUnit);
-    }
-
-    @Override
-    public Iterator<JsonDocument> getFromReplica(String id) {
-        return getFromReplica(id, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(D document) {
-        return getFromReplica(document, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target) {
-        return getFromReplica(id, target, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(String id, Class<D> target, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(id, ReplicaMode.ALL, target)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
-    }
-
-    @Override
-    public <D extends Document<?>> Iterator<D> getFromReplica(D document, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(document, ReplicaMode.ALL)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
-    }
-
-    @Override
-    public Iterator<JsonDocument> getFromReplica(String id, long timeout, TimeUnit timeUnit) {
-        return asyncBucket
-            .getFromReplica(id, ReplicaMode.ALL)
-            .timeout(timeout, timeUnit)
-            .toBlocking()
-            .getIterator();
     }
 
     @Override
@@ -567,24 +482,23 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public N1qlQueryResult query(Statement statement) {
+    public QueryResult query(Statement statement) {
         return query(statement, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
-    public N1qlQueryResult query(N1qlQuery query) {
+    public QueryResult query(Query query) {
         return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
-//    @Override
-//    public PreparedPayload prepare(String statement) {
-//        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
-//    }
-
-//    @Override
-//    public PreparedPayload prepare(Statement statement) {
-//        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
-//    }
+    @Override
+    public QueryPlan prepare(String statement) {
+        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
+    @Override
+    public QueryPlan prepare(Statement statement) {
+        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
 
     @Override
     public SpatialViewResult query(SpatialViewQuery query) {
@@ -594,17 +508,17 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public ViewResult query(ViewQuery query, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
-            .query(query)
-            .map(new Func1<AsyncViewResult, ViewResult>() {
-                @Override
-                public ViewResult call(AsyncViewResult asyncViewResult) {
-                    return new DefaultViewResult(environment, CouchbaseBucket.this,
-                        asyncViewResult.rows(), asyncViewResult.totalRows(), asyncViewResult.success(),
-                        asyncViewResult.error(), asyncViewResult.debug()
-                    );
-                }
-            })
-            .single(), timeout, timeUnit);
+                .query(query)
+                .map(new Func1<AsyncViewResult, ViewResult>() {
+                    @Override
+                    public ViewResult call(AsyncViewResult asyncViewResult) {
+                        return new DefaultViewResult(environment, CouchbaseBucket.this,
+                                asyncViewResult.rows(), asyncViewResult.totalRows(), asyncViewResult.success(),
+                                asyncViewResult.error(), asyncViewResult.debug()
+                        );
+                    }
+                })
+                .single(), timeout, timeUnit);
     }
 
 
@@ -625,42 +539,51 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public N1qlQueryResult query(Statement statement, final long timeout, final TimeUnit timeUnit) {
-        return query(N1qlQuery.simple(statement), timeout, timeUnit);
+    public QueryResult query(Statement statement, final long timeout, final TimeUnit timeUnit) {
+        return query(Query.simple(statement), timeout, timeUnit);
     }
 
     @Override
-    public N1qlQueryResult query(N1qlQuery query, final long timeout, final TimeUnit timeUnit) {
-        if (!query.params().hasServerSideTimeout()) {
-            query.params().serverSideTimeout(timeout, timeUnit);
-        }
-
+    public QueryResult query(Query query, final long timeout, final TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
                 .query(query)
-                .flatMap(new Func1<AsyncN1qlQueryResult, Observable<N1qlQueryResult>>() {
+                .flatMap(new Func1<AsyncQueryResult, Observable<QueryResult>>() {
                     @Override
-                    public Observable<N1qlQueryResult> call(AsyncN1qlQueryResult aqr) {
+                    public Observable<QueryResult> call(AsyncQueryResult aqr) {
                         final boolean parseSuccess = aqr.parseSuccess();
                         final String requestId = aqr.requestId();
                         final String clientContextId = aqr.clientContextId();
 
                         return Observable.zip(aqr.rows().toList(),
                                 aqr.signature().singleOrDefault(JsonObject.empty()),
-                                aqr.info().singleOrDefault(N1qlMetrics.EMPTY_METRICS),
+                                aqr.info().singleOrDefault(QueryMetrics.EMPTY_METRICS),
                                 aqr.errors().toList(),
-                                aqr.status(),
                                 aqr.finalSuccess().singleOrDefault(Boolean.FALSE),
-                                new Func6<List<AsyncN1qlQueryRow>, Object, N1qlMetrics, List<JsonObject>, String, Boolean, N1qlQueryResult>() {
+                                new Func5<List<AsyncQueryRow>, Object, QueryMetrics,
+                                        List<JsonObject>, Boolean, QueryResult>() {
                                     @Override
-                                    public N1qlQueryResult call(List<AsyncN1qlQueryRow> rows, Object signature,
-                                            N1qlMetrics info, List<JsonObject> errors, String finalStatus, Boolean finalSuccess) {
-                                        return new DefaultN1qlQueryResult(rows, signature, info, errors, finalStatus, finalSuccess,
+                                    public QueryResult call(List<AsyncQueryRow> rows, Object signature,
+                                            QueryMetrics info, List<JsonObject> errors, Boolean finalSuccess) {
+                                        return new DefaultQueryResult(rows, signature, info, errors, finalSuccess,
                                                 parseSuccess, requestId, clientContextId);
                                     }
                                 });
                     }
                 })
                 .single(), timeout, timeUnit);
+    }
+
+    @Override
+    public QueryPlan prepare(String statement, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .prepare(statement)
+            .single(), timeout, timeUnit);
+    }
+    @Override
+    public QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .prepare(statement)
+            .single(), timeout, timeUnit);
     }
 
     @Override
@@ -768,156 +691,6 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public JsonLongDocument counter(String id, long delta, PersistTo persistTo) {
-        return counter(id, delta, persistTo, ReplicateTo.NONE);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, ReplicateTo replicateTo) {
-        return counter(id, delta, PersistTo.NONE, replicateTo);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, PersistTo persistTo, ReplicateTo replicateTo) {
-        return counter(id, delta, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, persistTo, ReplicateTo.NONE, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, PersistTo.NONE, replicateTo, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, PersistTo persistTo) {
-        return counter(id, delta, initial, persistTo, ReplicateTo.NONE);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, ReplicateTo replicateTo) {
-        return counter(id, delta, initial, PersistTo.NONE, replicateTo);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, PersistTo persistTo, ReplicateTo replicateTo) {
-        return counter(id, delta, initial, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, initial, persistTo, ReplicateTo.NONE, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, initial, PersistTo.NONE, replicateTo, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, PersistTo persistTo) {
-        return counter(id, delta, initial, expiry, persistTo, ReplicateTo.NONE);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, ReplicateTo replicateTo) {
-        return counter(id, delta, initial, expiry, PersistTo.NONE, replicateTo);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, PersistTo persistTo, ReplicateTo replicateTo) {
-        return counter(id, delta, initial, expiry, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, initial, expiry, persistTo, ReplicateTo.NONE, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return counter(id, delta, initial, expiry, PersistTo.NONE, replicateTo, timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.counter(id, delta, persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.counter(id, delta, initial, persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    @Override
-    public JsonLongDocument counter(String id, long delta, long initial, int expiry, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.counter(id, delta, initial, expiry, persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, PersistTo persistTo) {
-        return append(document, persistTo, ReplicateTo.NONE);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, ReplicateTo replicateTo) {
-        return append(document, PersistTo.NONE, replicateTo);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, PersistTo persistTo, ReplicateTo replicateTo) {
-        return append(document, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return append(document, persistTo, ReplicateTo.NONE, timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return append(document, PersistTo.NONE, replicateTo, timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D append(D document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.append(document, persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, PersistTo persistTo) {
-        return prepend(document, persistTo, ReplicateTo.NONE);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, ReplicateTo replicateTo) {
-        return prepend(document, PersistTo.NONE, replicateTo);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, PersistTo persistTo, ReplicateTo replicateTo) {
-        return prepend(document, persistTo, replicateTo, kvTimeout, TIMEOUT_UNIT);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, PersistTo persistTo, long timeout, TimeUnit timeUnit) {
-        return prepend(document, persistTo, ReplicateTo.NONE, timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return prepend(document, PersistTo.NONE, replicateTo, timeout, timeUnit);
-    }
-
-    @Override
-    public <D extends Document<?>> D prepend(D document, PersistTo persistTo, ReplicateTo replicateTo, long timeout, TimeUnit timeUnit) {
-        return Blocking.blockForSingle(asyncBucket.prepend(document, persistTo, replicateTo), timeout, timeUnit);
-    }
-
-    @Override
     public Boolean close() {
         return close(environment.disconnectTimeout(), TIMEOUT_UNIT);
     }
@@ -928,19 +701,7 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public boolean isClosed() {
-        return asyncBucket.isClosed();
-    }
-
-    @Override
     public String toString() {
         return "Bucket[" + name() + "]";
-    }
-
-    @Override
-    public int invalidateQueryCache() {
-        return Blocking.blockForSingle(
-            asyncBucket.invalidateQueryCache(), environment.managementTimeout(), TIMEOUT_UNIT
-        );
     }
 }

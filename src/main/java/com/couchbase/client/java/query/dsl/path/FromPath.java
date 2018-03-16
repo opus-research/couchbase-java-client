@@ -14,6 +14,4 @@ public interface FromPath extends LetPath {
     /** Note that from Expression should be a single identifier/path **/
     AsPath from(Expression expression);
 
-    AsPath fromCurrentBucket();
-
 }

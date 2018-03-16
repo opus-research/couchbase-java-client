@@ -21,62 +21,126 @@
  */
 package com.couchbase.client.java.util;
 
+import com.couchbase.client.deps.io.netty.util.ResourceLeakDetector;
+import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.java.env.CouchbaseEnvironment;
+import com.couchbase.client.java.env.DefaultCouchbaseEnvironment;
+import com.couchbase.client.java.util.features.CouchbaseFeature;
+import com.couchbase.client.java.util.features.Version;
+import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.bucket.BucketType;
-import com.couchbase.client.java.repository.Repository;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import com.couchbase.client.java.cluster.ClusterManager;
+import com.couchbase.client.java.cluster.DefaultBucketSettings;
 
 /**
  * Base test class for tests that need a working cluster reference.
  *
- * @deprecated prefer explicit @BeforeClass and @AfterClass using a {@link CouchbaseTestContext.Builder}.
- *
  * @author Michael Nitschinger
  * @author Simon Baslé
  */
-@Deprecated
 public class ClusterDependentTest {
 
-    private static CouchbaseTestContext ctx;
+    static {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+    }
+
+    private static final String seedNode = TestProperties.seedNode();
+    private static final String adminName = TestProperties.adminName();
+    private static final String adminPassword = TestProperties.adminPassword();
+
+    private static CouchbaseEnvironment env;
+    private static Cluster cluster;
+    private static Bucket bucket;
+    private static ClusterManager clusterManager;
+    private static BucketManager bucketManager;
 
     @BeforeClass
     public static void connect() throws Exception {
-        ctx = CouchbaseTestContext.builder()
-                .bucketQuota(256)
-                .bucketType(BucketType.COUCHBASE)
-                .flushOnInit(true)
-                .build();
+        env = DefaultCouchbaseEnvironment
+            .builder()
+            .queryEnabled(queryEnabled())
+            .build();
+        cluster = CouchbaseCluster.create(env, seedNode);
+        clusterManager = cluster.clusterManager(adminName, adminPassword);
+        boolean exists = clusterManager.hasBucket(bucketName());
+
+        if (!exists) {
+            clusterManager.insertBucket(DefaultBucketSettings
+                .builder()
+                .name(bucketName())
+                .quota(256)
+                .password(password())
+                .enableFlush(true)
+                .type(BucketType.COUCHBASE)
+                .build());
+        }
+
+        bucket = cluster.openBucket(bucketName(), password());
+        bucketManager = bucket.bucketManager();
+        bucketManager.flush();
     }
 
     @AfterClass
     public static void disconnect() throws InterruptedException {
-        ctx.disconnect();
+        cluster.disconnect();
+    }
+
+    /**
+     * By calling this in @BeforeClass with a {@link CouchbaseFeature},
+     * tests will be skipped is said feature is not available on the cluster.
+     *
+     * @param feature the feature to check for.
+     */
+    public static void ignoreIfMissing(CouchbaseFeature feature) {
+        Assume.assumeTrue(clusterManager().info().checkAvailable(feature));
+    }
+
+    /**
+     * By calling this in @BeforeClass with a {@link Version},
+     * tests will be skipped is all nodes in the cluster are not above
+     * or at that version.
+     *
+     * @param minimumVersion the required version to check for.
+     */
+    public static void ignoreIfClusterUnder(Version minimumVersion) {
+        Assume.assumeTrue(clusterManager().info().getMinVersion().compareTo(minimumVersion) >= 0);
     }
 
     public static String password() {
-        return ctx.bucketPassword();
+        return  TestProperties.password();
+    }
+
+    public static CouchbaseEnvironment env() {
+        return env;
     }
 
     public static Cluster cluster() {
-        return ctx.cluster();
+        return cluster;
     }
 
     public static Bucket bucket() {
-        return ctx.bucket();
+        return bucket;
     }
 
     public static String bucketName() {
-        return ctx.bucketName();
+        return TestProperties.bucket();
     }
 
-    public static Repository repository() {
-        return ctx.repository();
+    public static boolean queryEnabled() {
+        return TestProperties.queryEnabled();
+    }
+
+    public static ClusterManager clusterManager() {
+        return clusterManager;
     }
 
     public static BucketManager bucketManager() {
-        return ctx.bucketManager();
+        return bucketManager;
     }
 }

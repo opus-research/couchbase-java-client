@@ -23,13 +23,9 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.java.error.BucketDoesNotExistException;
 import com.couchbase.client.java.error.InvalidPasswordException;
+import com.couchbase.client.java.util.ClusterDependentTest;
 import com.couchbase.client.java.util.TestProperties;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Basic test cases which verify functionality not bound to a {@link Bucket}.
@@ -37,7 +33,7 @@ import static org.junit.Assert.assertTrue;
  * @author Michael Nitschinger
  * @since 2.0
  */
-public class ConnectionTest  {
+public class ConnectionTest extends ClusterDependentTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowIllegalArgumentExceptionIfBucketIsNull() {
@@ -61,26 +57,5 @@ public class ConnectionTest  {
     public void shouldThrowConfigurationExceptionForWrongBucketPassword() {
         Cluster cluster = CouchbaseCluster.create(TestProperties.seedNode());
         cluster.openBucket(TestProperties.bucket(), "completelyWrongPassword");
-    }
-
-    @Test
-    public void shouldCacheBucketReference() {
-        Cluster cluster = CouchbaseCluster.create(TestProperties.seedNode());
-        Bucket bucket1 = cluster.openBucket(TestProperties.bucket(), TestProperties.password());
-        Bucket bucket2 = cluster.openBucket(TestProperties.bucket(), TestProperties.password());
-
-        assertEquals(bucket1.hashCode(), bucket2.hashCode());
-
-        assertFalse(bucket1.isClosed());
-        assertFalse(bucket2.isClosed());
-        bucket1.close();
-        assertTrue(bucket1.isClosed());
-        assertTrue(bucket2.isClosed());
-
-        Bucket bucket3 = cluster.openBucket(TestProperties.bucket(), TestProperties.password());
-
-        assertNotEquals(bucket1.hashCode(), bucket3.hashCode());
-
-        assertFalse(bucket3.isClosed());
     }
 }
