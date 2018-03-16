@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.message.observe.Observe;
-
 /**
  * Defines the possible disk persistence constraints to observe.
  *
@@ -34,44 +32,44 @@ public enum PersistTo {
     /**
      * Observe disk persistence to the master node of the document only.
      */
-    MASTER(Observe.PersistTo.MASTER),
+    MASTER((short) -1),
 
     /**
      * Do not observe any disk persistence constraint.
      */
-    NONE(Observe.PersistTo.NONE),
+    NONE((short) 0),
 
     /**
      * Observe disk persistence of one node (master or replica).
      */
-    ONE(Observe.PersistTo.ONE),
+    ONE((short) 1),
 
     /**
      * Observe disk persistence of two nodes (master or replica).
      */
-    TWO(Observe.PersistTo.TWO),
+    TWO((short) 2),
 
     /**
      * Observe disk persistence of three nodes (master or replica).
      */
-    THREE(Observe.PersistTo.THREE),
+    THREE((short) 3),
 
     /**
      * Observe disk persistence of four nodes (one master and three replicas).
      */
-    FOUR(Observe.PersistTo.FOUR);
+    FOUR((short) 4);
 
     /**
      * Contains the internal value to map onto.
      */
-    private final Observe.PersistTo value;
+    private final short value;
 
     /**
      * Internal constructor for the enum.
      *
      * @param value the value of the persistence constraint.
      */
-    PersistTo(Observe.PersistTo value) {
+    PersistTo(short value) {
         this.value = value;
     }
 
@@ -80,7 +78,7 @@ public enum PersistTo {
      *
      * @return the internal persistence representation.
      */
-    public Observe.PersistTo value() {
+    public short value() {
         return value;
     }
 
@@ -90,6 +88,6 @@ public enum PersistTo {
      * @return true if it includes a replica, false if not.
      */
     public boolean touchesReplica() {
-        return value.touchesReplica();
+        return value > 0;
     }
 }
