@@ -70,10 +70,12 @@ public class PreparedQuery extends ParameterizedQuery {
     @Override
     public JsonObject n1ql() {
         JsonObject n1ql = super.n1ql();
-        String encodedPlan = statement().encodedPlan();
-        if (encodedPlan != null) {
-            n1ql.put("encoded_plan", encodedPlan);
+        String preparePrefix = "PREPARE " + statement().preparedName() + " FROM ";
+        String prepareFallback = statement().originalStatement().toString();
+        if (!prepareFallback.toLowerCase().startsWith("prepare ")) {
+            prepareFallback = preparePrefix + prepareFallback;
         }
+        n1ql.put("statement", prepareFallback);
         return n1ql;
     }
 }
