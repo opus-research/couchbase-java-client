@@ -20,52 +20,28 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
-
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+package com.couchbase.client.protocol.views;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * An enum containing the two possible values for the stale
+ * parameter.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
-
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
-
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+public enum Stale {
+  OK {
+    public String toString() {
+      return "ok";
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
+  },
+
+  FALSE {
+    public String toString() {
+      return "false";
     }
+  },
 
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
+  UPDATE_AFTER {
+    public String toString() {
+      return "update_after";
     }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
   }
 }

@@ -20,52 +20,39 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
+package com.couchbase.client;
 
-import com.couchbase.client.vbucket.config.Bucket;
+import com.couchbase.client.protocol.views.HttpOperationImpl;
 
-import java.util.Observable;
-import java.util.Observer;
+import java.net.HttpURLConnection;
+
+import net.spy.memcached.ops.OperationStatus;
+
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * A TestOperationImpl.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class TestOperationImpl extends HttpOperationImpl implements
+    TestOperation {
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
-
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public TestOperationImpl(HttpRequest r, TestCallback testCallback) {
+    super(r, testCallback);
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+  public void handleResponse(HttpResponse response) {
+    String json = getEntityString(response);
+    int errorcode = response.getStatusLine().getStatusCode();
+    if (errorcode == HttpURLConnection.HTTP_OK) {
+      ((TestCallback) callback).getData(json);
+      callback.receivedStatus(new OperationStatus(true, "OK"));
+    } else {
+      callback.receivedStatus(new OperationStatus(false,
+          Integer.toString(errorcode)));
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
+    callback.complete();
   }
 
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
-  }
 }
