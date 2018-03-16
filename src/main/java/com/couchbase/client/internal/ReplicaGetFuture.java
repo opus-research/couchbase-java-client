@@ -24,21 +24,28 @@ package com.couchbase.client.internal;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import net.spy.memcached.internal.AbstractListenableFuture;
+import net.spy.memcached.internal.GenericCompletionListener;
 import net.spy.memcached.internal.GetFuture;
 
 /**
  * Represents the future result of a ReplicaGet operation.
  */
-public class ReplicaGetFuture<T extends Object> implements Future<T> {
+public class ReplicaGetFuture<T extends Object>
+  extends AbstractListenableFuture<T, ReplicaGetCompletionListener>
+  implements Future<T> {
 
   private final long timeout;
   private final List<GetFuture<T>> futures;
   private boolean cancelled = false;
 
-  public ReplicaGetFuture(long timeout, List<GetFuture<T>> futures) {
+  public ReplicaGetFuture(long timeout, List<GetFuture<T>> futures,
+    ExecutorService service) {
+    super(service);
     this.timeout = timeout;
     this.futures = futures;
   }
@@ -107,5 +114,20 @@ public class ReplicaGetFuture<T extends Object> implements Future<T> {
     }
     return allDone;
   }
+
+  @Override
+  public ReplicaGetFuture<T> addListener(
+    ReplicaGetCompletionListener listener) {
+    super.addToListeners((GenericCompletionListener) listener);
+    return this;
+  }
+
+  @Override
+  public ReplicaGetFuture<T> removeListener(
+    ReplicaGetCompletionListener listener) {
+    super.removeFromListeners((GenericCompletionListener) listener);
+    return this;
+  }
+
 
 }
