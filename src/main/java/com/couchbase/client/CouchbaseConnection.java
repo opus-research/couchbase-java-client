@@ -271,7 +271,11 @@ public class CouchbaseConnection extends MemcachedConnection  implements
           (InetSocketAddress)placeIn.getSocketAddress()).throttle();
       }
       updateLastWrite();
-      addOperation(placeIn, o);
+      if(placeIn.isAuthenticated()) {
+          addOperation(placeIn, o);
+      } else {
+          this.retryOperation(o);
+      }
     } else {
       assert o.isCancelled() : "No node found for " + key
           + " (and not immediately cancelled)";
@@ -337,7 +341,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
 
   @Override
   protected void handleRetryInformation(byte[] retryMessage) {
-    String message = new String(retryMessage).trim();
+    final String message = new String(retryMessage).trim();
     if (message.startsWith("{")) {
       cf.getConfigurationProvider().setConfig(
         replaceConfigWildcards(message)
