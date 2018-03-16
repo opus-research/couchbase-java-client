@@ -1,4 +1,4 @@
-package com.couchbase.client.java.query.dsl;
+package com.couchbase.client.java.query;
 
 /**
  * .
