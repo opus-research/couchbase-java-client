@@ -133,7 +133,7 @@ public class TapConnectionProvider extends SpyObject implements
   }
 
   /**
-   * Get a TapClient based on the REST response from a Couchbase server.
+   * Get a MemcachedClient based on the REST response from a Membase server.
    *
    * @param baseList
    * @param bucketName

@@ -47,7 +47,7 @@ import net.spy.memcached.auth.PlainCallbackHandler;
 
 
 /**
- * Couchbase implementation of ConnectionFactory.
+ * Membase implementation of ConnectionFactory.
  *
  * <p>
  * This implementation creates connections where the operation queue is an
@@ -110,7 +110,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       throw new IllegalStateException("Couldn't get config");
     }
 
-    if (config.getConfigType() == ConfigType.COUCHBASE) {
+    if (config.getConfigType() == ConfigType.MEMBASE) {
       return new KetamaNodeLocator(nodes, getHashAlg());
     } else if (config.getConfigType() == ConfigType.MEMCACHE) {
       return new VBucketNodeLocator(nodes, getVBucketConfig());

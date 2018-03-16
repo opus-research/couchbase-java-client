@@ -50,7 +50,7 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.VBucketAware;
 
 /**
- * Couchbase implementation of CouchbaseConnection.
+ * Membase implementation of MembaseConnection.
  *
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
@@ -234,7 +234,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         }
       }
     }
-    getLogger().info("Shut down Couchbase client");
+    getLogger().info("Shut down membase client");
   }
 
   private void logRunException(Exception e) {
@@ -243,7 +243,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
       // shutdown sequence that are considered OK. Log at debug.
       getLogger().debug("Exception occurred during shutdown", e);
     } else {
-      getLogger().warn("Problem handling Couchbase IO", e);
+      getLogger().warn("Problem handling membase IO", e);
     }
   }
 }
