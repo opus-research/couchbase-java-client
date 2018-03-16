@@ -56,7 +56,7 @@ public class TapConnectionProvider
    */
   public TapConnectionProvider(final List<URI> baseList,
       final String bucketName, final String pwd)
-    throws IOException, ConfigurationException {
+    throws IOException {
     this(new CouchbaseConnectionFactory(baseList, bucketName, pwd));
   }
 

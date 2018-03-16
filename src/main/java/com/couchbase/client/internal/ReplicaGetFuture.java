@@ -46,7 +46,7 @@ public class ReplicaGetFuture<T extends Object>
   implements Future<T> {
 
   private final long timeout;
-  private AtomicReference<GetFuture<T>> completedFuture;
+  private final AtomicReference<GetFuture<T>> completedFuture;
   private final List<GetFuture<T>> monitoredFutures;
   private volatile boolean cancelled = false;
 

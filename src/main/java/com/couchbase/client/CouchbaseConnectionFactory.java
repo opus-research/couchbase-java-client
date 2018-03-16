@@ -181,7 +181,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   public CouchbaseConnectionFactory(final List<URI> baseList,
-    final String bucketName, String password) throws IOException {
+    final String bucketName, String password) {
     initialize(baseList, bucketName, password);
   }
 
