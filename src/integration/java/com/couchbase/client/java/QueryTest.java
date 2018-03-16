@@ -35,7 +35,6 @@ import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.PreparedQuery;
-import com.couchbase.client.java.query.QueryParams;
 import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.QueryRow;
@@ -70,7 +69,7 @@ public class QueryTest extends ClusterDependentTest {
         assertTrue(plan.plan().containsKey("operator"));
         assertFalse(plan.plan().getObject("operator").isEmpty());
 
-        QueryResult response = bucket().query(new PreparedQuery(plan, JsonArray.from(123), QueryParams.build()));
+        QueryResult response = bucket().query(new PreparedQuery(plan, JsonArray.from(123)));
         assertTrue(response.success());
         List<QueryRow> rows = response.allRows();
         assertEquals(1, rows.size());
