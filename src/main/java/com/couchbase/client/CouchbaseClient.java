@@ -26,7 +26,6 @@ import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.internal.ViewFuture;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
 import com.couchbase.client.protocol.views.HttpOperation;
-import com.couchbase.client.protocol.views.InvalidViewException;
 import com.couchbase.client.protocol.views.NoDocsOperationImpl;
 import com.couchbase.client.protocol.views.Paginator;
 import com.couchbase.client.protocol.views.Query;
@@ -44,12 +43,9 @@ import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -58,7 +54,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +72,6 @@ import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
-import net.spy.memcached.compat.CloseUtil;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.ObserveOperation;
@@ -103,62 +97,12 @@ import org.apache.http.message.BasicHttpRequest;
 public class CouchbaseClient extends MemcachedClient
   implements CouchbaseClientIF, Reconfigurable {
 
-  private static final String MODE_PRODUCTION = "production";
-  private static final String MODE_DEVELOPMENT = "development";
-  private static final String DEV_PREFIX = "dev_";
-  private static final String PROD_PREFIX = "";
-  public static final String MODE_PREFIX;
-  private static final String MODE_ERROR;
+  public static String modePrefix="";
+  private static String modeMessage="";
 
   private ViewConnection vconn;
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cbConnFactory;
-
-  /**
-   * Properties priority from highest to lowest:
-   *
-   * 1. Property defined in user code.
-   * 2. Property defined on command line.
-   * 3. Property defined in cbclient.properties.
-   */
-  static {
-    Properties properties = new Properties(System.getProperties());
-    String viewmode = properties.getProperty("viewmode", null);
-
-    if (viewmode == null) {
-      FileInputStream fs = null;
-      try {
-        URL url =  ClassLoader.getSystemResource("cbclient.properties");
-        if (url != null) {
-          fs = new FileInputStream(new File(url.getFile()));
-          properties.load(fs);
-        }
-        viewmode = properties.getProperty("viewmode");
-      } catch (IOException e) {
-        // Properties file doesn't exist. Error logged later.
-      } finally {
-        if (fs != null) {
-          CloseUtil.close(fs);
-        }
-      }
-    }
-
-    if (viewmode == null) {
-      MODE_ERROR = "viewmode property isn't defined. Setting viewmode to"
-        + " production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    } else if (viewmode.equals(MODE_PRODUCTION)) {
-      MODE_ERROR = "viewmode set to production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    } else if (viewmode.equals(MODE_DEVELOPMENT)) {
-      MODE_ERROR = "viewmode set to development mode";
-      MODE_PREFIX = DEV_PREFIX;
-    } else {
-      MODE_ERROR = "unknown value \"" + viewmode + "\" for property viewmode"
-          + " Setting to production mode";
-      MODE_PREFIX = PROD_PREFIX;
-    }
-  }
 
   /**
    * Get a CouchbaseClient based on the initial server list provided.
@@ -247,7 +191,9 @@ public class CouchbaseClient extends MemcachedClient
     List<InetSocketAddress> addrs =
       AddrUtil.getAddressesFromURL(cf.getVBucketConfig().getCouchServers());
 
-    getLogger().info(MODE_ERROR);
+    modePrefix = cf.getViewModePrefix();
+    modeMessage = cf.getViewModeMessage();
+    getLogger().info(modeMessage);
     vconn = cf.createViewConnection(addrs);
     cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
@@ -284,7 +230,15 @@ public class CouchbaseClient extends MemcachedClient
   }
 
 
-
+  /**
+   * Get the View Mode Prefix.
+   *
+   * This prefix can be used to create views based
+   * on the viewmode property.
+   */
+   String getViewModePrefix() {
+     return modePrefix;
+   }
   /**
    * Gets access to a view contained in a design document from the cluster.
    *
@@ -297,11 +251,6 @@ public class CouchbaseClient extends MemcachedClient
    * information in your database from the raw data objects that have
    * been stored.
    *
-   * Note that since an HttpFuture is returned, the caller must also check to
-   * see if the View is null. The HttpFuture does provide a getStatus() method
-   * which can be used to check whether or not the view request has been
-   * successful.
-   *
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a View object from the cluster.
@@ -311,7 +260,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   public HttpFuture<View> asyncGetView(String designDocumentName,
       final String viewName) {
-    designDocumentName = MODE_PREFIX + designDocumentName;
+    designDocumentName = modePrefix + designDocumentName;
     String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
@@ -358,16 +307,11 @@ public class CouchbaseClient extends MemcachedClient
    * information in your database from the raw data objects that have
    * been stored.
    *
-   * Note that since an HttpFuture is returned, the caller must also check to
-   * see if the View is null. The HttpFuture does provide a getStatus() method
-   * which can be used to check whether or not the view request has been
-   * successful.
-   *
    * @param designDocumentName the name of the design document.
    * @return a future containing a List of View objects from the cluster.
    */
   public HttpFuture<List<View>> asyncGetViews(String designDocumentName) {
-    designDocumentName = MODE_PREFIX + designDocumentName;
+    designDocumentName = modePrefix + designDocumentName;
     String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
@@ -415,16 +359,10 @@ public class CouchbaseClient extends MemcachedClient
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a View object from the cluster.
-   * @throws InvalidViewException if no design document or view was found.
    */
   public View getView(final String designDocumentName, final String viewName) {
     try {
-      View view = asyncGetView(designDocumentName, viewName).get();
-      if(view == null) {
-        throw new InvalidViewException("Could not load view \"" +
-          viewName + "\" for design doc \"" + designDocumentName + "\"");
-      }
-      return view;
+      return asyncGetView(designDocumentName, viewName).get();
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted getting views", e);
     } catch (ExecutionException e) {
@@ -437,16 +375,10 @@ public class CouchbaseClient extends MemcachedClient
    *
    * @param designDocumentName the name of the design document.
    * @return a list of View objects from the cluster.
-   * @throws InvalidViewException if no design document or view was found.
    */
   public List<View> getViews(final String designDocumentName) {
     try {
-      List<View> views = asyncGetViews(designDocumentName).get();
-      if(views == null) {
-        throw new InvalidViewException("Could not load views for design doc \""
-          + designDocumentName + "\"");
-      }
-      return views;
+      return asyncGetViews(designDocumentName).get();
     } catch (InterruptedException e) {
       throw new RuntimeException("Interrupted getting views", e);
     } catch (ExecutionException e) {
