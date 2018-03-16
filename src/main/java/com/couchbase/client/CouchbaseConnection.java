@@ -115,7 +115,7 @@ public class CouchbaseConnection extends MemcachedConnection  implements
 
       // call update locator with new nodes list and vbucket config
       if (locator instanceof VBucketNodeLocator) {
-        ((VBucketNodeLocator)locator).updateLocator(mergedNodes, servers,
+        ((VBucketNodeLocator)locator).updateLocator(mergedNodes,
             bucket.getConfig());
       } else {
         locator.updateLocator(mergedNodes);
