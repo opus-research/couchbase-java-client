@@ -24,10 +24,14 @@ package com.couchbase.client;
 
 import com.couchbase.client.vbucket.config.Config;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +40,7 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.OperationFactory;
+import net.spy.memcached.compat.CloseUtil;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
 
@@ -46,11 +51,121 @@ import net.spy.memcached.transcoders.Transcoder;
 
 public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
 
-  private Config vBucketConfig;
-  private long reconnThresholdTimeMsecs =
-    CouchbaseConnectionFactory.DEFAULT_MIN_RECONNECT_INTERVAL;
+  private static final String MODE_PRODUCTION = "production";
+  private static final String MODE_DEVELOPMENT = "development";
+  private static final String DEV_PREFIX = "dev_";
+  private static final String PROD_PREFIX = "";
+  private static String modePrefix = PROD_PREFIX;
+  private static String modeMessage = "";
+
+  private static String obsPollIntervalProp;
+  private static String obsPollMaxProp;
+  private static String shouldOptimizeProp;
+  private static String opTimeoutProp;
+  private static String timeoutExceptionThresholdProp;
+  private static String maxReconnectDelayProp;
+  private static String readBufSizeProp;
+  private static String isDaemonProp;
+  private static String opQueueMaxBlockTimeProp;
+  private static String reconnThresholdTimeProp;
+
   private long obsPollInterval;
   private int obsPollMax;
+  private long reconnThresholdTimeMsecs =
+    CouchbaseConnectionFactory.DEFAULT_MIN_RECONNECT_INTERVAL;
+  /**
+   * Properties priority from highest to lowest:
+   *
+   * 1. Property defined in user code.
+   * 2. Property defined on command line.
+   * 3. Property defined in cbclient.properties.
+   */
+  static {
+    Properties properties = new Properties();
+
+    FileInputStream fs = null;
+    try {
+      URL url = ClassLoader.getSystemResource("cbclient.properties");
+      if (url != null) {
+        fs = new FileInputStream(new File(url.getFile()));
+        properties.load(fs);
+      }
+    } catch (IOException e) {
+      // Properties file doesn't exist. Error logged later.
+    } finally {
+      if (fs != null) {
+        CloseUtil.close(fs);
+      }
+    }
+    // Merge the command-line properties
+    properties.putAll(System.getProperties());
+
+    String viewmode = properties.getProperty("viewmode", MODE_PRODUCTION);
+    if (viewmode == null) {
+      modeMessage = "viewmode property isn't defined. Setting viewmode to"
+        + " production mode";
+      modePrefix = PROD_PREFIX;
+    } else if (viewmode.equals(MODE_PRODUCTION)) {
+      modeMessage = "viewmode set to production mode";
+      modePrefix = PROD_PREFIX;
+    } else if (viewmode.equals(MODE_DEVELOPMENT)) {
+      modeMessage = "viewmode set to development mode";
+      modePrefix = DEV_PREFIX;
+    } else {
+      modeMessage = "unknown value \"" + viewmode + "\" for property viewmode"
+          + " Setting to production mode";
+      modePrefix = PROD_PREFIX;
+    }
+
+    obsPollIntervalProp = properties.getProperty("obsPollInterval");
+    obsPollMaxProp = properties.getProperty("obsPollMax");
+    shouldOptimizeProp = properties.getProperty("shouldOptimize");
+    opTimeoutProp = properties.getProperty("opTimeout");
+    timeoutExceptionThresholdProp =
+            properties.getProperty("timeoutExceptionThreshold");
+    maxReconnectDelayProp = properties.getProperty("maxReconnectDelay");
+    readBufSizeProp = properties.getProperty("readBufSize");
+    isDaemonProp = properties.getProperty("isDaemon");
+    opQueueMaxBlockTimeProp = properties.getProperty("opQueueMaxBlockTime");
+    reconnThresholdTimeProp = properties.getProperty("reconnThresholdTime");
+  }
+
+  public CouchbaseConnectionFactoryBuilder() {
+    super();
+    if (obsPollIntervalProp != null) {
+      obsPollInterval = Long.parseLong(obsPollIntervalProp);
+    }
+    if (obsPollMaxProp != null) {
+      obsPollMax = Integer.parseInt(obsPollMaxProp);
+    }
+    if (opTimeoutProp != null) {
+      opTimeout = Long.parseLong(opTimeoutProp);
+    }
+    if (shouldOptimizeProp != null) {
+      shouldOptimize = Boolean.parseBoolean(shouldOptimizeProp);
+    }
+    if (timeoutExceptionThresholdProp != null) {
+      timeoutExceptionThreshold =
+              Integer.parseInt(timeoutExceptionThresholdProp);
+    }
+    if (maxReconnectDelayProp != null) {
+      maxReconnectDelay = Integer.parseInt(maxReconnectDelayProp);
+    }
+    if (readBufSizeProp != null) {
+      readBufSize = Integer.parseInt(readBufSizeProp);
+    }
+    if (isDaemonProp != null) {
+      isDaemon = Boolean.parseBoolean(isDaemonProp);
+    }
+    if (opQueueMaxBlockTimeProp != null) {
+      opQueueMaxBlockTime = Integer.parseInt(opQueueMaxBlockTimeProp);
+    }
+    if (reconnThresholdTimeProp != null) {
+      reconnThresholdTimeMsecs = Integer.parseInt(reconnThresholdTimeProp);
+    }
+  }
+
+  private Config vBucketConfig;
 
   public Config getVBucketConfig() {
     return vBucketConfig;
@@ -73,6 +188,7 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
     obsPollMax = maxPoll;
     return this;
   }
+
   /**
    * Get the CouchbaseConnectionFactory set up with the provided parameters.
    * Note that a CouchbaseConnectionFactory requires the failure mode is set
@@ -209,6 +325,16 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
       @Override
       public int getObsPollMax() {
         return obsPollMax;
+      }
+
+      @Override
+      public String getViewModePrefix() {
+        return modePrefix;
+      }
+
+      @Override
+      public String getViewModeMessage() {
+        return modeMessage;
       }
 
     };
