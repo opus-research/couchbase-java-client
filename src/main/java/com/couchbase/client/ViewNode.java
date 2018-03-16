@@ -105,7 +105,6 @@ public class ViewNode extends SpyObject {
           "Interrupted while trying to get a connection."
               + " Cancelling op");
       op.cancel();
-      connRequest.cancel();
       return;
     }
 
@@ -113,7 +112,6 @@ public class ViewNode extends SpyObject {
     if (conn == null) {
       getLogger().error("Failed to obtain connection. Cancelling op");
       op.cancel();
-      connRequest.cancel();
     } else {
       if (!user.equals("default")) {
         try {
@@ -123,7 +121,6 @@ public class ViewNode extends SpyObject {
             + "could not encode credentials into base64. Canceling op."
             + op, ex);
           op.cancel();
-          connRequest.cancel();
         }
       }
       HttpContext context = conn.getContext();

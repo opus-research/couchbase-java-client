@@ -54,12 +54,20 @@ import static org.junit.Assert.*;
 public class SpringBaseTest {
   private static final String SERVER_URI = "http://" + TestConfig.IPV4_ADDR
       + ":8091/pools";
-  static private URL url;
+  private URL url;
   public SpringBaseTest() {
   }
 
   @BeforeClass
-  public static void setUpClass() throws IOException, URISyntaxException {
+  public static void setUpClass() {
+  }
+
+  @AfterClass
+  public static void tearDownClass() {
+  }
+
+  @Before
+  public void setUp() throws IOException, URISyntaxException {
     // Create the application context file
     url = ClassLoader.getSystemResource("cbGenerate.xml");
     PrintWriter pw = new
@@ -127,20 +135,6 @@ public class SpringBaseTest {
     pw.close();
   }
 
-  @AfterClass
-  public static void tearDownClass() throws URISyntaxException {
-    url = ClassLoader.getSystemResource("cbGenerate.xml");
-    File file = new File(url.toURI().getPath());
-    file.delete();
-    url = ClassLoader.getSystemResource("cfbGenerate.xml");
-    file = new File(url.toURI().getPath());
-    file.delete();
-  }
-
-  @Before
-  public void setUp() {
-  }
-
   @After
   public void tearDown() {
   }
@@ -153,7 +147,7 @@ public class SpringBaseTest {
       new ClassPathXmlApplicationContext("cbGenerate.xml");
     CouchbaseClient c =
             (CouchbaseClient) beanFactory.getBean("couchbaseClient");
-    c.set(key, 0, value);
+    c.set(key, 0, "Spring/Couchbase");
     assertEquals(value, c.get(key));
     c.delete(key);
     c.shutdown(3, TimeUnit.SECONDS);
@@ -175,7 +169,7 @@ public class SpringBaseTest {
     CouchbaseConnectionFactory cf =
         cfb.buildCouchbaseConnection(baseURIs, "default", "", "");
     CouchbaseClient c = new CouchbaseClient(cf);
-    c.set(key, 0, value);
+    c.set(key, 0, "Spring/Couchbase");
     assertEquals(value, c.get(key));
     c.delete(key);
     c.shutdown(3, TimeUnit.SECONDS);
