@@ -2031,7 +2031,7 @@ public interface AsyncBucket {
      * @return a builder to describe the lookup(s) to perform.
      * @see AsyncLookupInBuilder#execute()
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     AsyncLookupInBuilder lookupIn(String docId);
 
@@ -2051,7 +2051,7 @@ public interface AsyncBucket {
      * @return a builder to describe the mutation(s) to perform.
      * @see AsyncMutateInBuilder#execute()
      */
-    @InterfaceStability.Committed
+    @InterfaceStability.Experimental
     @InterfaceAudience.Public
     AsyncMutateInBuilder mutateIn(String docId);
 
