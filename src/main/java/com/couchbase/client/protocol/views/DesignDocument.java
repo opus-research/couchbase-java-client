@@ -43,7 +43,7 @@ public class DesignDocument {
    *
    * Only "javascript" is supported currently.
    */
-  private final String language = "javascript";
+  private String language = "javascript";
 
   /**
    * Associated views to the design document.

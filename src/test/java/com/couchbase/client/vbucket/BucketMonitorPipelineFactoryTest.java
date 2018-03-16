@@ -37,6 +37,11 @@ import static junit.framework.Assert.assertTrue;
  */
 public class BucketMonitorPipelineFactoryTest {
 
+  @Before
+  public void setUp() {
+
+  }
+
   /**
    * Tests the get pipeline from the ChannelPipeline and
    * get the HTTP decoder, encoder, handler.

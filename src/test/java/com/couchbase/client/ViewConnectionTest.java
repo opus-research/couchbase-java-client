@@ -67,7 +67,7 @@ public class ViewConnectionTest {
 
     ViewConnection vconn = cf.createViewConnection(addrs);
     assertFalse(vconn.getConnectedNodes().isEmpty());
-    assertTrue(vconn.shutdown());
+    vconn.shutdown();
     assertTrue(vconn.getConnectedNodes().isEmpty());
 
   }
