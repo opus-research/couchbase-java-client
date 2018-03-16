@@ -82,13 +82,4 @@ public class Node {
     result = 31 * result + ports.hashCode();
     return result;
   }
-
-  @Override
-  public String toString() {
-    return "Node{" +
-      "status=" + status +
-      ", hostname='" + hostname + '\'' +
-      ", ports=" + ports +
-      '}';
-  }
 }
