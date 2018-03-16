@@ -57,6 +57,7 @@ public class ClusterManagerTest extends TestCase {
    */
   @Override
   public void tearDown() throws HttpException {
+    deleteAllBuckets(manager);
     manager.shutdown();
   }
   /**
@@ -299,7 +300,7 @@ public class ClusterManagerTest extends TestCase {
     uris.add(URI.create("http://badurl:8091/pools"));
     uris.add(URI.create("http://anotherbadurl:8091/pools"));
     manager.shutdown();
-    manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME, CbTestConfig.CLUSTER_PASS);
+    manager = new ClusterManager(uris, "Administrator", "password");
 
     try {
       manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
@@ -326,8 +327,9 @@ public class ClusterManagerTest extends TestCase {
     uris.add(URI.create("http://anotherbadurl:8091/pools"));
 
     manager.shutdown();
-    manager = new ClusterManager(uris, CbTestConfig.CLUSTER_ADMINNAME, CbTestConfig.CLUSTER_PASS);
+    manager = new ClusterManager(uris, "Administrator", "password");
     manager.createDefaultBucket(BucketType.COUCHBASE, 100, 0, true);
-    manager = getClusterManager();
-   }
+    Thread.sleep(1000);
+    manager.deleteBucket("default");
+  }
 }
