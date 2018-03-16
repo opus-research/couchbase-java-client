@@ -21,7 +21,9 @@
  */
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
+import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.bucket.DefaultBucketManager;
@@ -31,10 +33,11 @@ import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.query.AsyncQueryResult;
 import com.couchbase.client.java.query.DefaultQueryResult;
+import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryPlan;
-import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
+import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.util.Blocking;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
@@ -49,6 +52,7 @@ import rx.functions.Func1;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class CouchbaseBucket implements Bucket {
 
@@ -482,8 +486,8 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public QueryPlan prepare(Statement statement) {
-        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    public QueryPlan queryPrepare(PrepareStatement prepare) {
+        return queryPrepare(prepare, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
@@ -553,10 +557,10 @@ public class CouchbaseBucket implements Bucket {
     }
 
     @Override
-    public QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit) {
+    public QueryPlan queryPrepare(PrepareStatement prepare, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket
-            .prepare(statement)
-            .single(), timeout, timeUnit);
+                .queryPrepare(prepare)
+                .single(), timeout, timeUnit);
     }
 
     @Override

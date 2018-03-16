@@ -62,10 +62,7 @@ public class ClusterDependentTest {
 
     @BeforeClass
     public static void connect() throws Exception {
-        env = DefaultCouchbaseEnvironment
-            .builder()
-            .queryEnabled(queryEnabled())
-            .build();
+        env = DefaultCouchbaseEnvironment.create();
         cluster = CouchbaseCluster.create(env, seedNode);
         clusterManager = cluster.clusterManager(adminName, adminPassword);
         boolean exists = clusterManager.hasBucket(bucketName());
@@ -130,10 +127,6 @@ public class ClusterDependentTest {
 
     public static String bucketName() {
         return TestProperties.bucket();
-    }
-
-    public static boolean queryEnabled() {
-        return TestProperties.queryEnabled();
     }
 
     public static ClusterManager clusterManager() {
