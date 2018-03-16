@@ -25,15 +25,12 @@ package com.couchbase.client;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import net.spy.memcached.BinaryConnectionFactory;
 import net.spy.memcached.ClientBaseCase;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.tapmessage.ResponseMessage;
 
 // TBD - Uncomment this line when the TAP tests are complete
 // import net.spy.memcached.tapmessage.ResponseMessage;
@@ -60,11 +57,10 @@ public class TapTest extends ClientBaseCase {
     });
   }
 
-
+/* -- commented out until TAP is completed
   public void testBackfill() throws Exception {
-    List<URI> uris = new LinkedList<URI>();
-    uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
-    TapClient tc = new TapClient(uris, "default", "");
+    TapClient tc =
+        new TapClient(AddrUtil.getAddresses(TestConfig.IPV4_ADDR + ":11210"));
     tc.tapBackfill(null, 5, TimeUnit.SECONDS);
     HashMap<String, Boolean> items = new HashMap<String, Boolean>();
     for (int i = 0; i < 25; i++) {
@@ -88,9 +84,9 @@ public class TapTest extends ClientBaseCase {
   }
 
   public void testTapDump() throws Exception {
-    List<URI> uris = new LinkedList<URI>();
-    uris.add(URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
-    TapClient tc = new TapClient(uris, "default", "");
+    TapClient tc =
+        new TapClient(AddrUtil.getAddresses(TestConfig.IPV4_ADDR + ":11210"));
+
     HashMap<String, Boolean> items = new HashMap<String, Boolean>();
     for (int i = 0; i < 25; i++) {
       client.set("key" + i, 0, "value" + i).get();
@@ -117,10 +113,12 @@ public class TapTest extends ClientBaseCase {
     assertTrue(client.flush().get().booleanValue());
   }
 
+*/
+
   public void testTapBucketDoesNotExist() throws Exception {
     TapClient client =
         new TapClient(Arrays.asList(new URI("http://" + TestConfig.IPV4_ADDR
-            + ":8091/pools")), "abucket", "apassword");
+            + ":8091/pools")), "abucket", "abucket", "apassword");
 
     try {
       client.tapBackfill(null, 5, TimeUnit.SECONDS);
