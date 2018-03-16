@@ -24,15 +24,20 @@ package com.couchbase.client.protocol.views;
 
 /**
  * Holds a row in a view result that contains the fields
- * key and value.
+ * id, key, value, and doc.
  */
-public class ViewRowReduced implements ViewRow {
-  private String key;
-  private String value;
+public class ViewRowWithDocsSpatial implements ViewRow {
+  private final String id;
+  private final String bbox;
+  private final String geometry;
+  private final Object doc;
 
-  public ViewRowReduced(String key, String value) {
-    this.key = parseField(key);
-    this.value = parseField(value);
+  public ViewRowWithDocsSpatial(String id, String bbox, String geometry,
+    Object doc) {
+    this.id = parseField(id);
+    this.bbox = parseField(bbox);
+    this.geometry = parseField(geometry);
+    this.doc = parseField((String)doc);
   }
 
   private String parseField(String field) {
@@ -45,21 +50,25 @@ public class ViewRowReduced implements ViewRow {
 
   @Override
   public String getId() {
-    throw new UnsupportedOperationException("Reduced views don't contain "
-        + "document ids");
-  }
-
-  public String getKey() {
-    return key;
-  }
-
-  public String getValue() {
-    return value;
+    return id;
   }
 
   @Override
-  public String getDocument() {
-    throw new UnsupportedOperationException("Reduced views don't contain "
-        + "documents");
+  public String getKey() {
+    throw new UnsupportedOperationException("Key is not supported on spatial"
+      + " view rows.");
+  }
+
+  public String getBbox() {
+    return bbox;
+  }
+
+  public String getGeometry() {
+    return geometry;
+  }
+
+  @Override
+  public Object getDocument() {
+    return doc;
   }
 }

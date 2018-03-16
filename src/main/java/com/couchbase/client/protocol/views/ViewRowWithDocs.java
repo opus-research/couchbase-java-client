@@ -52,12 +52,10 @@ public class ViewRowWithDocs implements ViewRow {
     return id;
   }
 
-  @Override
   public String getKey() {
     return key;
   }
 
-  @Override
   public String getValue() {
     return value;
   }

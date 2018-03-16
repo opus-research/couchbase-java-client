@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,43 +23,16 @@
 package com.couchbase.client.protocol.views;
 
 /**
- * Holds a row in a view result that contains the fields
- * key and value.
+ * Supported View Types.
  */
-public class ViewRowReduced implements ViewRow {
-  private String key;
-  private String value;
+public enum ViewType {
+  /**
+   * The map/reduce type represents normal map and map/reduce views.
+   */
+  MAPREDUCE,
 
-  public ViewRowReduced(String key, String value) {
-    this.key = parseField(key);
-    this.value = parseField(value);
-  }
-
-  private String parseField(String field) {
-    if (field != null && field.equals("null")) {
-      return null;
-    } else {
-      return field;
-    }
-  }
-
-  @Override
-  public String getId() {
-    throw new UnsupportedOperationException("Reduced views don't contain "
-        + "document ids");
-  }
-
-  public String getKey() {
-    return key;
-  }
-
-  public String getValue() {
-    return value;
-  }
-
-  @Override
-  public String getDocument() {
-    throw new UnsupportedOperationException("Reduced views don't contain "
-        + "documents");
-  }
+  /**
+   * The spatial type represents spatial views.
+   */
+  SPATIAL
 }

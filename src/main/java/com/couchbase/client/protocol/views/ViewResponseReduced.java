@@ -32,8 +32,8 @@ import java.util.Map;
 public class ViewResponseReduced extends ViewResponse {
 
   public ViewResponseReduced(final Collection<ViewRow> rows,
-      final Collection<RowError> errors) {
-    super(rows, errors);
+      final Collection<RowError> errors, ViewType viewType) {
+    super(rows, errors, viewType);
   }
 
   @Override
@@ -46,10 +46,13 @@ public class ViewResponseReduced extends ViewResponse {
   public String toString() {
     StringBuilder s = new StringBuilder();
     for (ViewRow r : rows) {
-      s.append(r.getKey());
-      s.append(" : ");
-      s.append(r.getValue());
-      s.append("\n");
+      if(getViewType().equals(ViewType.MAPREDUCE)) {
+        s.append(((ViewRowReduced)r).getKey());
+        s.append(" : ");
+        s.append(((ViewRowReduced)r).getValue());
+      } else if(getViewType().equals(ViewType.SPATIAL)) {
+        throw new RuntimeException("Spatial views don't support reduce");
+      }
     }
     return s.toString();
   }
