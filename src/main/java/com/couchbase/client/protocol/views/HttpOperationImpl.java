@@ -90,6 +90,11 @@ public abstract class HttpOperationImpl implements HttpOperation {
     return exception;
   }
 
+  public void setException(OperationException e) {
+    errored = true;
+    exception = e;
+  }
+
   public abstract void handleResponse(HttpResponse response);
 
   protected String getEntityString(HttpResponse response) {
