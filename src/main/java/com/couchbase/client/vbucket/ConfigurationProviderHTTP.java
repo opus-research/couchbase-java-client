@@ -62,7 +62,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * configuration and receiving configuration updates.
    */
   private static final String DEFAULT_POOL_NAME = "default";
-  public static final String ANONYMOUS_AUTH_BUCKET = "default";
+  private static final String ANONYMOUS_AUTH_BUCKET = "default";
   /**
    * The specification version which this client meets. This will be included in
    * requests to the server.
