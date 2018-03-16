@@ -42,16 +42,14 @@ public class Bucket {
 
   // nodes list
   private final List<Node> nodes;
-  private final long revision;
 
   public Bucket(String name, Config configuration, URI streamingURI,
-      List<Node> nodes, long revision) {
+      List<Node> nodes) {
     this.name = name;
     this.configuration = configuration;
     this.streamingURI = streamingURI;
     this.nodes = nodes;
     this.isNotUpdating = false;
-    this.revision = revision;
   }
 
   public String getName() {
@@ -64,10 +62,6 @@ public class Bucket {
 
   public URI getStreamingURI() {
     return streamingURI;
-  }
-
-  public long getRevision() {
-    return revision;
   }
 
   @Override
