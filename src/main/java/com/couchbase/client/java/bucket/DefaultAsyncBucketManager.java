@@ -353,11 +353,8 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<IndexInfo> listIndexes() {
-        Expression whereClause = x("keyspace_id").eq(s(bucket))
-                .and(i("using").eq(s("gsi")));
-
-        Statement listIndexes = select("idx.*").from(x("system:indexes").as("idx")).where(whereClause)
-            .orderBy(Sort.desc("is_primary"), Sort.asc("name"));
+        Statement listIndexes = select("idx.*").from(x("system:indexes").as("idx")).where(x("keyspace_id").eq(s(bucket)))
+                .orderBy(Sort.desc("is_primary"), Sort.asc("name"));
 
         final Func1<List<JsonObject>, Observable<AsyncN1qlQueryRow>> errorHandler = errorsToThrowable(
                 "Error while listing indexes: ");
