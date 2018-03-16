@@ -56,6 +56,8 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.CannotRetryException;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DesignDocumentException;
+import com.couchbase.client.java.error.IndexAlreadyExistsException;
+import com.couchbase.client.java.error.IndexDoesNotExistException;
 import com.couchbase.client.java.error.IndexesNotReadyException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
@@ -388,36 +390,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         }
 
         return queryExecutor.execute(N1qlQuery.simple(createIndex))
-            .flatMap(new Func1<AsyncN1qlQueryResult, Observable<Boolean>>() {
-                @Override
-                public Observable<Boolean> call(final AsyncN1qlQueryResult aqr) {
-                    return aqr.finalSuccess()
-                              .flatMap(new Func1<Boolean, Observable<Boolean>>() {
-                                  @Override
-                                  public Observable<Boolean> call(Boolean success) {
-                                      if (success) {
-                                          return Observable.just(true);
-                                      } else {
-                                          return aqr.errors().toList()
-                                                    .flatMap(new Func1<List<JsonObject>, Observable<Boolean>>() {
-                                                        @Override
-                                                        public Observable<Boolean> call(List<JsonObject> errors) {
-                                                            if (ignoreIfExist && errors.size() == 1
-                                                                    && errors.get(0)
-                                                                             .getString("msg")
-                                                                             .contains("already exist")) {
-                                                                return Observable.just(false);
-                                                            } else {
-                                                                return Observable.error(new CouchbaseException(
-                                                                        "Error creating primary index: " + errors));
-                                                            }
-                                                        }
-                                                    });
-                                      }
-                                  }
-                              });
-                }
-            });
+            .compose(checkIndexCreation(ignoreIfExist, "Error creating primary index"));
     }
 
     private static Expression expressionOrIdentifier(Object o) {
@@ -457,7 +430,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<Boolean> dropPrimaryIndex(final boolean ignoreIfNotExist) {
-        return drop(ignoreIfNotExist, Index.dropPrimaryIndex(bucket).using(IndexType.GSI), "Error dropping primary index: ");
+        return drop(ignoreIfNotExist, Index.dropPrimaryIndex(bucket).using(IndexType.GSI), "Error dropping primary index");
     }
 
     @Override
@@ -481,11 +454,14 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                                                 .flatMap(new Func1<List<JsonObject>, Observable<Boolean>>() {
                                                     @Override
                                                     public Observable<Boolean> call(List<JsonObject> errors) {
-                                                        if (ignoreIfNotExist && errors.size() == 1
-                                                                && errors.get(0).getString("msg").contains("not found")) {
-                                                            return Observable.just(false);
+                                                        if (errors.size() == 1 && errors.get(0).getString("msg").contains("not found")) {
+                                                            if (ignoreIfNotExist) {
+                                                                return Observable.just(false);
+                                                            } else {
+                                                                return Observable.error(new IndexDoesNotExistException(errorPrefix));
+                                                            }
                                                         } else {
-                                                            return Observable.error(new CouchbaseException(errorPrefix + errors));
+                                                            return Observable.error(new CouchbaseException(errorPrefix + ": " + errors));
                                                         }
                                                     }
                                                 });
@@ -550,12 +526,18 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<IndexInfo> watchIndex(final String indexName, long watchTimeout, TimeUnit watchTimeUnit) {
+    public Observable<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, final long watchTimeout,
+            final TimeUnit watchTimeUnit) {
+        final Set<String> watchSet = new HashSet<String>(watchList);
+        if (watchPrimary) {
+            watchSet.add(Index.PRIMARY_NAME);
+        }
+
         return listIndexes()
                 .flatMap(new Func1<IndexInfo, Observable<IndexInfo>>() {
                     @Override
                     public Observable<IndexInfo> call(IndexInfo i) {
-                        if (!indexName.equals(i.name())) {
+                        if (!watchSet.contains(i.name())) {
                             return Observable.empty();
                         } else if (!"online".equals(i.state()))
                             return Observable.error(new IndexesNotReadyException("Index not ready: " + i.name()));
@@ -570,7 +552,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                         if (INDEX_WATCH_LOG.isDebugEnabled()) {
                             if (notification.isOnNext()) {
                                 IndexInfo info = (IndexInfo) notification.getValue();
-                                String indexShortInfo = indexName + "(" + info.state() + ")";
+                                String indexShortInfo = info.name() + "(" + info.state() + ")";
                                 INDEX_WATCH_LOG.debug("Index ready: " + indexShortInfo);
                             } else if (notification.isOnError()) {
                                 Throwable e = notification.getThrowable();
@@ -585,24 +567,6 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                         .delay(INDEX_WATCH_DELAY)
                         .max(INDEX_WATCH_MAX_ATTEMPTS)
                         .build())
-                .compose(safeAbort(watchTimeout, watchTimeUnit, null));
-    }
-
-    @Override
-    public Observable<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, final long watchTimeout,
-            final TimeUnit watchTimeUnit) {
-        Set<String> watchSet = new HashSet<String>(watchList);
-        if (watchPrimary) {
-            watchSet.add(Index.PRIMARY_NAME);
-        }
-
-        return Observable.from(watchSet)
-                .flatMap(new Func1<String, Observable<IndexInfo>>() {
-                    @Override
-                    public Observable<IndexInfo> call(String s) {
-                        return watchIndex(s, watchTimeout, watchTimeUnit);
-                    }
-                })
                 .compose(safeAbort(watchTimeout, watchTimeUnit, null));
     }
 
@@ -672,11 +636,13 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                                                     .toList()
                                                     .flatMap(new Func1<List<JsonObject>, Observable<Boolean>>() {
                                                         @Override
-                                                        public Observable<Boolean> call(
-                                                                List<JsonObject> errors) {
-                                                            if (ignoreIfExist && errors.size() == 1
-                                                                    && errors.get(0).getString("msg").contains("already exist")) {
-                                                                return Observable.just(false);
+                                                        public Observable<Boolean> call(List<JsonObject> errors) {
+                                                            if (errors.size() == 1 && errors.get(0).getString("msg").contains("already exist")) {
+                                                                if (ignoreIfExist) {
+                                                                    return Observable.just(false);
+                                                                } else {
+                                                                    return Observable.error(new IndexAlreadyExistsException(prefixMsg));
+                                                                }
                                                             } else {
                                                                 return Observable.error(new CouchbaseException(prefixMsg + ": " + errors));
                                                             }

@@ -28,8 +28,9 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.error.IndexAlreadyExistsException;
+import com.couchbase.client.java.error.IndexDoesNotExistException;
 import com.couchbase.client.java.error.TranscodingException;
-import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.view.DesignDocument;
@@ -548,7 +549,8 @@ public interface BucketManager {
      *              to the corresponding query service API).
      * @return true if the index was effectively created, (even in deferred mode) or false if the index existed and
      * ignoreIfExist is true.
-     * @throws CouchbaseException if the index already exists and ignoreIfExist is set to false.
+     * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
+     * @throws CouchbaseException if another error occurs during index creation.
      */
     @InterfaceStability.Experimental
     boolean createPrimaryIndex(boolean ignoreIfExist, boolean defer);
@@ -563,7 +565,8 @@ public interface BucketManager {
      * @param timeUnit the time unit for the custom timeout.
      * @return true if the index was effectively created, (even in deferred mode) or false if the index existed and
      * ignoreIfExist is true.
-     * @throws CouchbaseException if the index already exists and ignoreIfExist is set to false.
+     * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
+     * @throws CouchbaseException if another error occurs during index creation.
      */
     @InterfaceStability.Experimental
     boolean createPrimaryIndex(boolean ignoreIfExist, boolean defer, long timeout, TimeUnit timeUnit);
@@ -582,7 +585,8 @@ public interface BucketManager {
      * @param fields the JSON fields to index, in either {@link Expression} or {@link String} form.
      * @return true if the index was effectively created (even in deferred mode) or false if the index existed and
      * ignoreIfExist is true.
-     * @throws CouchbaseException if the index already exists and ignoreIfExist is set to false.
+     * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
+     * @throws CouchbaseException if another error occurs during index creation.
      */
     @InterfaceStability.Experimental
     boolean createIndex(String indexName, boolean ignoreIfExist, boolean defer, Object... fields); //for convenience
@@ -601,7 +605,8 @@ public interface BucketManager {
      *              to the corresponding query service API).
      * @return true if the index was effectively created (even in deferred mode) or false if the index existed and
      * ignoreIfExist is true.
-     * @throws CouchbaseException if the index already exists and ignoreIfExist is set to false.
+     * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
+     * @throws CouchbaseException if another error occurs during index creation.
      */
     @InterfaceStability.Experimental
     boolean createIndex(String indexName, List<Object> fields, boolean ignoreIfExist, boolean defer); //for consistency with timeout api below
@@ -619,7 +624,8 @@ public interface BucketManager {
      * @param timeUnit the unit for the custom timeout.
      * @return true if the index was effectively created (even in deferred mode) or false if the index existed and
      * ignoreIfExist is true.
-     * @throws CouchbaseException if the index already exists and ignoreIfExist is set to false.
+     * @throws IndexAlreadyExistsException if the index already exists and ignoreIfExist is set to false.
+     * @throws CouchbaseException if another error occurs during index creation.
      */
     @InterfaceStability.Experimental
     boolean createIndex(String indexName, List<Object> fields, boolean ignoreIfExist, boolean defer, long timeout,
@@ -630,7 +636,8 @@ public interface BucketManager {
      *
      * @param ignoreIfNotExist if true, attempting to drop on a bucket without any primary index won't cause an exception to be propagated.
      * @return true if the index was effectively dropped, false if it didn't exist and ignoreIfNotExist is set to true.
-     * @throws CouchbaseException if the primary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws CouchbaseException if another error occurs during index drop.
      */
     @InterfaceStability.Experimental
     boolean dropPrimaryIndex(boolean ignoreIfNotExist);
@@ -642,7 +649,8 @@ public interface BucketManager {
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the custom timeout.
      * @return true if the index was effectively dropped, false if it didn't exist and ignoreIfNotExist is set to true.
-     * @throws CouchbaseException if the primary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws IndexDoesNotExistException if the primary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws CouchbaseException if another error occurs during index drop.
      */
     @InterfaceStability.Experimental
     boolean dropPrimaryIndex(boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit);
@@ -652,7 +660,8 @@ public interface BucketManager {
      *
      * @param ignoreIfNotExist if true, attempting to drop on a bucket without the specified index won't cause an exception to be propagated.
      * @return true if the index was effectively dropped, false if it didn't exist and ignoreIfNotExist is set to true.
-     * @throws CouchbaseException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws IndexDoesNotExistException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws CouchbaseException if another error occurs during index drop.
      */
     @InterfaceStability.Experimental
     boolean dropIndex(String name, boolean ignoreIfNotExist);
@@ -664,7 +673,8 @@ public interface BucketManager {
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the custom timeout.
      * @return true if the index was effectively dropped, false if it didn't exist and ignoreIfNotExist is set to true.
-     * @throws CouchbaseException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws IndexDoesNotExistException if the secondary index doesn't exist and ignoreIfNotExist is set to false.
+     * @throws CouchbaseException if another error occurs during index drop.
      */
     @InterfaceStability.Experimental
     boolean dropIndex(String name, boolean ignoreIfNotExist, long timeout, TimeUnit timeUnit);
@@ -677,7 +687,6 @@ public interface BucketManager {
      * in a "pending" state. This method will return a List of the names of indexes whose build has been triggered.
      *
      * @return a {@link List} of index names, the names of the indexes that have been triggered.
-     * @see #watchIndex(String, long, TimeUnit) to poll for a specific index to become online.
      * @see #watchIndexes(List, boolean, long, TimeUnit) to poll for a list of indexes to become online.
      */
     @InterfaceStability.Experimental
@@ -692,7 +701,6 @@ public interface BucketManager {
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the custom timeout.
      * @return a {@link List} of index names, the names of the indexes that have been triggered.
-     * @see #watchIndex(String, long, TimeUnit) to poll for a specific index to become online.
      * @see #watchIndexes(List, boolean, long, TimeUnit) to poll for a list of indexes to become online.
      */
     @InterfaceStability.Experimental
@@ -714,18 +722,4 @@ public interface BucketManager {
      */
     @InterfaceStability.Experimental
     List<IndexInfo> watchIndexes(List<String> watchList, boolean watchPrimary, long watchTimeout, TimeUnit watchTimeUnit);
-
-    /**
-     * Watches a specific index, polling the query service until the index becomes "online" or the watchTimeout has expired.
-     *
-     * Note: You can activate DEBUG level logs on the "{@value DefaultAsyncBucketManager#INDEX_WATCH_LOG_NAME}" logger
-     * to see various stages of the polling.
-     *
-     * @param indexName the name of the index to watch. For primary indexes, use {@link Index#PRIMARY_NAME}.
-     * @param watchTimeout the maximum duration for which to poll for the index to become online.
-     * @param watchTimeUnit the time unit for the watchTimeout.
-     * @return true if the index could be observed to become online within the watchTimeout, false otherwise.
-     */
-    @InterfaceStability.Experimental
-    boolean watchIndex(String indexName, long watchTimeout, TimeUnit watchTimeUnit);
 }
