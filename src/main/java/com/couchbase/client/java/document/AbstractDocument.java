@@ -35,6 +35,13 @@ public abstract class AbstractDocument<T> implements Document<T> {
     private final T content;
 
     protected AbstractDocument(String id, int expiry, T content, long cas) {
+        if (id == null || id.isEmpty()) {
+            throw new IllegalArgumentException("The Document ID must not be null or empty.");
+        }
+        if (expiry < 0) {
+            throw new IllegalArgumentException("The Document expiry must not be negative.");
+        }
+
         this.id = id;
         this.cas = cas;
         this.expiry = expiry;
