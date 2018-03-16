@@ -1383,15 +1383,14 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @return the document containing the ID.
@@ -1401,15 +1400,14 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param timeout the custom timeout.
@@ -1421,8 +1419,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1431,7 +1429,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param persistTo the persistence constraint to watch.
@@ -1443,8 +1440,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1453,7 +1450,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param persistTo the persistence constraint to watch.
@@ -1467,8 +1463,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1477,7 +1473,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param persistTo the persistence constraint to watch.
@@ -1488,8 +1483,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1498,7 +1493,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param persistTo the persistence constraint to watch.
@@ -1511,8 +1505,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1521,7 +1515,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param replicateTo the replication constraint to watch.
@@ -1532,8 +1525,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1542,7 +1535,6 @@ public interface Bucket {
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
      * - The durability constraint could not be fulfilled because of a temporary or persistent problem:
      *   {@link DurabilityException}.
-     * - A CAS value was set on the {@link Document} and it did not match with the server: {@link CASMismatchException}
      *
      * @param document the document to remove, with the ID extracted.
      * @param replicateTo the replication constraint to watch.
@@ -1555,8 +1547,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1572,8 +1564,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1592,8 +1584,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1613,8 +1605,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1637,8 +1629,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1657,8 +1649,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1680,8 +1672,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1700,8 +1692,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1722,8 +1714,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID with the default key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1740,8 +1732,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1761,8 +1753,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1783,8 +1775,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1809,8 +1801,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1830,8 +1822,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1854,8 +1846,8 @@ public interface Bucket {
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with the default
      * key/value timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -1875,8 +1867,8 @@ public interface Bucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement with a custom timeout.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * This method throws under the following conditions:
      *
@@ -2249,11 +2241,6 @@ public interface Bucket {
     /**
      * Append a {@link Document} to another one with the default key/value timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the appended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2261,14 +2248,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be appended.
      * @return a document which mirrors the one supplied as an argument.
@@ -2278,11 +2262,6 @@ public interface Bucket {
     /**
      * Append a {@link Document} to another one with a custom timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the appended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2290,14 +2269,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be appended.
      * @param timeout the custom timeout.
@@ -2309,11 +2285,6 @@ public interface Bucket {
     /**
      * Prepend a {@link Document} to another one with the default key/value timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the prepended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2321,14 +2292,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be prepended.
      * @return a document which mirrors the one supplied as an argument.
@@ -2338,11 +2306,6 @@ public interface Bucket {
     /**
      * Prepend a {@link Document} to another one with a custom timeout.
      *
-     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
-     * does not return the prepended result, so at this point the client does not know how the {@link Document} now
-     * looks like. A separate {@link Bucket#get(Document)} call needs to be issued in order to get the full
-     * current content.
-     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -2350,14 +2313,11 @@ public interface Bucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
-     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
-     *
      * This method throws under the following conditions:
      *
      * - The operation takes longer than the specified timeout: {@link TimeoutException}
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be prepended.
      * @param timeout the custom timeout.

@@ -378,22 +378,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final D document) {
-        final  Transcoder<Document<Object>, Object> transcoder =
-            (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
             bucket);
-
-        return core
-            .<RemoveResponse>send(request)
-            .map(new Func1<RemoveResponse, D>() {
-                @Override
-                public D call(final RemoveResponse response) {
-                    if (response.status() == ResponseStatus.EXISTS) {
-                        throw new CASMismatchException();
-                    }
-                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
-                }
-            });
+        return core.<RemoveResponse>send(request).map(new Func1<RemoveResponse, D>() {
+            @Override
+            public D call(RemoveResponse response) {
+                return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), document.cas());
+            }
+        });
     }
 
     @Override
@@ -579,7 +572,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(), 0, null, response.cas());
+                    return (D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas());
                 }
             });
     }
@@ -598,7 +591,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         throw new DocumentDoesNotExistException();
                     }
 
-                    return (D) transcoder.newDocument(document.id(),  0, null, response.cas());
+                    return (D) transcoder.newDocument(document.id(),  document.expiry(), document.content(), response.cas());
                 }
             });
     }
