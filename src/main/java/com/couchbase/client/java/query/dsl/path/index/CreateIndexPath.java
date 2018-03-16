@@ -19,24 +19,30 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.path.Path;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * Starting path of the Index creation DSL.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface CreateIndexPath extends Path {
 
-    AsyncRepository async();
+    /**
+     * Create a secondary index.
+     * @param indexName the name of the secondary index to be created. It will automatically be escaped.
+     */
+    OnPath create(String indexName);
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
-
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    /**
+     * Create a primary index.
+     */
+    OnPrimaryPath createPrimary();
 }

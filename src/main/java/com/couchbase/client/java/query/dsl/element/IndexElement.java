@@ -19,24 +19,37 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.element;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * Element of the Index DSL to create various forms of indexes.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public class IndexElement implements Element {
 
-    AsyncRepository async();
+    private final String name;
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    public IndexElement(String indexName) {
+        this.name = indexName;
+    }
 
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
+    public IndexElement() {
+        this(null);
+    }
 
+    @Override
+    public String export() {
+        if (name == null) {
+            return "CREATE PRIMARY INDEX";
+        } else {
+            return "CREATE INDEX `" + name + "`";
+        }
+    }
 }

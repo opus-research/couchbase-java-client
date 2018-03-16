@@ -19,24 +19,20 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * Enum of the different types of indexes supported by N1QL.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
-
-    AsyncRepository async();
-
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
-
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public enum IndexType {
+    GSI,
+    VIEW
 }

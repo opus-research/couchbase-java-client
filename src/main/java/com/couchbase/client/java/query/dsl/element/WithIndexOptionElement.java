@@ -19,24 +19,34 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.element;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * Element of the Index DSL that allows to describe additional options for index creation.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * Options are set as a JSON object. Supported options as of Couchbase 4.0 DP are:
+ *  - "nodes": "node_name": specify on which node to create a GSI index
+ *  - "defer_build":true: defer creation of the index (useful to create multiple indexes then build them in one scan swipe).
+ *
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public class WithIndexOptionElement implements Element {
 
-    AsyncRepository async();
+    private final JsonObject options;
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    public WithIndexOptionElement(JsonObject options) {
+        this.options = options;
+    }
 
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    @Override
+    public String export() {
+        return "WITH `" + options.toString() + "`";
+    }
 }

@@ -21,9 +21,6 @@
  */
 package com.couchbase.client.java.repository;
 
-import com.couchbase.client.java.PersistTo;
-import com.couchbase.client.java.ReplicaMode;
-import com.couchbase.client.java.ReplicateTo;
 import rx.Observable;
 
 /**
@@ -35,35 +32,7 @@ import rx.Observable;
 public interface AsyncRepository {
 
     <T> Observable<T> get(String id, Class<T> documentClass);
-    <T> Observable<T> getFromReplica(String id, ReplicaMode type, Class<T> documentClass);
-    <T> Observable<T> getAndLock(String id, int lockTime, Class<T> documentClass);
-    <T> Observable<T> getAndTouch(String id, int expiry, Class<T> documentClass);
-
-    Observable<Boolean> exists(String id);
-    <T> Observable<Boolean> exists(T document);
 
     <T> Observable<T> upsert(T document);
-    <T> Observable<T> upsert(T document, PersistTo persistTo);
-    <T> Observable<T> upsert(T document, ReplicateTo replicateTo);
-    <T> Observable<T> upsert(T document, PersistTo persistTo, ReplicateTo replicateTo);
-
-    <T> Observable<T> insert(T document);
-    <T> Observable<T> insert(T document, PersistTo persistTo);
-    <T> Observable<T> insert(T document, ReplicateTo replicateTo);
-    <T> Observable<T> insert(T document, PersistTo persistTo, ReplicateTo replicateTo);
-
-    <T> Observable<T> replace(T document);
-    <T> Observable<T> replace(T document, PersistTo persistTo);
-    <T> Observable<T> replace(T document, ReplicateTo replicateTo);
-    <T> Observable<T> replace(T document, PersistTo persistTo, ReplicateTo replicateTo);
-
-    <T> Observable<T> remove(T document);
-    <T> Observable<T> remove(T document, PersistTo persistTo);
-    <T> Observable<T> remove(T document, ReplicateTo replicateTo);
-    <T> Observable<T> remove(T document, PersistTo persistTo, ReplicateTo replicateTo);
-    <T> Observable<T> remove(String id, Class<T> documentClass);
-    <T> Observable<T> remove(String id, PersistTo persistTo, Class<T> documentClass);
-    <T> Observable<T> remove(String id, ReplicateTo replicateTo, Class<T> documentClass);
-    <T> Observable<T> remove(String id, PersistTo persistTo, ReplicateTo replicateTo, Class<T> documentClass);
 
 }

@@ -19,24 +19,35 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.element.OnElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * See {@link OnPrimaryPath}.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultOnPrimaryPath extends AbstractPath implements OnPrimaryPath {
 
-    AsyncRepository async();
+    public DefaultOnPrimaryPath(AbstractPath parent) {
+        super(parent);
+    }
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    @Override
+    public UsingPath on(String namespace, String keyspace) {
+        element(new OnElement(namespace, keyspace, null, null));
+        return new DefaultUsingPath(this);
+    }
 
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    @Override
+    public UsingPath on(String keyspace) {
+        return on(null, keyspace);
+    }
 }

@@ -19,24 +19,30 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.element.UsingElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * See {@link UsingPath}.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultUsingPath extends DefaultWithPath implements UsingPath {
 
-    AsyncRepository async();
+    protected DefaultUsingPath(AbstractPath parent) {
+        super(parent);
+    }
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
-
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    @Override
+    public WithPath using(IndexType type) {
+        element(new UsingElement(type));
+        return new DefaultWithPath(this);
+    }
 }

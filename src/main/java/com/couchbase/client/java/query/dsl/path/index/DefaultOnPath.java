@@ -19,24 +19,36 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.Expression;
+import com.couchbase.client.java.query.dsl.element.OnElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * See {@link OnPath}.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultOnPath extends AbstractPath implements OnPath {
 
-    AsyncRepository async();
+    public DefaultOnPath(AbstractPath parent) {
+        super(parent);
+    }
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    @Override
+    public UsingWherePath on(String namespace, String keyspace, Expression expression, Expression... additionalExpressions) {
+        element(new OnElement(namespace, keyspace, expression, additionalExpressions));
+        return new DefaultUsingWherePath(this);
+    }
 
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    @Override
+    public UsingWherePath on(String keyspace, Expression expression, Expression... additionalExpressions) {
+        return on(null, keyspace, expression, additionalExpressions);
+    }
 }

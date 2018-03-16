@@ -19,24 +19,33 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.Expression;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * Starting clause of the secondary Index creation DSL.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public interface WherePath extends WithPath {
 
-    AsyncRepository async();
+    /**
+     * Adds filtering clause to the secondary index creation.
+     *
+     * @param filterExpression the expression to use for index filtering.
+     */
+    WithPath where(Expression filterExpression);
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
-
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    /**
+     * Adds filtering clause to the secondary index creation.
+     *
+     * @param filterExpression the expression to use for index filtering.
+     */
+    WithPath where(String filterExpression);
 }

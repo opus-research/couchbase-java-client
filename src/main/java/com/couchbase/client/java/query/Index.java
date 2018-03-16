@@ -19,24 +19,29 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.path.index.DefaultCreateIndexPath;
+import com.couchbase.client.java.query.dsl.path.index.OnPath;
+import com.couchbase.client.java.query.dsl.path.index.OnPrimaryPath;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * DSL starting point for creating and managing N1QL indexes.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Public
+public class Index {
 
-    AsyncRepository async();
+    public static OnPath createIndex(String indexName) {
+        return new DefaultCreateIndexPath().create(indexName);
+    }
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
-
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    public static OnPrimaryPath createPrimaryIndex() {
+        return new DefaultCreateIndexPath().createPrimary();
+    }
 }

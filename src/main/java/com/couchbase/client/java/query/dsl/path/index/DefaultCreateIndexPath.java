@@ -19,24 +19,36 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.repository;
+package com.couchbase.client.java.query.dsl.path.index;
 
-import java.util.concurrent.TimeUnit;
+import com.couchbase.client.core.annotations.InterfaceAudience;
+import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.query.dsl.element.IndexElement;
+import com.couchbase.client.java.query.dsl.path.AbstractPath;
 
 /**
- * The repository abstraction for entities on top of a bucket.
+ * See {@link CreateIndexPath}.
  *
- * @author Michael Nitschinger
- * @since 2.2.0
+ * @author Simon Baslé
+ * @since 2.2
  */
-public interface Repository {
+@InterfaceStability.Experimental
+@InterfaceAudience.Private
+public class DefaultCreateIndexPath extends AbstractPath implements CreateIndexPath {
 
-    AsyncRepository async();
+    public DefaultCreateIndexPath() {
+        super(null);
+    }
 
-    <T> T get(String id, Class<T> entityClass);
-    <T> T get(String id, Class<T> entityClass, long timeout, TimeUnit timeUnit);
+    @Override
+    public OnPath create(String indexName) {
+        element(new IndexElement(indexName));
+        return new DefaultOnPath(this);
+    }
 
-    <T> T upsert(T document);
-    <T> T upsert(T document, long timeout, TimeUnit timeUnit);
-
+    @Override
+    public OnPrimaryPath createPrimary() {
+        element(new IndexElement());
+        return new DefaultOnPrimaryPath(this);
+    }
 }
