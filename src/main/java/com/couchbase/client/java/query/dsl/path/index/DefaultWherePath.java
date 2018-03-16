@@ -37,20 +37,20 @@ import com.couchbase.client.java.query.dsl.path.AbstractPath;
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Private
-public class DefaultWherePath extends DefaultUsingWithPath implements WherePath {
+public class DefaultWherePath extends DefaultWithPath implements WherePath {
 
     protected DefaultWherePath(AbstractPath parent) {
         super(parent);
     }
 
     @Override
-    public UsingWithPath where(Expression filterExpression) {
+    public WithPath where(Expression filterExpression) {
         element(new WhereElement(filterExpression));
-        return new DefaultUsingWithPath(this);
+        return new DefaultWithPath(this);
     }
 
     @Override
-    public UsingWithPath where(String filterExpression) {
+    public WithPath where(String filterExpression) {
         return where(x(filterExpression));
     }
 }

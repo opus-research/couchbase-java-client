@@ -23,29 +23,21 @@ package com.couchbase.client.java.query.dsl.path.index;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.query.dsl.Expression;
 
 /**
- * Where clause in the Index creation DSL.
+ * Using path of the secondary Index creation DSL.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public interface WherePath extends WithPath {
+public interface UsingWherePath extends WherePath {
 
     /**
-     * Adds filtering clause to the secondary index creation.
+     * Describes what kind of index to create.
      *
-     * @param filterExpression the expression to use for index filtering.
+     * @param indexType the type of index to create.
      */
-    WithPath where(Expression filterExpression);
-
-    /**
-     * Adds filtering clause to the secondary index creation.
-     *
-     * @param filterExpression the expression to use for index filtering.
-     */
-    WithPath where(String filterExpression);
+    WherePath using(IndexType indexType);
 }
