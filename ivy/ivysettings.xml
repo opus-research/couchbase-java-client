@@ -29,18 +29,6 @@
   <property name="repo.couchbase"
     value="http://files.couchbase.com/maven2"
     override="false"/>
- <!--
-    This property is used later in the ivy.xml file to set
-    the project's revision. Unless overridden, it defaults
-    to the Maven SNAPSHOT convention, as that it works well
-    for publishing local test builds to ~/.m2/repository.
-  -->
-
-  <!-- "default" is defined later in the file. -->
-  <settings defaultResolver="default"/>
-
-  <!-- Pulls in the "public" resolver for ibiblio-hosted jars. -->
-  <include url="${ivy.default.settings.dir}/ivysettings-public.xml"/>
 
   <property name="maven2.pattern"
     value="[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier])"/>
@@ -52,45 +40,17 @@
   <settings defaultResolver="default"/>
 
   <resolvers>
-    <!-- add any 3rd-party maven repos here... -->
     <chain name="default">
       <ibiblio name="maven2" root="${repo.maven.org}"
         pattern="${maven2.pattern.ext}" m2compatible="true"/>
       <ibiblio name="ibiblio" root="${ibiblio.maven.org}"
         pattern="${maven2.pattern.ext}" m2compatible="true"/>
-      <ibiblio name="couchbase-maven" root="${repo.couchbase}"
-        pattern="${maven2.pattern.ext}" m2compatible="true"/>
+      <!--<ibiblio name="couchbase-maven" root="${repo.couchbase}"
+        pattern="${maven2.pattern.ext}" m2compatible="true"/>-->
       <filesystem name="local-maven2" m2compatible="true" >
         <ivy pattern="${local-maven2-pattern}"/>
         <artifact pattern="${local-maven2-pattern}"/>
       </filesystem>
-    <!--
-      for *retrieving* artifacts for local testing builds,
-      we'll use maven's own .m2/repository.
-    -->
-    <ibiblio
-      name="local-m2"
-      m2compatible="true"
-      root="file://${user.home}/.m2/repository"
-      changingPattern=".*SNAPSHOT"/>
-
-    <!--
-      for *publishing* artifacts for local testing builds,
-      as the previous ibiblio resolver does not support
-      publishing
-    -->
-    <filesystem name="local-m2-publish" m2compatible="true">
-      <artifact pattern="${user.home}/.m2/repository/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"/>
-    </filesystem>
-
-    <!--
-      for publishing release artifacts via an sshfs-mounted share
-    -->
-    <filesystem name="share-m2" m2compatible="true">
-      <artifact pattern="${user.home}/repo/[organisation]/[module]/[revision]/[artifact]-[revision](-[classifier]).[ext]"/>
-    </filesystem>
-
-    <!-- strings the separate resolvers all together -->
-   </chain>
+    </chain>
   </resolvers>
 </ivysettings>
