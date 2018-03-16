@@ -46,7 +46,6 @@ import net.spy.memcached.ops.OperationStatus;
 
 import org.junit.Ignore;
 import static org.junit.Assume.assumeTrue;
-import org.junit.Test;
 
 /**
  * A CouchbaseClientTest.
@@ -56,15 +55,15 @@ public class CouchbaseClientTest extends BinaryClientTest {
   // Constant for empty string
   private static final String EMPTY = "";
 
-  private final List<URI> uris = Arrays.asList(URI.create("http://"
-        + TestConfig.IPV4_ADDR + ":8091/pools"));
-
   /**
    * Initialises the client, deletes all the buckets
    * and creates a new default bucket.
    */
   @Override
   protected void initClient() throws Exception {
+    final List<URI> uris = Arrays.asList(URI.create("http://"
+        + TestConfig.IPV4_ADDR + ":8091/pools"));
+
     BucketTool bucketTool = new BucketTool();
     bucketTool.deleteAllBuckets();
     bucketTool.createDefaultBucket(BucketType.COUCHBASE, 256, 1, true);
@@ -101,21 +100,6 @@ public class CouchbaseClientTest extends BinaryClientTest {
   @Override
   protected void initClient(ConnectionFactory cf) throws Exception {
     client = new CouchbaseClient((CouchbaseConnectionFactory) cf);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void shouldThrowIfBucketIsNull() throws Exception {
-    new CouchbaseClient(uris, null, "");
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void shouldThrowIfBucketIsEmpty() throws Exception {
-    new CouchbaseClient(uris, "", "");
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void shouldThrowIfPasswordIsNull() throws Exception {
-    new CouchbaseClient(uris, "default", null);
   }
 
   /**
@@ -206,7 +190,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   public void testDelReturnsCAS() throws Exception {
     OperationFuture<Boolean> setOp = client.set("testDelReturnsCAS", 0, EMPTY);
-    assertTrue(setOp.get());
+    assertTrue(setOp.isDone());
     OperationFuture<Boolean> delOp = client.delete("testDelReturnsCAS");
     assertTrue(delOp.getCas() > 0);
   }
@@ -650,7 +634,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   public void testDelNoExist() throws Exception {
     OperationFuture<Boolean> delOp = client.delete("testDelNoExist");
-    assertFalse(delOp.get());
+    assertTrue(delOp.isDone());
     assertNull(delOp.getCas());
   }
 
@@ -666,7 +650,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   public void testGATZeroTimeout() throws Exception {
     assertNull(client.get("gatkey"));
-    assertTrue(client.set("gatkey", 1, "gatvalue").get());
+    assertTrue(client.set("gatkey", 1, "gatvalue").get().booleanValue());
     Thread.sleep(1500);
     assertFalse("gatvalue".equals(client.get("gatkey")));
     assertNull(client.getAndTouch("gatkey", 0));
@@ -684,7 +668,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
    */
   public void testGATNegativeTimeout() throws Exception {
     assertNull(client.get("gatkey"));
-    assertTrue(client.set("gatkey", -1, "gatvalue").get());
+    assertTrue(client.set("gatkey", -1, "gatvalue").get().booleanValue());
     Thread.sleep(1500);
     assertTrue("gatvalue".equals(client.get("gatkey")));
     assertNotNull(client.getAndTouch("gatkey", -1));
