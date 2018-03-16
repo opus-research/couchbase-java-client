@@ -28,8 +28,7 @@ import com.couchbase.client.http.ViewPool;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
-import com.couchbase.client.vbucket.config.CouchbaseConfig;
-
+import com.couchbase.client.vbucket.config.DefaultConfig;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -272,7 +271,7 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
    */
   @Override
   public void reconfigure(final Bucket bucket) {
-    CouchbaseConfig config = (CouchbaseConfig) bucket.getConfig();
+    DefaultConfig config = (DefaultConfig) bucket.getConfig();
     int sizeBeforeReconfigure = viewNodes.size();
 
     List<HttpHost> currentViewServers = new ArrayList<HttpHost>();
@@ -281,28 +280,20 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
       currentViewServers.add(host);
 
       if (!viewNodes.contains(host) && hasActiveVBuckets(config, host)) {
-        getLogger().debug("Adding view node: " + host);
         viewNodes.add(host);
       }
     }
 
-    List<HttpHost> connectionsToClose = new ArrayList<HttpHost>();
     synchronized (viewNodes) {
       Iterator<HttpHost> iter = viewNodes.iterator();
       while (iter.hasNext()) {
         HttpHost current = iter.next();
         if (!currentViewServers.contains(current)
           || !hasActiveVBuckets(config, current)) {
-          connectionsToClose.add(current);
           iter.remove();
-          getLogger().debug("Removing view node: " + current);
+          pool.closeConnectionsForHost(current);
         }
       }
-    }
-
-    for (HttpHost host : connectionsToClose) {
-      getLogger().debug("Closing old connections for node: " + host);
-      pool.closeConnectionsForHost(host);
     }
 
     if (sizeBeforeReconfigure != viewNodes.size()) {
@@ -392,7 +383,7 @@ public class ViewConnection extends SpyObject implements Reconfigurable {
    * @param node the node to check.
    * @return true if it has active vbuckets, false if not.
    */
-  private static boolean hasActiveVBuckets(final CouchbaseConfig config,
+  private static boolean hasActiveVBuckets(final DefaultConfig config,
     final HttpHost node) {
     return config.nodeHasActiveVBuckets(
       new InetSocketAddress(node.getHostName(), node.getPort())
