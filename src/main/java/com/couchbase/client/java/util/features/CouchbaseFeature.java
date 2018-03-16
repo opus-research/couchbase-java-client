@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2014 Couchbase, Inc.
+/*
+ * Copyright (c) 2014 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,37 +19,37 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.client.java.query;
-
-import com.couchbase.client.java.document.json.JsonObject;
+package com.couchbase.client.java.util.features;
 
 /**
- * The simplest form of N1QL {@link Query} with a plain un-parametrized {@link Statement}.
+ * Enumeration of all Couchbase Features supported by this SDK.
  *
  * @author Simon Baslé
- * @since 2.1
+ * @since 2.1.0
  */
-public class SimpleQuery implements Query {
+public enum CouchbaseFeature {
 
-    private final Statement statement;
+    KV(1, 8, 0),
+    VIEW(2, 0, 0),
+    CCCP(2, 5, 0),
+    SSL(3, 0, 0),
+    DCP(3, 0, 0),
+    N1QL(3, 5, 0),
+    SPATIAL_VIEW(3, 5, 0);
+
+    private final Version availableFrom;
+
+    CouchbaseFeature(int major, int minor, int patch) {
+        this.availableFrom = new Version(major, minor, patch);
+    }
 
     /**
-     * Create a new {@link Query} with a plain un-parametrized {@link Statement}.
-     * @param statement the {@link Statement} to execute
+     * Checks if this feature is available on the provided server version.
+     *
+     * @param serverVersion the server side version to check against
+     * @return true if this feature is available on the given version, false otherwise.
      */
-    public SimpleQuery(Statement statement) {
-        this.statement = statement;
-    }
-
-    @Override
-    public Statement statement() {
-        return this.statement;
-    }
-
-    @Override
-    public String toN1QL() {
-        return JsonObject.create()
-            .put("statement", this.statement.toString())
-            .toString();
+    public boolean isAvailableOn(Version serverVersion) {
+        return serverVersion.compareTo(availableFrom) >= 0;
     }
 }
