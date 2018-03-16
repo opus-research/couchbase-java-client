@@ -32,7 +32,6 @@ import rx.functions.Func1;
 
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -155,11 +154,7 @@ public class NodeLocatorHelper {
             if (nodeId == -2) {
                 throw new IllegalStateException("Replica not configured for this bucket.");
             }
-            try {
-                return InetAddress.getByName(cbc.nodeAtIndex(nodeId).hostname().address());
-            } catch (UnknownHostException e) {
-                throw new IllegalStateException(e);
-            }
+            return cbc.nodeAtIndex(nodeId).hostname();
         }  else {
             throw new UnsupportedOperationException("Bucket type not supported: " + config.getClass().getName());
         }
@@ -174,11 +169,7 @@ public class NodeLocatorHelper {
         List<InetAddress> allNodes = new ArrayList<InetAddress>();
         BucketConfig config = bucketConfig.get();
         for (NodeInfo nodeInfo : config.nodes()) {
-            try {
-                allNodes.add(InetAddress.getByName(nodeInfo.hostname().address()));
-            } catch (UnknownHostException e) {
-                throw new IllegalStateException(e);
-            }
+            allNodes.add(nodeInfo.hostname());
         }
         return allNodes;
     }
@@ -189,11 +180,7 @@ public class NodeLocatorHelper {
         if (nodeId == -1) {
             throw new IllegalStateException("No partition assigned to node for Document ID: " + id);
         }
-        try {
-            return InetAddress.getByName(config.nodeAtIndex(nodeId).hostname().address());
-        } catch (UnknownHostException e) {
-            throw new IllegalStateException(e);
-        }
+        return config.nodeAtIndex(nodeId).hostname();
     }
 
     private static InetAddress nodeForIdOnMemcachedBucket(final String id, final MemcachedBucketConfig config) {
@@ -206,11 +193,7 @@ public class NodeLocatorHelper {
                 hash = tailMap.firstKey();
             }
         }
-        try {
-            return InetAddress.getByName(config.ketamaNodes().get(hash).hostname().address());
-        } catch (UnknownHostException e) {
-            throw new IllegalStateException(e);
-        }
+        return config.ketamaNodes().get(hash).hostname();
     }
 
     private static long hashId(String id) {
