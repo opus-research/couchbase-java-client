@@ -22,22 +22,17 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javax.naming.ConfigurationException;
 
 import net.spy.memcached.AddrUtil;
-import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.ops.Operation;
 
 /**
@@ -46,8 +41,6 @@ import net.spy.memcached.ops.Operation;
 public class TapConnectionProvider
   extends net.spy.memcached.TapConnectionProvider
   implements Reconfigurable {
-
-  private final ConfigurationProvider cp;
 
   /**
    * Get a tap connection based on the REST response from a Couchbase server.
@@ -74,19 +67,11 @@ public class TapConnectionProvider
   public TapConnectionProvider(CouchbaseConnectionFactory cf)
     throws IOException, ConfigurationException{
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
-    cp = cf.getConfigurationProvider();
-    cp.subscribe(cf.getBucketName(), this);
+    cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
 
-  protected void addTapAckOp(MemcachedNode node, Operation op) {
-    super.addTapAckOp(node, op);
-  }
-
-  protected CountDownLatch broadcastOp(final BroadcastOpFactory of) {
-    if (shuttingDown) {
-      throw new IllegalStateException("Shutting down");
-    }
-    return conn.broadcastOperation(of, conn.getLocator().getAll());
+  protected void addOp(final Operation op) {
+    conn.enqueueOperation("TStream", op);
   }
 
   /**
@@ -101,50 +86,5 @@ public class TapConnectionProvider
 
   public void reconfigure(Bucket bucket) {
     ((CouchbaseConnection)conn).reconfigure(bucket);
-  }
-
-  /**
-   * Shut down immediately.
-   */
-  public void shutdown() {
-    shutdown(-1, TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Shut down this client gracefully.
-   *
-   * @param timeout the amount of time for shutdown
-   * @param unit the TimeUnit for the timeout
-   * @return result of the shutdown request
-   */
-  public boolean shutdown(long timeout, TimeUnit unit) {
-    // Guard against double shutdowns (bug 8).
-    if (shuttingDown) {
-      getLogger().info("Suppressing duplicate attempt to shut down");
-      return false;
-    }
-    cp.shutdown();
-    shuttingDown = true;
-    String baseName = conn.getName();
-    conn.setName(baseName + " - SHUTTING DOWN");
-    boolean rv = false;
-    try {
-      // Conditionally wait
-      if (timeout > 0) {
-        conn.setName(baseName + " - SHUTTING DOWN (waiting)");
-        rv = waitForQueues(timeout, unit);
-      }
-    } finally {
-      // But always begin the shutdown sequence
-      try {
-        conn.setName(baseName + " - SHUTTING DOWN (telling client)");
-        conn.shutdown();
-        conn.setName(baseName + " - SHUTTING DOWN (informed client)");
-        tcService.shutdown();
-      } catch (IOException e) {
-        getLogger().warn("exception while shutting down", e);
-      }
-    }
-    return rv;
   }
 }
