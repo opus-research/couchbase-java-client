@@ -492,34 +492,37 @@ public class CouchbaseClientTest extends BinaryClientTest {
   public void testPersistToMoreThanConf() throws Exception {
     CouchbaseClient cb = (CouchbaseClient) client;
     int size = client.getAvailableServers().size();
+    String expected = "Currently, there are less nodes in the cluster than "
+         + "required to satisfy the persistence constraint.";
     OperationFuture<Boolean> future = null;
     switch(size){
     case 0:
       future = cb.set("something", 0,
         "to_store", PersistTo.ONE);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     case 1:
       future = cb.set("something", 0,
         "to_store", PersistTo.TWO);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     case 2:
       future = cb.set("something", 0,
         "to_store", PersistTo.THREE);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     case 3:
       future = cb.set("something", 0,
         "to_store", PersistTo.FOUR);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     default:
       break;
     }
-    String expected = "Currently, there are less nodes in the cluster than "
-      + "required to satisfy the persistence constraint.";
-    assertEquals(expected, future.getStatus().getMessage());
   }
 
   /**
@@ -535,28 +538,30 @@ public class CouchbaseClientTest extends BinaryClientTest {
     CouchbaseClient cb = (CouchbaseClient) client;
     int size = client.getAvailableServers().size();
     OperationFuture<Boolean> future = null;
+    String expected = "Currently, there are less nodes in the cluster than "
+         + "required to satisfy the replication constraint.";
     switch(size){
     case 0:
       future = cb.set("something", 0,
         "to_store", ReplicateTo.ONE);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     case 1:
       future = cb.set("something", 0,
         "to_store", ReplicateTo.TWO);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     case 2:
       future = cb.set("something", 0,
         "to_store", ReplicateTo.THREE);
       assertFalse(future.get());
+      assertEquals(expected, future.getStatus().getMessage());
       break;
     default:
       break;
     }
-    String expected = "Currently, there are less nodes in the cluster than "
-      + "required to satisfy the replication constraint.";
-    assertEquals(expected, future.getStatus().getMessage());
   }
 
   /**
