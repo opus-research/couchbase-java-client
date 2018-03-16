@@ -30,21 +30,19 @@ import com.couchbase.client.protocol.views.SpatialViewRowWithDocs;
 import com.couchbase.client.protocol.views.Stale;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.TestConfig;
-import net.spy.memcached.compat.log.Logger;
-import net.spy.memcached.compat.log.LoggerFactory;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -54,17 +52,12 @@ import static org.junit.Assert.assertTrue;
  * Verifies the correct functionality of spatial view queries.
  */
 public class SpatialViewTest {
-
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(SpatialViewTest.class);
-
   protected static TestingClient client = null;
   private static final ArrayList<City> CITY_DOCS;
   private static final String SERVER_URI = "http://" + TestConfig.IPV4_ADDR
       + ":8091/pools";
   public static final String DESIGN_DOC = "cities";
   public static final String VIEW_NAME_SPATIAL = "all_cities";
-  private static boolean isOldSpatial = false;
 
   static {
     CITY_DOCS = new ArrayList<City>();
@@ -155,13 +148,6 @@ public class SpatialViewTest {
     bucketTool.poll(callback);
     bucketTool.waitForWarmup(client);
 
-    ArrayList<String> versions = new ArrayList<String>(
-        client.getVersions().values());
-    if (versions.size() > 0) {
-      CbTestConfig.Version version = new CbTestConfig.Version(versions.get(0));
-      isOldSpatial = version.isOldSpatialAware();
-    }
-
     String docUri = "/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC;
     String view = "{\"language\":\"javascript\",\"spatial\":{\""
@@ -216,12 +202,6 @@ public class SpatialViewTest {
    */
   @Test
   public void testSpatialWithoutDocs() {
-    if (!isOldSpatial) {
-      LOGGER.info("Skipping Test because cluster is not compatible with old "
-          + "spatial views.");
-      return;
-    }
-
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);
     String expected = "/default/_design/" + DESIGN_DOC + "/_spatial/"
       + VIEW_NAME_SPATIAL;
@@ -252,12 +232,6 @@ public class SpatialViewTest {
    */
   @Test
   public void testSpatialBbox() {
-    if (!isOldSpatial) {
-      LOGGER.info("Skipping Test because cluster is not compatible with old "
-          + "spatial views.");
-      return;
-    }
-
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);
     Query query = new Query();
     query.setStale(Stale.FALSE).setBbox(0, 0, 50, 50);
@@ -286,12 +260,6 @@ public class SpatialViewTest {
    */
   @Test
   public void testSpatialWithDocs() {
-    if (!isOldSpatial) {
-      LOGGER.info("Skipping Test because cluster is not compatible with old "
-          + "spatial views.");
-      return;
-    }
-
     SpatialView view = client.getSpatialView(DESIGN_DOC, VIEW_NAME_SPATIAL);
     Query query = new Query();
     query.setStale(Stale.FALSE).setIncludeDocs(true);

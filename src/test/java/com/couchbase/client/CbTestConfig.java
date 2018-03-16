@@ -22,9 +22,6 @@
 
 package com.couchbase.client;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 /**
  * A typical configuration for the test suite.
  */
@@ -62,22 +59,15 @@ public final class CbTestConfig {
    */
   public static class Version {
 
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?.*");
-
     private final int major;
     private final int minor;
     private final int bugfix;
 
     public Version(String raw) {
-      Matcher matcher = VERSION_PATTERN.matcher(raw);
-      if (matcher.matches() && matcher.groupCount() == 3) {
-        major = Integer.parseInt(matcher.group(1));
-        minor = matcher.group(2) != null ? Integer.parseInt(matcher.group(2)) : 0;
-        bugfix = matcher.group(3) != null ? Integer.parseInt(matcher.group(3)) : 0;
-      } else {
-        throw new IllegalArgumentException(
-            "Expected a version string starting with X[.Y[.Z]], was " + raw);
-      }
+      String[] tokens = raw.replaceAll("_.*$", "").split("\\.");
+      major = Integer.parseInt(tokens[0]);
+      minor = Integer.parseInt(tokens[1]);
+      bugfix = Integer.parseInt(tokens[2]);
     }
 
     public boolean greaterOrEqualThan(int major, int minor, int bugfix) {
@@ -88,10 +78,6 @@ public final class CbTestConfig {
 
     public boolean isCarrierConfigAware() {
       return greaterOrEqualThan(2, 5, 0);
-    }
-
-    public boolean isOldSpatialAware() {
-      return !greaterOrEqualThan(3, 0, 0);
     }
   }
 
