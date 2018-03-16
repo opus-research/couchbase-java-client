@@ -28,15 +28,6 @@ public interface Bucket {
     Observable<JsonDocument> get(String id);
 
     /**
-     * Get a {@link Document} by the document id stored in the given one.
-     *
-     * @param document
-     * @param <D>
-     * @return
-     */
-    <D extends Document<?>> Observable<D> get(D document);
-
-    /**
     * Get a {@link Document} by its unique ID.
     *
     * The loaded document will be converted into the target class, which needs
@@ -127,12 +118,5 @@ public interface Bucket {
      * @return
      */
     Observable<QueryResult> query(String query);
-
-    /**
-     * Flushes the bucket.
-     *
-     * @return
-     */
-    Observable<Boolean> flush();
 
 }
