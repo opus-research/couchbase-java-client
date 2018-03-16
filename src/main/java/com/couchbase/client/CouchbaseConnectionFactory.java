@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 package com.couchbase.client;
 
 import com.couchbase.client.http.AsyncConnectionManager;
+import com.couchbase.client.protocol.views.HttpOperation;
 
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
@@ -39,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -125,7 +127,8 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public ViewNode createViewNode(InetSocketAddress addr,
       AsyncConnectionManager connMgr) {
-    return new ViewNode(addr, connMgr, opQueueLen,
+    return new ViewNode(addr, connMgr,
+        new LinkedBlockingQueue<HttpOperation>(opQueueLen),
         getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
   }
 
