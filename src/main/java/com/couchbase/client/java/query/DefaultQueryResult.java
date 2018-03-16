@@ -1,6 +1,7 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.util.Blocking;
 import rx.Observable;
 import rx.functions.Func1;
@@ -11,13 +12,11 @@ import java.util.concurrent.TimeUnit;
 
 public class DefaultQueryResult implements QueryResult {
 
-    private final boolean finalSuccess;
-    private final boolean parseSuccess;
-    private final List<QueryRow> allRows;
-    private final JsonObject info;
-    private final List<JsonObject> errors;
-    private final String requestId;
-    private final String clientContextId;
+    private boolean finalSuccess;
+    private boolean parseSuccess;
+    private List<QueryRow> allRows;
+    private JsonObject info;
+    private List<JsonObject> errors;
 
 
     /**
@@ -34,11 +33,8 @@ public class DefaultQueryResult implements QueryResult {
     public DefaultQueryResult(Observable<AsyncQueryRow> rows,
             Observable<JsonObject> info, Observable<JsonObject> errors,
             Observable<Boolean> finalSuccess, boolean parseSuccess,
-            String requestId, String clientContextId,
             long timeout, TimeUnit timeUnit) {
 
-        this.requestId = requestId;
-        this.clientContextId = clientContextId;
         this.parseSuccess = parseSuccess;
         //block on the finalSuccess item, ensuring streamed section of the result is finished
         this.finalSuccess = Blocking.blockForSingle(finalSuccess, timeout, timeUnit);
@@ -90,15 +86,5 @@ public class DefaultQueryResult implements QueryResult {
     @Override
     public Iterator<QueryRow> iterator() {
         return rows();
-    }
-
-    @Override
-    public String requestId() {
-        return this.requestId;
-    }
-
-    @Override
-    public String clientContextId() {
-        return this.clientContextId;
     }
 }

@@ -1,10 +1,9 @@
 package com.couchbase.client.java;
 
+import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.BucketSettings;
 import com.couchbase.client.java.cluster.ClusterInfo;
-import com.couchbase.client.java.cluster.ClusterManager;
 import com.couchbase.client.java.cluster.DefaultBucketSettings;
-import com.couchbase.client.java.error.InvalidPasswordException;
 import com.couchbase.client.java.util.TestProperties;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -15,49 +14,36 @@ import rx.functions.Func1;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ClusterManagerTest {
 
-    private static ClusterManager clusterManager;
-    private static CouchbaseCluster couchbaseCluster;
+    private static AsyncClusterManager clusterManager;
 
     @BeforeClass
     public static void setup() {
-        couchbaseCluster = CouchbaseCluster.create(TestProperties.seedNode());
-        clusterManager = couchbaseCluster
-            .clusterManager(TestProperties.adminName(), TestProperties.adminPassword());
+        clusterManager = CouchbaseAsyncCluster
+            .create(TestProperties.seedNode())
+            .clusterManager(TestProperties.adminName(), TestProperties.adminPassword())
+            .toBlocking()
+            .single();
     }
 
     @Before
     public void clearBuckets() {
-        clusterManager.async()
+        clusterManager
             .getBuckets()
             .flatMap(new Func1<BucketSettings, Observable<?>>() {
                 @Override
                 public Observable<?> call(BucketSettings bucketSettings) {
-                    return clusterManager.async().removeBucket(bucketSettings.name());
+                    return clusterManager.removeBucket(bucketSettings.name());
                 }
             }).toBlocking().lastOrDefault(null);
     }
 
-    @Test(expected = InvalidPasswordException.class)
-    public void shouldFailOnWrongUser() {
-        ClusterManager manager = couchbaseCluster.clusterManager("invalidUser", "");
-        manager.getBuckets();
-    }
-
-    @Test(expected = InvalidPasswordException.class)
-    public void shouldFailOnWrongPassword() {
-        ClusterManager manager = couchbaseCluster.clusterManager(TestProperties.adminName(), "foobar3423$$");
-        manager.getBuckets();
-    }
-
     @Test
     public void shouldLoadInfo() {
-        ClusterInfo info = clusterManager.info();
+        ClusterInfo info = clusterManager.info().toBlocking().single();
 
         assertNotNull(info);
         assertTrue(info.raw().getObject("storageTotals").getObject("ram").getLong("total") > 0);
@@ -72,7 +58,7 @@ public class ClusterManagerTest {
             .quota(128)
             .build();
 
-        clusterManager.insertBucket(settings);
+        clusterManager.insertBucket(settings).toBlocking().single();
     }
 
     @Test
@@ -93,12 +79,12 @@ public class ClusterManagerTest {
             .flatMap(new Func1<BucketSettings, Observable<?>>() {
                 @Override
                 public Observable<?> call(BucketSettings settings) {
-                    return clusterManager.async().insertBucket(settings);
+                    return clusterManager.insertBucket(settings);
                 }
             }).toBlocking().last();
 
 
-        List<BucketSettings> settings = clusterManager.async().getBuckets().toList().toBlocking().single();
+        List<BucketSettings> settings = clusterManager.getBuckets().toList().toBlocking().single();
         assertEquals(2, settings.size());
         for (BucketSettings bucket : settings) {
             assertTrue(bucket.name().equals("bucket1") || bucket.name().equals("bucket2"));
@@ -114,11 +100,11 @@ public class ClusterManagerTest {
             .quota(128)
             .build();
 
-        clusterManager.insertBucket(settings);
+        clusterManager.insertBucket(settings).toBlocking().single();
 
-        assertEquals(1, clusterManager.async().getBuckets().toList().toBlocking().single().size());
-        assertTrue(clusterManager.removeBucket("removeBucket"));
-        assertEquals(0, clusterManager.async().getBuckets().toList().toBlocking().single().size());
+        assertEquals(1, clusterManager.getBuckets().toList().toBlocking().single().size());
+        assertTrue(clusterManager.removeBucket("removeBucket").toBlocking().single());
+        assertEquals(0, clusterManager.getBuckets().toList().toBlocking().single().size());
     }
 
     @Test
@@ -131,7 +117,7 @@ public class ClusterManagerTest {
             .quota(128)
             .build();
 
-        clusterManager.insertBucket(settings);
+        clusterManager.insertBucket(settings).toBlocking().single();
 
         settings = DefaultBucketSettings
             .builder()
@@ -140,8 +126,8 @@ public class ClusterManagerTest {
             .quota(256)
             .build();
 
-        clusterManager.updateBucket(settings);
-        assertEquals(256, clusterManager.getBucket("updateBucket").quota());
+        clusterManager.updateBucket(settings).toBlocking().single();
+        assertEquals(256, clusterManager.getBucket("updateBucket").toBlocking().single().quota());
     }
 
 }
