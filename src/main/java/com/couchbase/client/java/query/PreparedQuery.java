@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
@@ -40,19 +38,17 @@ import com.couchbase.client.java.document.json.JsonObject;
  * @author Simon Baslé
  * @since 2.1
  */
-@InterfaceStability.Experimental
-@InterfaceAudience.Private
 public class PreparedQuery extends ParameterizedQuery {
 
-    public PreparedQuery(PreparedPayload plan, JsonArray positionalParams, QueryParams params) {
+    /* package */ PreparedQuery(PreparedPayload plan, JsonArray positionalParams, QueryParams params) {
         super(plan, positionalParams, params);
     }
 
-    public PreparedQuery(PreparedPayload plan, JsonObject namedParams, QueryParams params) {
+    /* package */ PreparedQuery(PreparedPayload plan, JsonObject namedParams, QueryParams params) {
        super(plan, namedParams, params);
     }
 
-    public PreparedQuery(PreparedPayload plan, QueryParams params) {
+    /* package */ PreparedQuery(PreparedPayload plan, QueryParams params) {
         super(plan, (JsonArray) null, params);
     }
 
@@ -74,10 +70,12 @@ public class PreparedQuery extends ParameterizedQuery {
     @Override
     public JsonObject n1ql() {
         JsonObject n1ql = super.n1ql();
-        String encodedPlan = statement().encodedPlan();
-        if (encodedPlan != null) {
-            n1ql.put("encoded_plan", encodedPlan);
+        String preparePrefix = "PREPARE " + statement().preparedName() + " FROM ";
+        String prepareFallback = statement().originalStatement().toString();
+        if (!prepareFallback.toLowerCase().startsWith("prepare ")) {
+            prepareFallback = preparePrefix + prepareFallback;
         }
+        n1ql.put("statement", prepareFallback);
         return n1ql;
     }
 }
