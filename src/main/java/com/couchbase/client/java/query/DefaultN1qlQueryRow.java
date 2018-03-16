@@ -50,6 +50,6 @@ public class DefaultN1qlQueryRow implements N1qlQueryRow {
 
     @Override
     public String toString() {
-        return asyncRow.toString();
+        return value().toString();
     }
 }
