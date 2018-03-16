@@ -207,8 +207,12 @@ public class DocumentFragment<OPERATION> {
         if (path == null) {
             return false;
         }
-
-        return status(path).isSuccess();
+        for (SubdocOperationResult<OPERATION> result : resultList) {
+            if (path.equals(result.path()) && !(result.value() instanceof Exception)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -217,11 +221,8 @@ public class DocumentFragment<OPERATION> {
      * @return true if that path is part of the successful result set, false in any other case.
      */
     public boolean exists(int specIndex) {
-        if (specIndex < 0) {
-            return false;
-        }
-
-        return status(specIndex).isSuccess();
+        return specIndex >= 0 && specIndex < resultList.size()
+                && !(resultList.get(specIndex).value() instanceof Exception);
     }
 
     @Override

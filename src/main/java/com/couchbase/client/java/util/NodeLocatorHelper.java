@@ -147,7 +147,7 @@ public class NodeLocatorHelper {
         if (config instanceof CouchbaseBucketConfig) {
             CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) config;
             int partitionId = (int) hashId(id) & cbc.numberOfPartitions() - 1;
-            int nodeId = cbc.nodeIndexForReplica(partitionId, replicaNum - 1, false);
+            int nodeId = cbc.nodeIndexForReplica(partitionId, replicaNum - 1);
             if (nodeId == -1) {
                 throw new IllegalStateException("No partition assigned to node for Document ID: " + id);
             }
@@ -176,7 +176,7 @@ public class NodeLocatorHelper {
 
     private static InetAddress nodeForIdOnCouchbaseBucket(final String id, final CouchbaseBucketConfig config) {
         int partitionId = (int) hashId(id) & config.numberOfPartitions() - 1;
-        int nodeId = config.nodeIndexForMaster(partitionId, false);
+        int nodeId = config.nodeIndexForMaster(partitionId);
         if (nodeId == -1) {
             throw new IllegalStateException("No partition assigned to node for Document ID: " + id);
         }
