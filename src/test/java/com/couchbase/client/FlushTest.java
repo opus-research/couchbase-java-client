@@ -79,6 +79,7 @@ public class FlushTest {
     bucketTool.poll(callback);
     bucketTool.waitForWarmup(defaultClient);
     bucketTool.waitForWarmup(saslClient);
+    bucketTool.waitForWarmup(memcachedClient);
   }
 
   /**

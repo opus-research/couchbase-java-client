@@ -27,7 +27,6 @@ import com.couchbase.client.http.AsyncConnectionManager;
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.CouchbaseNodeOrder;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -37,9 +36,7 @@ import com.couchbase.client.vbucket.config.ConfigType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,12 +111,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    */
   public static final int DEFAULT_OBS_POLL_MAX = 500;
 
-  /**
-   * Default Node ordering to use for streaming connection.
-   */
-  public static final CouchbaseNodeOrder DEFAULT_STREAMING_NODE_ORDER =
-    CouchbaseNodeOrder.RANDOM;
-
   protected volatile ConfigurationProvider configurationProvider;
   private volatile String bucket;
   private volatile String pass;
@@ -138,59 +129,11 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private long obsPollInterval = DEFAULT_OBS_POLL_INTERVAL;
   private int obsPollMax = DEFAULT_OBS_POLL_MAX;
   private int viewTimeout = DEFAULT_VIEW_TIMEOUT;
-  private CouchbaseNodeOrder nodeOrder = DEFAULT_STREAMING_NODE_ORDER;
   private ClusterManager clusterManager;
 
-  /**
-   * Create a new {@link CouchbaseConnectionFactory} and load the required
-   * connection information from system properties.
-   *
-   * <p>The following properties need to be set in order to bootstrap:
-   *  - cbclient.nodes: ;-separated list of URIs
-   *  - cbclient.bucket: name of the bucket
-   *  - cbclient.password: password of the bucket
-   * </p>
-   */
-  public CouchbaseConnectionFactory() {
-    String nodes = CouchbaseProperties.getProperty("nodes");
-    String bucket =  CouchbaseProperties.getProperty("bucket");
-    String password = CouchbaseProperties.getProperty("password");
-
-    if (nodes == null) {
-      throw new IllegalArgumentException("System property cbclient.nodes "
-        + "not set or empty");
-    }
-    if (bucket == null) {
-      throw new IllegalArgumentException("System property cbclient.bucket "
-        + "not set or empty");
-    }
-    if (password == null) {
-      throw new IllegalArgumentException("System property cbclient.password "
-        + "not set or empty");
-    }
-
-    List<URI> baseList = new ArrayList<URI>();
-    String[] nodeList = nodes.split(";");
-    for (String node : nodeList) {
-      try {
-        baseList.add(new URI(node));
-      } catch (Exception e) {
-        throw new IllegalArgumentException("Could not parse node list into "
-          + " URI format.");
-      }
-    }
-
-    initialize(baseList, bucket, password);
-  }
-
   public CouchbaseConnectionFactory(final List<URI> baseList,
-    final String bucketName, String password) throws IOException {
-    initialize(baseList, bucketName, password);
-  }
-
-  private void initialize(List<URI> baseList, String bucket, String password) {
-    potentiallyRandomizeNodeList(baseList);
-
+      final String bucketName, String password)
+    throws IOException {
     storedBaseList = new ArrayList<URI>();
     for (URI bu : baseList) {
       if (!bu.isAbsolute()) {
@@ -199,7 +142,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       storedBaseList.add(bu);
     }
 
-    if (bucket == null || bucket.isEmpty()) {
+    if (bucketName == null || bucketName.isEmpty()) {
       throw new IllegalArgumentException("The bucket name must not be null "
         + "or empty.");
     }
@@ -208,10 +151,10 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         + " null.");
     }
 
-    this.bucket = bucket;
+    bucket = bucketName;
     pass = password;
     configurationProvider =
-      new ConfigurationProviderHTTP(baseList, bucket, password);
+        new ConfigurationProviderHTTP(baseList, bucketName, password);
   }
 
   public ViewNode createViewNode(InetSocketAddress addr,
@@ -288,9 +231,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return this.viewTimeout;
   }
 
-  public CouchbaseNodeOrder getStreamingNodeOrder() {
-    return nodeOrder;
-  }
 
   public Config getVBucketConfig() {
     Bucket config = configurationProvider.getBucketConfiguration(bucket);
@@ -482,78 +422,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       clusterManager = new ClusterManager(storedBaseList, bucket, pass);
     }
     return clusterManager;
-  }
-
-  /**
-   * Updates the stored base list with a new one based on the config.
-   *
-   * @param config
-   */
-  public void updateStoredBaseList(Config config) {
-    List<String> bucketServers = config.getServers();
-    if (bucketServers.size() > 0) {
-      List<URI> newList = new ArrayList<URI>();
-      for (String bucketServer : bucketServers) {
-        String hostname = bucketServer.split(":")[0];
-        try {
-          newList.add(new URI("http://" + hostname + ":8091/pools"));
-        } catch(URISyntaxException ex) {
-          getLogger().warn("Could not add node to updated bucket list because "
-            + "of a parsing exception.");
-          getLogger().debug("Could not parse list because: " + ex);
-        }
-      }
-
-      if (nodeListsAreDifferent(storedBaseList, newList)) {
-        getLogger().info("Replacing current streaming node list "
-          + storedBaseList + " with " + newList);
-        potentiallyRandomizeNodeList(newList);
-        storedBaseList = newList;
-        getConfigurationProvider().updateBaseListFromConfig(newList);
-      }
-    }
-  }
-
-  /**
-   * Returns the current base list.
-   *
-   * @return the base list.
-   */
-  List<URI> getStoredBaseList() {
-    return storedBaseList;
-  }
-
-  /**
-   * Randomizes the entries of the node list if needed.
-   *
-   * @param list the list to potentially randomize.
-   */
-  private void potentiallyRandomizeNodeList(List<URI> list) {
-    if (getStreamingNodeOrder().equals(CouchbaseNodeOrder.ORDERED)) {
-      return;
-    }
-
-    Collections.shuffle(list);
-  }
-
-  /**
-   * Check if two given node lists are different.
-   *
-   * @param left one node list
-   * @param right the other node list
-   * @return true if they are different, false otherwise.
-   */
-  private boolean nodeListsAreDifferent(List<URI> left, List<URI> right) {
-    if (left.size() != right.size()) {
-      return true;
-    }
-
-    for (URI uri : left) {
-      if (!right.contains(uri)) {
-        return true;
-      }
-    }
-    return false;
   }
 
 }
