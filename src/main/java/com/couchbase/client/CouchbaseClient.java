@@ -42,6 +42,7 @@ import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.ops.UnlockOperation;
 import net.spy.memcached.transcoders.Transcoder;
 
 /**
@@ -277,6 +278,40 @@ public class CouchbaseClient extends MemcachedClient
    */
   public CASValue<Object> getAndLock(String key, int exp) {
     return getAndLock(key, exp, transcoder);
+  }
+  /**
+   * Unlock the given key from the cache.
+   *
+   * @param key the key to unlock
+   * @param cas the CAS identifier
+   * @return whether or not the operation was performed
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public OperationFuture<Boolean> unlock(final String key, long casId) {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(key,
+            latch, operationTimeout);
+    Operation op = opFact.unlock(key, casId,
+            new UnlockOperation.Callback() {
+      private CASValue val = null;
+
+      public void receivedStatus(OperationStatus s) {
+        rv.set(s.isSuccess(), s);
+      }
+
+      public void gotData(String k, int flags, long cas, byte[] data) {
+        assert key.equals(k) : "Wrong key returned";
+        assert cas > 0 : "CAS was less than zero:  " + cas;
+      }
+
+      public void complete() {
+        latch.countDown();
+      }
+    });
+    rv.setOperation(op);
+    mconn.enqueueOperation(key, op);
+    return rv;
   }
 
   /**
