@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.CouchbaseConnection;
+import com.couchbase.client.ViewNode;
 import com.couchbase.client.http.AsyncConnectionManager;
 import com.couchbase.client.protocol.views.HttpOperation;
 

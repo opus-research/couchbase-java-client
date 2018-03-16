@@ -22,10 +22,6 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.TestOperation.TestCallback;
-import com.couchbase.client.internal.HttpFuture;
-import com.couchbase.client.protocol.views.HttpOperationImpl;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -40,6 +36,9 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 
+import com.couchbase.client.TestOperation.TestCallback;
+import com.couchbase.client.internal.HttpFuture;
+import com.couchbase.client.protocol.views.HttpOperationImpl;
 
 /**
  * A TestingClient.

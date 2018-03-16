@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.CouchbaseConnectionFactory;
+import com.couchbase.client.ViewNode;
 import com.couchbase.client.ViewNode.EventLogger;
 import com.couchbase.client.ViewNode.MyHttpRequestExecutionHandler;
 import com.couchbase.client.http.AsyncConnectionManager;
@@ -38,10 +40,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import net.spy.memcached.AddrUtil;
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.compat.SpyThread;
 
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequestInterceptor;
@@ -60,9 +58,12 @@ import org.apache.http.protocol.RequestExpectContinue;
 import org.apache.http.protocol.RequestTargetHost;
 import org.apache.http.protocol.RequestUserAgent;
 
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.compat.SpyThread;
 
 /**
- * Couchbase implementation of ViewConnection.
+ * Couchbase implementation of CouchbaseConnection.
  *
  */
 public class ViewConnection extends SpyThread  implements
@@ -92,46 +93,46 @@ public class ViewConnection extends SpyThread  implements
   }
 
   private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
-    throws IOException {
+  throws IOException {
+  List<ViewNode> nodeList = new LinkedList<ViewNode>();
 
-    List<ViewNode> nodeList = new LinkedList<ViewNode>();
+  for (InetSocketAddress a : addrs) {
+    HttpParams params = new SyncBasicHttpParams();
+    params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
+        .setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000)
+        .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
+        .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK,
+            false)
+        .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
+        .setParameter(CoreProtocolPNames.USER_AGENT,
+            "Spymemcached Client/1.1");
 
-    for (InetSocketAddress a : addrs) {
-      HttpParams params = new SyncBasicHttpParams();
-      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
-          .setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000)
-          .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
-          .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK,
-              false)
-          .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
-          .setParameter(CoreProtocolPNames.USER_AGENT, "Couchbase Java Client 1.0.2");
+    HttpProcessor httpproc =
+        new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
+          new RequestContent(), new RequestTargetHost(),
+          new RequestConnControl(), new RequestUserAgent(),
+          new RequestExpectContinue(), });
 
-      HttpProcessor httpproc =
-          new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
-            new RequestContent(), new RequestTargetHost(),
-            new RequestConnControl(), new RequestUserAgent(),
-            new RequestExpectContinue(), });
+    AsyncNHttpClientHandler protocolHandler =
+        new AsyncNHttpClientHandler(httpproc,
+            new MyHttpRequestExecutionHandler(),
+            new DefaultConnectionReuseStrategy(),
+            new DirectByteBufferAllocator(), params);
+    protocolHandler.setEventListener(new EventLogger());
 
-      AsyncNHttpClientHandler protocolHandler =
-          new AsyncNHttpClientHandler(httpproc,
-              new MyHttpRequestExecutionHandler(),
-              new DefaultConnectionReuseStrategy(),
-              new DirectByteBufferAllocator(), params);
-      protocolHandler.setEventListener(new EventLogger());
+    AsyncConnectionManager connMgr =
+        new AsyncConnectionManager(
+            new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
+            protocolHandler, params);
+    getLogger().info("Added %s to connect queue", a);
 
-      AsyncConnectionManager connMgr =
-          new AsyncConnectionManager(
-              new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
-              protocolHandler, params);
-      getLogger().info("Added %s to connect queue", a);
-
-      ViewNode node = connFactory.createViewNode(a, connMgr);
-      node.init();
-      nodeList.add(node);
-    }
-
-    return nodeList;
+    ViewNode node = connFactory.createViewNode(a, connMgr);
+    node.init();
+    nodeList.add(node);
   }
+
+  return nodeList;
+}
 
   public void addOp(final HttpOperation op) {
     couchNodes.get(getNextNode()).addOp(op);

@@ -33,11 +33,11 @@ import com.couchbase.client.protocol.views.ReducedOperationImpl;
 import com.couchbase.client.protocol.views.View;
 import com.couchbase.client.protocol.views.ViewFetcherOperation;
 import com.couchbase.client.protocol.views.ViewFetcherOperationImpl;
-import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.couchbase.client.protocol.views.ViewsFetcherOperation;
 import com.couchbase.client.protocol.views.ViewsFetcherOperationImpl;
+import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 
@@ -57,8 +57,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpVersion;
+import org.apache.http.message.BasicHttpRequest;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.CASValue;
@@ -71,10 +72,6 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.Transcoder;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpVersion;
-import org.apache.http.message.BasicHttpRequest;
 
 /**
  * A client for Couchbase Server.
@@ -172,8 +169,8 @@ public class CouchbaseClient extends MemcachedClient
    *          the bucket name
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by
-   *          the server has issues or is not compatible
+   * @throws ConfigurationException if the configuration provided by the server
+   *           has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
       final String usr, final String pwd) throws IOException {
@@ -225,7 +222,6 @@ public class CouchbaseClient extends MemcachedClient
     reconfiguring = true;
     try {
       vconn.reconfigure(bucket);
-      ((CouchbaseConnection)mconn).reconfigure(bucket);
     } catch (IllegalArgumentException ex) {
       getLogger().warn("Failed to reconfigure client, staying with "
           + "previous configuration.", ex);
@@ -237,16 +233,7 @@ public class CouchbaseClient extends MemcachedClient
 
 
   /**
-   * Gets access to a view contained in a design document from the cluster.
-   *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
+   * Gets a view contained in a design document from the cluster.
    *
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
@@ -294,15 +281,6 @@ public class CouchbaseClient extends MemcachedClient
    * Gets a future with a list of views for a given design document from the
    * cluster.
    *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
-   *
    * @param designDocumentName the name of the design document.
    * @return a future containing a List of View objects from the cluster.
    */
@@ -341,16 +319,7 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Gets access to a view contained in a design document from the cluster.
-   *
-   * The purpose of a view is take the structured data stored within the
-   * Couchbase Server database as JSON documents, extract the fields and
-   * information, and to produce an index of the selected information.
-   *
-   * The result is a view on the stored data. The view that is created
-   * during this process allows you to iterate, select and query the
-   * information in your database from the raw data objects that have
-   * been stored.
+   * Gets a view contained in a design document from the cluster.
    *
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
@@ -393,8 +362,7 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator. This
+   * Asynchronously queries a Couchbase view by calling its map function. This
    * type of query will return the view result along with all of the documents
    * for each row in the query.
    *
@@ -443,10 +411,9 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator. This
-   * type of query will return the view result but will not
-   * get the documents associated with each row of the query.
+   * Asynchronously queries a Couchbase view by calling its map function. This
+   * type of query will return the view result but will not get the documents
+   * associated with each row of the query.
    *
    * @param view the view to run the query against.
    * @param query the type of query to run against the view.
@@ -486,8 +453,8 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Asynchronously queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator.
+   * Asynchronously queries a Couchbase view by calling its map function and
+   * then the views reduce function.
    *
    * @param view the view to run the query against.
    * @param query the type of query to run against the view.
@@ -530,10 +497,8 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Queries a Couchbase view and returns the result.
-   * The result can be accessed row-wise via an iterator.
-   * This type of query will return the view result along
-   * with all of the documents for each row in
+   * Queries a Couchbase view by calling its map function. This type of query
+   * will return the view result along with all of the documents for each row in
    * the query.
    *
    * @param view the view to run the query against.
@@ -563,7 +528,7 @@ public class CouchbaseClient extends MemcachedClient
    * @return A Paginator (iterator) to use for reading the results of the query.
    */
   public Paginator paginatedQuery(View view, Query query, int docsPerPage) {
-    return new Paginator(this, view, query, docsPerPage);
+    return new Paginator(this, view, query, 10);
   }
 
   /**
@@ -767,6 +732,8 @@ public class CouchbaseClient extends MemcachedClient
     return unlock(key, casId, transcoder);
   }
 
+
+
   /**
    * Gets the number of vBuckets that are contained in the cluster. This
    * function is for internal use only and should rarely be since there
@@ -780,19 +747,9 @@ public class CouchbaseClient extends MemcachedClient
 
   @Override
   public boolean shutdown(long timeout, TimeUnit unit) {
-    boolean shutdownResult = false;
-    try {
-      shutdownResult = super.shutdown(timeout, unit);
-      CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
-      cf.getConfigurationProvider().shutdown();
-      vconn.shutdown();
-    } catch (IOException ex) {
-      Logger.getLogger(
-         CouchbaseClient.class.getName()).log(Level.SEVERE,
-            "Unexpected IOException in shutdown", ex);
-      throw new RuntimeException(null, ex);
-    }
+    boolean shutdownResult = super.shutdown(timeout, unit);
+    CouchbaseConnectionFactory cf = (CouchbaseConnectionFactory) connFactory;
+    cf.getConfigurationProvider().shutdown();
     return shutdownResult;
   }
-
 }
