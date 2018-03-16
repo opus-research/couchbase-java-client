@@ -246,6 +246,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
         throttleManager.getThrottler(
           (InetSocketAddress)placeIn.getSocketAddress()).throttle();
       }
+      if (!placeIn.isActive() || !placeIn.isAuthenticated()) {
+        System.out.println(placeIn);
+        System.out.println(placeIn.isActive() + ", " + placeIn.isAuthenticated());
+      }
       addOperation(placeIn, o);
     } else {
       assert o.isCancelled() : "No node found for " + key
