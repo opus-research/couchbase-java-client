@@ -51,7 +51,8 @@ public class TapTest extends ClientBaseCase {
       }
     });
   }
-
+  
+/* -- commented out until TAP is completed 
   public void testBackfill() throws Exception {
     if (TestConfig.isMembase()) {
       TapClient tc =
@@ -111,6 +112,8 @@ public class TapTest extends ClientBaseCase {
     }
   }
 
+*/
+  
   public void testTapBucketDoesNotExist() throws Exception {
     if (TestConfig.isMembase()) {
       TapClient client =

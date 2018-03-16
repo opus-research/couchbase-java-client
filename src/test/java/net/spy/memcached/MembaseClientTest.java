@@ -62,8 +62,11 @@ public class MembaseClientTest extends BinaryClientTest {
   }
 
   public void testNumVBuckets() throws Exception {
+    // Check for power of two values
     if (TestConfig.isMembase()) {
-      assert ((MembaseClient)client).getNumVBuckets() == 1024;
+      int num = ((MembaseClient)client).getNumVBuckets();
+
+      assertTrue("NumVBuckets has to be a power of two", (num & -num)== num);
     }
   }
 
