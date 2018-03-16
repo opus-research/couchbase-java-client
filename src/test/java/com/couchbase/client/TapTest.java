@@ -106,7 +106,7 @@ public class TapTest extends ClientBaseCase {
     }
     checkTapKeys(items);
     assertTrue(client.flush().get().booleanValue());
-    tapClient.shutdown();
+    tc.shutdown();
   }
 
   public void testTapBucketDoesNotExist() throws Exception {
@@ -122,7 +122,7 @@ public class TapTest extends ClientBaseCase {
         + "failure:\n" + e.getMessage());
       return;
     } finally {
-      tapClient.shutdown();
+      client.shutdown();
     }
   }
 
