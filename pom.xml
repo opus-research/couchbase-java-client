@@ -1,0 +1,336 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Basic Settings & Versioning -->
+    <groupId>com.couchbase</groupId>
+    <artifactId>couchbase-client</artifactId>
+    <packaging>jar</packaging>
+    <version>1.1.6-SNAPSHOT</version>
+
+
+    <!-- Identification -->
+    <name>Official Couchbase Java Client</name>
+    <url>http://www.couchbase.com/develop/java/current</url>
+    <description>
+        This is the official Couchbase Java Client. It provides high-performance
+        and reliable data or management operations against a Couchbase Server
+        cluster.
+    </description>
+    <organization>
+        <name>Couchbase, Inc.</name>
+        <url>http://couchbase.com</url>
+    </organization>
+    <developers>
+        <developer>
+            <id>nitschinger</id>
+            <name>Michael Nitschinger</name>
+            <email>michael.nitschinger@couchbase.com</email>
+            <url>http://nitschinger.at</url>
+            <organization>Couchbase, Inc.</organization>
+            <organizationUrl>http://couchbase.com</organizationUrl>
+            <roles>
+                <role>Maintainer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>ingenthron</id>
+            <name>Matt Ingenthron</name>
+            <email>matt@couchbase.com</email>
+            <organization>Couchbase, Inc.</organization>
+            <organizationUrl>http://couchbase.com</organizationUrl>
+            <roles>
+                <role>Maintainer</role>
+            </roles>
+        </developer>
+        <developer>
+            <id>wiederhold</id>
+            <name>Michael Wiederhold</name>
+            <email>mike@couchbase.com</email>
+            <organization>Couchbase, Inc.</organization>
+            <organizationUrl>http://couchbase.com</organizationUrl>
+            <roles>
+                <role>Developer</role>
+            </roles>
+        </developer>
+    </developers>
+    <contributors>
+        <contributor>
+            <name>Raghavan Srinivas</name>
+            <email>rags@couchbase.com</email>
+            <roles>
+                <role>Former Maintainer</role>
+            </roles>
+        </contributor>
+        <contributor>
+            <name>Deepti Dawar</name>
+            <email>deepti.dawar@globallogic.com</email>
+            <roles>
+                <role>Quality Engineering</role>
+            </roles>
+        </contributor>
+        <contributor>
+            <name>Tugdual Grall</name>
+            <email>tug@couchbase.com</email>
+            <roles>
+                <role>Contributor</role>
+            </roles>
+        </contributor>
+        <contributor>
+            <name>Sergey Avseyev</name>
+            <email>sergey@couchbase.com</email>
+            <roles>
+                <role>Contributor</role>
+            </roles>
+        </contributor>
+    </contributors>
+
+    <!-- Licenses -->
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+    <inceptionYear>2009</inceptionYear>
+
+    <!-- Source Code Management -->
+    <scm>
+        <connection>scm:git:https://github.com/couchbase/couchbase-java-client.git</connection>
+        <developerConnection>scm:git:ssh://review.couchbase.org:29418/couchbase-java-client.git</developerConnection>
+    </scm>
+
+    <!-- Properties -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <!-- Used Repositories for Dependencies -->
+    <repositories>
+        <repository>
+            <id>couchbase</id>
+            <name>Couchbase Maven Repository</name>
+            <layout>default</layout>
+            <url>http://files.couchbase.com/maven2/</url>
+        </repository>
+    </repositories>
+
+    <!-- Dependencies -->
+    <dependencies>
+
+        <!-- Runtime & Compile Dependencies -->
+        <dependency>
+            <groupId>spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>2.8.12</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty</artifactId>
+            <version>3.5.5.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.jettison</groupId>
+            <artifactId>jettison</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore-nio</artifactId>
+            <version>4.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>2.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>3.3.1</version>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>spy</groupId>
+            <artifactId>spymemcached-test</artifactId>
+            <version>2.8.12</version>
+            <scope>test</scope>
+            <!-- Remove Exclusion Workaround for 2.8.13 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit-addons</groupId>
+            <artifactId>junit-addons</artifactId>
+            <version>1.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>2.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymockclassextension</artifactId>
+            <version>2.4</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+
+    <!-- Build Configuration -->
+    <build>
+        <plugins>
+            <!-- Install Checksums -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <createChecksum>true</createChecksum>
+                </configuration>
+            </plugin>
+
+            <!-- Sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Skip Testing on Package -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemProperties>
+                        <property>
+                            <name>server.address_v4</name>
+                            <value>127.0.0.1</value>
+                        </property>
+                        <property>
+                            <name>server.address_v6</name>
+                            <value>::1</value>
+                        </property>
+                        <property>
+                            <name>server.type</name>
+                            <value>memcached</value>
+                        </property>
+                        <property>
+                            <name>test.type</name>
+                            <value>unit</value>
+                        </property>
+                    </systemProperties>
+                </configuration>
+                <version>2.14.1</version>
+            </plugin>
+
+             <!-- Javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>javadoc-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <includeDependencySources>true</includeDependencySources>
+                            <dependencySourceIncludes>
+                                <dependencySourceInclude>net.spy.*</dependencySourceInclude>
+                            </dependencySourceIncludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Compiler Configuration -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <fork>true</fork>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <debug>true</debug>
+                    <optimize>true</optimize>
+                    <showDeprecation>true</showDeprecation>
+                    <showWarnings>true</showWarnings>
+                </configuration>
+            </plugin>
+            <!-- Site rendering/Reporting -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <reportPlugins>
+                        <!-- Checkstyle Support -->
+                       <plugin>
+                           <groupId>org.apache.maven.plugins</groupId>
+                           <artifactId>maven-checkstyle-plugin</artifactId>
+                           <version>2.10</version>
+                           <configuration>
+                               <configLocation>etc/checkstyle.xml</configLocation>
+                               <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                               <consoleOutput>true</consoleOutput>
+                           </configuration>
+                       </plugin>
+                       <!-- Support Cross-References to Sources -->
+                       <plugin>
+                           <groupId>org.apache.maven.plugins</groupId>
+                           <artifactId>maven-jxr-plugin</artifactId>
+                           <version>2.3</version>
+                       </plugin>
+                    </reportPlugins>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
