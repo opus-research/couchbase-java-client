@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
-import net.spy.memcached.TestConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -35,28 +34,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Test for Properties in the CouchbaseConnectionFactoryBuilder.
- * To run the test, create a cbclient.properties in the work directory
- * with the following entries.
+ * Test for basic things in the CouchbaseConnectionFactoryBuilder.
  *
- * obsPollMax=99
- * obsPollInterval=444
- * opTimeout=999
- * timeoutExceptionThreshold=999
- *
- * ant -DobsPollInterval=444 test
- *
- * or set the same properties in the command line.
- * 
- * These properties are applicable only when using the
- * CouchbaseConnectionFactoryBuilder. To generate clients with
- * default values, CouchbaseClient or CouchbaseConnectionFactory should
- * be used.
  */
 public class CouchbaseConnectionFactoryBuilderTest {
 
   private List<URI> uris = Arrays.asList(
-      URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools"));
+      URI.create("http://localhost:8091/pools"));
 
   public CouchbaseConnectionFactoryBuilderTest() {
   }
@@ -86,12 +70,11 @@ public class CouchbaseConnectionFactoryBuilderTest {
     long timeInterval = 600L;
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
-    assertEquals("Did the test run with obsPollInterval=444",
-            444L, instance.getObsPollInterval());
     CouchbaseConnectionFactoryBuilder instanceResult =
       instance.setObsPollInterval(timeInterval);
     assertEquals("Failed to set observe poll interval.", 600L,
       instanceResult.getObsPollInterval());
+    assertEquals(instance, instanceResult);
     instance.buildCouchbaseConnection(uris, "default", "");
   }
 
@@ -100,57 +83,14 @@ public class CouchbaseConnectionFactoryBuilderTest {
    */
   @Test
   public void testSetObsPollMax() throws IOException {
+    System.out.println("setObsPollMax");
     int maxPoll = 40;
     CouchbaseConnectionFactoryBuilder instance =
       new CouchbaseConnectionFactoryBuilder();
-    assertEquals("Did the test run with ObsPollMax=99",
-            99L, instance.getObsPollMax());
     CouchbaseConnectionFactoryBuilder instanceResult
       = instance.setObsPollMax(maxPoll);
+    assertEquals(instance, instanceResult);
     assertEquals(maxPoll, instanceResult.getObsPollMax());
-    instance.buildCouchbaseConnection(uris, "default", "");
-  }
-
-  /**
-   * Test of testopTimeout method, of class
-   * CouchbaseConnectionFactoryBuilder.
-   */
-  @Test
-  public void testopTimeOut() throws IOException {
-    int opTimeout = 999;
-    CouchbaseConnectionFactoryBuilder instance =
-      new CouchbaseConnectionFactoryBuilder();
-    CouchbaseConnectionFactory cf =
-            instance.buildCouchbaseConnection(uris, "default", "", "");
-    assertEquals("Did the test run with opTimeout=999",
-            999L, cf.getOperationTimeout());
-    CouchbaseConnectionFactoryBuilder instanceResult
-      = (CouchbaseConnectionFactoryBuilder)
-            instance.setOpTimeout(opTimeout);
-    assertEquals(opTimeout,
-            instanceResult.build().getOperationTimeout());
-    instance.buildCouchbaseConnection(uris, "default", "");
-  }
-
-  /**
-   * Test of testTimeoutExceptionThreshold method, of class
-   * CouchbaseConnectionFactoryBuilder.
-   */
-  @Test
-  public void testTimeoutExceptionThreshold() throws IOException {
-    int timeoutExceptionThreshold = 9999;
-    CouchbaseConnectionFactoryBuilder instance =
-      new CouchbaseConnectionFactoryBuilder();
-    CouchbaseConnectionFactory cf =
-            instance.buildCouchbaseConnection(uris, "default", "", "");
-    assertEquals("Did the test run with timeoutExceptionThreshold=999",
-            999L, cf.getTimeoutExceptionThreshold());
-    CouchbaseConnectionFactoryBuilder instanceResult
-      = (CouchbaseConnectionFactoryBuilder)
-            instance.setTimeoutExceptionThreshold(
-            timeoutExceptionThreshold + 2);
-    assertEquals(timeoutExceptionThreshold,
-            instanceResult.build().getTimeoutExceptionThreshold());
     instance.buildCouchbaseConnection(uris, "default", "");
   }
 }

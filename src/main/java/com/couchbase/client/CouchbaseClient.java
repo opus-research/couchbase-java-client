@@ -44,9 +44,12 @@ import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
 import com.couchbase.client.vbucket.config.Config;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,6 +58,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +77,7 @@ import net.spy.memcached.ObserveResponse;
 import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
+import net.spy.memcached.compat.CloseUtil;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.ObserveOperation;
@@ -98,12 +103,62 @@ import org.apache.http.message.BasicHttpRequest;
 public class CouchbaseClient extends MemcachedClient
   implements CouchbaseClientIF, Reconfigurable {
 
-  private static String modePrefix="";
-  private static String modeMessage="";
+  private static final String MODE_PRODUCTION = "production";
+  private static final String MODE_DEVELOPMENT = "development";
+  private static final String DEV_PREFIX = "dev_";
+  private static final String PROD_PREFIX = "";
+  public static final String MODE_PREFIX;
+  private static final String MODE_ERROR;
 
   private ViewConnection vconn;
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cbConnFactory;
+
+  /**
+   * Properties priority from highest to lowest:
+   *
+   * 1. Property defined in user code.
+   * 2. Property defined on command line.
+   * 3. Property defined in cbclient.properties.
+   */
+  static {
+    Properties properties = new Properties(System.getProperties());
+    String viewmode = properties.getProperty("viewmode", null);
+
+    if (viewmode == null) {
+      FileInputStream fs = null;
+      try {
+        URL url =  ClassLoader.getSystemResource("cbclient.properties");
+        if (url != null) {
+          fs = new FileInputStream(new File(url.getFile()));
+          properties.load(fs);
+        }
+        viewmode = properties.getProperty("viewmode");
+      } catch (IOException e) {
+        // Properties file doesn't exist. Error logged later.
+      } finally {
+        if (fs != null) {
+          CloseUtil.close(fs);
+        }
+      }
+    }
+
+    if (viewmode == null) {
+      MODE_ERROR = "viewmode property isn't defined. Setting viewmode to"
+        + " production mode";
+      MODE_PREFIX = PROD_PREFIX;
+    } else if (viewmode.equals(MODE_PRODUCTION)) {
+      MODE_ERROR = "viewmode set to production mode";
+      MODE_PREFIX = PROD_PREFIX;
+    } else if (viewmode.equals(MODE_DEVELOPMENT)) {
+      MODE_ERROR = "viewmode set to development mode";
+      MODE_PREFIX = DEV_PREFIX;
+    } else {
+      MODE_ERROR = "unknown value \"" + viewmode + "\" for property viewmode"
+          + " Setting to production mode";
+      MODE_PREFIX = PROD_PREFIX;
+    }
+  }
 
   /**
    * Get a CouchbaseClient based on the initial server list provided.
@@ -192,9 +247,7 @@ public class CouchbaseClient extends MemcachedClient
     List<InetSocketAddress> addrs =
       AddrUtil.getAddressesFromURL(cf.getVBucketConfig().getCouchServers());
 
-    modePrefix = cf.getViewModePrefix();
-    modeMessage = cf.getViewModeMessage();
-    getLogger().info(modeMessage);
+    getLogger().info(MODE_ERROR);
     vconn = cf.createViewConnection(addrs);
     cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
@@ -231,15 +284,7 @@ public class CouchbaseClient extends MemcachedClient
   }
 
 
-  /**
-   * Get the View Mode Prefix.
-   *
-   * This prefix can be used to create views based
-   * on the viewmode property.
-   */
-  String getViewModePrefix() {
-    return modePrefix;
-  }
+
   /**
    * Gets access to a view contained in a design document from the cluster.
    *
@@ -266,7 +311,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   public HttpFuture<View> asyncGetView(String designDocumentName,
       final String viewName) {
-    designDocumentName = modePrefix + designDocumentName;
+    designDocumentName = MODE_PREFIX + designDocumentName;
     String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
@@ -322,7 +367,7 @@ public class CouchbaseClient extends MemcachedClient
    * @return a future containing a List of View objects from the cluster.
    */
   public HttpFuture<List<View>> asyncGetViews(String designDocumentName) {
-    designDocumentName = modePrefix + designDocumentName;
+    designDocumentName = MODE_PREFIX + designDocumentName;
     String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
