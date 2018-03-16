@@ -75,8 +75,6 @@ import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.Repository;
-import com.couchbase.client.java.search.query.SearchQuery;
-import com.couchbase.client.java.search.SearchQueryResult;
 import com.couchbase.client.java.transcoder.Transcoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
 import com.couchbase.client.java.view.AsyncViewResult;
@@ -2531,5 +2529,4 @@ public interface AsyncBucket {
      */
     boolean isClosed();
 
-    Observable<SearchQueryResult> search(SearchQuery query);
 }

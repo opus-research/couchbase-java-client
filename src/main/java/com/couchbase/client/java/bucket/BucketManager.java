@@ -32,7 +32,6 @@ import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.Index;
 import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
-import com.couchbase.client.java.search.IndexSettings;
 import com.couchbase.client.java.view.DesignDocument;
 
 /**
@@ -729,18 +728,4 @@ public interface BucketManager {
      */
     @InterfaceStability.Experimental
     boolean watchIndex(String indexName, long watchTimeout, TimeUnit watchTimeUnit);
-
-
-    IndexSettings insertSearchIndex(IndexSettings settings);
-    IndexSettings insertSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit);
-
-    IndexSettings updateSearchIndex(IndexSettings settings);
-    IndexSettings updateSearchIndex(IndexSettings settings, long timeout, TimeUnit timeUnit);
-
-    Boolean hasSearchIndex(String name);
-    Boolean hasSearchIndex(String name, long timeout, TimeUnit timeUnit);
-
-    Boolean removeSearchIndex(String name);
-    Boolean removeSearchIndex(String name, long timeout, TimeUnit timeUnit);
-
 }

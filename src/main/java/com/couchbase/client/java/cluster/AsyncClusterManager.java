@@ -25,7 +25,6 @@ import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.search.IndexSettings;
 import rx.Observable;
 
 /**
@@ -137,4 +136,5 @@ public interface AsyncClusterManager {
      * @return true if the removal was successful, false otherwise.
      */
     Observable<Boolean> removeBucket(String name);
+
 }
