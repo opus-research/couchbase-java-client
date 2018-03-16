@@ -57,7 +57,7 @@ public class DefaultInsertValuesPath extends DefaultReturningPath implements Ins
 
   @Override
   public InsertValuesPath values(String id, String value) {
-    element(new InsertValueElement(POS, s(id), x(value)));
+    element(new InsertValueElement(POS, s(id), s(value)));
     return new DefaultInsertValuesPath(this);
   }
 
@@ -108,7 +108,7 @@ public class DefaultInsertValuesPath extends DefaultReturningPath implements Ins
 
   @Override
   public InsertValuesPath values(Expression id, String value) {
-    element(new InsertValueElement(POS, id, x(value)));
+    element(new InsertValueElement(POS, id, s(value)));
     return new DefaultInsertValuesPath(this);
   }
 
