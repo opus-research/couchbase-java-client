@@ -37,7 +37,7 @@ import rx.functions.Func2;
  * @author Simon Baslé
  * @since 2.1
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class Retry {
 
