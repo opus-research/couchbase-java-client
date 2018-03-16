@@ -22,7 +22,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -46,13 +45,10 @@ import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.*;
-import com.couchbase.client.java.util.Buffers;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
-import rx.exceptions.CompositeException;
 import rx.functions.Func0;
 import rx.functions.Func1;
-import rx.functions.Func2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -526,11 +522,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         public AsyncQueryRow call(ByteBuf byteBuf) {
                             try {
                                 JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                byteBuf.release();
                                 return new DefaultAsyncQueryRow(value);
                             } catch (Exception e) {
                                 throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
                             }
                         }
                     });
@@ -538,106 +533,34 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
                             try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                byteBuf.release();
+                                return value;
                             } catch (Exception e) {
                                 throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
                             }
                         }
                     });
                     if (response.status().isSuccess()) {
-                        response.errors().subscribe(Buffers.ACTION_RELEASE);
                         return Observable.just((AsyncQueryResult) new DefaultAsyncQueryResult(rows, info, null,
                             response.status().isSuccess()));
                     } else {
-                        return response.errors().map(new Func1<ByteBuf, JsonObject>() {
+                        return response.info().map(new Func1<ByteBuf, AsyncQueryResult>() {
                             @Override
-                            public JsonObject call(ByteBuf byteBuf) {
+                            public AsyncQueryResult call(ByteBuf byteBuf) {
                                 try {
-                                    return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                    JsonObject error = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                    byteBuf.release();
+                                    return new DefaultAsyncQueryResult(rows, info, error, response.status().isSuccess());
                                 } catch (Exception e) {
                                     throw new TranscodingException("Could not decode View Info.", e);
-                                } finally {
-                                    byteBuf.release();
                                 }
-                            }
-                        }).last().map(new Func1<JsonObject, AsyncQueryResult>() {
-                            @Override
-                            public AsyncQueryResult call(JsonObject error) {
-                                //TODO rework DefaultAsyncQueryResult
-                                return new DefaultAsyncQueryResult(rows, info, error, response.status().isSuccess());
+
                             }
                         });
                     }
                 }
             });
-    }
-
-    @Override
-    public Observable<QueryPlan> queryPrepare(PrepareStatement prepare) {
-        SimpleQuery query = new SimpleQuery(prepare);
-        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.toN1QL(),
-                bucket, password);
-        return core
-                .<GenericQueryResponse>send(prepareRequest)
-                .flatMap(new Func1<GenericQueryResponse, Observable<QueryPlan>>() {
-                    @Override
-                    public Observable<QueryPlan> call(GenericQueryResponse r) {
-                        if (r.status().isSuccess()) {
-                            r.info().subscribe(Buffers.ACTION_RELEASE);
-                            r.errors().subscribe(Buffers.ACTION_RELEASE);
-                            return r.rows().map(new Func1<ByteBuf, QueryPlan>() {
-                                @Override
-                                public QueryPlan call(ByteBuf byteBuf) {
-                                    try {
-                                        JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                        return new QueryPlan(value);
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                    } finally {
-                                        byteBuf.release();
-                                    }
-                                }
-                            });
-                        } else {
-                            r.info().subscribe(Buffers.ACTION_RELEASE);
-                            r.rows().subscribe(Buffers.ACTION_RELEASE);
-                            return r.errors().map(new Func1<ByteBuf, Exception>() {
-                                @Override
-                                public Exception call(ByteBuf byteBuf) {
-                                    try {
-                                        JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                        return new CouchbaseException("Query Error - " + value.toString());
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                    } finally {
-                                        byteBuf.release();
-                                    }
-                                }
-                            }).reduce(new ArrayList<Throwable>(),
-                                new Func2<ArrayList<Throwable>, Exception, ArrayList<Throwable>>() {
-                                    @Override
-                                    public ArrayList<Throwable> call(ArrayList<Throwable> throwables,
-                                            Exception error) {
-                                        throwables.add(error);
-                                        return throwables;
-                                    }
-                            }).flatMap(new Func1<ArrayList<Throwable>, Observable<QueryPlan>>() {
-                                @Override
-                                public Observable<QueryPlan> call(ArrayList<Throwable> errors) {
-                                    if (errors.size() == 1) {
-                                        return Observable.error(new CouchbaseException(
-                                                "Error while preparing plan", errors.get(0)));
-                                    } else {
-                                        return Observable.error(new CompositeException(
-                                                "Multiple errors while preparing plan", errors));
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
     }
 
     @Override

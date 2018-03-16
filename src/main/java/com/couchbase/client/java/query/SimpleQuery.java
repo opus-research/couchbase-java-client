@@ -21,7 +21,7 @@
  */
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.java.document.json.JsonValue;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
  * The simplest form of N1QL {@link Query} with a plain un-parametrized {@link Statement}.
@@ -29,7 +29,7 @@ import com.couchbase.client.java.document.json.JsonValue;
  * @author Simon Baslé
  * @since 2.1
  */
-public class SimpleQuery extends AbstractQuery {
+public class SimpleQuery implements Query {
 
     private final Statement statement;
 
@@ -47,17 +47,9 @@ public class SimpleQuery extends AbstractQuery {
     }
 
     @Override
-    protected String statementType() {
-        return "statement";
-    }
-
-    @Override
-    protected Object statementValue() {
-        return this.statement.toString();
-    }
-
-    @Override
-    protected JsonValue statementParameters() {
-        return null;
+    public String toN1QL() {
+        return JsonObject.create()
+            .put("statement", this.statement.toString())
+            .toString();
     }
 }
