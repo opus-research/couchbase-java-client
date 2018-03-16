@@ -275,4 +275,16 @@ public class ViewQueryTest {
         assertEquals(query, deserialized);
     }
 
+    @Test
+    public void shouldStoreKeysAsJsonOutsideParams() {
+        JsonArray keys = JsonArray.create().add("1").add("2").add("3");
+        String keysJson = keys.toString();
+        ViewQuery query = ViewQuery.from("design", "view");
+        assertNull(query.getKeys());
+
+        query.keys(keys);
+        assertEquals(keysJson, query.getKeys());
+        assertFalse(query.toString().contains("keys="));
+        assertFalse(query.toString().contains("3"));
+    }
 }
