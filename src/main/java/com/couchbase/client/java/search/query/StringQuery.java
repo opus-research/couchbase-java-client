@@ -1,16 +1,16 @@
-/*
- * Copyright (C) 2016 Couchbase, Inc.
- *
+/**
+ * Copyright (C) 2015 Couchbase, Inc.
+ * <p/>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p/>
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p/>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,36 +20,57 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error;
+package com.couchbase.client.java.search.query;
 
-import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.bucket.BucketManager;
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * An exception indicating that an index does not exist, for instance
- * when trying to delete one using {@link BucketManager#dropIndex(String, boolean)}.
- *
- * @author Simon Baslé
- * @since 2.2
+ * @author Sergey Avseyev
  */
-@InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class IndexDoesNotExistException extends CouchbaseException {
+@InterfaceStability.Experimental
+public class StringQuery extends SearchQuery {
+    private final String query;
 
-    public IndexDoesNotExistException() {
+    protected StringQuery(Builder builder) {
+        super(builder);
+        query = builder.query;
     }
 
-    public IndexDoesNotExistException(String message) {
-        super(message);
+    public static Builder on(String index) {
+        return new Builder(index);
     }
 
-    public IndexDoesNotExistException(String message, Throwable cause) {
-        super(message, cause);
+    public String query() {
+        return query;
     }
 
-    public IndexDoesNotExistException(Throwable cause) {
-        super(cause);
+    public double boost() {
+        return boost;
+    }
+
+    @Override
+    public JsonObject queryJson() {
+        return JsonObject.create()
+                .put("query", query);
+    }
+
+    public static class Builder extends SearchQuery.Builder {
+        private String query;
+
+        protected Builder(String index) {
+            super(index);
+        }
+
+        public StringQuery build() {
+            return new StringQuery(this);
+        }
+
+        public Builder query(String query) {
+            this.query = query;
+            return this;
+        }
     }
 }
