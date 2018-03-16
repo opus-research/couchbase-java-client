@@ -306,8 +306,8 @@ public class BucketMonitor extends Observable {
   /**
    * Shut down this monitor in a graceful way.
    *
-   * @param timeout maximum time until shutdown is forced.
-   * @param unit the time unit for the timeout.
+   * @param timeout
+   * @param unit
    */
   public void shutdown(long timeout, TimeUnit unit) {
     deleteObservers();

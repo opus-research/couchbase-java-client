@@ -262,7 +262,7 @@ public class Paginator implements Iterator<ViewResponse> {
   }
 
   /**
-   * This method is not supported in this context.
+   * The {@link #remove()} method is not supported in this context.
    */
   public final void remove() {
     throw new UnsupportedOperationException("Remove is unsupported");

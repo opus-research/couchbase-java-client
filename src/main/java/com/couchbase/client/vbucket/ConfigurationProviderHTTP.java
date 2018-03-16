@@ -199,7 +199,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * established, a backoff algorithm is in place to retry after a
    * increasing timeframe.
    *
-   * @param bucketToFind the name of the bucket to find in the REST API.
+   * @param bucketToFind
    */
   private void readPools(String bucketToFind) {
     for (URI baseUri : baseList) {
@@ -379,14 +379,14 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    *
    * @param resource the URI either absolute or relative to the base for this
    * ClientManager
-   * @return a proper URLConnection to use.
+   * @return
    * @throws java.io.IOException
    */
-  private URLConnection urlConnBuilder(URI base, URI resource) throws IOException {
+  private URLConnection urlConnBuilder(URI base, URI resource)
+    throws IOException {
     if (!resource.isAbsolute() && base != null) {
       resource = base.resolve(resource);
     }
-
     URL specURL = resource.toURL();
     URLConnection connection = specURL.openConnection();
     connection.setConnectTimeout(500); // All conns are on local LAN

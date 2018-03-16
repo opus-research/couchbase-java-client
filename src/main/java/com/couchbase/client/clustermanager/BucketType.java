@@ -44,6 +44,7 @@ public enum BucketType {
 
   /**
    * Creates an BucketType instance.
+   * @param type
    */
   BucketType(String type) {
     this.type = type;

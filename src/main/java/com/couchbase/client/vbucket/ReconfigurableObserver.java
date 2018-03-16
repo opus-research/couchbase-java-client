@@ -42,6 +42,9 @@ public class ReconfigurableObserver implements Observer {
 
   /**
    * Delegates update to the reconfigurable passed in the constructor.
+   *
+   * @param o
+   * @param arg
    */
   public void update(Observable o, Object arg) {
     LOGGER.finest("Received an update, notifying reconfigurables about a "
