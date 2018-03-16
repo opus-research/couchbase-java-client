@@ -18,7 +18,6 @@ import com.couchbase.client.java.convert.Converter;
 import com.couchbase.client.java.convert.JacksonJsonConverter;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
-import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryResult;
@@ -275,11 +274,5 @@ public class CouchbaseBucket implements Bucket {
                     }
                 }
             });
-    }
-
-    @Override
-    public Observable<LongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
-        core.<CounterResponse>send(new CounterRequest(id, delta, initial, expiry, bucket))
-        return null;
     }
 }
