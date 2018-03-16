@@ -31,7 +31,15 @@ import com.couchbase.client.java.document.json.JsonValue;
  */
 public class SimpleQuery extends AbstractQuery {
 
-    /* package */ SimpleQuery(Statement statement, QueryParams params) {
+    /**
+     * Create a new {@link Query} with a plain un-parametrized {@link Statement}.
+     * @param statement the {@link Statement} to execute
+     */
+    public SimpleQuery(Statement statement) {
+        super(statement, null);
+    }
+
+    public SimpleQuery(Statement statement, QueryParams params) {
         super(statement, params);
     }
 

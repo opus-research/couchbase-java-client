@@ -515,7 +515,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Statement statement) {
-        return query(Query.simple(statement));
+        return query(new SimpleQuery(statement));
     }
 
     @Override
@@ -596,7 +596,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<QueryPlan> queryPrepare(PrepareStatement prepare) {
-        SimpleQuery query = Query.simple(prepare);
+        SimpleQuery query = new SimpleQuery(prepare);
         GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
                 bucket, password);
         return core
