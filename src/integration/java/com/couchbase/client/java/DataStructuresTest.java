@@ -51,14 +51,14 @@ public class DataStructuresTest {
 
     @Before
     public void init() throws Exception {
-        ctx.bucket().mapAdd("dsmap", "1", "1", MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().mapAdd("dsmapFull", "1", "1", MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().listAppend("dslist", "1", MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().listAppend("dslistFull", "1", MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().setAdd("dsset", 1, MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().setAdd("dssetFull", 1, MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().queuePush("dsqueue", 1, MutationOptionBuilder.builder().createDocument(true));
-        ctx.bucket().queuePush("dsqueueFull", 1, MutationOptionBuilder.builder().createDocument(true));
+        ctx.bucket().mapAdd("dsmap", "1", "1");
+        ctx.bucket().mapAdd("dsmapFull", "1", "1");
+        ctx.bucket().listPush("dslist", "1");
+        ctx.bucket().listPush("dslistFull", "1");
+        ctx.bucket().setAdd("dsset", 1);
+        ctx.bucket().setAdd("dssetFull", 1);
+        ctx.bucket().queueAdd("dsqueue", 1);
+        ctx.bucket().queueAdd("dsqueueFull", 1);
     }
 
     @AfterClass
@@ -133,7 +133,7 @@ public class DataStructuresTest {
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testMapExpiry() {
-        ctx.bucket().mapAdd("dsmapShortLived", "1", "1", MutationOptionBuilder.builder().expiry(1).createDocument(true));
+        ctx.bucket().mapAdd("dsmapShortLived", "1", "1", MutationOptionBuilder.builder().expiry(1));
         try {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
@@ -143,10 +143,10 @@ public class DataStructuresTest {
 
     @Test
     public void testList() {
-        ctx.bucket().listAppend("dslist", "foo");
+        ctx.bucket().listPush("dslist", "foo");
         String myval = ctx.bucket().listGet("dslist", 1, String.class);
         assertEquals(myval, "foo");
-        ctx.bucket().listPrepend("dslist", null);
+        ctx.bucket().listShift("dslist", null);
         assertNull(ctx.bucket().listGet("dslist", 0, Object.class));
         ctx.bucket().listSet("dslist", 1, JsonArray.create().add("baz"));
         JsonArray array = ctx.bucket().listGet("dslist", 1, JsonArray.class);
@@ -204,13 +204,13 @@ public class DataStructuresTest {
     public void testListFullException() {
         char[] data = new char[5000000];
         String str = new String(data);
-        boolean result = ctx.bucket().listPrepend("dslistFull", str, MutationOptionBuilder.builder().persistTo(PersistTo.MASTER));
+        boolean result = ctx.bucket().listShift("dslistFull", str, MutationOptionBuilder.builder().persistTo(PersistTo.MASTER));
         assertEquals(result, true);
     }
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testListExpiry() {
-        ctx.bucket().listAppend("dslistShortLived", "1", MutationOptionBuilder.builder().expiry(1).createDocument(true));
+        ctx.bucket().listPush("dslistShortLived", "1", MutationOptionBuilder.builder().expiry(1));
         try {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
@@ -220,52 +220,52 @@ public class DataStructuresTest {
 
     @Test
     public void testQueue() {
-        Object first = ctx.bucket().queuePop("dsqueue", Object.class);
+        Object first = ctx.bucket().queueRemove("dsqueue", Object.class);
         assertNotNull(first);
-        boolean result = ctx.bucket().queuePush("dsqueue", "val1");
+        boolean result = ctx.bucket().queueAdd("dsqueue", "val1");
         assert (result == true);
-        result = ctx.bucket().queuePush("dsqueue", "val2");
+        result = ctx.bucket().queueAdd("dsqueue", "val2");
         assert (result == true);
-        String val = ctx.bucket().queuePop("dsqueue", String.class);
+        String val = ctx.bucket().queueRemove("dsqueue", String.class);
         assertEquals(val, "val1");
-        val = ctx.bucket().queuePop("dsqueue", String.class);
+        val = ctx.bucket().queueRemove("dsqueue", String.class);
         assertEquals(val, "val2");
-        ctx.bucket().queuePush("dsqueue", null);
-        assertNull(ctx.bucket().queuePop("dsqueue", null));
+        ctx.bucket().queueAdd("dsqueue", null);
+        assertNull(ctx.bucket().queueRemove("dsqueue", null));
     }
 
     @Test
     public void testQueueEmptyRemove() {
         int size = ctx.bucket().queueSize("dsqueue");
         while (size > 0) {
-            ctx.bucket().queuePop("dsqueue", Object.class);
+            ctx.bucket().queueRemove("dsqueue", Object.class);
             size = ctx.bucket().queueSize("dsqueue");
         }
-        assertEquals(ctx.bucket().queuePop("dsqueue", Object.class), null);
+        assertEquals(ctx.bucket().queueRemove("dsqueue", Object.class), null);
     }
 
     @Test(expected = CASMismatchException.class)
-    public void testqueuePushCasMismatch() {
+    public void testQueueAddCasMismatch() {
         JsonArrayDocument document = ctx.bucket().get("dsqueue", JsonArrayDocument.class);
-        ctx.bucket().queuePush("dsqueue", "casElement", MutationOptionBuilder.builder().cas(document.cas() + 1));
+        ctx.bucket().queueAdd("dsqueue", "casElement", MutationOptionBuilder.builder().cas(document.cas() + 1));
     }
 
     @Test(expected = RequestTooBigException.class)
     public void testQueueFullException() {
         char[] data = new char[5000000];
         String str = new String(data);
-        boolean result = ctx.bucket().queuePush("dsqueueFull", str, MutationOptionBuilder.builder().persistTo(PersistTo.MASTER));
+        boolean result = ctx.bucket().queueAdd("dsqueueFull", str, MutationOptionBuilder.builder().persistTo(PersistTo.MASTER));
         assertEquals(result, true);
     }
 
     @Test(expected = RuntimeException.class)
-    public void testSyncqueuePushTimeout() {
-        ctx.bucket().queuePush("dsqueue", "timeout", 1, TimeUnit.NANOSECONDS);
+    public void testSyncQueueAddTimeout() {
+        ctx.bucket().queueAdd("dsqueue", "timeout", 1, TimeUnit.NANOSECONDS);
     }
 
     @Test(expected = DocumentDoesNotExistException.class)
-    public void testqueuePopOnNonExistentDocument() {
-        ctx.bucket().queuePop("dsqueueRandom", String.class);
+    public void testQueueRemoveOnNonExistentDocument() {
+        ctx.bucket().queueRemove("dsqueueRandom", String.class);
     }
 
     @Test(expected = DocumentDoesNotExistException.class)
@@ -275,7 +275,7 @@ public class DataStructuresTest {
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testQueueExpiry() {
-        ctx.bucket().queuePush("dsqueueShortLived", "1", MutationOptionBuilder.builder().expiry(1).createDocument(true));
+        ctx.bucket().queueAdd("dsqueueShortLived", "1", MutationOptionBuilder.builder().expiry(1));
         try {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
@@ -293,16 +293,16 @@ public class DataStructuresTest {
         assertEquals(val, "foo");
         result = ctx.bucket().setAdd("dsset", "foo");
         assertEquals(result, true);
-        result = ctx.bucket().setContains("dsset", "foo");
+        result = ctx.bucket().setExists("dsset", "foo");
         assertEquals(result, true);
         ctx.bucket().setRemove("dsset", "foo");
         String element = ctx.bucket().setRemove("dsset", "foo");
         assertEquals(element, "foo");
-        result = ctx.bucket().setContains("dsset", "foo");
+        result = ctx.bucket().setExists("dsset", "foo");
         assertEquals(result, false);
         result = ctx.bucket().setAdd("dsset", null);
         assertEquals(result, true);
-        assertEquals(ctx.bucket().setContains("dsset", null), true);
+        assertEquals(ctx.bucket().setExists("dsset", null), true);
         assertNull(ctx.bucket().setRemove("dsset", null));
         result = ctx.bucket().setAdd("dsset", 2);
         assertEquals(result, true);
@@ -338,7 +338,7 @@ public class DataStructuresTest {
 
     @Test(expected = DocumentDoesNotExistException.class)
     public void testSetExpiry() {
-        ctx.bucket().setAdd("dssetShortLived", "1", MutationOptionBuilder.builder().expiry(1).createDocument(true));
+        ctx.bucket().setAdd("dssetShortLived", "1", MutationOptionBuilder.builder().expiry(1));
         try {
             Thread.sleep(2000);
         } catch (InterruptedException ex) {
