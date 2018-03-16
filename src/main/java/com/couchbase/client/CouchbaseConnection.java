@@ -57,7 +57,7 @@ import net.spy.memcached.ops.VBucketAware;
  *
  */
 public class CouchbaseConnection extends MemcachedConnection  implements
-  Reconfigurable {
+  CouchbaseConnectable {
 
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cf;
