@@ -22,27 +22,54 @@
 
 package com.couchbase.client;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.TestConfig;
 import org.junit.Test;
 
+import static org.junit.Assert.*;
+
 /**
- * Verifies the correct functionality of the {@link ViewConnection} class.
+ * Verifies the correct functionality of the ViewConnection class.
  */
 public class ViewConnectionTest {
 
+  /**
+   * Tests the correctness of the initialization and shutdown phase.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Create view connection using the
+   * parameters as above.
+   * @post Assert false if the view connection nodes are empty
+   * Shutdown the client and then again check for assertion.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
+   */
   @Test
-  public void shouldAddNodeOnRebalance() {
+  public void testInitAndShutdown() throws IOException, InterruptedException {
+
+    CouchbaseConnectionFactory cf = new CouchbaseConnectionFactory(
+      Arrays.asList(
+        URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")
+      ),
+      "default",
+      ""
+    );
+
+    List<InetSocketAddress> addrs = AddrUtil.getAddressesFromURL(
+      cf.getVBucketConfig().getCouchServers()
+    );
+
+    ViewConnection vconn = cf.createViewConnection(addrs);
+    assertFalse(vconn.getConnectedNodes().isEmpty());
+    assertTrue(vconn.shutdown());
+    assertTrue(vconn.getConnectedNodes().isEmpty());
 
   }
-
-  @Test
-  public void shouldRemoveNodeOnRebalance() {
-
-  }
-
-  @Test
-  public void shouldAddAndRemoveNodeOnRebalance() {
-
-  }
-
 
 }

@@ -771,6 +771,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   protected void addOp(final HttpOperation op) {
     if(vconn != null) {
+      vconn.checkState();
       vconn.addOp(op);
     }
   }
