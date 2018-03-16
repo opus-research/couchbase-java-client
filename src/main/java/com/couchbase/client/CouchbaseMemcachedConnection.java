@@ -25,12 +25,6 @@ package com.couchbase.client;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.MemcachedConnection;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.OperationFactory;
-import net.spy.memcached.ops.Operation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -43,6 +37,13 @@ import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.FailureMode;
+import net.spy.memcached.MemcachedConnection;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.OperationFactory;
+import net.spy.memcached.ops.Operation;
 
 /**
  * Couchbase implementation of CouchbaseConnection.
@@ -164,13 +165,14 @@ public class CouchbaseMemcachedConnection extends MemcachedConnection implements
       return;
     }
 
-    boolean needsRecheckConfigUpdate = false;
+    if(!primary.isActive()) {
+      cf.checkConfigUpdate();
+    }
+
     if (primary.isActive() || failureMode == FailureMode.Retry) {
       placeIn = primary;
-      needsRecheckConfigUpdate = !primary.isActive();
     } else if (failureMode == FailureMode.Cancel) {
       o.cancel();
-      needsRecheckConfigUpdate = true;
     } else {
       // Look for another node in sequence that is ready.
       for (Iterator<MemcachedNode> i = locator.getSequence(key); placeIn == null
@@ -185,19 +187,10 @@ public class CouchbaseMemcachedConnection extends MemcachedConnection implements
       // and wait for it to come back online.
       if (placeIn == null) {
         placeIn = primary;
-        needsRecheckConfigUpdate = true;
         this.getLogger().warn(
             "Could not redistribute "
                 + "to another node, retrying primary node for %s.", key);
       }
-    }
-
-    if (needsRecheckConfigUpdate) {
-      getLogger().warn(
-        "Node expected to receive data is inactive. This could be due to "
-          + "a failure within the cluster. Will check for updated "
-          + "configuration. Key without a configured node is: %s.", key);
-      cf.checkConfigUpdate();
     }
 
     assert o.isCancelled() || placeIn != null : "No node found for key " + key;
