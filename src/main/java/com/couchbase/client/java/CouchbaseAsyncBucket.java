@@ -62,6 +62,7 @@ import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
+import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
@@ -87,6 +88,7 @@ import com.couchbase.client.java.query.DefaultAsyncQueryResult;
 import com.couchbase.client.java.query.DefaultAsyncQueryRow;
 import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.PreparedPayload;
+import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
 import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.SimpleQuery;
@@ -113,6 +115,7 @@ import com.couchbase.client.java.view.ViewQueryResponseMapper;
 import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.exceptions.CompositeException;
+import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -749,7 +752,60 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
-        return queryRaw(query.n1ql().toString());
+        Observable<AsyncQueryResult> result = queryRaw(query.n1ql().toString());
+
+        if (query instanceof PreparedQuery && environment().retryStrategy() == BestEffortRetryStrategy.INSTANCE) {
+            /*
+            retry handling for prepared statements:
+             - the statement() is a PreparedPayload (with a name and the original statement)
+             - attempting to prepare a PreparedPayload will reuse the name and original statement
+             - this will update the query node's cache with the same info as the node on which we previously prepared
+             */
+            result = result.flatMap(new Func1<AsyncQueryResult, Observable<? extends AsyncQueryResult>>() {
+                @Override
+                public Observable<? extends AsyncQueryResult> call(AsyncQueryResult aqr) {
+                    //cache errors so that peeking into it then re-emitting them works
+                    Observable<JsonObject> errors = aqr.errors().cache();
+                    //peek at errors
+                    return errors
+                            //only take interest in the 4040 error (prepared statement name doesn't exist)
+                            .filter(new Func1<JsonObject, Boolean>() {
+                                @Override
+                                public Boolean call(JsonObject error) {
+                                    return error.getInt("code") == 4040;
+                                }
+                            })
+                            .doOnNext(new Action1<JsonObject>() {
+                                @Override
+                                public void call(JsonObject planNotFound) {
+                                    LOGGER.warn("Re-prepared a named prepared statement, " + planNotFound.getString("msg"));
+                                }
+                            })
+                            //if 4040 encountered, re-prepare...
+                            .flatMap(new Func1<JsonObject, Observable<PreparedPayload>>() {
+                                @Override
+                                public Observable<PreparedPayload> call(JsonObject planNotFound) {
+                                    return CouchbaseAsyncBucket.this.prepare(query.statement());
+                                }
+                            })
+                            //...and reissue the query as is (this allows to include params as well...
+                            // the name should now be valid)
+                            .flatMap(new Func1<PreparedPayload, Observable<AsyncQueryResult>>() {
+                                @Override
+                                public Observable<AsyncQueryResult> call(PreparedPayload newPlan) {
+                                    return queryRaw(query.n1ql().toString());
+                                }
+                            })
+                            //...otherwise filtered errors will be empty. Recreate result from original
+                            // but with the cached errors (since original.errors() will have been consumed)
+                            .defaultIfEmpty(new DefaultAsyncQueryResult(aqr.rows(), aqr.signature(),
+                                    aqr.info(), errors, aqr.finalSuccess(), aqr.parseSuccess(),
+                                    aqr.requestId(), aqr.clientContextId()));
+                }
+            });
+
+        }
+        return result;
     }
 
     /**

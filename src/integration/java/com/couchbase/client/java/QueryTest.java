@@ -190,4 +190,18 @@ public class QueryTest extends ClusterDependentTest {
         assertEquals(1, rows.size());
         assertTrue(rows.get(0).value().toString().contains("123"));
     }
+
+    //FIXME this is impossible to test twice in a row without a mean of evicting named prepared statements... Chicken and Egg problem
+    //this test also allowed to detect UnicastAutoReleaseSubject multiple subscriptions in the case where the first
+    //  AsyncQueryResult is valid (no need to retry prepare) => had to recreate aqr with error().cache()...
+    @Test
+    public void shouldRetryPrepareIfPlanNameNotFound() {
+        Statement st = select("*").from(i("beer-sample")).limit(10);
+        PreparedPayload nonExistingPayload = new PreparedPayload(st, "nonExistingName");
+
+        QueryResult response = bucket().query(nonExistingPayload);
+        assertTrue(response.errors().toString(), response.finalSuccess());
+        List<QueryRow> rows = response.allRows();
+        assertEquals(10, rows.size());
+    }
 }
