@@ -12,8 +12,6 @@ public interface AsyncQueryResult {
 
     Observable<AsyncQueryRow> rows();
 
-    Observable<JsonObject> signature();
-
     Observable<JsonObject> info();
 
     boolean parseSuccess();
