@@ -21,13 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.lang.Tuple2;
@@ -60,11 +53,7 @@ import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
 import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
 import com.couchbase.client.core.message.kv.subdoc.multi.MultiLookupResponse;
-import com.couchbase.client.core.message.kv.subdoc.multi.MultiMutationResponse;
-import com.couchbase.client.core.message.kv.subdoc.multi.Mutation;
-import com.couchbase.client.core.message.kv.subdoc.multi.MutationCommand;
 import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiLookupRequest;
-import com.couchbase.client.core.message.kv.subdoc.multi.SubMultiMutationRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SimpleSubdocResponse;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubArrayRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubCounterRequest;
@@ -75,6 +64,8 @@ import com.couchbase.client.core.message.kv.subdoc.simple.SubExistRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubGetRequest;
 import com.couchbase.client.core.message.kv.subdoc.simple.SubReplaceRequest;
 import com.couchbase.client.core.message.observe.Observe;
+import com.couchbase.client.core.message.search.SearchQueryRequest;
+import com.couchbase.client.core.message.search.SearchQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
@@ -85,13 +76,13 @@ import com.couchbase.client.java.bucket.ReplicaReader;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
+import com.couchbase.client.java.document.json.JsonArray;
+import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.document.subdoc.DocumentFragment;
 import com.couchbase.client.java.document.subdoc.ExtendDirection;
 import com.couchbase.client.java.document.subdoc.LookupResult;
-import com.couchbase.client.java.document.subdoc.MultiLookupResult;
 import com.couchbase.client.java.document.subdoc.LookupSpec;
-import com.couchbase.client.java.document.subdoc.MultiMutationResult;
-import com.couchbase.client.java.document.subdoc.MutationSpec;
+import com.couchbase.client.java.document.subdoc.MultiLookupResult;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
@@ -121,6 +112,9 @@ import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.core.N1qlQueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
+import com.couchbase.client.java.search.SearchQueryRow;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
 import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
@@ -134,8 +128,8 @@ import com.couchbase.client.java.transcoder.RawJsonTranscoder;
 import com.couchbase.client.java.transcoder.SerializableTranscoder;
 import com.couchbase.client.java.transcoder.StringTranscoder;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.transcoder.subdoc.JacksonFragmentTranscoder;
 import com.couchbase.client.java.transcoder.subdoc.FragmentTranscoder;
+import com.couchbase.client.java.transcoder.subdoc.JacksonFragmentTranscoder;
 import com.couchbase.client.java.view.AsyncSpatialViewResult;
 import com.couchbase.client.java.view.AsyncViewResult;
 import com.couchbase.client.java.view.SpatialViewQuery;
@@ -145,6 +139,13 @@ import com.couchbase.client.java.view.ViewRetryHandler;
 import rx.Observable;
 import rx.functions.Func0;
 import rx.functions.Func1;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class CouchbaseAsyncBucket implements AsyncBucket {
 
@@ -806,6 +807,101 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     return ViewQueryResponseMapper.mapToViewResult(CouchbaseAsyncBucket.this, query, response);
                 }
             });
+    }
+
+    @Override
+    public Observable<SearchQueryResult> query(final SearchQuery query) {
+        Observable<SearchQueryResponse> source = Observable.defer(new Func0<Observable<SearchQueryResponse>>() {
+            @Override
+            public Observable<SearchQueryResponse> call() {
+                final SearchQueryRequest request =
+                    new SearchQueryRequest(query.index(), query.json().toString(), bucket, password);
+                return core.send(request);
+            }
+        });
+
+        // TODO: this needs to be refactored into its own class.
+        return source.map(new Func1<SearchQueryResponse, SearchQueryResult>() {
+            @Override
+            public SearchQueryResult call(SearchQueryResponse response) {
+                if (!response.status().isSuccess()) {
+                    throw new CouchbaseException("Could not query search index: " + response.payload());
+                }
+
+                JsonObject json = JsonObject.fromJson(response.payload());
+                long totalHits = json.getLong("total_hits");
+                long took = json.getLong("took");
+                double maxScore = json.getDouble("max_score");
+                List<SearchQueryRow> hits = new ArrayList<SearchQueryRow>();
+                for (Object rawHit : json.getArray("hits")) {
+                    JsonObject hit = (JsonObject)rawHit;
+                    String index = hit.getString("index");
+                    String id = hit.getString("id");
+                    double score = hit.getDouble("score");
+                    String explanation = null;
+                    JsonObject explanationJson = hit.getObject("explanation");
+                    if (explanationJson != null) {
+                        explanation = explanationJson.toString();
+                    }
+                    Map<String, Map<String, List<SearchQueryRow.Location>>> locations = null;
+                    JsonObject locationsJson = hit.getObject("locations");
+                    if (locationsJson != null) {
+                        locations = new HashMap<String, Map<String, List<SearchQueryRow.Location>>>();
+                        for (String field : locationsJson.getNames()) {
+                            JsonObject termsJson = locationsJson.getObject(field);
+                            Map<String, List<SearchQueryRow.Location>> terms = new HashMap<String, List<SearchQueryRow.Location>>();
+                            for (String term : termsJson.getNames()) {
+                                JsonArray locsJson = termsJson.getArray(term);
+                                List<SearchQueryRow.Location> locs = new ArrayList<SearchQueryRow.Location>(locsJson.size());
+                                for (int i = 0; i < locsJson.size(); i++) {
+                                    JsonObject loc = locsJson.getObject(i);
+                                    long pos = loc.getLong("pos");
+                                    long start = loc.getLong("start");
+                                    long end = loc.getLong("end");
+                                    JsonArray arrayPositionsJson = loc.getArray("array_positions");
+                                    long[] arrayPositions = null;
+                                    if (arrayPositionsJson != null) {
+                                        arrayPositions = new long[arrayPositionsJson.size()];
+                                        for (int j = 0; j < arrayPositionsJson.size(); j++) {
+                                            arrayPositions[j] = arrayPositionsJson.getLong(j);
+                                        }
+                                    }
+                                    locs.add(new SearchQueryRow.Location(pos, start, end, arrayPositions));
+                                }
+                                terms.put(term, locs);
+                            }
+                            locations.put(field, terms);
+                        }
+                    }
+
+                    Map<String, String[]> fragments = null;
+                    JsonObject fragmentsJson = hit.getObject("fragments");
+                    if (fragmentsJson != null) {
+                        fragments = new HashMap<String, String[]>();
+                        for (String field : fragmentsJson.getNames()) {
+                            JsonArray fragmentJson = fragmentsJson.getArray(field);
+                            String[] fragment = null;
+                            if (fragmentJson != null) {
+                                fragment = new String[fragmentJson.size()];
+                                for (int i = 0; i < fragmentJson.size(); i++) {
+                                    fragment[i] = fragmentJson.getString(i);
+                                }
+                            }
+                            fragments.put(field, fragment);
+                        }
+                    }
+
+                    Map<String, Object> fields = null;
+                    JsonObject fieldsJson = hit.getObject("fields");
+                    if (fieldsJson != null) {
+                        fields = fieldsJson.toMap();
+                    }
+
+                    hits.add(new SearchQueryRow(index, id, score, explanation, locations, fragments, fields));
+                }
+                return new SearchQueryResult(took, totalHits, maxScore, hits);
+            }
+        });
     }
 
     @Override
@@ -1863,112 +1959,113 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         });
     }
 
-    @Override
-    public Observable<MultiMutationResult> mutateIn(final JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo,
-            final MutationSpec... mutationSpecs) {
-        return mutateIn(doc.id(), doc.cas(), doc.expiry(), persistTo, replicateTo, mutationSpecs);
-    }
-
-    @Override
-    public Observable<MultiMutationResult> mutateIn(String docId, PersistTo persistTo, ReplicateTo replicateTo,
-            final MutationSpec... mutationSpecs) {
-        return mutateIn(docId, 0L, 0, persistTo, replicateTo, mutationSpecs);
-    }
-
-    protected Observable<MultiMutationResult> mutateIn(final String docId, final long cas, final int expiry,
-            final PersistTo persistTo, final ReplicateTo replicateTo, final MutationSpec... mutationSpecs) {
-        if (mutationSpecs == null) {
-            throw new NullPointerException("At least one MutationSpec is necessary for mutateIn");
-        }
-        if (mutationSpecs.length == 0) {
-            throw new IllegalArgumentException("At least one MutationSpec is necessary for mutateIn");
-        }
-
-        Observable<MultiMutationResult> mutations = Observable.defer(new Func0<Observable<MutationCommand>>() {
-            @Override
-            public Observable<MutationCommand> call() {
-                List<ByteBuf> bufList = new ArrayList<ByteBuf>(mutationSpecs.length);
-                final List<MutationCommand> commands = new ArrayList<MutationCommand>(mutationSpecs.length);
-
-                for (int i = 0; i < mutationSpecs.length; i++) {
-                    MutationSpec spec = mutationSpecs[i];
-                    if (spec.type() == Mutation.DELETE) {
-                        commands.add(new MutationCommand(Mutation.DELETE, spec.path()));
-                    } else {
-                        try {
-                            ByteBuf buf = subdocumentTranscoder.encodeWithMessage(spec.fragment(), "Couldn't encode MutationSpec #" +
-                                    i + " (" + spec.type() + " on " + spec.path() + ") in " + docId);
-                            bufList.add(buf);
-                            commands.add(new MutationCommand(spec.type(), spec.path(), buf, spec.createParents()));
-                        } catch (TranscodingException e) {
-                            releaseAll(bufList);
-                            return Observable.error(e);
-                        }
-                    }
-                }
-                return Observable.from(commands);
-            }
-        }).toList()
-        .flatMap(new Func1<List<MutationCommand>, Observable<MultiMutationResponse>>(){
-            @Override
-            public Observable<MultiMutationResponse> call(List<MutationCommand> mutationCommands) {
-                return core.send(new SubMultiMutationRequest(docId, bucket, expiry, cas, mutationCommands));
-            }
-        }).flatMap(new Func1<MultiMutationResponse, Observable<MultiMutationResult>>() {
-            @Override
-            public Observable<MultiMutationResult> call(MultiMutationResponse response) {
-                if (response.content() != null && response.content().refCnt() > 0) {
-                    response.content().release();
-                }
-
-                if (response.status().isSuccess()) {
-                    return Observable.just(
-                            new MultiMutationResult(docId, response.cas(), response.mutationToken()));
-                }
-
-                switch(response.status()) {
-                    case SUBDOC_MULTI_PATH_FAILURE:
-                        int index = response.firstErrorIndex();
-                        ResponseStatus errorStatus = response.firstErrorStatus();
-                        String errorPath = mutationSpecs[index].path();
-                        CouchbaseException errorException = commonSubdocErrors(errorStatus, docId, errorPath);
-
-                        return Observable.error(new MultiMutationException(index, errorStatus,
-                                Arrays.asList(mutationSpecs), errorException));
-                    default:
-                        return Observable.error(commonSubdocErrors(response.status(), docId, "MULTI-MUTATION"));
-                }
-            }
-        });
-
-        if (persistTo == PersistTo.NONE && replicateTo == ReplicateTo.NONE) {
-            return mutations;
-        }
-
-        return mutations.flatMap(new Func1<MultiMutationResult, Observable<MultiMutationResult>>() {
-            @Override
-            public Observable<MultiMutationResult> call(final MultiMutationResult result) {
-                return Observe
-                        .call(core, bucket, result.id(), result.cas(), false, result.mutationToken(),
-                                persistTo.value(), replicateTo.value(),
-                                environment.observeIntervalDelay(), environment.retryStrategy())
-                        .map(new Func1<Boolean, MultiMutationResult>() {
-                            @Override
-                            public MultiMutationResult call(Boolean aBoolean) {
-                                return result;
-                            }
-                        })
-                        .onErrorResumeNext(new Func1<Throwable, Observable<MultiMutationResult>>() {
-                            @Override
-                            public Observable<MultiMutationResult> call(Throwable throwable) {
-                                return Observable.error(new DurabilityException(
-                                        "Durability requirement failed: " + throwable.getMessage(),
-                                        throwable));
-                            }
-                        });
-            }
-        });
-    }
+    //TODO reintroduce mutateIn once the protocol has been stabilized
+//    @Override
+//    public Observable<MultiMutationResult> mutateIn(final JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo,
+//            final MutationSpec... mutationSpecs) {
+//        return mutateIn(doc.id(), doc.cas(), doc.expiry(), persistTo, replicateTo, mutationSpecs);
+//    }
+//
+//    @Override
+//    public Observable<MultiMutationResult> mutateIn(String docId, PersistTo persistTo, ReplicateTo replicateTo,
+//            final MutationSpec... mutationSpecs) {
+//        return mutateIn(docId, 0L, 0, persistTo, replicateTo, mutationSpecs);
+//    }
+//
+//    protected Observable<MultiMutationResult> mutateIn(final String docId, final long cas, final int expiry,
+//            final PersistTo persistTo, final ReplicateTo replicateTo, final MutationSpec... mutationSpecs) {
+//        if (mutationSpecs == null) {
+//            throw new NullPointerException("At least one MutationSpec is necessary for mutateIn");
+//        }
+//        if (mutationSpecs.length == 0) {
+//            throw new IllegalArgumentException("At least one MutationSpec is necessary for mutateIn");
+//        }
+//
+//        Observable<MultiMutationResult> mutations = Observable.defer(new Func0<Observable<MutationCommand>>() {
+//            @Override
+//            public Observable<MutationCommand> call() {
+//                List<ByteBuf> bufList = new ArrayList<ByteBuf>(mutationSpecs.length);
+//                final List<MutationCommand> commands = new ArrayList<MutationCommand>(mutationSpecs.length);
+//
+//                for (int i = 0; i < mutationSpecs.length; i++) {
+//                    MutationSpec spec = mutationSpecs[i];
+//                    if (spec.type() == Mutation.DELETE) {
+//                        commands.add(new MutationCommand(Mutation.DELETE, spec.path()));
+//                    } else {
+//                        try {
+//                            ByteBuf buf = subdocumentTranscoder.encodeWithMessage(spec.fragment(), "Couldn't encode MutationSpec #" +
+//                                    i + " (" + spec.type() + " on " + spec.path() + ") in " + docId);
+//                            bufList.add(buf);
+//                            commands.add(new MutationCommand(spec.type(), spec.path(), buf, spec.createParents()));
+//                        } catch (TranscodingException e) {
+//                            releaseAll(bufList);
+//                            return Observable.error(e);
+//                        }
+//                    }
+//                }
+//                return Observable.from(commands);
+//            }
+//        }).toList()
+//        .flatMap(new Func1<List<MutationCommand>, Observable<MultiMutationResponse>>(){
+//            @Override
+//            public Observable<MultiMutationResponse> call(List<MutationCommand> mutationCommands) {
+//                return core.send(new SubMultiMutationRequest(docId, bucket, expiry, cas, mutationCommands));
+//            }
+//        }).flatMap(new Func1<MultiMutationResponse, Observable<MultiMutationResult>>() {
+//            @Override
+//            public Observable<MultiMutationResult> call(MultiMutationResponse response) {
+//                if (response.content() != null && response.content().refCnt() > 0) {
+//                    response.content().release();
+//                }
+//
+//                if (response.status().isSuccess()) {
+//                    return Observable.just(
+//                            new MultiMutationResult(docId, response.cas(), response.mutationToken()));
+//                }
+//
+//                switch(response.status()) {
+//                    case SUBDOC_MULTI_PATH_FAILURE:
+//                        int index = response.firstErrorIndex();
+//                        ResponseStatus errorStatus = response.firstErrorStatus();
+//                        String errorPath = mutationSpecs[index].path();
+//                        CouchbaseException errorException = commonSubdocErrors(errorStatus, docId, errorPath);
+//
+//                        return Observable.error(new MultiMutationException(index, errorStatus,
+//                                Arrays.asList(mutationSpecs), errorException));
+//                    default:
+//                        return Observable.error(commonSubdocErrors(response.status(), docId, "MULTI-MUTATION"));
+//                }
+//            }
+//        });
+//
+//        if (persistTo == PersistTo.NONE && replicateTo == ReplicateTo.NONE) {
+//            return mutations;
+//        }
+//
+//        return mutations.flatMap(new Func1<MultiMutationResult, Observable<MultiMutationResult>>() {
+//            @Override
+//            public Observable<MultiMutationResult> call(final MultiMutationResult result) {
+//                return Observe
+//                        .call(core, bucket, result.id(), result.cas(), false, result.mutationToken(),
+//                                persistTo.value(), replicateTo.value(),
+//                                environment.observeIntervalDelay(), environment.retryStrategy())
+//                        .map(new Func1<Boolean, MultiMutationResult>() {
+//                            @Override
+//                            public MultiMutationResult call(Boolean aBoolean) {
+//                                return result;
+//                            }
+//                        })
+//                        .onErrorResumeNext(new Func1<Throwable, Observable<MultiMutationResult>>() {
+//                            @Override
+//                            public Observable<MultiMutationResult> call(Throwable throwable) {
+//                                return Observable.error(new DurabilityException(
+//                                        "Durability requirement failed: " + throwable.getMessage(),
+//                                        throwable));
+//                            }
+//                        });
+//            }
+//        });
+//    }
 
     private static void releaseAll(List<ByteBuf> byteBufs) {
         for (ByteBuf byteBuf : byteBufs) {

@@ -1,16 +1,16 @@
-/*
- * Copyright (C) 2016 Couchbase, Inc.
- *
+/**
+ * Copyright (C) 2015 Couchbase, Inc.
+ * <p/>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p/>
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p/>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,44 +20,50 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.document.subdoc;
+package com.couchbase.client.java.search;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.core.message.kv.subdoc.multi.Lookup;
-import com.couchbase.client.core.message.kv.subdoc.multi.LookupCommand;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * Utility class to create specs for the sub-document API's multi-{@link LookupCommand lookup} operations.
- *
- * @author Michael Nitschinger
- * @author Simon Baslé
- * @since 2.2
+ * @author Sergey Avseyev
  */
-@InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class LookupSpec extends LookupCommand {
+@InterfaceStability.Experimental
+public class SearchQueryResult implements Iterable<SearchQueryRow> {
 
-    private LookupSpec(Lookup type, String path) {
-        super(type, path);
+    private final List<SearchQueryRow> hits;
+    private final long took; // nanoseconds
+    private final long totalHits;
+    private final double maxScore;
+
+    public SearchQueryResult(long took, long totalHits, double maxScore, List<SearchQueryRow> hits) {
+        this.took = took;
+        this.totalHits = totalHits;
+        this.maxScore = maxScore;
+        this.hits = hits;
+    }
+
+    public long took() {
+        return took;
+    }
+
+    public long totalHits() {
+        return totalHits;
+    }
+
+    public List<SearchQueryRow> hits() {
+        return hits;
+    }
+
+    public double maxScore() {
+        return maxScore;
     }
 
     @Override
-    public String toString() {
-        return "{" + lookup() + ":" + path() + "}";
-    }
-
-    /**
-     * Create a GET lookup specification.
-     */
-    public static LookupSpec get(String path) {
-        return new LookupSpec(Lookup.GET, path);
-    }
-
-    /**
-     * Create an EXIST lookup specification.
-     */
-    public static LookupSpec exists(String path) {
-        return new LookupSpec(Lookup.EXIST, path);
+    public Iterator<SearchQueryRow> iterator() {
+        return hits.iterator();
     }
 }
