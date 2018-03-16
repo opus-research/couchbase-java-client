@@ -26,10 +26,15 @@ import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
@@ -173,6 +178,31 @@ public class QueryToN1qlTest {
         expected.removeKey("statement").put("prepared", fakePlan);
         PreparedQuery query3 = new PreparedQuery(new QueryPlan(fakePlan), JsonArray.empty(), fullParams);
         assertEquals(expected, query3.n1ql());
+    }
+
+    private Object unmarshallSignature(String value) throws Exception {
+        return CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.byteBufJsonValueToObject(
+                Unpooled.copiedBuffer(value, CharsetUtil.UTF_8));
+    }
+
+    @Test
+    public void testQuerySignaturesAreCorrectlyUnmarshalled() throws Exception {
+        Object stringScalar = unmarshallSignature("\"a\"");
+        Object numberScalar = unmarshallSignature("123");
+        Object booleanScalar = unmarshallSignature("true");
+        Object nullScalar = unmarshallSignature("null");
+        Object jsonObject = unmarshallSignature("{\"a\": 123}");
+        Object jsonArray = unmarshallSignature("[1, 2, 3]");
+
+        assertTrue(stringScalar.getClass().getSimpleName(), stringScalar instanceof String);
+        assertTrue(numberScalar.getClass().getSimpleName(), numberScalar instanceof Number);
+        assertTrue(booleanScalar.getClass().getSimpleName(), booleanScalar instanceof Boolean);
+        assertNull(nullScalar);
+        assertTrue(jsonObject.getClass().getSimpleName(), jsonObject instanceof JsonObject);
+        assertTrue(jsonArray.getClass().getSimpleName(), jsonArray instanceof JsonArray);
+
+        assertEquals(JsonObject.create().put("a", 123), jsonObject);
+        assertEquals(JsonArray.from(1, 2, 3), jsonArray);
     }
 
 }
