@@ -500,32 +500,8 @@ public class MutateInBuilder {
      * @param fragment the new dictionary value to insert.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public <T> MutateInBuilder insert(String path, T fragment, boolean createParents) {
         asyncBuilder.insert(path, fragment, createParents);
-        return this;
-    }
-
-    /**
-     * Insert a fragment provided the last element of the path doesn't exists.
-     *
-     * @param path the path where to insert a new dictionary value.
-     * @param fragment the new dictionary value to insert.
-     */
-    public <T> MutateInBuilder insert(String path, T fragment) {
-        asyncBuilder.insert(path, fragment);
-        return this;
-    }
-
-    /**
-     * Insert a fragment provided the last element of the path doesn't exists.
-     *
-     * @param path the path where to insert a new dictionary value.
-     * @param fragment the new dictionary value to insert.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder insert(String path, T fragment, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.insert(path, fragment, optionsBuilder);
         return this;
     }
 
@@ -536,34 +512,11 @@ public class MutateInBuilder {
      * @param fragment the new dictionary value to be applied.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public <T> MutateInBuilder upsert(String path, T fragment, boolean createParents) {
-        asyncBuilder.upsert(path, fragment, new SubdocOptionsBuilder().createParents(createParents));
+        asyncBuilder.upsert(path, fragment, createParents);
         return this;
     }
 
-    /**
-     * Insert a fragment, replacing the old value if the path exists.
-     *
-     * @param path the path where to insert (or replace) a dictionary value.
-     * @param fragment the new dictionary value to be applied.
-     */
-    public <T> MutateInBuilder upsert(String path, T fragment) {
-        asyncBuilder.upsert(path, fragment);
-        return this;
-    }
-
-    /**
-     * Insert a fragment, replacing the old value if the path exists.
-     *
-     * @param path the path where to insert (or replace) a dictionary value.
-     * @param fragment the new dictionary value to be applied.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder upsert(String path, T fragment, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.upsert(path, fragment, optionsBuilder);
-        return this;
-    }
 
     /**
      * Remove an entry in a JSON document (scalar, array element, dictionary entry,
@@ -576,23 +529,6 @@ public class MutateInBuilder {
         return this;
     }
 
-
-    /**
-     * Remove an entry in a JSON document (scalar, array element, dictionary entry,
-     * whole array or dictionary, depending on the path).
-     *
-     * @param path the path to remove.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder remove(String path, SubdocOptionsBuilder optionsBuilder) {
-        if (optionsBuilder.createParents()) {
-            throw new IllegalArgumentException("Options createParents are not supported for remove");
-        }
-        asyncBuilder.remove(path, optionsBuilder);
-        return this;
-    }
-
-
     /**
      * Increment/decrement a numerical fragment in a JSON document.
      * If the value (last element of the path) doesn't exist the counter is created and takes the value of the delta.
@@ -601,34 +537,8 @@ public class MutateInBuilder {
      * @param delta the value to increment or decrement the counter by.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public MutateInBuilder counter(String path, long delta, boolean createParents) {
-        asyncBuilder.counter(path, delta, new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-    /**
-     * Increment/decrement a numerical fragment in a JSON document.
-     * If the value (last element of the path) doesn't exist the counter is created and takes the value of the delta.
-     *
-     * @param path the path to the counter (must be containing a number).
-     * @param delta the value to increment or decrement the counter by.
-     */
-    public MutateInBuilder counter(String path, long delta) {
-        asyncBuilder.counter(path, delta);
-        return this;
-    }
-
-    /**
-     * Increment/decrement a numerical fragment in a JSON document.
-     * If the value (last element of the path) doesn't exist the counter is created and takes the value of the delta.
-     *
-     * @param path the path to the counter (must be containing a number).
-     * @param delta the value to increment or decrement the counter by.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public MutateInBuilder counter(String path, long delta, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.counter(path, delta, optionsBuilder);
+        asyncBuilder.counter(path, delta, createParents);
         return this;
     }
 
@@ -640,35 +550,8 @@ public class MutateInBuilder {
      * @param value the value to insert at the front of the array.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public <T> MutateInBuilder arrayPrepend(String path, T value, boolean createParents) {
-        asyncBuilder.arrayPrepend(path, value, new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-
-    /**
-     * Prepend to an existing array, pushing the value to the front/first position in
-     * the array.
-     *
-     * @param path the path of the array.
-     * @param value the value to insert at the front of the array.
-     */
-    public <T> MutateInBuilder arrayPrepend(String path, T value) {
-        asyncBuilder.arrayPrepend(path, value);
-        return this;
-    }
-
-    /**
-     * Prepend to an existing array, pushing the value to the front/first position in
-     * the array.
-     *
-     * @param path the path of the array.
-     * @param value the value to insert at the front of the array.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder arrayPrepend(String path, T value, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayPrepend(path, value, optionsBuilder);
+        asyncBuilder.arrayPrepend(path, value, createParents);
         return this;
     }
 
@@ -691,34 +574,8 @@ public class MutateInBuilder {
      * @param createParents true to create missing intermediary nodes.
      * @param <T> the type of data in the collection (must be JSON serializable).
      */
-    @Deprecated
     public <T> MutateInBuilder arrayPrependAll(String path, Collection<T> values, boolean createParents) {
-        asyncBuilder.arrayPrependAll(path, values, new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-
-    /**
-     * Prepend multiple values at once in an existing array, pushing all values in the collection's iteration order to
-     * the front/start of the array.
-     *
-     * First value becomes the first element of the array, second value the second, etc... All existing values
-     * are shifted right in the array, by the number of inserted elements.
-     *
-     * Each item in the collection is inserted as an individual element of the array, but a bit of overhead
-     * is saved compared to individual {@link #arrayPrepend(String, Object, boolean)} (String, Object)} by grouping
-     * mutations in a single packet.
-     *
-     * For example given an array [ A, B, C ], prepending the values X and Y yields [ X, Y, A, B, C ]
-     * and not [ [ X, Y ], A, B, C ].
-     *
-     * @param path the path of the array.
-     * @param values the collection of values to insert at the front of the array as individual elements.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @param <T> the type of data in the collection (must be JSON serializable).
-     */
-    public <T> MutateInBuilder arrayPrependAll(String path, Collection<T> values, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayPrependAll(path, values, optionsBuilder);
+        asyncBuilder.arrayPrependAll(path, values, createParents);
         return this;
     }
 
@@ -755,34 +612,8 @@ public class MutateInBuilder {
      * @param value the value to insert at the back of the array.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public <T> MutateInBuilder arrayAppend(String path, T value, boolean createParents) {
-        asyncBuilder.arrayAppend(path, value, new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-    /**
-     * Append to an existing array, pushing the value to the back/last position in
-     * the array.
-     *
-     * @param path the path of the array.
-     * @param value the value to insert at the back of the array.
-     */
-    public <T> MutateInBuilder arrayAppend(String path, T value) {
-        asyncBuilder.arrayAppend(path, value);
-        return this;
-    }
-
-    /**
-     * Append to an existing array, pushing the value to the back/last position in
-     * the array.
-     *
-     * @param path the path of the array.
-     * @param value the value to insert at the back of the array.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder arrayAppend(String path, T value, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayAppend(path, value, optionsBuilder);
+        asyncBuilder.arrayAppend(path, value, createParents);
         return this;
     }
 
@@ -802,30 +633,8 @@ public class MutateInBuilder {
      * @param createParents true to create missing intermediary nodes.
      * @param <T> the type of data in the collection (must be JSON serializable).
      */
-    @Deprecated
     public <T> MutateInBuilder arrayAppendAll(String path, Collection<T> values, boolean createParents) {
-        asyncBuilder.arrayAppendAll(path, values,  new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-    /**
-     * Append multiple values at once in an existing array, pushing all values in the collection's iteration order to
-     * the back/end of the array.
-     *
-     * Each item in the collection is inserted as an individual element of the array, but a bit of overhead
-     * is saved compared to individual {@link #arrayAppend(String, Object, boolean)} by grouping mutations in
-     * a single packet.
-     *
-     * For example given an array [ A, B, C ], appending the values X and Y yields [ A, B, C, X, Y ]
-     * and not [ A, B, C, [ X, Y ] ].
-     *
-     * @param path the path of the array.
-     * @param values the collection of values to individually insert at the back of the array.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     * @param <T> the type of data in the collection (must be JSON serializable).
-     */
-    public <T> MutateInBuilder arrayAppendAll(String path, Collection<T> values, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayAppendAll(path, values, optionsBuilder);
+        asyncBuilder.arrayAppendAll(path, values, createParents);
         return this;
     }
 
@@ -864,19 +673,6 @@ public class MutateInBuilder {
     }
 
     /**
-     * Insert into an existing array at a specific position
-     * (denoted in the path, eg. "sub.array[2]").
-     *
-     * @param path the path (including array position) where to insert the value.
-     * @param value the value to insert in the array.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder arrayInsert(String path, T value, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayInsert(path, value, optionsBuilder);
-        return this;
-    }
-
-    /**
      * Insert multiple values at once in an existing array at a specified position (denoted in the
      * path, eg. "sub.array[2]"), inserting all values in the collection's iteration order at the given
      * position and shifting existing values beyond the position by the number of elements in the collection.
@@ -894,29 +690,6 @@ public class MutateInBuilder {
      */
     public <T> MutateInBuilder arrayInsertAll(String path, Collection<T> values) {
         asyncBuilder.arrayInsertAll(path, values);
-        return this;
-    }
-
-
-    /**
-     * Insert multiple values at once in an existing array at a specified position (denoted in the
-     * path, eg. "sub.array[2]"), inserting all values in the collection's iteration order at the given
-     * position and shifting existing values beyond the position by the number of elements in the collection.
-     *
-     * Each item in the collection is inserted as an individual element of the array, but a bit of overhead
-     * is saved compared to individual {@link #arrayInsert(String, Object)} by grouping mutations in a single packet.
-     *
-     * For example given an array [ A, B, C ], inserting the values X and Y at position 1 yields [ A, B, X, Y, C ]
-     * and not [ A, B, [ X, Y ], C ].
-     *
-     * @param path the path of the array.
-     * @param values the values to insert at the specified position of the array, each value becoming an entry at or
-     *               after the insert position.
-     * @param <T> the type of data in the collection (must be JSON serializable).
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder arrayInsertAll(String path, Collection<T> values, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayInsertAll(path, values, optionsBuilder);
         return this;
     }
 
@@ -952,34 +725,8 @@ public class MutateInBuilder {
      * @param value the value to insert.
      * @param createParents true to create missing intermediary nodes.
      */
-    @Deprecated
     public <T> MutateInBuilder arrayAddUnique(String path, T value, boolean createParents) {
-        asyncBuilder.arrayAddUnique(path, value, new SubdocOptionsBuilder().createParents(createParents));
-        return this;
-    }
-
-    /**
-     * Insert a value in an existing array only if the value
-     * isn't already contained in the array (by way of string comparison).
-     *
-     * @param path the path to mutate in the JSON.
-     * @param value the value to insert.
-     */
-    public <T> MutateInBuilder arrayAddUnique(String path, T value) {
-        asyncBuilder.arrayAddUnique(path, value);
-        return this;
-    }
-
-    /**
-     * Insert a value in an existing array only if the value
-     * isn't already contained in the array (by way of string comparison).
-     *
-     * @param path the path to mutate in the JSON.
-     * @param value the value to insert.
-     * @param optionsBuilder {@link SubdocOptionsBuilder}
-     */
-    public <T> MutateInBuilder arrayAddUnique(String path, T value, SubdocOptionsBuilder optionsBuilder) {
-        asyncBuilder.arrayAddUnique(path, value, optionsBuilder);
+        asyncBuilder.arrayAddUnique(path, value, createParents);
         return this;
     }
 
