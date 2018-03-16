@@ -35,6 +35,7 @@ import java.util.Set;
  * allow to store such objects which can be represented by JSON.
  *
  * @author Michael Nitschinger
+ * @author Simon Baslé
  * @since 2.0
  */
 public class JsonObject extends JsonValue {
@@ -67,6 +68,40 @@ public class JsonObject extends JsonValue {
      */
     public static JsonObject create() {
         return new JsonObject();
+    }
+
+    /**
+     * Constructs a {@link JsonObject} from a {@link Map Map&lt;String, ?&gt;}.
+     * This is only possible if the given Map is well formed, that is it contains non null
+     * keys and values, and all values are of a supported type.
+     * <p>
+     * Null values or keys will lead to a {@link NullPointerException} being thrown.
+     * If any unsupported value is present in the Map, an {@link IllegalArgumentException}
+     * will be thrown.
+     * </p>
+     * 
+     * @param mapData the Map to convert to a JsonObject
+     * @return the resulting JsonObject
+     * @throws IllegalArgumentException in case one or more unsupported values are present
+     * @throws NullPointerException in case a null key or any null value are present
+     */
+    public static JsonObject from(Map<String, ?> mapData) {
+        if (mapData == null || mapData.isEmpty()) {
+            return JsonObject.empty();
+        }
+
+        JsonObject value = new JsonObject();
+        for (Map.Entry<String, ?> entry : mapData.entrySet()) {
+            if (entry.getKey() == null) {
+                throw new NullPointerException("The null key is not supported");
+            } else if (entry.getValue() == null) {
+                throw new NullPointerException("Unsupported null value for key " + entry.getKey());
+            } else if (!checkType(entry.getValue())) {
+                throw new IllegalArgumentException("Unsupported type for JsonObject: " + entry.getValue().getClass());
+            }
+            value.put(entry.getKey(), entry.getValue());
+        }
+        return value;
     }
 
     /**
