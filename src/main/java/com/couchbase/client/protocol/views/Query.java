@@ -52,6 +52,7 @@ import net.spy.memcached.util.StringUtils;
  * query.setIncludeDocs(true);
  */
 public class Query {
+
   private static final String DESCENDING = "descending";
   private static final String ENDKEY = "endkey";
   private static final String ENDKEYDOCID = "endkey_docid";
@@ -124,6 +125,11 @@ public class Query {
   /**
    * Group the results using the reduce function to a group or single row.
    *
+   * Important: {@link #setGroup(boolean)} and {@link #setGroupLevel(int)}
+   * should not be used together in the same {@link Query}. It is sufficient
+   * to only set the grouping level only and use {@link #setGroup(boolean)}
+   * only in cases where you always want the highest group level implictly.
+   *
    * @param group True when grouping should be enabled.
    * @return The Query instance.
    */
@@ -134,6 +140,11 @@ public class Query {
 
   /**
    * Specify the group level to be used.
+   *
+   * Important: {@link #setGroup(boolean)} and {@link #setGroupLevel(int)}
+   * should not be used together in the same {@link Query}. It is sufficient
+   * to only set the grouping level only and use {@link #setGroup(boolean)}
+   * only in cases where you always want the highest group level implictly.
    *
    * @param grouplevel How deep the grouping level should be.
    * @return The Query instance.
