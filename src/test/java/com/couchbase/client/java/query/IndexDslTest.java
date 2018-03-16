@@ -20,7 +20,7 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.query.dsl;
+package com.couchbase.client.java.query;
 
 import static com.couchbase.client.java.query.Index.buildIndex;
 import static com.couchbase.client.java.query.Index.dropIndex;
@@ -31,9 +31,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.Index;
-import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.query.dsl.path.index.DefaultBuildIndexPath;
 import com.couchbase.client.java.query.dsl.path.index.DefaultOnPath;
 import com.couchbase.client.java.query.dsl.path.index.DefaultOnPrimaryPath;
 import com.couchbase.client.java.query.dsl.path.index.DefaultWithPath;
