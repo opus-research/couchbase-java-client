@@ -123,7 +123,7 @@ public class BucketConfigurationProvider extends SpyObject
         + "configuration.");
     }
 
-    if (bootstrapProvider == BootstrapProviderType.CARRIER) {
+    if (bootstrapProvider.isCarrier()) {
       getLogger().info("Could bootstrap through carrier publication.");
     } else {
       getLogger().info("Carrier config not available, bootstrapped through "
@@ -355,7 +355,7 @@ public class BucketConfigurationProvider extends SpyObject
    * used.
    */
   private void monitorBucket() {
-    if (!shutdown && bootstrapProvider == BootstrapProviderType.HTTP) {
+    if (!shutdown && bootstrapProvider.isHttp()) {
         httpProvider.get().subscribe(bucket, this);
     }
   }
@@ -388,7 +388,7 @@ public class BucketConfigurationProvider extends SpyObject
       }
     }
     getLogger().debug("Applying new bucket config for bucket \"" + bucket
-      + "\" (carrier publication: " + (bootstrapProvider == BootstrapProviderType.CARRIER) + "): " + config);
+      + "\" (carrier publication: " + bootstrapProvider.isCarrier() + "): " + config);
 
     this.config.set(config);
     httpProvider.get().updateBucket(config.getName(), config);
@@ -490,7 +490,7 @@ public class BucketConfigurationProvider extends SpyObject
       return;
     }
 
-    if (bootstrapProvider == BootstrapProviderType.CARRIER) {
+    if (bootstrapProvider.isCarrier()) {
       if (binaryConnection.get() == null) {
         bootstrap();
       } else {
@@ -527,7 +527,7 @@ public class BucketConfigurationProvider extends SpyObject
 
   @Override
   public void reloadConfig() {
-    if (bootstrapProvider == BootstrapProviderType.CARRIER && !shutdown) {
+    if (bootstrapProvider.isCarrier() && !shutdown) {
       signalOutdated();
     }
   }
@@ -647,7 +647,7 @@ public class BucketConfigurationProvider extends SpyObject
     @Override
     public void run() {
       try {
-        while (bootstrapProvider == BootstrapProviderType.CARRIER && getConfig().getConfig().isTainted()) {
+        while (bootstrapProvider.isCarrier() && getConfig().getConfig().isTainted()) {
           getLogger().debug("Polling for new carrier configuration and " +
             "waiting " + waitPeriod + "ms (Attempt " + ++attempt + ").");
           signalOutdated();
