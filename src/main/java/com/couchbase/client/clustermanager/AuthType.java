@@ -19,19 +19,39 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
  */
-package com.couchbase.spring;
 
-import org.springframework.cache.support.SimpleCacheManager;
+package com.couchbase.client.clustermanager;
+
 /**
- * A Couchbase based backing store Cache Manager to be used in
- * conjunction with the Spring framework.
+ * An enum of the different Couchbase authentication types for creating
+ * a bucket.
  */
-public class CouchbaseCacheManager extends SimpleCacheManager {
-/**
- * {@inheritDoc}.
- */
-  @Override
-  public CouchbaseCache getCache(String name) {
-    return (CouchbaseCache) super.getCache(name);
+public enum AuthType {
+
+  /**
+   * Specifies no authentication.
+   */
+  NONE("none"),
+
+  /**
+   * Specifies sasl authentication.
+   */
+  SASL("sasl");
+
+  /**
+   * Holds the authentication type.
+   */
+  private String auth;
+
+  /**
+   * Creates an Auth instance.
+   * @param auth
+   */
+  AuthType(String auth) {
+    this.auth = auth;
+  }
+
+  public String getAuthType() {
+    return auth;
   }
 }

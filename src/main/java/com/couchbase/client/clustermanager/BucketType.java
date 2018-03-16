@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,37 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.spring;
+package com.couchbase.client.clustermanager;
 
 /**
- * CouchbaseCache exception that is a result of using
- * Couchbase as a backing store with the Spring framework.
+ * An enum of the different Couchbase bucket types.
  */
-public class CouchbaseCacheException extends RuntimeException {
+public enum BucketType {
 
-  private static final long serialVersionUID = -3625467801237543267L;
+  /**
+   * Specifies no authentication.
+   */
+  MEMCACHED("memcached"),
 
-  public CouchbaseCacheException() {
-    super();
+  /**
+   * Specifies sasl authentication.
+   */
+  COUCHBASE("membase");
+
+  /**
+   * Holds the authentication type.
+   */
+  private String type;
+
+  /**
+   * Creates an BucketType instance.
+   * @param type
+   */
+  BucketType(String type) {
+    this.type = type;
   }
 
-  public CouchbaseCacheException(String message) {
-    super(message);
-  }
-
-  public CouchbaseCacheException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
-  public CouchbaseCacheException(Throwable cause) {
-    super(cause);
+  public String getBucketType() {
+    return type;
   }
 }
