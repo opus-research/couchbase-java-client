@@ -35,6 +35,7 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.OperationFactory;
+import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.transcoders.Transcoder;
 
@@ -166,6 +167,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder{
       @Override
       public long getMaxReconnectDelay() {
         return maxReconnectDelay;
+      }
+
+      @Override
+      public AuthDescriptor getAuthDescriptor() {
+        return authDescriptor;
       }
 
       @Override
