@@ -20,35 +20,13 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket.config;
+package com.couchbase.client.internal;
+
+import net.spy.memcached.internal.GenericCompletionListener;
 
 /**
- * A VBucket.
+ * A listener that will be notified once the replica get future completes.
  */
-public class VBucket {
-
-  public static final int MAX_REPLICAS = 4;
-
-  public static final int MAX_BUCKETS = 65536;
-
-  private volatile int master;
-
-  private final int[] replicas;
-
-  public VBucket(int m, int[] r) {
-    master = m;
-    replicas = r.clone();
-  }
-
-  public int getMaster() {
-    return master;
-  }
-
-  public int getReplica(int n) {
-    return replicas[n];
-  }
-
-  public void setMaster(int rv) {
-    master = rv;
-  }
+public interface ReplicaGetCompletionListener
+  extends GenericCompletionListener<ReplicaGetFuture<?>> {
 }
