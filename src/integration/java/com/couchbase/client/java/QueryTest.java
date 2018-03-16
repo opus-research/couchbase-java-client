@@ -29,16 +29,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.NamedPreparedStatementException;
 import com.couchbase.client.java.query.PrepareStatement;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
@@ -75,8 +76,7 @@ public class QueryTest extends ClusterDependentTest {
         bucket().upsert(JsonDocument.create("test1", JsonObject.create().put("item", "value")));
         bucket().upsert(JsonDocument.create("test2", JsonObject.create().put("item", 123)));
 
-        bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`",
-                QueryParams.build().consistency(CONSISTENCY)), 2, TimeUnit.MINUTES);
+        bucket().query(Query.simple("CREATE PRIMARY INDEX ON `" + bucketName() + "`"));
     }
 
     @Test
@@ -192,7 +192,7 @@ public class QueryTest extends ClusterDependentTest {
         PreparedQuery preparedQuery = Query.prepared(payload,
                 JsonArray.from(123),
                 QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
-        QueryResult response = bucket().query(preparedQuery, 2, TimeUnit.MINUTES);
+        QueryResult response = bucket().query(preparedQuery);
         assertTrue(response.errors().toString(), response.finalSuccess());
         List<QueryRow> rows = response.allRows();
         assertEquals("TEST", response.clientContextId());
@@ -201,9 +201,7 @@ public class QueryTest extends ClusterDependentTest {
     }
 
     @Test
-    public void shouldManageToExecuteUnknownNamedPreparedStatement() {
-        //this test is expected to work on a single node cluster, will generate named prepared statements that
-        //should be new on each iteration. The underlying expected behavior is for it to retry once and succeed.
+    public void shouldFailToExecuteUnknownNamedPreparedStatement() {
         SimpleDateFormat sdf = new SimpleDateFormat("YYYYMMddHHmmss");
         String preparedName = "testPreparedNamed" + sdf.format(new Date());
 
@@ -213,12 +211,12 @@ public class QueryTest extends ClusterDependentTest {
         PreparedQuery preparedQuery = Query.prepared(payload,
                 JsonArray.from(123),
                 QueryParams.build().withContextId("TEST").consistency(CONSISTENCY));
-        QueryResult response = bucket().query(preparedQuery);
-
-        assertTrue(response.errors().toString(), response.finalSuccess());
-        List<QueryRow> rows = response.allRows();
-        assertEquals("TEST", response.clientContextId());
-        assertEquals(1, rows.size());
-        assertTrue(rows.get(0).value().toString().contains("123"));
+        try {
+            QueryResult response = bucket().query(preparedQuery);
+            fail("Expected NamedPreparedStatementException, got: " + response.allRows().toString() + ", errors: "
+                + response.errors().toString());
+        } catch (NamedPreparedStatementException e) {
+            //success
+        }
     }
 }
