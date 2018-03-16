@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import net.spy.memcached.compat.SpyObject;
@@ -59,21 +63,19 @@ public class ViewNode extends SpyObject {
 
   private final InetSocketAddress addr;
   private final AsyncConnectionManager connMgr;
-  // TODO: These unused variables need to be utilized in the
-  // AsyncConnectionManager.
   private final long opQueueMaxBlockTime;
-  private final long opQueueLen;
   private final long defaultOpTimeout;
+  private final BlockingQueue<HttpOperation> writeQ;
   private final String user;
   private final String pass;
 
   public ViewNode(InetSocketAddress a, AsyncConnectionManager mgr,
-      long queueLen, long maxBlockTime, long operationTimeout, String usr,
-      String pwd) {
+      LinkedBlockingQueue<HttpOperation> linkedBlockingQueue,
+      long maxBlockTime, long operationTimeout, String usr, String pwd) {
     addr = a;
     connMgr = mgr;
+    writeQ = linkedBlockingQueue;
     opQueueMaxBlockTime = maxBlockTime;
-    opQueueLen = queueLen;
     defaultOpTimeout = operationTimeout;
     user = usr;
     pass = pwd;
@@ -97,43 +99,71 @@ public class ViewNode extends SpyObject {
     t.start();
   }
 
-  public void writeOp(HttpOperation op) {
-    AsyncConnectionRequest connRequest = connMgr.requestConnection();
+  public void doWrites() {
+    HttpOperation op;
     try {
-      connRequest.waitFor();
-    } catch (InterruptedException e) {
-      getLogger().warn(
-          "Interrupted while trying to get a connection."
-              + " Cancelling op");
-      op.cancel();
-      return;
-    }
+      while ((op = writeQ.take()) != null) {
+        if (!op.isTimedOut() && !op.isCancelled()) {
+          AsyncConnectionRequest connRequest = connMgr.requestConnection();
+          try {
+            connRequest.waitFor();
+          } catch (InterruptedException e) {
+            getLogger().warn(
+                "Interrupted while trying to get a connection."
+                    + " Cancelling op");
+            op.cancel();
+            return;
+          }
 
-    NHttpClientConnection conn = connRequest.getConnection();
-    if (conn == null) {
-      getLogger().error("Failed to obtain connection. Cancelling op");
-      op.cancel();
-    } else {
-      if (!user.equals("default")) {
-        try {
-          op.addAuthHeader(HttpUtil.buildAuthHeader(user, pass));
-        } catch (UnsupportedEncodingException ex) {
-          getLogger().error("Could not create auth header for request, "
-            + "could not encode credentials into base64. Canceling op."
-            + op, ex);
-          op.cancel();
+          NHttpClientConnection conn = connRequest.getConnection();
+          if (conn == null) {
+            getLogger().error("Failed to obtain connection. Cancelling op");
+            op.cancel();
+          } else {
+            if (!user.equals("default")) {
+              try {
+                op.addAuthHeader(HttpUtil.buildAuthHeader(user, pass));
+              } catch (UnsupportedEncodingException ex) {
+                getLogger().error("Could not create auth header for request, "
+                  + "could not encode credentials into base64. Canceling op."
+                  + op, ex);
+                op.cancel();
+              }
+            }
+            HttpContext context = conn.getContext();
+            RequestHandle handle = new RequestHandle(connMgr, conn);
+            context.setAttribute("request-handle", handle);
+            context.setAttribute("operation", op);
+            conn.requestOutput();
+          }
         }
       }
-      HttpContext context = conn.getContext();
-      RequestHandle handle = new RequestHandle(connMgr, conn);
-      context.setAttribute("request-handle", handle);
-      context.setAttribute("operation", op);
-      conn.requestOutput();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      getLogger().info("View connection interupted while waiting for op");
     }
   }
 
+  public Collection<HttpOperation> destroyWriteQueue() {
+    Collection<HttpOperation> rv = new ArrayList<HttpOperation>();
+    writeQ.drainTo(rv);
+    return rv;
+  }
+
   public boolean hasWriteOps() {
-    return connMgr.hasPendingRequests();
+    return !writeQ.isEmpty();
+  }
+
+  public void addOp(HttpOperation op) {
+    try {
+      if (!writeQ.offer(op, opQueueMaxBlockTime, TimeUnit.MILLISECONDS)) {
+        throw new IllegalStateException("Timed out waiting to add " + op
+            + "(max wait=" + opQueueMaxBlockTime + "ms)");
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Interrupted while waiting to add " + op);
+    }
   }
 
   public InetSocketAddress getSocketAddress() {
