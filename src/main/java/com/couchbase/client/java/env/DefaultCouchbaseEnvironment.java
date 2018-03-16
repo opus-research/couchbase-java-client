@@ -62,6 +62,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private static final long MANAGEMENT_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long QUERY_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long VIEW_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
+    private static final long SEARCH_TIMEOUT = TimeUnit.SECONDS.toMillis(75);
     private static final long KV_TIMEOUT = 2500;
     private static final long CONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
     private static final long DISCONNECT_TIMEOUT = TimeUnit.SECONDS.toMillis(25);
@@ -70,14 +71,20 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     private final long managementTimeout;
     private final long queryTimeout;
     private final long viewTimeout;
+    private final long searchTimeout;
     private final long kvTimeout;
     private final long connectTimeout;
     private final long disconnectTimeout;
     private final boolean dnsSrvEnabled;
 
+    protected static String CLIENT_VERSION;
+    protected static String CLIENT_GIT_VERSION;
+
     public static String SDK_PACKAGE_NAME_AND_VERSION = "couchbase-java-client";
+    public static String SDK_USER_AGENT = SDK_PACKAGE_NAME_AND_VERSION;
 
     private static final String VERSION_PROPERTIES = "com.couchbase.client.java.properties";
+
 
 
     /**
@@ -97,18 +104,22 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             String gitVersion = null;
             try {
                 Properties versionProp = new Properties();
-                versionProp.load(DefaultCoreEnvironment.class.getClassLoader().getResourceAsStream(VERSION_PROPERTIES));
+                versionProp.load(DefaultCouchbaseEnvironment.class.getClassLoader().getResourceAsStream(VERSION_PROPERTIES));
                 version = versionProp.getProperty("specificationVersion");
                 gitVersion = versionProp.getProperty("implementationVersion");
             } catch (Exception e) {
-                LOGGER.info("Could not retrieve version properties, defaulting.", e);
+                LOGGER.info("Could not retrieve java-client version properties, defaulting.", e);
             }
-            SDK_PACKAGE_NAME_AND_VERSION = String.format("couchbase-java-client/%s (git: %s)",
-                version == null ? "unknown" : version, gitVersion == null ? "unknown" : gitVersion);
 
-            //this will overwrite the USER_AGENT in Core
-            // making core send user_agent with java client version information
-            USER_AGENT = String.format("%s (%s/%s %s; %s %s)",
+            CLIENT_VERSION = version == null ? "unknown" : version;
+            CLIENT_GIT_VERSION = gitVersion == null ? "unknown" : gitVersion;
+
+            SDK_PACKAGE_NAME_AND_VERSION = String.format("couchbase-java-client/%s (git: %s, core: %s)",
+                    CLIENT_VERSION,
+                    CLIENT_GIT_VERSION,
+                    CORE_GIT_VERSION);
+
+            SDK_USER_AGENT = String.format("%s (%s/%s %s; %s %s)",
                 SDK_PACKAGE_NAME_AND_VERSION,
                 System.getProperty("os.name"),
                 System.getProperty("os.version"),
@@ -127,6 +138,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         queryTimeout = longPropertyOr("queryTimeout", builder.queryTimeout);
         viewTimeout = longPropertyOr("viewTimeout", builder.viewTimeout);
         kvTimeout = longPropertyOr("kvTimeout", builder.kvTimeout);
+        searchTimeout = longPropertyOr("searchTimeout", builder.searchTimeout);
         connectTimeout = longPropertyOr("connectTimeout", builder.connectTimeout);
         disconnectTimeout = longPropertyOr("disconnectTimeout", builder.disconnectTimeout);
         dnsSrvEnabled = booleanPropertyOr("dnsSrvEnabled", builder.dnsSrvEnabled);
@@ -173,12 +185,18 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         private long queryTimeout = QUERY_TIMEOUT;
         private long viewTimeout = VIEW_TIMEOUT;
         private long kvTimeout = KV_TIMEOUT;
+        private long searchTimeout = SEARCH_TIMEOUT;
         private long connectTimeout = CONNECT_TIMEOUT;
         private long disconnectTimeout = DISCONNECT_TIMEOUT;
         private boolean dnsSrvEnabled = DNS_SRV_ENABLED;
 
-        private String userAgent = USER_AGENT; //this is from Core
-        private String packageNameAndVersion = SDK_PACKAGE_NAME_AND_VERSION;
+        public Builder() {
+            super();
+            //this ensures default values are the ones relative to the client
+            //while still making it possible to override.
+            packageNameAndVersion(SDK_PACKAGE_NAME_AND_VERSION);
+            userAgent(SDK_USER_AGENT);
+        }
 
         public Builder managementTimeout(long managementTimeout) {
             this.managementTimeout = managementTimeout;
@@ -197,6 +215,11 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
 
         public Builder kvTimeout(long kvTimeout) {
             this.kvTimeout = kvTimeout;
+            return this;
+        }
+
+        public Builder searchTimeout(long searchTimeout) {
+            this.searchTimeout = searchTimeout;
             return this;
         }
 
@@ -462,7 +485,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder dcpConnectionBufferAckThreshold(int dcpConnectionBufferAckThreshold) {
+        public Builder dcpConnectionBufferAckThreshold(double dcpConnectionBufferAckThreshold) {
             super.dcpConnectionBufferAckThreshold(dcpConnectionBufferAckThreshold);
             return this;
         }
@@ -470,6 +493,18 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         @Override
         public Builder socketConnectTimeout(int socketConnectTimeout) {
             super.socketConnectTimeout(socketConnectTimeout);
+            return this;
+        }
+
+        @Override
+        public Builder callbacksOnIoPool(boolean callbacksOnIoPool) {
+            super.callbacksOnIoPool(callbacksOnIoPool);
+            return this;
+        }
+
+        @Override
+        public Builder searchEndpoints(int searchEndpoints) {
+            super.searchEndpoints(searchEndpoints);
             return this;
         }
 
@@ -495,6 +530,11 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     }
 
     @Override
+    public long searchTimeout() {
+        return searchTimeout;
+    }
+
+    @Override
     public long kvTimeout() {
         return kvTimeout;
     }
@@ -512,6 +552,16 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
     @Override
     public boolean dnsSrvEnabled() {
         return dnsSrvEnabled;
+    }
+
+    @Override
+    public String clientVersion() {
+        return CLIENT_VERSION;
+    }
+
+    @Override
+    public String clientBuild() {
+        return CLIENT_GIT_VERSION;
     }
 
     @Override

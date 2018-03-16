@@ -20,22 +20,38 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.java.error.subdoc;
+package com.couchbase.client.java.error;
 
+import java.util.List;
+
+import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.java.bucket.BucketManager;
 
 /**
- * Subdocument exception thrown when the delta value is zero in a counter operation.
+ * An exception indicating that an index already exists, for instance
+ * when trying to create one using {@link BucketManager#createIndex(String, List, boolean, boolean)}.
  *
  * @author Simon Baslé
  * @since 2.2
  */
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
-public class ZeroDeltaException extends SubDocumentException {
+public class IndexAlreadyExistsException extends CouchbaseException {
 
-    public ZeroDeltaException() {
-        super();
+    public IndexAlreadyExistsException() {
+    }
+
+    public IndexAlreadyExistsException(String message) {
+        super(message);
+    }
+
+    public IndexAlreadyExistsException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public IndexAlreadyExistsException(Throwable cause) {
+        super(cause);
     }
 }
