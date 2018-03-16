@@ -72,7 +72,6 @@ public class ViewQuery {
         this.design = design;
         this.view = view;
         params = new String[NUM_PARAMS * 2];
-        onError(OnError.STOP);
     }
 
     /**
@@ -220,16 +219,6 @@ public class ViewQuery {
     }
 
     /**
-     * Check whether the handler should fail fast when the server sent errors
-     * in response payload.
-     *
-     * @return true if the query should fail fast on error in response.
-     */
-    public boolean stopOnError() {
-        return params[PARAM_ONERROR_OFFSET+1].equals(OnError.STOP.identifier());
-    }
-
-    /**
      * Enabled debugging on view queries.
      *
      * @return the {@link Query} object for proper chaining.
@@ -283,6 +272,7 @@ public class ViewQuery {
         params[PARAM_KEY_OFFSET+1] = Double.toString(key);
         return this;
     }
+
 
     public ViewQuery key(boolean key) {
         params[PARAM_KEY_OFFSET] = "key";
