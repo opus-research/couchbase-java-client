@@ -1,23 +1,17 @@
 /*
- * Copyright (C) 2016 Couchbase, Inc.
+ * Copyright (c) 2016 Couchbase, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
- * IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.couchbase.client.java.subdoc;
@@ -63,7 +57,7 @@ import rx.functions.Func1;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Experimental
+@InterfaceStability.Committed
 @InterfaceAudience.Public
 public class AsyncLookupInBuilder {
 
@@ -102,8 +96,8 @@ public class AsyncLookupInBuilder {
 
     /**
      * Perform several {@link Lookup lookup} operations inside a single existing {@link JsonDocument JSON document}.
-     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String)} and
-     * {@link #exists(String)}.
+     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String...)} and
+     * {@link #exists(String...)}.
      *
      * The subdocument API has the benefit of only transmitting the fragment of the document you work with
      * on the wire, instead of the whole document.
@@ -154,14 +148,19 @@ public class AsyncLookupInBuilder {
     /**
      * Get a value inside the JSON document.
      *
-     * @param path the path inside the document where to get the value from.
+     * @param paths the path inside the document where to get the value from.
      * @return this builder for chaining.
      */
-    public AsyncLookupInBuilder get(String path) {
-        if (StringUtil.isNullOrEmpty(path)) {
+    public AsyncLookupInBuilder get(String... paths) {
+        if (paths == null || paths.length == 0) {
             throw new IllegalArgumentException("Path is mandatory for subdoc get");
         }
-        this.specs.add(new LookupSpec(Lookup.GET, path));
+        for (String path : paths) {
+            if (StringUtil.isNullOrEmpty(path)) {
+                throw new IllegalArgumentException("Path is mandatory for subdoc get");
+            }
+            this.specs.add(new LookupSpec(Lookup.GET, path));
+        }
         return this;
     }
 
@@ -170,14 +169,19 @@ public class AsyncLookupInBuilder {
      * {@link DocumentFragment#content(int)} will raise an error).
      * This doesn't transmit the value on the wire if it exists, saving the corresponding byte overhead.
      *
-     * @param path the path inside the document to check for existence.
+     * @param paths the path inside the document to check for existence.
      * @return this builder for chaining.
      */
-    public AsyncLookupInBuilder exists(String path) {
-        if (StringUtil.isNullOrEmpty(path)) {
+    public AsyncLookupInBuilder exists(String... paths) {
+        if (paths == null || paths.length == 0) {
             throw new IllegalArgumentException("Path is mandatory for subdoc exists");
         }
-        this.specs.add(new LookupSpec(Lookup.EXIST, path));
+        for (String path : paths) {
+            if (StringUtil.isNullOrEmpty(path)) {
+                throw new IllegalArgumentException("Path is mandatory for subdoc exists");
+            }
+            this.specs.add(new LookupSpec(Lookup.EXIST, path));
+        }
         return this;
     }
 
@@ -253,18 +257,18 @@ public class AsyncLookupInBuilder {
 
                 throw SubdocHelper.commonSubdocErrors(response.status(), docId, "MULTI-LOOKUP");
             }
-        }).flatMap(new Func1<MultiLookupResponse, Observable<MultiResult<Lookup>>>() {
+        }).flatMap(new Func1<MultiLookupResponse, Observable<DocumentFragment<Lookup>>>() {
             @Override
-            public Observable<MultiResult<Lookup>> call(final MultiLookupResponse multiLookupResponse) {
-                return Observable.from(multiLookupResponse.responses());
-            }
-        })
-        .map(multiCoreResultToLookupResult)
-        .toList()
-        .map(new Func1<List<SubdocOperationResult<Lookup>>, DocumentFragment<Lookup>>() {
-            @Override
-            public DocumentFragment<Lookup> call(List<SubdocOperationResult<Lookup>> lookupResults) {
-                return new DocumentFragment<Lookup>(docId, 0L, null, lookupResults);
+            public Observable<DocumentFragment<Lookup>> call(final MultiLookupResponse mlr) {
+                return Observable
+                    .from(mlr.responses()).map(multiCoreResultToLookupResult)
+                    .toList()
+                    .map(new Func1<List<SubdocOperationResult<Lookup>>, DocumentFragment<Lookup>>() {
+                        @Override
+                        public DocumentFragment<Lookup> call(List<SubdocOperationResult<Lookup>> lookupResults) {
+                            return new DocumentFragment<Lookup>(docId, mlr.cas(), null, lookupResults);
+                        }
+                    });
             }
         });
     }

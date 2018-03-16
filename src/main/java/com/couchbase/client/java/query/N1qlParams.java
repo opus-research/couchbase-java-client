@@ -1,37 +1,32 @@
-/**
- * Copyright (C) 2015 Couchbase, Inc.
+/*
+ * Copyright (c) 2016 Couchbase, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
- * IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.message.kv.MutationToken;
+import com.couchbase.client.java.MutationState;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.document.json.JsonValue;
+import com.couchbase.client.java.query.dsl.functions.ObjectFunctions;
 import com.couchbase.client.java.subdoc.DocumentFragment;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,8 +50,9 @@ public class N1qlParams implements Serializable {
     private String scanWait;
     private String clientContextId;
     private Integer maxParallelism;
-
-    private List<MutationToken> mutationTokens;
+    private boolean disableMetrics;
+    private MutationState mutationState;
+    private Map<String, Object> rawParams;
 
     /**
      * If adhoc, the query should never be prepared.
@@ -65,6 +61,7 @@ public class N1qlParams implements Serializable {
 
     private N1qlParams() {
         adhoc = true;
+        disableMetrics = false;
     }
 
     /**
@@ -89,27 +86,23 @@ public class N1qlParams implements Serializable {
         if (this.maxParallelism != null) {
             queryJson.put("max_parallelism", this.maxParallelism.toString());
         }
-        if (this.mutationTokens != null) {
+        if (this.disableMetrics) {
+            queryJson.put("metrics", false);
+        }
+
+        if (this.mutationState != null) {
             if (this.consistency != null) {
                 throw new IllegalArgumentException("`consistency(...)` cannot be used "
                     + "together with `consistentWith(...)`");
             }
-            JsonObject vectors = JsonObject.create();
-            for (MutationToken token : mutationTokens) {
-                JsonObject bucket = vectors.getObject(token.bucket());
-                if (bucket == null) {
-                    bucket = JsonObject.create();
-                    vectors.put(token.bucket(), bucket);
-                }
-
-                bucket.put(String.valueOf(token.vbucketID()), JsonArray.from(
-                    token.sequenceNumber(),
-                    String.valueOf(token.vbucketUUID())
-                ));
-            }
-
-            queryJson.put("scan_vectors", vectors);
+            queryJson.put("scan_vectors", mutationState.export());
             queryJson.put("scan_consistency", "at_plus");
+        }
+
+        if (this.rawParams != null) {
+            for (Map.Entry<String, Object> entry : rawParams.entrySet()) {
+                queryJson.put(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -167,6 +160,19 @@ public class N1qlParams implements Serializable {
     }
 
     /**
+     * If set to true (false being the default), the metrics object will not be returned from N1QL and
+     * as a result be more efficient. Note that if metrics are disabled you are loosing information
+     * to diagnose problems - so use with care!
+     *
+     * @param disableMetrics true if disabled, false otherwise (false = default).
+     * @return this {@link N1qlParams} for chaining.
+     */
+    public N1qlParams disableMetrics(boolean disableMetrics) {
+        this.disableMetrics = disableMetrics;
+        return this;
+    }
+
+    /**
      * Sets scan consistency.
      *
      * Note that {@link ScanConsistency#NOT_BOUNDED NOT_BOUNDED} will unset the {@link #scanWait} if it was set.
@@ -185,69 +191,34 @@ public class N1qlParams implements Serializable {
      * Sets the {@link Document}s resulting of a mutation this query should be consistent with.
      *
      * @param documents the documents returned from a mutation.
-     *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
     public N1qlParams consistentWith(Document... documents) {
-        if (documents == null || documents.length == 0) {
-            throw new IllegalArgumentException("At least one Document needs to be provided.");
-        }
-
-        for (Document doc : documents) {
-            storeToken(doc.mutationToken());
-        }
-
-        return this;
+        return consistentWith(MutationState.from(documents));
     }
 
     /**
      * Sets the {@link DocumentFragment}s resulting of a mutation this query should be consistent with.
      *
      * @param fragments the fragments returned from a mutation.
-     *
      * @return this {@link N1qlParams} for chaining.
      */
     @InterfaceStability.Experimental
     public N1qlParams consistentWith(DocumentFragment... fragments) {
-        if (fragments == null || fragments.length == 0) {
-            throw new IllegalArgumentException("At least one DocumentFragment needs to be provided.");
-        }
-
-        for (DocumentFragment doc : fragments) {
-            storeToken(doc.mutationToken());
-        }
-
-        return this;
+        return consistentWith(MutationState.from(fragments));
     }
 
     /**
-     * Helper method to build up the token array and store it for later processing.
+     * Sets the {@link MutationState} this query should be consistent with.
+     *
+     * @param mutationState the mutation state which accumulates tokens from one or more mutation results.
+     * @return this {@link N1qlParams} for chaining.
      */
-    private void storeToken(MutationToken token) {
-        if (token == null) {
-            throw new IllegalArgumentException("No MutationToken provided (must be enabled on the Environment).");
-        }
-
-        if (mutationTokens == null) {
-            mutationTokens = new ArrayList<MutationToken>();
-            mutationTokens.add(token);
-            return;
-        }
-
-        Iterator<MutationToken> tokenIterator = mutationTokens.iterator();
-        while(tokenIterator.hasNext()) {
-            MutationToken t = tokenIterator.next();
-            if (t.vbucketID() == token.vbucketID() && t.bucket().equals(token.bucket())) {
-                if (token.sequenceNumber() > t.sequenceNumber()) {
-                    tokenIterator.remove();
-                    mutationTokens.add(token);
-                }
-                return;
-            }
-        }
-
-        mutationTokens.add(token);
+    @InterfaceStability.Experimental
+    public N1qlParams consistentWith(MutationState mutationState) {
+        this.mutationState = mutationState;
+        return this;
     }
 
     /**
@@ -297,6 +268,30 @@ public class N1qlParams implements Serializable {
     }
 
     /**
+     * Allows to specify an arbitrary, raw N1QL param.
+     *
+     * Use with care and only provide options that are supported by the server and are not exposed as part of the
+     * overall stable API in the {@link N1qlParams} class.
+     *
+     * @param name the name of the property.
+     * @param value the value of the property, only JSON value types are supported.
+     * @return this {@link N1qlParams} for chaining.
+     */
+    @InterfaceStability.Uncommitted
+    public N1qlParams rawParam(String name, Object value) {
+        if (this.rawParams == null) {
+            this.rawParams = new HashMap<String, Object>();
+        }
+
+        if (!JsonValue.checkType(value)) {
+            throw new IllegalArgumentException("Only JSON types are supported.");
+        }
+
+        rawParams.put(name, value);
+        return this;
+    }
+
+    /**
      * Helper method to check if a custom server side timeout has been applied on the params.
      *
      * @return true if it has, false otherwise.
@@ -321,15 +316,19 @@ public class N1qlParams implements Serializable {
 
         N1qlParams that = (N1qlParams) o;
 
+        if (disableMetrics != that.disableMetrics) return false;
         if (adhoc != that.adhoc) return false;
         if (serverSideTimeout != null ? !serverSideTimeout.equals(that.serverSideTimeout) : that.serverSideTimeout != null)
             return false;
         if (consistency != that.consistency) return false;
-        if (scanWait != null ? !scanWait.equals(that.scanWait) : that.scanWait != null)
-            return false;
+        if (scanWait != null ? !scanWait.equals(that.scanWait) : that.scanWait != null) return false;
         if (clientContextId != null ? !clientContextId.equals(that.clientContextId) : that.clientContextId != null)
             return false;
-        return !(maxParallelism != null ? !maxParallelism.equals(that.maxParallelism) : that.maxParallelism != null);
+        if (maxParallelism != null ? !maxParallelism.equals(that.maxParallelism) : that.maxParallelism != null)
+            return false;
+        if (mutationState != null ? !mutationState.equals(that.mutationState) : that.mutationState != null)
+            return false;
+        return rawParams != null ? rawParams.equals(that.rawParams) : that.rawParams == null;
 
     }
 
@@ -340,6 +339,9 @@ public class N1qlParams implements Serializable {
         result = 31 * result + (scanWait != null ? scanWait.hashCode() : 0);
         result = 31 * result + (clientContextId != null ? clientContextId.hashCode() : 0);
         result = 31 * result + (maxParallelism != null ? maxParallelism.hashCode() : 0);
+        result = 31 * result + (disableMetrics ? 1 : 0);
+        result = 31 * result + (mutationState != null ? mutationState.hashCode() : 0);
+        result = 31 * result + (rawParams != null ? rawParams.hashCode() : 0);
         result = 31 * result + (adhoc ? 1 : 0);
         return result;
     }
@@ -353,6 +355,8 @@ public class N1qlParams implements Serializable {
         sb.append(", clientContextId='").append(clientContextId).append('\'');
         sb.append(", maxParallelism=").append(maxParallelism);
         sb.append(", adhoc=").append(adhoc);
+        sb.append(", disableMetrics=").append(disableMetrics);
+        sb.append(", rawParams=").append(rawParams);
         sb.append('}');
         return sb.toString();
     }

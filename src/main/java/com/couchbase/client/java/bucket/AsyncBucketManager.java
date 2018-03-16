@@ -1,25 +1,22 @@
-/**
- * Copyright (C) 2014 Couchbase, Inc.
+/*
+ * Copyright (c) 2016 Couchbase, Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
- * IN THE SOFTWARE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.couchbase.client.java.bucket;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
@@ -34,8 +31,6 @@ import com.couchbase.client.java.query.dsl.Expression;
 import com.couchbase.client.java.query.util.IndexInfo;
 import com.couchbase.client.java.view.DesignDocument;
 import rx.Observable;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Provides management capabilities for a {@link AsyncBucket}.
@@ -253,7 +248,6 @@ public interface AsyncBucketManager {
      * @return an {@link Observable} that will get notified of each relevant {@link IndexInfo} (can be empty if no
      * relevant index is defined for this bucket).
      */
-    @InterfaceStability.Experimental
     Observable<IndexInfo> listN1qlIndexes();
 
     /**
@@ -273,7 +267,6 @@ public interface AsyncBucketManager {
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively created
      * (even in deferred mode), Boolean.FALSE if the index existed and ignoreIfExist is true.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> createN1qlPrimaryIndex(boolean ignoreIfExist, boolean defer);
 
     /**
@@ -294,7 +287,6 @@ public interface AsyncBucketManager {
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively created
      * (even in deferred mode), Boolean.FALSE if the index existed and ignoreIfExist is true.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> createN1qlPrimaryIndex(String customName, boolean ignoreIfExist, boolean defer);
 
     /**
@@ -322,7 +314,6 @@ public interface AsyncBucketManager {
      * (even in deferred mode), Boolean.FALSE if the index existed and ignoreIfExist is true.
      * @see #createN1qlIndex(String, List, Expression, boolean, boolean)
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> createN1qlIndex(String indexName, boolean ignoreIfExist, boolean defer, Object... fields);
 
     /**
@@ -346,7 +337,6 @@ public interface AsyncBucketManager {
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively created
      * (even in deferred mode), Boolean.FALSE if the index existed and ignoreIfExist is true.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> createN1qlIndex(final String indexName, List<Object> fields, Expression whereClause,
             final boolean ignoreIfExist, boolean defer);
 
@@ -364,7 +354,6 @@ public interface AsyncBucketManager {
      * @param ignoreIfNotExist if true, attempting to drop on a bucket without any primary index won't cause an exception to be propagated.
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively dropped.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> dropN1qlPrimaryIndex(boolean ignoreIfNotExist);
 
     /**
@@ -382,7 +371,6 @@ public interface AsyncBucketManager {
      * @param ignoreIfNotExist if true, attempting to drop on a bucket without any primary index won't cause an exception to be propagated.
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively dropped.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> dropN1qlPrimaryIndex(String customName, boolean ignoreIfNotExist);
 
     /**
@@ -399,7 +387,6 @@ public interface AsyncBucketManager {
      * @param ignoreIfNotExist if true, attempting to drop on a bucket without the specified index won't cause an exception to be propagated.
      * @return an {@link Observable} that will get notified with a single Boolean.TRUE if the index was effectively dropped.
      */
-    @InterfaceStability.Experimental
     Observable<Boolean> dropN1qlIndex(String name, boolean ignoreIfNotExist);
 
     /**
@@ -414,7 +401,6 @@ public interface AsyncBucketManager {
      * have been triggered.
      * @see #watchN1qlIndexes(List, long, TimeUnit) to poll for a list of indexes to become online.
      */
-    @InterfaceStability.Experimental
     Observable<List<String>> buildN1qlDeferredIndexes();
 
     /**
@@ -433,6 +419,5 @@ public interface AsyncBucketManager {
      * @return a stream of the {@link IndexInfo} for the indexes that went online during the watch period. Can be empty
      * if all indexes where online, no index to watch or no index became online within the watchTimeout timeframe.
      */
-    @InterfaceStability.Experimental
     Observable<IndexInfo> watchN1qlIndexes(List<String> watchList, long watchTimeout, TimeUnit watchTimeUnit);
 }
