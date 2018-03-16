@@ -436,17 +436,6 @@ public class ViewTest {
   }
 
   @Test
-  public void testQuerySetUpdateSeq() throws Exception {
-    Query query = new Query();
-    query.setReduce(false);
-    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    HttpFuture<ViewResponse> future =
-        client.asyncQuery(view, query.setUpdateSeq(true));
-    ViewResponse response = future.get();
-    assert response != null : future.getStatus();
-  }
-
-  @Test
   public void testQuerySetOnError() throws Exception {
     Query query = new Query();
     query.setReduce(false);
@@ -468,6 +457,19 @@ public class ViewTest {
       return; // Pass, no reduce exists.
     }
     assert false : ("No view exists and this query still happened");
+  }
+
+  @Test
+  public void testComplexKeyQuery() throws Exception {
+    Query query = new Query();
+    query.setReduce(false);
+
+    ComplexKey rangeEnd = ComplexKey.of("end");
+    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
+    HttpFuture<ViewResponse> future =
+        client.asyncQuery(view, query.setRangeEnd(rangeEnd));
+    ViewResponse response = future.get();
+    assert response != null : future.getStatus();
   }
 
   @Test
