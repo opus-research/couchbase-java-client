@@ -131,7 +131,7 @@ public class ReplicaReader {
      */
     private static class GetResponseFilter implements Func1<GetResponse, Boolean> {
 
-        public static final GetResponseFilter INSTANCE = new GetResponseFilter();
+        public static GetResponseFilter INSTANCE = new GetResponseFilter();
 
         @Override
         public Boolean call(GetResponse response) {
@@ -162,7 +162,7 @@ public class ReplicaReader {
      */
     private static class GetResponseErrorHandler implements Func1<Throwable, Observable<? extends GetResponse>> {
 
-        public static final GetResponseErrorHandler INSTANCE = new GetResponseErrorHandler();
+        public static GetResponseErrorHandler INSTANCE = new GetResponseErrorHandler();
 
         @Override
         public Observable<? extends GetResponse> call(Throwable throwable) {
