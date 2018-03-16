@@ -66,6 +66,13 @@ public class Index {
     }
 
     /**
+     * Create a new primary index with a custom name.
+     */
+    public static OnPrimaryPath createPrimaryIndex(String customPrimaryName) {
+        return new DefaultCreateIndexPath().createPrimary(customPrimaryName);
+    }
+
+    /**
      * Triggers building of indexes that have been deferred. Note that this feature is currently
      * only supported for GSI indexes, so the final {@link UsingPath using clause} should be explicit and use
      * the {@link IndexType#GSI GSI index type}.
@@ -100,6 +107,7 @@ public class Index {
      *
      * @param namespace the namespace prefix (will be escaped).
      * @param keyspace the keyspace (bucket, will be escaped).
+     * @see #dropCustomPrimaryIndex(String, String, String) if the primary index name has been customized.
      */
     public static UsingPath dropPrimaryIndex(String namespace, String keyspace) {
         return new DefaultDropPath().dropPrimary(namespace, keyspace);
@@ -109,8 +117,33 @@ public class Index {
      * Drop the primary index in the given keyspace.
      *
      * @param keyspace the keyspace (bucket, will be escaped).
+     * @see #dropCustomPrimaryIndex(String, String) if the primary index name has been customized.
      */
     public static UsingPath dropPrimaryIndex(String keyspace) {
         return new DefaultDropPath().dropPrimary(keyspace);
+    }
+
+
+    /**
+     * Drop the primary index of the given namespace:keyspace that has a custom name.
+     *
+     * @param namespace the namespace prefix (will be escaped).
+     * @param keyspace the keyspace (bucket, will be escaped).
+     * @param customPrimaryName the custom name for the primary index (will be escaped).
+     */
+    public static UsingPath dropCustomPrimaryIndex(String namespace, String keyspace, String customPrimaryName) {
+        //N1QL syntax for dropping a primary with a name is actually similar to dropping secondary index
+        return new DefaultDropPath().drop(namespace, keyspace, customPrimaryName);
+    }
+
+    /**
+     * Drop the primary index in the given keyspace that has a custom name.
+     *
+     * @param keyspace the keyspace (bucket, will be escaped).
+     * @param customPrimaryName the custom name for the primary index (will be escaped).
+     */
+    public static UsingPath dropCustomPrimaryIndex(String keyspace, String customPrimaryName) {
+        //N1QL syntax for dropping a primary with a name is actually similar to dropping secondary index
+        return new DefaultDropPath().drop(keyspace, customPrimaryName);
     }
 }
