@@ -34,6 +34,7 @@ public class TestProperties {
   private static String password;
   private static String adminName;
   private static String adminPassword;
+  private static int thinkTime;
 
   /**
    * Initialize static the properties.
@@ -44,6 +45,7 @@ public class TestProperties {
     password = System.getProperty("password", "");
     adminName = System.getProperty("adminName", "Administrator");
     adminPassword = System.getProperty("adminPassword", "password");
+    thinkTime = Integer.parseInt(System.getProperty("thinkTime", "5000"));
   }
 
   /**
@@ -80,4 +82,8 @@ public class TestProperties {
   public static String adminPassword() {
       return adminPassword;
   }
+
+    public static int thinkTime() {
+        return thinkTime;
+    }
 }
