@@ -1,13 +1,14 @@
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.java.document.json.JsonObject;
-
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
+import com.couchbase.client.java.document.json.JsonObject;
 
 /**
- * .
+ * Represents the results of a {@link Query}, in a blocking fashion.
+ * Note that the result is complete, meaning it will block until all
+ * data has been streamed from the server.
  *
  * @author Michael Nitschinger
  */
@@ -15,15 +16,9 @@ public interface QueryResult {
 
     List<QueryRow> allRows();
 
-    List<QueryRow> allRows(long timeout, TimeUnit timeUnit);
-
     Iterator<QueryRow> rows();
 
-    Iterator<QueryRow> rows(long timeout, TimeUnit timeUnit);
-
     JsonObject info();
-
-    JsonObject info(long timeout, TimeUnit timeUnit);
 
     boolean parseSuccess();
 
