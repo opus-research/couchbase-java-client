@@ -22,21 +22,17 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 import javax.naming.ConfigurationException;
 
 import net.spy.memcached.AddrUtil;
-import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.ops.Operation;
 
 /**
@@ -45,8 +41,6 @@ import net.spy.memcached.ops.Operation;
 public class TapConnectionProvider
   extends net.spy.memcached.TapConnectionProvider
   implements Reconfigurable {
-
-  private final ConfigurationProvider cp;
 
   /**
    * Get a tap connection based on the REST response from a Couchbase server.
@@ -73,19 +67,11 @@ public class TapConnectionProvider
   public TapConnectionProvider(CouchbaseConnectionFactory cf)
     throws IOException, ConfigurationException{
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
-    cp = cf.getConfigurationProvider();
-    cp.subscribe(cf.getBucketName(), this);
+    cf.getConfigurationProvider().subscribe(cf.getBucketName(), this);
   }
 
-  protected void addTapAckOp(MemcachedNode node, Operation op) {
-    super.addTapAckOp(node, op);
-  }
-
-  protected CountDownLatch broadcastOp(final BroadcastOpFactory of) {
-    if (shuttingDown) {
-      throw new IllegalStateException("Shutting down");
-    }
-    return conn.broadcastOperation(of, conn.getLocator().getAll());
+  protected void addOp(final Operation op) {
+    conn.enqueueOperation("TStream", op);
   }
 
   /**
