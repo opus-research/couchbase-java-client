@@ -21,6 +21,9 @@
  */
 package com.couchbase.client.java;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
@@ -34,6 +37,10 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.LegacyDocument;
 import com.couchbase.client.java.document.StringDocument;
+import com.couchbase.client.java.document.subdoc.DocumentFragment;
+import com.couchbase.client.java.document.subdoc.ExtendDirection;
+import com.couchbase.client.java.document.subdoc.LookupResult;
+import com.couchbase.client.java.document.subdoc.LookupSpec;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
@@ -56,7 +63,6 @@ import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.View;
 import com.couchbase.client.java.view.ViewQuery;
 import rx.Observable;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Defines operations that can be executed asynchronously against a Couchbase Server bucket.
@@ -1990,6 +1996,44 @@ public interface AsyncBucket {
      * @return a document which mirrors the one supplied as an argument.
      */
     <D extends Document<?>> Observable<D> prepend(D document, PersistTo persistTo, ReplicateTo replicateTo);
+
+    /*---------------------------*
+     * START OF SUB-DOCUMENT API *
+     *---------------------------*/
+    <T> Observable<DocumentFragment<T>> getIn(String id, String path, Class<T> fragmentType);
+    Observable<Boolean> existsIn(String id, String path);
+
+    <T> Observable<DocumentFragment<T>> upsertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> Observable<DocumentFragment<T>> insertIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> Observable<DocumentFragment<T>> replaceIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+
+    <T> Observable<DocumentFragment<T>> extendIn(DocumentFragment<T> fragment, ExtendDirection direction, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> Observable<DocumentFragment<T>> arrayInsertIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+    <T> Observable<DocumentFragment<T>> addUniqueIn(DocumentFragment<T> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+
+    <T> Observable<DocumentFragment<T>> removeIn(DocumentFragment<T> fragment, PersistTo persistTo, ReplicateTo replicateTo);
+
+    Observable<DocumentFragment<Long>> counterIn(DocumentFragment<Long> fragment, boolean createParents, PersistTo persistTo, ReplicateTo replicateTo);
+
+    /**
+     *
+     * @param id
+     * @param lookupSpecs
+     * @return
+     * @throws DocumentDoesNotExistException if the id doesn't map to an existing document
+     * @throws NullPointerException if the lookupSpecs is null
+     * @throws IllegalArgumentException if the lookupSpecs is empty
+     */
+    Observable<DocumentFragment<List<LookupResult>>> lookupIn(String id, LookupSpec... lookupSpecs);
+
+//
+//    // would look like:
+//    // JsonDocument result = bucket().mutateIn(JsonDocument.create("doc"), PersistTo.NONE, ReplicateTo.NONE, upsert("a.b", JsonObject.empty(), false), replace("b.c", false));
+//    Observable<JsonDocument> mutateIn(JsonDocument doc, PersistTo persistTo, ReplicateTo replicateTo, MutationSpec... mutationSpecs);
+    /*-------------------------*
+     * END OF SUB-DOCUMENT API *
+     *-------------------------*/
+
 
     /**
      * Invalidates and clears the internal query cache.
