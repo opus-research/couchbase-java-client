@@ -27,8 +27,11 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
+import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.message.cluster.GetClusterConfigRequest;
+import com.couchbase.client.core.message.cluster.GetClusterConfigResponse;
 import com.couchbase.client.core.message.query.GenericQueryRequest;
 import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.utils.Buffers;
@@ -50,7 +53,6 @@ import com.couchbase.client.java.query.PreparedN1qlQuery;
 import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.SimpleN1qlQuery;
 import com.couchbase.client.java.query.Statement;
-import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.util.LRUCache;
 import rx.Observable;
@@ -360,14 +362,30 @@ public class N1qlQueryExecutor {
         if (statement instanceof PrepareStatement) {
             prepared = (PrepareStatement) statement;
         } else {
-            prepared = PrepareStatement.prepare(statement, null);
+            //not including an explicit name here will produce a hash as explicit name
+            //null would have let the server generate a name
+            prepared = PrepareStatement.prepare(statement);
         }
         final SimpleN1qlQuery query = N1qlQuery.simple(prepared);
 
-        return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
+        return Observable.defer(new Func0<Observable<GetClusterConfigResponse>>() {
             @Override
-            public Observable<GenericQueryResponse> call() {
-                return core.send(createN1qlRequest(query, bucket, password));
+            public Observable<GetClusterConfigResponse> call() {
+                return core.send(new GetClusterConfigRequest());
+            }
+        }).flatMap(new Func1<GetClusterConfigResponse, Observable<NodeInfo>>() {
+            @Override
+            public Observable<NodeInfo> call(GetClusterConfigResponse getClusterConfigResponse) {
+                return Observable.from(getClusterConfigResponse.config()
+                        .bucketConfig(bucket)
+                        .nodes());
+            }
+        }).flatMap(new Func1<NodeInfo, Observable<GenericQueryResponse>>() {
+            @Override
+            public Observable<GenericQueryResponse> call(NodeInfo nodeInfo) {
+                GenericQueryRequest req = createN1qlRequest(query, bucket, password);
+                req.sendTo(nodeInfo.hostname());
+                return core.send(req);
             }
         }).flatMap(new Func1<GenericQueryResponse, Observable<PreparedPayload>>() {
             @Override
@@ -429,7 +447,7 @@ public class N1qlQueryExecutor {
                         });
                 }
             }
-        });
+        }).last();
     }
 
   /**
@@ -451,7 +469,8 @@ public class N1qlQueryExecutor {
         return new PreparedPayload(
                 prepared.originalStatement(),
                 response.getString("name"),
-                response.getString("encoded_plan")
+                null
+//                response.getString("encoded_plan")
         );
     }
 
