@@ -47,8 +47,6 @@ public interface HttpOperation {
 
   void timeOut();
 
-  void addAuthHeader(String auth);
-
   OperationException getException();
 
   void handleResponse(HttpResponse response);

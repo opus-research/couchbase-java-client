@@ -25,6 +25,7 @@ package com.couchbase.client.protocol.views;
 import java.io.IOException;
 import java.text.ParseException;
 
+import net.spy.memcached.ops.ErrorCode;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationErrorType;
 import net.spy.memcached.ops.OperationException;
@@ -44,9 +45,9 @@ public abstract class HttpOperationImpl implements HttpOperation {
   private final HttpRequest request;
   protected final OperationCallback callback;
   protected OperationException exception;
-  private volatile boolean cancelled;
-  private volatile boolean errored;
-  private volatile boolean timedOut;
+  private boolean cancelled;
+  private boolean errored;
+  private boolean timedOut;
 
   public HttpOperationImpl(HttpRequest r, OperationCallback cb) {
     request = r;
@@ -94,10 +95,6 @@ public abstract class HttpOperationImpl implements HttpOperation {
     exception = e;
   }
 
-  public void addAuthHeader(String authzn) {
-    request.addHeader("Authorization", authzn);
-  }
-
   public abstract void handleResponse(HttpResponse response);
 
   protected String getEntityString(HttpResponse response) {
@@ -132,33 +129,16 @@ public abstract class HttpOperationImpl implements HttpOperation {
           if (base.has("reason")) {
             error += " Reason: " + base.getString("reason");
           }
-          return new OperationStatus(false, error);
+          return new OperationStatus(false, error, ErrorCode.ERR_INVAL);
         } else {
-          return new OperationStatus(true, "Error Code: " + errorcode);
+          return new OperationStatus(true, "Error Code: " + errorcode,
+              ErrorCode.SUCCESS);
         }
       } catch (JSONException e) {
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
     return new OperationStatus(false, "Error Code: " + errorcode
-        + "No entity");
+        + "No entity", ErrorCode.ERR_INVAL);
   }
-
-  @Override
-  public String toString() {
-    StringBuilder rv = new StringBuilder(HttpOperationImpl.class.getName());
-    rv.append(" request:").append(getRequest())
-      .append(" has errored: ").append(hasErrored())
-      .append(" is  cancelled: ").append(isCancelled())
-      .append(" is timed out: ").append(isTimedOut());
-    if (null != getException()) {
-      rv.append(" with contained exception: ")
-        .append(getException().getClass().getName())
-        .append(": ").append(getException().getMessage());
-    }
-    return rv.toString();
-
-  }
-
-
 }
