@@ -42,15 +42,11 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.LongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.CASMismatchException;
-import com.couchbase.client.java.error.DocumentAlreadyExistsException;
-import com.couchbase.client.java.error.DocumentDoesNotExistException;
-import com.couchbase.client.java.error.DurabilityException;
+import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.JsonTranscoder;
 import com.couchbase.client.java.transcoder.LegacyTranscoder;
 import com.couchbase.client.java.transcoder.Transcoder;
-import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
 import rx.functions.Func1;
@@ -419,60 +415,60 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
   public Observable<AsyncViewResult> query(final ViewQuery query) {
-    final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
-        query.toString(), bucket, password);
+        final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
+                query.toString(), bucket, password);
         return core.<ViewQueryResponse>send(request)
-            .flatMap(new Func1<ViewQueryResponse, Observable<AsyncViewResult>>() {
-                @Override
-                public Observable<AsyncViewResult> call(final ViewQueryResponse response) {
-                    return response.info().map(new Func1<ByteBuf, JsonObject>() {
-                        @Override
-                        public JsonObject call(ByteBuf byteBuf) {
-                            if (byteBuf == null || byteBuf.readableBytes() == 0) {
-                                return JsonObject.empty();
-                            }
-                            try {
-                                return JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            }
-                        }
-                    }).map(new Func1<JsonObject, AsyncViewResult>() {
-                        @Override
-                        public AsyncViewResult call(JsonObject jsonInfo) {
-                            JsonObject error = null;
-                            JsonObject debug = null;
-                            int totalRows = 0;
-                            boolean success = response.status().isSuccess();
-                            if (success) {
-                                debug = jsonInfo.getObject("debug_info");
-                                Integer trows = jsonInfo.getInt("total_rows");
-                                if (trows != null) {
-                                    totalRows = trows;
+                .flatMap(new Func1<ViewQueryResponse, Observable<AsyncViewResult>>() {
+                    @Override
+                    public Observable<AsyncViewResult> call(final ViewQueryResponse response) {
+                        return response.info().map(new Func1<ByteBuf, JsonObject>() {
+                            @Override
+                            public JsonObject call(ByteBuf byteBuf) {
+                                if (byteBuf == null || byteBuf.readableBytes() == 0) {
+                                    return JsonObject.empty();
                                 }
-                            } else {
-                                error = jsonInfo;
+                                try {
+                                    return JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                } catch (Exception e) {
+                                    throw new TranscodingException("Could not decode View Info.", e);
+                                }
                             }
-
-                            Observable<AsyncViewRow> rows = response.rows().map(new Func1<ByteBuf, AsyncViewRow>() {
-                                @Override
-                                public AsyncViewRow call(final ByteBuf byteBuf) {
-                                    JsonObject doc;
-                                    try {
-                                        doc = JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode View Info.", e);
+                        }).map(new Func1<JsonObject, AsyncViewResult>() {
+                            @Override
+                            public AsyncViewResult call(JsonObject jsonInfo) {
+                                JsonObject error = null;
+                                JsonObject debug = null;
+                                int totalRows = 0;
+                                boolean success = response.status().isSuccess();
+                                if (success) {
+                                    debug = jsonInfo.getObject("debug_info");
+                                    Integer trows = jsonInfo.getInt("total_rows");
+                                    if (trows != null) {
+                                        totalRows = trows;
                                     }
-                                    String id = doc.getString("id");
-                                    return new DefaultAsyncViewRow(CouchbaseAsyncBucket.this, id, doc.get("key"), doc.get("value"));
+                                } else {
+                                    throw new ViewQueryException(jsonInfo.getString("error"), jsonInfo.getString("reason"));
                                 }
-                            });
-                            return new DefaultAsyncViewResult(rows, totalRows, success, error, debug);
-                        }
-                    });
-                }
-            });
-  }
+
+                                Observable<AsyncViewRow> rows = response.rows().map(new Func1<ByteBuf, AsyncViewRow>() {
+                                    @Override
+                                    public AsyncViewRow call(final ByteBuf byteBuf) {
+                                        JsonObject doc;
+                                        try {
+                                            doc = JSON_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                        } catch (Exception e) {
+                                            throw new TranscodingException("Could not decode View Info.", e);
+                                        }
+                                        String id = doc.getString("id");
+                                        return new DefaultAsyncViewRow(CouchbaseAsyncBucket.this, id, doc.get("key"), doc.get("value"));
+                                    }
+                                });
+                                return new DefaultAsyncViewResult(rows, totalRows, success, error, debug);
+                            }
+                        });
+                    }
+                });
+    }
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {
