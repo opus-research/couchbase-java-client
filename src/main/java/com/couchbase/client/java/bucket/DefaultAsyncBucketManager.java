@@ -32,6 +32,7 @@ import com.couchbase.client.core.message.view.RemoveDesignDocumentRequest;
 import com.couchbase.client.core.message.view.RemoveDesignDocumentResponse;
 import com.couchbase.client.core.message.view.UpsertDesignDocumentRequest;
 import com.couchbase.client.core.message.view.UpsertDesignDocumentResponse;
+import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonArray;
@@ -41,6 +42,7 @@ import com.couchbase.client.java.error.DesignDocumentException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.view.DesignDocument;
 import rx.Observable;
+import rx.functions.Func0;
 import rx.functions.Func1;
 
 import java.util.ArrayList;
@@ -134,37 +136,42 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<DesignDocument> getDesignDocument(String name, boolean development) {
-        return core.<GetDesignDocumentResponse>send(new GetDesignDocumentRequest(name, development, bucket, password))
-            .filter(new Func1<GetDesignDocumentResponse, Boolean>() {
-                @Override
-                public Boolean call(GetDesignDocumentResponse response) {
-                    boolean success = response.status().isSuccess();
-                    if (!success) {
-                        if (response.content() != null && response.content().refCnt() > 0) {
-                           response.content().release();
-                        }
+    public Observable<DesignDocument> getDesignDocument(final String name, final boolean development) {
+        return Buffers.wrapColdWithAutoRelease(Observable.defer(new Func0<Observable<GetDesignDocumentResponse>>() {
+            @Override
+            public Observable<GetDesignDocumentResponse> call() {
+                return core.send(new GetDesignDocumentRequest(name, development, bucket, password));
+            }
+        }))
+        .filter(new Func1<GetDesignDocumentResponse, Boolean>() {
+            @Override
+            public Boolean call(GetDesignDocumentResponse response) {
+                boolean success = response.status().isSuccess();
+                if (!success) {
+                    if (response.content() != null && response.content().refCnt() > 0) {
+                        response.content().release();
                     }
-                    return success;
                 }
-            })
-            .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
-                @Override
-                public DesignDocument call(GetDesignDocumentResponse response) {
-                    JsonObject converted;
-                    try {
-                        converted = CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(
-                            response.content().toString(CharsetUtil.UTF_8));
-                    } catch (Exception e) {
-                        throw new TranscodingException("Could not decode design document.", e);
-                    } finally {
-                        if (response.content() != null && response.content().refCnt() > 0) {
-                            response.content().release();
-                        }
+                return success;
+            }
+        })
+        .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
+            @Override
+            public DesignDocument call(GetDesignDocumentResponse response) {
+                JsonObject converted;
+                try {
+                    converted = CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.stringToJsonObject(
+                        response.content().toString(CharsetUtil.UTF_8));
+                } catch (Exception e) {
+                    throw new TranscodingException("Could not decode design document.", e);
+                } finally {
+                    if (response.content() != null && response.content().refCnt() > 0) {
+                        response.content().release();
                     }
-                    return DesignDocument.from(response.name(), converted);
                 }
-            });
+                return DesignDocument.from(response.name(), converted);
+            }
+        });
     }
 
     @Override
@@ -201,25 +208,31 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
         } catch (Exception e) {
             throw new TranscodingException("Could not encode design document: ", e);
         }
-        UpsertDesignDocumentRequest req = new UpsertDesignDocumentRequest(designDocument.name(),
+        final UpsertDesignDocumentRequest req = new UpsertDesignDocumentRequest(designDocument.name(),
             body, development, bucket, password);
-        return core.<UpsertDesignDocumentResponse>send(req)
-            .map(new Func1<UpsertDesignDocumentResponse, DesignDocument>() {
-                @Override
-                public DesignDocument call(UpsertDesignDocumentResponse response) {
-                    try {
-                        if (!response.status().isSuccess()) {
-                            String msg = response.content().toString(CharsetUtil.UTF_8);
-                            throw new DesignDocumentException("Could not store DesignDocument: " + msg);
-                        }
-                    } finally {
-                        if (response.content() != null && response.content().refCnt() > 0) {
-                            response.content().release();
-                        }
+
+        return Buffers.wrapColdWithAutoRelease(Observable.defer(new Func0<Observable<UpsertDesignDocumentResponse>>() {
+            @Override
+            public Observable<UpsertDesignDocumentResponse> call() {
+                return core.send(req);
+            }
+        }))
+        .map(new Func1<UpsertDesignDocumentResponse, DesignDocument>() {
+            @Override
+            public DesignDocument call(UpsertDesignDocumentResponse response) {
+                try {
+                    if (!response.status().isSuccess()) {
+                        String msg = response.content().toString(CharsetUtil.UTF_8);
+                        throw new DesignDocumentException("Could not store DesignDocument: " + msg);
                     }
-                    return designDocument;
+                } finally {
+                    if (response.content() != null && response.content().refCnt() > 0) {
+                        response.content().release();
+                    }
                 }
-            });
+                return designDocument;
+            }
+        });
     }
 
     @Override
@@ -229,17 +242,23 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<Boolean> removeDesignDocument(String name, boolean development) {
-        RemoveDesignDocumentRequest req = new RemoveDesignDocumentRequest(name, development, bucket, password);
-        return core.<RemoveDesignDocumentResponse>send(req)
-            .map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
-                @Override
-                public Boolean call(RemoveDesignDocumentResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
-                        response.content().release();
-                    }
-                    return response.status().isSuccess();
+        final RemoveDesignDocumentRequest req = new RemoveDesignDocumentRequest(name, development, bucket, password);
+
+        return Buffers.wrapColdWithAutoRelease(Observable.defer(new Func0<Observable<RemoveDesignDocumentResponse>>() {
+            @Override
+            public Observable<RemoveDesignDocumentResponse> call() {
+                return core.send(req);
+            }
+        }))
+        .map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
+            @Override
+            public Boolean call(RemoveDesignDocumentResponse response) {
+                if (response.content() != null && response.content().refCnt() > 0) {
+                    response.content().release();
                 }
-            });
+                return response.status().isSuccess();
+            }
+        });
     }
 
     @Override

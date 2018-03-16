@@ -32,11 +32,13 @@ import com.couchbase.client.core.message.kv.GetRequest;
 import com.couchbase.client.core.message.kv.GetResponse;
 import com.couchbase.client.core.message.kv.UpsertRequest;
 import com.couchbase.client.core.message.kv.UpsertResponse;
+import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.error.FlushDisabledException;
 import rx.Observable;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
 
@@ -108,8 +110,13 @@ public class BucketFlusher {
             .from(FLUSH_MARKERS)
             .flatMap(new Func1<String, Observable<UpsertResponse>>() {
                 @Override
-                public Observable<UpsertResponse> call(String id) {
-                    return core.send(new UpsertRequest(id, Unpooled.copiedBuffer(id, CharsetUtil.UTF_8), bucket));
+                public Observable<UpsertResponse> call(final String id) {
+                    return Buffers.wrapColdWithAutoRelease(Observable.defer(new Func0<Observable<UpsertResponse>>() {
+                        @Override
+                        public Observable<UpsertResponse> call() {
+                            return core.send(new UpsertRequest(id, Unpooled.copiedBuffer(id, CharsetUtil.UTF_8), bucket));
+                        }
+                    }));
                 }
             })
             .doOnNext(new Action1<UpsertResponse>() {
@@ -170,8 +177,13 @@ public class BucketFlusher {
             .from(FLUSH_MARKERS)
             .flatMap(new Func1<String, Observable<GetResponse>>() {
                 @Override
-                public Observable<GetResponse> call(String id) {
-                    return core.send(new GetRequest(id, bucket));
+                public Observable<GetResponse> call(final String id) {
+                    return Buffers.wrapColdWithAutoRelease(Observable.defer(new Func0<Observable<GetResponse>>() {
+                        @Override
+                        public Observable<GetResponse> call() {
+                            return core.send(new GetRequest(id, bucket));
+                        }
+                    }));
                 }
             })
             .reduce(0, new Func2<Integer, GetResponse, Integer>() {
