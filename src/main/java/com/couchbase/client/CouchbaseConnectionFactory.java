@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.http.AsyncConnectionManager;
+
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
@@ -57,7 +59,6 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
-import org.apache.http.nio.reactor.IOReactorException;
 
 /**
  * Couchbase implementation of ConnectionFactory.
@@ -210,9 +211,10 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       new ConfigurationProviderHTTP(baseList, bucket, password);
   }
 
-  public ViewNode createViewNode(InetSocketAddress addr, ViewConnection conn)
-    throws IOReactorException {
-    return new ViewNode(addr, bucket, pass, conn);
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
+        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
   }
 
   @Override
