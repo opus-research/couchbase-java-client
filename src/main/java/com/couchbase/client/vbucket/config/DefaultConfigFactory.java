@@ -41,257 +41,162 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
 /**
- * A {@link ConfigFactory} for creating a {@link Config} out of raw JSON.
+ * A DefaultConfigFactory.
  */
 public class DefaultConfigFactory extends SpyObject implements ConfigFactory {
 
-  /**
-   * Create a {@link Config} from a {@link File}.
-   *
-   * @param source the source to look it up from.
-   * @return the populated {@link Config}.
-   */
   @Override
-  public Config create(final File source) {
-    if (source == null || source.getName().isEmpty()) {
+  public Config create(File filename) {
+    if (filename == null || "".equals(filename.getName())) {
       throw new IllegalArgumentException("Filename is empty.");
     }
-
-    final StringBuilder builder = new StringBuilder();
+    StringBuilder sb = new StringBuilder();
     try {
-      FileInputStream fis = new FileInputStream(source);
+      FileInputStream fis = new FileInputStream(filename);
       BufferedReader reader = new BufferedReader(new InputStreamReader(fis));
       String str;
       while ((str = reader.readLine()) != null) {
-        builder.append(str);
+        sb.append(str);
       }
     } catch (IOException e) {
       throw new ConfigParsingException("Exception reading input file: "
-        + source, e);
+          + filename, e);
     }
-    return create(builder.toString());
+    return create(sb.toString());
   }
 
-  /**
-   * Create a {@link Config} from a raw JSON String.
-   *
-   * @param source the raw JSON string.
-   * @return the populated {@link Config}.
-   */
   @Override
-  public Config create(final String source) {
+  public Config create(String data) {
     try {
-      return parseJSON(new JSONObject(source));
+      JSONObject jsonObject = new JSONObject(data);
+      return parseJSON(jsonObject);
     } catch (JSONException e) {
-      throw new ConfigParsingException("Exception parsing JSON source: "
-        + source, e);
+      throw new ConfigParsingException("Exception parsing JSON data: " + data,
+        e);
     }
   }
 
-  /**
-   * Create a {@link Config} from a {@link JSONObject}.
-   *
-   * @param source the raw {@link JSONObject}.
-   * @return the populated {@link Config}.
-   */
   @Override
-  public Config create(final JSONObject source) {
+  public Config create(JSONObject jsonObject) {
     try {
-      return parseJSON(source);
+      return parseJSON(jsonObject);
     } catch (JSONException e) {
       throw new ConfigParsingException("Exception parsing JSON data: "
-        + source, e);
+        + jsonObject, e);
     }
   }
 
-  /**
-   * Helper method to identify the type of bucket to parse.
-   *
-   * @param source the raw {@link JSONObject}.
-   * @return the populated {@link Config}.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private Config parseJSON(final JSONObject source) throws JSONException {
-    return source.has("vBucketServerMap")
-      ? parseCouchbaseBucketJSON(source) : parseMemcacheBucketJSON(source);
+  private Config parseJSON(JSONObject jsonObject) throws JSONException {
+    // the incoming config could be cache or EP object types, JSON envelope
+    // picked apart
+    if (!jsonObject.has("vBucketServerMap")) {
+      return parseCacheJSON(jsonObject);
+    }
+    return parseEpJSON(jsonObject);
   }
 
-  /**
-   * Parse the JSON for a memcache type bucket.
-   *
-   * @param source the raw {@link JSONObject}.
-   * @return the populated {@link Config}.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private Config parseMemcacheBucketJSON(final JSONObject source)
-    throws JSONException {
-    JSONArray nodes = source.getJSONArray("nodes");
+  private Config parseCacheJSON(JSONObject jsonObject) throws JSONException {
 
-    int amountOfNodes = nodes.length();
-    if (amountOfNodes <= 0) {
+    JSONArray nodes = jsonObject.getJSONArray("nodes");
+    if (nodes.length() <= 0) {
       throw new ConfigParsingException("Empty nodes list.");
     }
+    int serversCount = nodes.length();
 
-    CacheConfig config = new CacheConfig(amountOfNodes);
-    populateServersForMemcacheBucket(config, nodes);
+    CacheConfig config = new CacheConfig(serversCount);
+    populateServers(config, nodes);
+
     return config;
   }
 
-  /**
-   * Helper method to populate the servers into the {@link CacheConfig}.
-   *
-   * @param config the {@link CacheConfig} to use.
-   * @param nodes the original list of nodes.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private void populateServersForMemcacheBucket(CacheConfig config,
-    JSONArray nodes) throws JSONException {
-    List<String> serverNames = new ArrayList<String>(nodes.length());
-    for (int i = 0; i < nodes.length(); i++) {
-      JSONObject node = nodes.getJSONObject(i);
-      String[] webHostPort = node.getString("hostname").split(":");
-      JSONObject portsList = node.getJSONObject("ports");
-      int port = portsList.getInt("direct");
-      serverNames.add(webHostPort[0] + ":" + port);
-    }
-    config.setServers(serverNames);
-  }
-
-
-  /**
-   * Parse the JSON for a couchbase type bucket.
-   *
-   * @param source the raw {@link JSONObject}.
-   * @return the populated {@link Config}.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private Config parseCouchbaseBucketJSON(JSONObject source)
-    throws JSONException {
-    final JSONObject vBucketServerMap =
-      source.getJSONObject("vBucketServerMap");
-
-    final String algorithm = vBucketServerMap.getString("hashAlgorithm");
+  /* ep is for ep-engine, a.k.a. couchbase */
+  private Config parseEpJSON(JSONObject jsonObject) throws JSONException {
+    JSONObject vbMap = jsonObject.getJSONObject("vBucketServerMap");
+    String algorithm = vbMap.getString("hashAlgorithm");
     HashAlgorithm hashAlgorithm =
-      HashAlgorithmRegistry.lookupHashAlgorithm(algorithm);
+        HashAlgorithmRegistry.lookupHashAlgorithm(algorithm);
     if (hashAlgorithm == null) {
       throw new IllegalArgumentException("Unhandled hash algorithm type: "
           + algorithm);
     }
-
-    final int replicasCount = vBucketServerMap.getInt("numReplicas");
+    int replicasCount = vbMap.getInt("numReplicas");
     if (replicasCount > VBucket.MAX_REPLICAS) {
       throw new ConfigParsingException("Expected number <= "
           + VBucket.MAX_REPLICAS + " for replicas.");
     }
-
-    final JSONArray servers = vBucketServerMap.getJSONArray("serverList");
-    final int serversCount = servers.length();
-    if (serversCount <= 0) {
+    JSONArray servers = vbMap.getJSONArray("serverList");
+    if (servers.length() <= 0) {
       throw new ConfigParsingException("Empty servers list.");
     }
-
-    final JSONArray viewServers = source.getJSONArray("nodes");
-    final int viewServersCount = viewServers.length();
-    if (viewServersCount <= 0) {
-      throw new ConfigParsingException("Empty view servers list.");
-    }
-
-    final JSONArray vBuckets = vBucketServerMap.getJSONArray("vBucketMap");
-    final int vBucketsCount = vBuckets.length();
-    if (vBucketsCount == 0 || (vBucketsCount & (vBucketsCount - 1)) != 0) {
+    int serversCount = servers.length();
+    JSONArray vbuckets = vbMap.getJSONArray("vBucketMap");
+    int vbucketsCount = vbuckets.length();
+    if (vbucketsCount == 0 || (vbucketsCount & (vbucketsCount - 1)) != 0) {
       throw new ConfigParsingException("Number of vBuckets must be a power of "
-        + "two, > 0 and <= " + VBucket.MAX_BUCKETS + " (got " + vBucketsCount
-        + ")");
+        + "two, > 0 and <= " + VBucket.MAX_BUCKETS);
     }
+    List<String> populateServers = populateServers(servers);
+    List<VBucket> populateVbuckets = populateVbuckets(vbuckets);
 
-    final List<String> populatedServers =
-      populateServersForCouchbaseBucket(servers);
-    final List<VBucket> populatedVBuckets = populateVBuckets(vBuckets);
-    final List<URL> populatedViewServers = populateViewServers(viewServers);
+    List<URL> couchServers =
+      populateCouchServers(jsonObject.getJSONArray("nodes"));
 
-    return new DefaultConfig(hashAlgorithm, serversCount, replicasCount,
-      vBucketsCount, populatedServers, populatedVBuckets,
-      populatedViewServers);
+    DefaultConfig config = new DefaultConfig(hashAlgorithm, serversCount,
+      replicasCount, vbucketsCount, populateServers, populateVbuckets,
+      couchServers);
+
+    return config;
   }
 
-  /**
-   * Helper method to create a {@link List} of view server URLs.
-   *
-   * @param nodes the raw JSON nodes.
-   * @return a populated list of URLs.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private List<URL> populateViewServers(JSONArray nodes) throws JSONException {
-    int nodeSize = nodes.length();
-    List<URL> nodeUrls = new ArrayList<URL>(nodeSize);
-    for (int i = 0; i < nodeSize; i++) {
+  private List<URL> populateCouchServers(JSONArray nodes) throws JSONException{
+    List<URL> nodeNames = new ArrayList<URL>();
+    for (int i = 0; i < nodes.length(); i++) {
       JSONObject node = nodes.getJSONObject(i);
       if (node.has("couchApiBase")) {
         try {
-          nodeUrls.add(new URL(node.getString("couchApiBase")));
+          nodeNames.add(new URL(node.getString("couchApiBase")));
         } catch (MalformedURLException e) {
           throw new JSONException("Got bad couchApiBase URL from config");
         }
       }
     }
-    return nodeUrls;
+    return nodeNames;
   }
 
-  /**
-   * Helper method to create a {@link List} of server hostnames.
-   *
-   * @param nodes the raw JSON nodes.
-   * @return a populates list of hostnames.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private List<String> populateServersForCouchbaseBucket(JSONArray nodes)
-    throws JSONException {
-    int nodeSize = nodes.length();
-    List<String> serverNames = new ArrayList<String>(nodeSize);
-    for (int i = 0; i < nodeSize; i++) {
-      serverNames.add(nodes.getString(i));
+  private List<String> populateServers(JSONArray servers) throws JSONException {
+    List<String> serverNames = new ArrayList<String>();
+    for (int i = 0; i < servers.length(); i++) {
+      String server = servers.getString(i);
+      serverNames.add(server);
     }
     return serverNames;
   }
 
-  /**
-   * Helper method to create a {@link List} of {@link VBucket} instances.
-   *
-   * @param source the raw JSON vbucket information.
-   * @return a populated list of {@link VBucket} instances.
-   * @throws JSONException if parsing the JSON was not successful.
-   */
-  private List<VBucket> populateVBuckets(JSONArray source)
+  private void populateServers(CacheConfig config, JSONArray nodes)
     throws JSONException {
-    int numVBuckets = source.length();
-    List<VBucket> vBuckets = new ArrayList<VBucket>(numVBuckets);
+    List<String> serverNames = new ArrayList<String>();
+    for (int i = 0; i < nodes.length(); i++) {
+      JSONObject node = nodes.getJSONObject(i);
+      String webHostPort = node.getString("hostname");
+      String[] splitHostPort = webHostPort.split(":");
+      JSONObject portsList = node.getJSONObject("ports");
+      int port = portsList.getInt("direct");
+      serverNames.add(splitHostPort[0] + ":" + port);
+    }
+    config.setServers(serverNames);
+  }
 
-    for (int i = 0; i < numVBuckets; i++) {
-      JSONArray rows = source.getJSONArray(i);
-      short master = (short) rows.getInt(0);
-      int replicaSize = rows.length() - 1;
-      short[] replicas = new short[replicaSize];
+  private List<VBucket> populateVbuckets(JSONArray jsonVbuckets)
+    throws JSONException {
+    List<VBucket> vBuckets = new ArrayList<VBucket>();
+    for (int i = 0; i < jsonVbuckets.length(); i++) {
+      JSONArray rows = jsonVbuckets.getJSONArray(i);
+      int master = rows.getInt(0);
+      int[] replicas = new int[VBucket.MAX_REPLICAS];
       for (int j = 1; j < rows.length(); j++) {
-        replicas[j - 1] = (short) rows.getInt(j);
+        replicas[j - 1] = rows.getInt(j);
       }
-      VBucket vbucket;
-      switch (replicaSize) {
-        case 0:
-          vbucket = new VBucket(master);
-          break;
-        case 1:
-          vbucket = new VBucket(master, replicas[0]);
-          break;
-        case 2:
-          vbucket = new VBucket(master, replicas[0], replicas[1]);
-          break;
-        case 3:
-          vbucket = new VBucket(master, replicas[0], replicas[1], replicas[2]);
-          break;
-        default:
-          throw new IllegalStateException("Not more than 3 replicas supported");
-      }
-      vBuckets.add(vbucket);
+      vBuckets.add(new VBucket(master, replicas));
     }
     return vBuckets;
   }
