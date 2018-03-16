@@ -24,7 +24,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.util.CouchbaseTestContext;
+import com.couchbase.client.java.util.ClusterDependentTest;
 import com.couchbase.client.java.util.features.Version;
 import com.couchbase.client.java.view.DesignDocument;
 import com.couchbase.client.java.view.SpatialView;
@@ -32,7 +32,6 @@ import com.couchbase.client.java.view.SpatialViewQuery;
 import com.couchbase.client.java.view.SpatialViewResult;
 import com.couchbase.client.java.view.SpatialViewRow;
 import com.couchbase.client.java.view.Stale;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import rx.Observable;
@@ -52,7 +51,7 @@ import static org.junit.Assert.assertTrue;
  * @author Michael Nitschinger
  * @since 2.1.0
  */
-public class SpatialViewQueryTest {
+public class SpatialViewQueryTest extends ClusterDependentTest {
 
     private static final JsonArray EUROPE_START = JsonArray.from(-10.8, 36.59);
     private static final JsonArray EUROPE_END = JsonArray.from(31.6, 70.67);
@@ -65,20 +64,12 @@ public class SpatialViewQueryTest {
         JsonObject.create().put("name", "San Francisco").put("lon", -122.47009277343749).put("lat", 37.76202988573211)
     };
 
-    private static CouchbaseTestContext ctx;
-
     /**
-     * Populates the bucket with sample data and creates views for testing.
+     * Populates th bucket with sample data and creates views for testing.
      */
     @BeforeClass
     public static void setupSpatialViews() {
-        ctx = CouchbaseTestContext.builder()
-                .adhoc(true)
-                .bucketName("Spatial")
-                .bucketQuota(100)
-                .build();
-
-        ctx.ignoreIfClusterUnder(new Version(3, 0, 2));
+        ignoreIfClusterUnder(new Version(3,0,2));
 
         Observable
             .from(FIXTURES)
@@ -87,7 +78,7 @@ public class SpatialViewQueryTest {
                 public Observable<JsonDocument> call(JsonObject content) {
                     String id = "city::" + content.getString("name");
                     content.put("type", "city");
-                    return ctx.bucket().async().upsert(JsonDocument.create(id, content));
+                    return bucket().async().upsert(JsonDocument.create(id, content));
                 }
             })
             .last()
@@ -101,20 +92,15 @@ public class SpatialViewQueryTest {
                 + " \"coordinates\":[doc.lon, doc.lat] }, null); } }")
         ));
 
-        DesignDocument stored = ctx.bucketManager().getDesignDocument("cities");
+        DesignDocument stored = bucketManager().getDesignDocument("cities");
         if (stored == null || !stored.equals(designDoc)) {
-            ctx.bucketManager().upsertDesignDocument(designDoc);
+            bucketManager().upsertDesignDocument(designDoc);
         }
-    }
-
-    @AfterClass
-    public static void cleanup() {
-        ctx.destroyBucketAndDisconnect();
     }
 
     @Test
     public void shouldQuerySpatial() {
-        SpatialViewResult result = ctx.bucket().query(SpatialViewQuery.from("cities", "by_location").stale(Stale.FALSE));
+        SpatialViewResult result = bucket().query(SpatialViewQuery.from("cities", "by_location").stale(Stale.FALSE));
         List<SpatialViewRow> allRows = result.allRows();
         assertEquals(FIXTURES.length, allRows.size());
 
@@ -128,7 +114,7 @@ public class SpatialViewQueryTest {
 
     @Test
     public void shouldQuerySpatialFromGeoJSON() {
-        SpatialViewResult result = ctx.bucket().query(SpatialViewQuery.from("cities", "by_geojson").stale(Stale.FALSE));
+        SpatialViewResult result = bucket().query(SpatialViewQuery.from("cities", "by_geojson").stale(Stale.FALSE));
         List<SpatialViewRow> allRows = result.allRows();
         assertEquals(FIXTURES.length, allRows.size());
 
@@ -143,7 +129,7 @@ public class SpatialViewQueryTest {
 
     @Test
     public void shouldQueryWithLimit() {
-        SpatialViewResult result = ctx.bucket().query(SpatialViewQuery.from("cities", "by_geojson")
+        SpatialViewResult result = bucket().query(SpatialViewQuery.from("cities", "by_geojson")
             .stale(Stale.FALSE)
             .limit(3));
         List<SpatialViewRow> allRows = result.allRows();
@@ -160,7 +146,7 @@ public class SpatialViewQueryTest {
 
     @Test
     public void shouldQueryInRange() {
-        SpatialViewResult result = ctx.bucket().query(SpatialViewQuery.from("cities", "by_location")
+        SpatialViewResult result = bucket().query(SpatialViewQuery.from("cities", "by_location")
             .stale(Stale.FALSE)
             .range(EUROPE_START, EUROPE_END));
         List<SpatialViewRow> allRows = result.allRows();
@@ -175,7 +161,7 @@ public class SpatialViewQueryTest {
 
     @Test
     public void shouldQueryWithIncludeDocs() {
-        SpatialViewResult result = ctx.bucket().query(
+        SpatialViewResult result = bucket().query(
             SpatialViewQuery.from("cities", "by_location").stale(Stale.FALSE).includeDocs()
         );
         List<SpatialViewRow> allRows = result.allRows();
