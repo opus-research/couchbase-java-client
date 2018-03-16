@@ -24,27 +24,29 @@ package com.couchbase.client.java.repository.mapping;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonObject;
 
+import java.lang.reflect.Field;
+
 public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
 
     @Override
     public JsonDocument fromEntity(Object document) {
-        EntityMetadata entityMetadata = new ReflectionBasedEntityMetadata(document.getClass());
+        EntityProperties properties = new ReflectionBasedEntityProperties(document.getClass());
 
-        if (!entityMetadata.hasIdProperty()) {
+        if (!properties.hasIdProperty()) {
             throw new RepositoryMappingException("No Id Field annotated with @Id present.");
         }
 
-        String id = (String) entityMetadata.idProperty().get(document);
+        String id = properties.get(properties.idProperty(), document, String.class);
         if (id == null) {
             throw new RepositoryMappingException("Id Field cannot be null.");
         }
 
         JsonObject content = JsonObject.create();
 
-        for (PropertyMetadata propertyMetadata : entityMetadata.properties()) {
-            String name = propertyMetadata.name();
-            Class<?> type = propertyMetadata.type();
-            Object value = propertyMetadata.get(document);
+        for (Field field : properties.fieldProperties()) {
+            String name = properties.actualFieldPropertyName(field);
+            Class<?> type = field.getType();
+            Object value = properties.get(field, document, Object.class);
 
             if (value == null
                 || value instanceof String
@@ -63,22 +65,22 @@ public class DefaultEntityConverter implements EntityConverter<JsonDocument> {
     @Override
     public <T> T toEntity(JsonDocument source, Class<T> clazz) {
         try {
-            EntityMetadata entityMetadata = new ReflectionBasedEntityMetadata(clazz);
-
+            EntityProperties properties = new ReflectionBasedEntityProperties(clazz);
             T instance = clazz.newInstance(); // for now only support no-args constructor
 
-            for (PropertyMetadata propertyMetadata : entityMetadata.properties()) {
-                String fieldName = propertyMetadata.name();
+            for (Field field : properties.fieldProperties()) {
+                String fieldName = properties.actualFieldPropertyName(field);
                 if (source.content().containsKey(fieldName)) {
-                    propertyMetadata.set(source.content().get(fieldName), instance);
+                    properties.set(field, instance, source.content().get(fieldName));
                 }
             }
 
-            if (!entityMetadata.hasIdProperty()) {
+            if (!properties.hasIdProperty()) {
                 throw new RepositoryMappingException("No Id Field annotated with @Id present.");
             }
 
-            entityMetadata.idProperty().set(source.id(), instance);
+            properties.set(properties.idProperty(), instance, source.id());
+
             return instance;
         } catch (Exception e) {
             throw new RepositoryMappingException("Could not instantiate entity.", e);
