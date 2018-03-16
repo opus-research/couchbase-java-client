@@ -40,16 +40,38 @@ import com.couchbase.client.java.document.json.JsonObject;
  */
 public class PreparedQuery extends ParametrizedQuery {
 
-    /* package */ PreparedQuery(QueryPlan plan, JsonArray positionalParams, QueryParams params) {
-        super(plan, positionalParams, params);
+    /**
+     * Create a new prepared query with positionalParameters. Note that the {@link JsonArray}
+     * should not be mutated until {@link #toN1QL()} is called since it backs the
+     * creation of the query string.
+     *
+     * @param plan the prepared {@link QueryPlan} to execute (containing positional placeholders).
+     * @param positionalParams the values for the positional placeholders in statement.
+     */
+    public PreparedQuery(QueryPlan plan, JsonArray positionalParams) {
+        super(plan, positionalParams);
     }
 
-    /* package */ PreparedQuery(QueryPlan plan, JsonObject namedParams, QueryParams params) {
-       super(plan, namedParams, params);
+    /**
+     * Create a new prepared query with named parameters. Note that the {@link JsonObject}
+     * should not be mutated until {@link #toN1QL()} is called since it backs the
+     * creation of the query string.
+     *
+     * @param plan the prepared {@link QueryPlan} to execute (containing named placeholders).
+     * @param namedParams the values for the named placeholders in statement.
+     */
+    public PreparedQuery(QueryPlan plan, JsonObject namedParams) {
+       super(plan, namedParams);
     }
 
-    /* package */ PreparedQuery(QueryPlan plan, QueryParams params) {
-        super(plan, (JsonArray) null, params);
+    /**
+     * Create a new prepared query without parameters (the original statement shouldn't contain
+     * parameter placeholders).
+     *
+     * @param plan the prepared {@link QueryPlan} to execute (containing no placeholders).
+     */
+    public PreparedQuery(QueryPlan plan) {
+        super(plan, (JsonArray) null);
     }
 
     @Override
