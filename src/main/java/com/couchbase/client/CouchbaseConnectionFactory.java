@@ -151,6 +151,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private static final Logger LOGGER =
     Logger.getLogger(CouchbaseConnectionFactory.class.getName());
   private volatile boolean needsReconnect;
+  private final AtomicBoolean doingResubscribe = new AtomicBoolean(false);
   private volatile long thresholdLastCheck = System.nanoTime();
   private final AtomicInteger configThresholdCount = new AtomicInteger(0);
   private final int maxConfigCheck = 10; //maximum allowed checks before we
@@ -359,7 +360,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
         return;
       }
 
-      getConfigurationProvider().signalOutdated();
+      if (doingResubscribe.compareAndSet(false, true)) {
+        getConfigurationProvider().signalOutdated();
+      } else {
+        LOGGER.log(Level.CONFIG, "Duplicate resubscribe for config updates"
+          + " suppressed.");
+      }
     } else {
       LOGGER.log(Level.FINE, "No reconnect required, though check requested."
               + " Current config check is {0} out of a threshold of {1}.",
