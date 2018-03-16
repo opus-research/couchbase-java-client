@@ -22,17 +22,6 @@
 
 package com.couchbase.client.java.query;
 
-import com.couchbase.client.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.deps.io.netty.util.CharsetUtil;
-import com.couchbase.client.java.CouchbaseAsyncBucket;
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.consistency.ScanConsistency;
-import org.junit.Test;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import static com.couchbase.client.java.query.Select.select;
 import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
@@ -40,6 +29,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.couchbase.client.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.deps.io.netty.util.CharsetUtil;
+import com.couchbase.client.java.CouchbaseAsyncBucket;
+import com.couchbase.client.java.document.json.JsonArray;
+import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.query.consistency.ScanConsistency;
+import org.junit.Test;
 
 /**
  * Verifies various combinations of N1QL queries and their transformation to N1QL string.
@@ -66,8 +67,8 @@ public class QueryToN1qlTest {
     }
 
     @Test
-    public void parameterizedQueryWithArrayShouldProduceStatementAndArgs() {
-        ParameterizedQuery query = new ParameterizedQuery(select("*"), JsonArray.from("aString", 123, true), null);
+    public void parametrizedQueryWithArrayShouldProduceStatementAndArgs() {
+        ParametrizedQuery query = new ParametrizedQuery(select("*"), JsonArray.from("aString", 123, true), null);
 
         JsonObject expected = JsonObject.create()
             .put("statement", "SELECT *")
@@ -131,12 +132,12 @@ public class QueryToN1qlTest {
     }
 
     @Test
-    public void parameterizedQueryWithObjectShouldProduceStatementAndNamedParameters() {
+    public void parametrizedQueryWithObjectShouldProduceStatementAndNamedParameters() {
         JsonObject args = JsonObject.create()
             .put("myParamString", "aString")
             .put("someInt", 123)
             .put("$fullN1qlParam", true);
-        ParameterizedQuery query = new ParameterizedQuery(select("*"), args, null);
+        ParametrizedQuery query = new ParametrizedQuery(select("*"), args, null);
 
         JsonObject expected = JsonObject.create()
             .put("statement", "SELECT *")
@@ -184,7 +185,7 @@ public class QueryToN1qlTest {
         SimpleQuery query1 = new SimpleQuery(select(x("*")).from("default"), fullParams);
         assertEquals(expected, query1.n1ql());
 
-        ParameterizedQuery query2 = new ParameterizedQuery(select(x("*")).from("default"), JsonObject.empty(), fullParams);
+        ParametrizedQuery query2 = new ParametrizedQuery(select(x("*")).from("default"), JsonObject.empty(), fullParams);
         assertEquals(expected, query2.n1ql());
 
         expected.removeKey("statement").put("prepared", "planName").put("statement", "PREPARE planName FROM SELECT *");

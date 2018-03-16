@@ -566,15 +566,14 @@ public class CouchbaseBucket implements Bucket {
         return query(query, environment.queryTimeout(), TIMEOUT_UNIT);
     }
 
-//    @Override
-//    public PreparedPayload prepare(String statement) {
-//        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
-//    }
-
-//    @Override
-//    public PreparedPayload prepare(Statement statement) {
-//        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
-//    }
+    @Override
+    public PreparedPayload prepare(String statement) {
+        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
+    @Override
+    public PreparedPayload prepare(Statement statement) {
+        return prepare(statement, environment.queryTimeout(), TIMEOUT_UNIT);
+    }
 
     @Override
     public SpatialViewResult query(SpatialViewQuery query) {
@@ -652,19 +651,18 @@ public class CouchbaseBucket implements Bucket {
                 .single(), timeout, timeUnit);
     }
 
-//    @Override
-//    public PreparedPayload prepare(String statement, long timeout, TimeUnit timeUnit) {
-//        return Blocking.blockForSingle(asyncBucket
-//            .prepare(statement)
-//            .single(), timeout, timeUnit);
-//    }
-
-//    @Override
-//    public PreparedPayload prepare(Statement statement, long timeout, TimeUnit timeUnit) {
-//        return Blocking.blockForSingle(asyncBucket
-//            .prepare(statement)
-//            .single(), timeout, timeUnit);
-//    }
+    @Override
+    public PreparedPayload prepare(String statement, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .prepare(statement)
+            .single(), timeout, timeUnit);
+    }
+    @Override
+    public PreparedPayload prepare(Statement statement, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket
+            .prepare(statement)
+            .single(), timeout, timeUnit);
+    }
 
     @Override
     public Boolean unlock(String id, long cas) {
