@@ -123,11 +123,7 @@ public class JsonObject implements JsonValue {
             if (entry.getValue() instanceof String) {
                 sb.append("\"").append(entry.getValue()).append("\"");
             } else {
-                if (entry.getValue() == null) {
-                    sb.append("null");
-                } else {
-                    sb.append(entry.getValue().toString());
-                }
+                sb.append(entry.getValue().toString());
             }
             if (++item < size) {
                 sb.append(",");
