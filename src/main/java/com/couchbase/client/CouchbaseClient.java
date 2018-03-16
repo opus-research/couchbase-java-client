@@ -57,7 +57,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -75,14 +74,12 @@ import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.compat.CloseUtil;
-import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.ObserveOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.ops.ReplicaReadOperation;
 import net.spy.memcached.transcoders.Transcoder;
 
 import org.apache.http.HttpRequest;
@@ -1081,74 +1078,6 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Read a key from the Replicas.
-   *
-   * @param key the Key
-   * @return OperationFuture
-   * @throws IllegalStateException in the rare circumstance where queue is too
-   *           full to accept any more requests
-   */
-  public <T> GetFuture<T> asyncReplicaGet(final String key,
-          final Transcoder<T> tc) {
-
-    final int vb = ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator()).getVBucketIndex(key);
-
-    int replicas;
-
-    replicas = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplicasCount();
-
-    List<MemcachedNode> replicaList = new
-            ArrayList<MemcachedNode>(replicas);
-
-    VBucketNodeLocator vbNodeLocator =
-      ((VBucketNodeLocator)
-            ((CouchbaseConnection) mconn).getLocator());
-
-    for (int i=0; i < replicas; i++) {
-      int replica = ((CouchbaseConnectionFactory)
-            connFactory).getVBucketConfig().getReplica(vb, i);
-      if (replica >= 0) { // Replica count is updated, not enough servers
-        replicaList.add(vbNodeLocator.getServerByIndex(replica));
-      }
-    }
-
-    for (MemcachedNode node : replicaList) {
-      final CountDownLatch latch = new CountDownLatch(1);
-      final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
-      Operation op = opFact.replica(key, new ReplicaReadOperation.Callback() {
-
-        private Future<T> val = null;
-
-        public void receivedStatus(OperationStatus status) {
-          rv.set(val, status);
-        }
-
-        public void gotData(int flags, byte[] data) {
-          val = tcService.decode(tc,
-                  new CachedData(flags, data, tc.getMaxSize()));
-        }
-
-        public void complete() {
-          latch.countDown();
-        }
-      });
-      rv.setOperation(op);
-      ((CouchbaseConnection) mconn).addOperation(key, op, node);
-      return rv;
-    }
-    CountDownLatch latch = new CountDownLatch(0);
-    GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
-    rv.set(null, new OperationStatus(false, "Could not read "
-            + "from replica(s). Replica Count = " + replicas));
-    return rv;
-  }
-
-  public GetFuture<Object> asyncReplicaGet(final String key) {
-    return asyncReplicaGet(key, transcoder);
-  }
-  /**
    * Observe a key with a CAS.
    *
    * @param key the Key
@@ -1388,7 +1317,10 @@ public class CouchbaseClient extends MemcachedClient
       }
     } while (loop++ < obsPollMax);
 
+    long timeTried = obsPollMax * obsPollInt;
+    TimeUnit tu = TimeUnit.MILLISECONDS;
     throw new ObservedTimeoutException("Observe Timeout - Polled"
-            + " Unsuccessfully for over 4 seconds");
+            + " Unsuccessfully for at least " + tu.toSeconds(timeTried)
+            + " seconds.");
   }
 }

@@ -139,24 +139,10 @@ public class CouchbaseConnection extends MemcachedConnection  implements
    */
   @Override
   public void addOperation(final String key, final Operation o) {
-    MemcachedNode primary = locator.getPrimary(key);
-    addOperation(key, o, primary);
-  }
-
-  /**
-   * Add an operation to a specific node.
-   *
-   * @param key the key the operation is operating upon
-   * @param o the operation
-   * @param node is the specific node for the operation
-   */
-  public void addOperation(final String key, final Operation o,
-          final MemcachedNode node) {
     MemcachedNode placeIn = null;
     MemcachedNode primary = locator.getPrimary(key);
-
-    if (node.isActive() || failureMode == FailureMode.Retry) {
-      placeIn = node;
+    if (primary.isActive() || failureMode == FailureMode.Retry) {
+      placeIn = primary;
     } else if (failureMode == FailureMode.Cancel) {
       o.cancel();
     } else {
