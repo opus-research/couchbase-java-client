@@ -75,7 +75,6 @@ public class TapTest extends ClientBaseCase {
     }
     checkTapKeys(items);
     assertTrue(client.flush().get().booleanValue());
-    tc.shutdown();
   }
 
   public void testTapDump() throws Exception {
@@ -106,7 +105,6 @@ public class TapTest extends ClientBaseCase {
     }
     checkTapKeys(items);
     assertTrue(client.flush().get().booleanValue());
-    tapClient.shutdown();
   }
 
   public void testTapBucketDoesNotExist() throws Exception {
@@ -121,8 +119,6 @@ public class TapTest extends ClientBaseCase {
       System.err.println("Expected tap of non existent bucket "
         + "failure:\n" + e.getMessage());
       return;
-    } finally {
-      tapClient.shutdown();
     }
   }
 
