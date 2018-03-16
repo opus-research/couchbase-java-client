@@ -57,7 +57,7 @@ import net.spy.memcached.ops.Operation;
  * and adding a method to handle reconfiguration of a bucket.
  */
 public class CouchbaseMemcachedConnection extends MemcachedConnection implements
-  CouchbaseConnectable {
+  Reconfigurable {
 
   protected volatile boolean reconfiguring = false;
   private final CouchbaseConnectionFactory cf;
@@ -155,7 +155,7 @@ public class CouchbaseMemcachedConnection extends MemcachedConnection implements
   }
 
   @Override
-  public void addOperation(final String key, final Operation o) {
+  protected void addOperation(final String key, final Operation o) {
     MemcachedNode placeIn = null;
     MemcachedNode primary = locator.getPrimary(key);
 
