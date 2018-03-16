@@ -96,8 +96,8 @@ public class AsyncLookupInBuilder {
 
     /**
      * Perform several {@link Lookup lookup} operations inside a single existing {@link JsonDocument JSON document}.
-     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String...)} and
-     * {@link #exists(String...)}.
+     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String)} and
+     * {@link #exists(String)}.
      *
      * The subdocument API has the benefit of only transmitting the fragment of the document you work with
      * on the wire, instead of the whole document.
@@ -148,19 +148,14 @@ public class AsyncLookupInBuilder {
     /**
      * Get a value inside the JSON document.
      *
-     * @param paths the path inside the document where to get the value from.
+     * @param path the path inside the document where to get the value from.
      * @return this builder for chaining.
      */
-    public AsyncLookupInBuilder get(String... paths) {
-        if (paths == null || paths.length == 0) {
+    public AsyncLookupInBuilder get(String path) {
+        if (StringUtil.isNullOrEmpty(path)) {
             throw new IllegalArgumentException("Path is mandatory for subdoc get");
         }
-        for (String path : paths) {
-            if (StringUtil.isNullOrEmpty(path)) {
-                throw new IllegalArgumentException("Path is mandatory for subdoc get");
-            }
-            this.specs.add(new LookupSpec(Lookup.GET, path));
-        }
+        this.specs.add(new LookupSpec(Lookup.GET, path));
         return this;
     }
 
@@ -169,19 +164,14 @@ public class AsyncLookupInBuilder {
      * {@link DocumentFragment#content(int)} will raise an error).
      * This doesn't transmit the value on the wire if it exists, saving the corresponding byte overhead.
      *
-     * @param paths the path inside the document to check for existence.
+     * @param path the path inside the document to check for existence.
      * @return this builder for chaining.
      */
-    public AsyncLookupInBuilder exists(String... paths) {
-        if (paths == null || paths.length == 0) {
+    public AsyncLookupInBuilder exists(String path) {
+        if (StringUtil.isNullOrEmpty(path)) {
             throw new IllegalArgumentException("Path is mandatory for subdoc exists");
         }
-        for (String path : paths) {
-            if (StringUtil.isNullOrEmpty(path)) {
-                throw new IllegalArgumentException("Path is mandatory for subdoc exists");
-            }
-            this.specs.add(new LookupSpec(Lookup.EXIST, path));
-        }
+        this.specs.add(new LookupSpec(Lookup.EXIST, path));
         return this;
     }
 
