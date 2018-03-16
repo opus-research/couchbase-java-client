@@ -62,7 +62,7 @@ public interface CouchbaseEnvironment extends CoreEnvironment {
      *
      * @return the default binary timeout.
      */
-    long kvTimeout();
+    long binaryTimeout();
 
     /**
      * The default timeout for connect operations, set to {@link DefaultCouchbaseEnvironment#CONNECT_TIMEOUT}.

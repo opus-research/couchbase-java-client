@@ -38,7 +38,7 @@ public class DefaultCouchbaseEnvironmentTest {
     public void shouldApplyDefaultSettings() {
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.create();
 
-        assertEquals(DefaultCouchbaseEnvironment.KEYVALUE_ENDPOINTS, env.kvEndpoints());
+        assertEquals(DefaultCouchbaseEnvironment.BINARY_ENDPOINTS, env.binaryEndpoints());
         assertNotNull(env.ioPool());
     }
 
@@ -46,22 +46,22 @@ public class DefaultCouchbaseEnvironmentTest {
     public void shouldOverrideSettings() {
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.
             builder()
-            .kvEndpoints(5)
+            .binaryEndpoints(5)
             .build();
 
-        assertEquals(5, env.kvEndpoints());
+        assertEquals(5, env.binaryEndpoints());
         assertNotNull(env.ioPool());
     }
 
     @Test
     public void systemPropertiesShouldTakePrecedence() {
-        System.setProperty("com.couchbase.kvEndpoints", "10");
+        System.setProperty("com.couchbase.binaryEndpoints", "10");
         CouchbaseEnvironment env = DefaultCouchbaseEnvironment.
             builder()
-            .kvEndpoints(5)
+            .binaryEndpoints(5)
             .build();
 
-        assertEquals(10, env.kvEndpoints());
-        System.clearProperty("com.couchbase.kvEndpoints");
+        assertEquals(10, env.binaryEndpoints());
+        System.clearProperty("com.couchbase.binaryEndpoints");
     }
 }
