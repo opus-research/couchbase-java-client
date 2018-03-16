@@ -1,6 +1,6 @@
 /**
  * Copyright (C) 2006-2009 Dustin Sallings
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.internal.OperationFuture;
 import org.junit.Ignore;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * A CouchbaseClientTest.
@@ -182,7 +184,7 @@ public class CouchbaseClientTest extends BinaryClientTest {
     assert replaceOp.get()
             : "Key replace was not persisted to master : "
             + replaceOp.getStatus().getMessage();
-    
+
     assert client.delete("observetest").get()
             : "Key was not deleted on master";
     OperationFuture<Boolean> addOp =
@@ -191,7 +193,58 @@ public class CouchbaseClientTest extends BinaryClientTest {
     assert addOp.get()
             : "Key add was not persisted to master : "
             + addOp.getStatus().getMessage();
+
+    OperationFuture<Boolean> noPersistOp =
+            (((CouchbaseClient)client).add("nopersisttest", 0, "value",
+              ReplicateTo.ONE));
+    assert noPersistOp.get()
+            : "Key add was not correctly replicated: "
+            + addOp.getStatus().getMessage();
   }
+
+  public void testStatsKey() throws Exception {
+    client.set("key", 0, "value");
+    OperationFuture<Map<String, String>> future =
+        ((CouchbaseClient)client).getKeyStats("key");
+    assertTrue(future.getStatus().isSuccess());
+    Map<String, String> stats = future.get();
+    assertTrue(stats.size() == 7);
+    assertTrue(stats.containsKey("key_vb_state"));
+    assertTrue(stats.containsKey("key_flags"));
+    assertTrue(stats.containsKey("key_is_dirty"));
+    assertTrue(stats.containsKey("key_cas"));
+    assertTrue(stats.containsKey("key_data_age"));
+    assertTrue(stats.containsKey("key_exptime"));
+    assertTrue(stats.containsKey("key_last_modification_time"));
+
+    future = ((CouchbaseClient)client).getKeyStats("key1");
+    assertFalse(future.getStatus().isSuccess());
+  }
+
+  /**
+   * Tests if passing NULL for ReplicateTo and/or
+   * PersistTo correctly works and does not throw
+   * an exception.
+   */
+  public void testNullObserve() throws Exception {
+    boolean success;
+    try {
+      success = true;
+      OperationFuture<Boolean> nullcheckOp =
+        (((CouchbaseClient)client).add("nullcheck", 0, "value", null, null));
+      nullcheckOp.get();
+      nullcheckOp =
+        (((CouchbaseClient)client).set("nullcheck", 0, "value1", null, null));
+      nullcheckOp.get();
+      nullcheckOp =
+        (((CouchbaseClient)client).replace("nullcheck", 0, "value1", null, null));
+      nullcheckOp.get();
+    } catch(NullPointerException ex) {
+      success = false;
+    }
+    assertTrue(success);
+  }
+
   public void testGetStatsSlabs() throws Exception {
     // Empty
   }

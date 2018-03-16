@@ -124,16 +124,15 @@ public class ViewTest {
 
     docUri = "/default/_design/" + TestingClient.MODE_PREFIX
         + DESIGN_DOC_WO_REDUCE;
-    String view2 = "{\"language\":\"javascript\",\"views\":{\"" + VIEW_NAME_FOR_DATED
-        + "\":{\"map\":\"function (doc) {  " + "emit(doc.type, 1)}\"}}}";
+    String view2 = "{\"language\":\"javascript\",\"views\":{\""
+        + VIEW_NAME_FOR_DATED + "\":{\"map\":\"function (doc) {  "
+        + "emit(doc.type, 1)}\"}}}";
     for (Entry<String, Object> item : ITEMS.entrySet()) {
       assert c.set(item.getKey(), 0,
           (String) item.getValue()).get().booleanValue();
     }
     HttpFuture<String> asyncHttpPut = c.asyncHttpPut(docUri, view2);
 
-    String view3 = "{\"language\":\"javascript\",\"views\":{\"" + VIEW_NAME_WO_REDUCE
-        + "\":{\"map\":\"function (doc) {  " + "emit(doc.type, 1)}\"}}}";
     String response = asyncHttpPut.get();
     OperationStatus status = asyncHttpPut.getStatus();
     if (!status.isSuccess()) {
@@ -386,7 +385,7 @@ public class ViewTest {
     query.setReduce(false);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future =
-        client.asyncQuery(view, query.setRangeStart(ComplexKey.of(2012,9,5)));
+        client.asyncQuery(view, query.setRangeStart(ComplexKey.of(2012, 9, 5)));
     ViewResponse response = future.get();
     assert response != null : future.getStatus();
   }

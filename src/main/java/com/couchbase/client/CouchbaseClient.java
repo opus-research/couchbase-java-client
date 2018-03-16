@@ -83,6 +83,7 @@ import net.spy.memcached.ops.ObserveOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
+import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.transcoders.Transcoder;
 
 import org.apache.http.HttpRequest;
@@ -91,6 +92,12 @@ import org.apache.http.message.BasicHttpRequest;
 
 /**
  * A client for Couchbase Server.
+ *
+ * This class acts as your main entry point while working with your Couchbase
+ * cluster (if you want to work with TAP, see the TapClient instead).
+ *
+ * If you are working with Couchbase Server 2.0, remember to set the appropriate
+ * view mode depending on your environment.
  */
 public class CouchbaseClient extends MemcachedClient
   implements CouchbaseClientIF, Reconfigurable {
@@ -153,16 +160,14 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Get a CouchbaseClient based on the REST response from a Couchbase server.
+   * Get a CouchbaseClient based on the initial server list provided.
    *
-   * This constructor is merely a convenience for situations where the bucket
-   * name is the same as the user name. This is commonly the case.
+   * This constructor should be used if the bucket name is the same as the
+   * username (which is normally the case). If your bucket does not have
+   * a password (likely the "default" bucket), use an empty string instead.
    *
-   * To connect to the "default" special bucket for a given cluster, use an
-   * empty string as the password.
-   *
-   * If a password has not been assigned to the bucket, it is typically an empty
-   * string.
+   * This method is only a convenience method so you don't have to create a
+   * CouchbaseConnectionFactory for yourself.
    *
    * @param baseList the URI list of one or more servers from the cluster
    * @param bucketName the bucket name in the cluster you wish to use
@@ -171,51 +176,60 @@ public class CouchbaseClient extends MemcachedClient
    * @throws ConfigurationException if the configuration provided by the server
    *           has issues or is not compatible
    */
-  public CouchbaseClient(List<URI> baseList, String bucketName, String pwd)
+  public CouchbaseClient(final List<URI> baseList, final String bucketName,
+    final String pwd)
     throws IOException {
     this(new CouchbaseConnectionFactory(baseList, bucketName, pwd));
   }
 
   /**
-   * Get a CouchbaseClient based on the REST response from a Couchbase server
-   * where the username is different than the bucket name.
+   * Get a CouchbaseClient based on the initial server list provided.
    *
-   * To connect to the "default" special bucket for a given cluster, use an
-   * empty string as the password.
+   * Currently, Couchbase Server does not support a different username than the
+   * bucket name. Therefore, this method ignores the given username for now
+   * but will likely use it in the future.
    *
-   * If a password has not been assigned to the bucket, it is typically an empty
-   * string.
+   * This constructor should be used if the bucket name is NOT the same as the
+   * username. If your bucket does not have a password (likely the "default"
+   * bucket), use an empty string instead.
+   *
+   * This method is only a convenience method so you don't have to create a
+   * CouchbaseConnectionFactory for yourself.
    *
    * @param baseList the URI list of one or more servers from the cluster
    * @param bucketName the bucket name in the cluster you wish to use
-   * @param usr the username for the bucket; this nearly always be the same as
-   *          the bucket name
+   * @param user the username for the bucket
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by
-   *          the server has issues or is not compatible
+   * @throws ConfigurationException if the configuration provided by the server
+   *           has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
-      final String usr, final String pwd) throws IOException {
+    final String user, final String pwd)
+    throws IOException {
     this(new CouchbaseConnectionFactory(baseList, bucketName, pwd));
   }
 
   /**
-   * Get a CouchbaseClient based on the REST response from a Couchbase server
-   * where the username is different than the bucket name.
+   * Get a CouchbaseClient based on the settings from the given
+   * CouchbaseConnectionFactory.
+   *
+   * If your bucket does not have a password (likely the "default" bucket), use
+   * an empty string instead.
+   *
+   * The URI list provided here is only used during the initial connection to
+   * the cluster. Afterwards, the actual cluster-map is synchronized from the
+   * cluster and maintained internally by the client. This allows the client to
+   * update the map as needed (when the cluster topology changes).
    *
    * Note that when specifying a ConnectionFactory you must specify a
-   * BinaryConnectionFactory. Also the ConnectionFactory's protocol and locator
-   * values are always overwritten. The protocol will always be binary and the
-   * locator will be chosen based on the bucket type you are connecting to.
+   * BinaryConnectionFactory (which is the case if you use the
+   * CouchbaseConnectionFactory). Also the ConnectionFactory's protocol and
+   * locator values are always overwritten. The protocol will always be binary
+   * and the locator will be chosen based on the bucket type you are connecting
+   * to.
    *
-   * To connect to the "default" special bucket for a given cluster, use an
-   * empty string as the password.
-   *
-   * If a password has not been assigned to the bucket, it is typically an empty
-   * string.
-   *
-   * The subscribe variable is determines whether or not we will subscribe to
+   * The subscribe variable determines whether or not we will subscribe to
    * the configuration changes feed. This constructor should be used when
    * calling super from subclasses of CouchbaseClient since the subclass might
    * want to start the changes feed later.
@@ -793,6 +807,7 @@ public class CouchbaseClient extends MemcachedClient
     }
 
   }
+
   /**
    * Unlock the given key synchronously from the cache with the default
    * transcoder.
@@ -803,22 +818,44 @@ public class CouchbaseClient extends MemcachedClient
    * @throws IllegalStateException in the rare circumstance where queue is too
    *           full to accept any more requests
    */
-
   public Boolean unlock(final String key,
           long casId) {
     return unlock(key, casId, transcoder);
   }
 
   /**
-   * Set a value and Observe.
+   * Set a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
    *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal set()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the set operation.
    */
   public OperationFuture<Boolean> set(String key, int exp,
           String value, PersistTo req, ReplicateTo rep) {
@@ -850,30 +887,88 @@ public class CouchbaseClient extends MemcachedClient
     }
     return setOp;
   }
-/**
-   * Set a value with Observe.
+
+  /**
+   * Set a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
    *
+   * For more information on how the durability options work, see the docblock
+   * for the set() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the set operation.
    */
   public OperationFuture<Boolean> set(String key, int exp,
           String value, PersistTo req) {
     return set(key, exp, value, req, ReplicateTo.ZERO);
   }
+
   /**
-   * Add a value and Observe.
+   * Set a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
    *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the set() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the set operation.
+   */
+  public OperationFuture<Boolean> set(String key, int exp,
+          String value, ReplicateTo rep) {
+    return set(key, exp, value, PersistTo.ZERO, rep);
+  }
+
+  /**
+   * Add a value with durability options.
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal add()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the add operation.
    */
   public OperationFuture<Boolean> add(String key, int exp,
           String value, PersistTo req, ReplicateTo rep) {
@@ -906,31 +1001,88 @@ public class CouchbaseClient extends MemcachedClient
     return addOp;
   }
 
-/**
-   * Add a value with Observe.
+  /**
+   * Add a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
    *
+   * For more information on how the durability options work, see the docblock
+   * for the add() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the add operation.
    */
   public OperationFuture<Boolean> add(String key, int exp,
           String value, PersistTo req) {
     return add(key, exp, value, req, ReplicateTo.ZERO);
   }
 
+
   /**
-   * Replace a value and Observe.
+   * Add a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
    *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the add() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the add operation.
+   */
+  public OperationFuture<Boolean> add(String key, int exp,
+          String value, ReplicateTo rep) {
+    return add(key, exp, value, PersistTo.ZERO, rep);
+  }
+
+  /**
+   * Replace a value with durability options.
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal replace()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the replace operation.
    */
   public OperationFuture<Boolean> replace(String key, int exp,
           String value, PersistTo req, ReplicateTo rep) {
@@ -963,15 +1115,24 @@ public class CouchbaseClient extends MemcachedClient
     return replaceOp;
 
   }
-/**
-   * Replace a value with Observe.
+
+  /**
+   * Replace a value with durability options.
    *
-   * @param key the key to set
-   * @param exp the Expiry value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
    *
+   * For more information on how the durability options work, see the docblock
+   * for the replace() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the replace operation.
    */
   public OperationFuture<Boolean> replace(String key, int exp,
           String value, PersistTo req) {
@@ -979,15 +1140,63 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   /**
-   * Set a value with a CAS and Observe.
+   * Replace a value with durability options.
    *
-   * @param key the key to set
-   * @param cas the CAS value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @param rep the Persistence to Replicas
-   * @return whether or not the operation was performed
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
    *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the replace() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param exp the expiry value to use.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the replace operation.
+   */
+  public OperationFuture<Boolean> replace(String key, int exp,
+          String value, ReplicateTo rep) {
+    return replace(key, exp, value, PersistTo.ZERO, rep);
+  }
+
+  /**
+   * Set a value with a CAS and durability options.
+   *
+   * To make sure that a value is stored the way you want it to in the
+   * cluster, you can use the PersistTo and ReplicateTo arguments. The
+   * operation will block until the desired state is satisfied or
+   * otherwise an exception is raised. There are many reasons why this could
+   * happen, the more frequent ones are as follows:
+   *
+   * - The given replication settings are invalid.
+   * - The operation could not be completed within the timeout.
+   * - Something goes wrong and a cluster failover is triggered.
+   *
+   * The client does not attempt to guarantee the given durability
+   * constraints, it just reports whether the operation has been completed
+   * or not. If it is not achieved, it is the responsibility of the
+   * application code using this API to re-retrieve the items to verify
+   * desired state, redo the operation or both.
+   *
+   * Note that even if an exception during the observation is raised,
+   * this doesn't mean that the operation has failed. A normal asyncCAS()
+   * operation is initiated and after the OperationFuture has returned,
+   * the key itself is observed with the given durability options (watch
+   * out for Observed*Exceptions) in this case.
+   *
+   * @param key the key to store.
+   * @param cas the CAS value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the CAS operation.
    */
   public CASResponse cas(String key, long cas,
           String value, PersistTo req, ReplicateTo rep) {
@@ -1015,30 +1224,68 @@ public class CouchbaseClient extends MemcachedClient
     }
     return casr;
   }
-/**
-   * Set a value with a CAS and Observe.
+
+  /**
+   * Set a value with a CAS and durability options.
    *
-   * @param key the key to set
-   * @param casv the CAS value
-   * @param value the Key value
-   * @param req the Persistence to Master value
-   * @return whether or not the operation was performed
+   * This is a shorthand method so that you only need to provide a
+   * PersistTo value if you don't care if the value is already replicated.
+   * A PersistTo.TWO durability setting implies a replication to at least
+   * one node.
    *
+   * For more information on how the durability options work, see the docblock
+   * for the cas() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param cas the CAS value to use.
+   * @param value the value of the key.
+   * @param req the amount of nodes the item should be persisted to before
+   *            returning.
+   * @return the future result of the CAS operation.
    */
-  public CASResponse cas(String key, long casv,
+  public CASResponse cas(String key, long cas,
           String value, PersistTo req) {
-    return cas(key, casv, value, req, ReplicateTo.ZERO);
+    return cas(key, cas, value, req, ReplicateTo.ZERO);
   }
 
   /**
-   * Observe a key with a CAS.
+   * Set a value with a CAS and durability options.
    *
-   * @param key the Key
-   * @param cas the CAS of the key. A value of
-   * zero means it will be ignored.
-   * @return ObserveReponse the Response on master and replicas
+   * This method allows you to express durability at the replication level
+   * only and is the functional equivalent of PersistTo.ZERO.
+   *
+   * A common use case for this would be to achieve good insert-performance
+   * and at the same time making sure that the data is at least replicated
+   * to the given amount of nodes to provide a better level of data safety.
+   *
+   * For more information on how the durability options work, see the docblock
+   * for the cas() operation with both PersistTo and ReplicateTo settings.
+   *
+   * @param key the key to store.
+   * @param cas the CAS value to use.
+   * @param value the value of the key.
+   * @param rep the amount of nodes the item should be replicated to before
+   *            returning.
+   * @return the future result of the CAS operation.
+   */
+  public CASResponse cas(String key, long cas,
+          String value, ReplicateTo rep) {
+    return cas(key, cas, value, PersistTo.ZERO, rep);
+  }
+
+  /**
+   * Observe a key with a associated CAS.
+   *
+   * This method allows you to check immediately on the state of a given
+   * key/CAS combination. It is normally used by higher-level methods when
+   * used in combination with durability constraints (ReplicateTo,
+   * PersistTo), but can also be used separately.
+   *
+   * @param key the key to observe.
+   * @param cas the CAS of the key (0 will ignore it).
+   * @return ObserveReponse the Response on master and replicas.
    * @throws IllegalStateException in the rare circumstance where queue is too
-   *           full to accept any more requests
+   *           full to accept any more requests.
    */
   public Map<MemcachedNode, ObserveResponse> observe(final String key,
       final long cas) {
@@ -1115,9 +1362,33 @@ public class CouchbaseClient extends MemcachedClient
     return shutdownResult;
   }
 
+  /**
+   * Poll and observe a key with the given CAS and persist settings.
+   *
+   * Based on the given persistence and replication settings, it observes the
+   * key and raises an exception if a timeout has been reached. This method is
+   * normally utilized through higher-level methods but can also be used
+   * directly.
+   *
+   * If persist is null, it will default to PersistTo.ZERO and if replicate is
+   * null, it will default to ReplicateTo.ZERO. This is the default behavior
+   * and is the same as not observing at all.
+   *
+   * @param key the key to observe.
+   * @param cas the CAS value for the key.
+   * @param persist the persistence settings.
+   * @param replicate the replication settings.
+   * @param isDelete if the key is to be deleted.
+   */
   public void observePoll(String key, long cas, PersistTo persist,
       ReplicateTo replicate, boolean isDelete) {
     boolean persistMaster = false;
+    if(persist == null) {
+      persist = PersistTo.ZERO;
+    }
+    if(replicate == null) {
+      replicate = ReplicateTo.ZERO;
+    }
     int persistReplica = persist.getValue();
     int replicateTo = replicate.getValue();
     int obsPolls = 0;
@@ -1198,5 +1469,28 @@ public class CouchbaseClient extends MemcachedClient
         throw new ObservedException("Observe was Interrupted ");
       }
     }
+  }
+
+  public OperationFuture<Map<String, String>> getKeyStats(String key) {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final OperationFuture<Map<String, String>> rv =
+        new OperationFuture<Map<String, String>>(key, latch, operationTimeout);
+    Operation op = opFact.keyStats(key, new StatsOperation.Callback() {
+          Map<String, String> stats = new HashMap<String, String>();
+          public void gotStat(String name, String val) {
+            stats.put(name, val);
+          }
+
+          public void receivedStatus(OperationStatus status) {
+            rv.set(stats, status);
+          }
+
+          public void complete() {
+            latch.countDown();
+          }
+        });
+    rv.setOperation(op);
+    mconn.enqueueOperation(key, op);
+    return rv;
   }
 }
