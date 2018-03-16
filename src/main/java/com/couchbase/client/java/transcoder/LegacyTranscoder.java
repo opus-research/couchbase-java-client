@@ -29,7 +29,6 @@ import com.couchbase.client.java.document.LegacyDocument;
 
 import java.io.*;
 import java.util.Date;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -47,8 +46,6 @@ public class LegacyTranscoder extends AbstractTranscoder<LegacyDocument, Object>
     private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(LegacyTranscoder.class);
 
     public static final int DEFAULT_COMPRESSION_THRESHOLD = 16384;
-
-    private static final Pattern DECIMAL_PATTERN = Pattern.compile("^-?\\d+$");
 
     // General flags
     static final int SERIALIZED = 1;
@@ -144,48 +141,41 @@ public class LegacyTranscoder extends AbstractTranscoder<LegacyDocument, Object>
 
         int flags = 0;
         Object content = document.content();
+        ByteBuf encoded = Unpooled.buffer();
 
-        boolean isJson = false;
-        ByteBuf encoded;
         if (content instanceof String) {
-            String c = (String) content;
-            isJson = isJsonObject(c);
-            encoded = TranscoderUtils.encodeStringAsUtf8(c);
+            encoded.writeBytes(((String) content).getBytes(CharsetUtil.UTF_8));
+        } else if (content instanceof Long) {
+            flags |= SPECIAL_LONG;
+            encoded.writeBytes(encodeNum((Long) content, 8));
+        } else if (content instanceof Integer) {
+            flags |= SPECIAL_INT;
+            encoded.writeBytes(encodeNum((Integer) content, 4));
+        } else if (content instanceof Boolean) {
+            flags |= SPECIAL_BOOLEAN;
+            boolean b = (Boolean) content;
+            encoded = Unpooled.buffer().writeByte(b ? '1' : '0');
+        } else if (content instanceof Date) {
+            flags |= SPECIAL_DATE;
+            encoded.writeBytes(encodeNum(((Date) content).getTime(), 8));
+        } else if (content instanceof Byte) {
+            flags |= SPECIAL_BYTE;
+            encoded.writeByte((Byte) content);
+        } else if (content instanceof Float) {
+            flags |= SPECIAL_FLOAT;
+            encoded.writeBytes(encodeNum(Float.floatToRawIntBits((Float) content), 4));
+        } else if (content instanceof Double) {
+            flags |= SPECIAL_DOUBLE;
+            encoded.writeBytes(encodeNum(Double.doubleToRawLongBits((Double) content), 8));
+        } else if (content instanceof byte[]) {
+            flags |= SPECIAL_BYTEARRAY;
+            encoded.writeBytes((byte[]) content);
         } else {
-            encoded = Unpooled.buffer();
-
-            if (content instanceof Long) {
-                flags |= SPECIAL_LONG;
-                encoded.writeBytes(encodeNum((Long) content, 8));
-            } else if (content instanceof Integer) {
-                flags |= SPECIAL_INT;
-                encoded.writeBytes(encodeNum((Integer) content, 4));
-            } else if (content instanceof Boolean) {
-                flags |= SPECIAL_BOOLEAN;
-                boolean b = (Boolean) content;
-                encoded = Unpooled.buffer().writeByte(b ? '1' : '0');
-            } else if (content instanceof Date) {
-                flags |= SPECIAL_DATE;
-                encoded.writeBytes(encodeNum(((Date) content).getTime(), 8));
-            } else if (content instanceof Byte) {
-                flags |= SPECIAL_BYTE;
-                encoded.writeByte((Byte) content);
-            } else if (content instanceof Float) {
-                flags |= SPECIAL_FLOAT;
-                encoded.writeBytes(encodeNum(Float.floatToRawIntBits((Float) content), 4));
-            } else if (content instanceof Double) {
-                flags |= SPECIAL_DOUBLE;
-                encoded.writeBytes(encodeNum(Double.doubleToRawLongBits((Double) content), 8));
-            } else if (content instanceof byte[]) {
-                flags |= SPECIAL_BYTEARRAY;
-                encoded.writeBytes((byte[]) content);
-            } else {
-                flags |= SERIALIZED;
-                encoded.writeBytes(serialize(content));
-            }
+            flags |= SERIALIZED;
+            encoded.writeBytes(serialize(content));
         }
 
-        if (!isJson && encoded.readableBytes() >= compressionThreshold) {
+        if (encoded.readableBytes() >= compressionThreshold) {
             byte[] compressed = compress(encoded.copy().array());
             if (compressed.length < encoded.array().length) {
                 encoded.clear().writeBytes(compressed);
@@ -364,25 +354,5 @@ public class LegacyTranscoder extends AbstractTranscoder<LegacyDocument, Object>
             }
         }
         return bos == null ? null : bos.toByteArray();
-    }
-
-    /**
-     * check if its a json object or not.
-     *
-     * Note that this code is not bullet proof, but it is copied over from as-is
-     * in the spymemcached project, since its intended to be compatible with it.
-     */
-    private static boolean isJsonObject(final String s) {
-        if (s == null || s.isEmpty()) {
-            return false;
-        }
-
-        if (s.startsWith("{") || s.startsWith("[")
-            || "true".equals(s) || "false".equals(s)
-            || "null".equals(s) || DECIMAL_PATTERN.matcher(s).matches()) {
-            return true;
-        }
-
-        return false;
     }
 }
