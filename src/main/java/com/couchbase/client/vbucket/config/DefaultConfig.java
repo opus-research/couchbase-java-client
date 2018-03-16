@@ -161,6 +161,6 @@ public class DefaultConfig implements Config {
   }
 
   public ConfigType getConfigType() {
-    return ConfigType.COUCHBASE;
+    return ConfigType.MEMBASE;
   }
 }
