@@ -39,13 +39,6 @@ import com.couchbase.client.java.error.TranscodingException;
  */
 public class JsonBooleanTranscoder extends AbstractTranscoder<JsonBooleanDocument, Boolean> {
 
-    private static final ByteBuf TRUE = Unpooled.unreleasableBuffer(
-        Unpooled.wrappedBuffer("true".getBytes(CharsetUtil.UTF_8))
-    );
-    private static final ByteBuf FALSE = Unpooled.unreleasableBuffer(
-        Unpooled.wrappedBuffer("false".getBytes(CharsetUtil.UTF_8))
-    );
-
     @Override
     protected JsonBooleanDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status)
         throws Exception {
@@ -66,10 +59,8 @@ public class JsonBooleanTranscoder extends AbstractTranscoder<JsonBooleanDocumen
 
     @Override
     protected Tuple2<ByteBuf, Integer> doEncode(final JsonBooleanDocument document) throws Exception {
-        return Tuple.create(
-            document.content() ? TRUE : FALSE,
-            TranscoderUtils.BOOLEAN_COMPAT_FLAGS
-        );
+        ByteBuf encoded = Unpooled.copiedBuffer(document.content() ? "true" : "false", CharsetUtil.UTF_8);
+        return Tuple.create(encoded, TranscoderUtils.BOOLEAN_COMPAT_FLAGS);
     }
 
     @Override
