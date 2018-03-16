@@ -1,5 +1,5 @@
 <!--
-  Copyright (c) 2009-2012  Couchbase, Inc.
+  Copyright (c) 2009-2011  Couchbase, Inc.
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of
   this software and associated documentation files (the "Software"), to deal in
@@ -72,7 +72,9 @@
   <property name="build.test.classes" location="${build.test}/classes" />
 
   <!-- maven -->
-  <property name="mvn.build.dir" value="${build.dir}" />
+  <property name="mvn.build.dir" value="${build.dir}/m2" />
+  <property name="couchbase-client.pom" value="${mvn.build.dir}/couchbase-client.pom" />
+  <property name="couchbase-client-test.pom" value="${mvn.build.dir}/couchbase-client-test.pom" />
 
   <!-- compilation -->
   <property name="javac.deprecation" value="off"/>
@@ -376,8 +378,8 @@
         deprecation="${javac.deprecation}">
       <classpath refid="${name}.common.classpath"/>
     </javac>
-    <move file="${build.src.dir}/net/spy/memcached/changelog.txt"
-        tofile="${build.classes}/net/spy/memcached/changelog.txt" />
+    <move file="${build.src.dir}/com/couchbase/client/changelog.txt"
+        tofile="${build.classes}/com/couchbase/client/changelog.txt" />
   </target>
 
   <target name="srcjar" depends="init,jar"
@@ -399,7 +401,7 @@
         <attribute name="Implementation-Version" value="${version}" />
         <attribute name="Implementation-Vendor" value="${copyright}" />
         <attribute name="Copyright" value="${copyright}" />
-        <attribute name="Main-Class" value="net.spy.memcached.BuildInfo" />
+        <attribute name="Main-Class" value="com.couchbase.client.BuildInfo" />
       </manifest>
     </jar>
     <jar jarfile="${build.dir}/${name}-test-${version}.jar" basedir="${build.test.classes}"/>
@@ -437,8 +439,6 @@
   <target name="mvn-prep" depends="gen-version, ivy-init"
       description="Creates maven files">
 
-    <property name="couchbase-client.pom" value="${mvn.build.dir}/couchbase-client-${version}.pom" />
-    <property name="couchbase-client-test.pom" value="${mvn.build.dir}/couchbase-client-test-${version}.pom" />
     <!-- Download maven -->
     <mkdir dir="${build.dir}" />
     <get src="${mvn_repo_url}" dest="${mvn.jar}" usetimestamp="true" />
@@ -490,16 +490,6 @@
           classifier="sources" />
     </artifact:install>
   </target>
-
-  <!-- ======================================
-        Section: Stage Maven locally
-       ====================================== -->
-  <target name="mvn-stage" depends="package,ivy-init,mvn-prep" description="publish jar/source to maven repo mounted at ~/repo">
-    <ivy:publish resolver="share-m2" forcedeliver="true" overwrite="true" publishivy="false">
-      <artifacts pattern="build/[artifact]-[revision].[ext]" />
-    </ivy:publish>
-  </target>
-
 
   <!-- ======================================
         Section: Findbugs Integration
