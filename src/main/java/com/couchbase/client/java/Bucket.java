@@ -21,6 +21,10 @@
  */
 package com.couchbase.client.java;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
@@ -44,9 +48,9 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
+import com.couchbase.client.java.query.PreparedPayload;
 import com.couchbase.client.java.query.PreparedQuery;
 import com.couchbase.client.java.query.Query;
-import com.couchbase.client.java.query.QueryPlan;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
@@ -57,10 +61,6 @@ import com.couchbase.client.java.view.View;
 import com.couchbase.client.java.view.ViewQuery;
 import com.couchbase.client.java.view.ViewResult;
 import rx.Observable;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Defines operations that can be executed synchronously against a Couchbase Server bucket.
@@ -2491,7 +2491,7 @@ public interface Bucket {
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link String} statement, with the default timeout. Statement can contain placeholders.
      *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2501,15 +2501,15 @@ public interface Bucket {
      *   retrying: {@link RequestCancelledException}
      *
      * @param statement the statement to prepare a plan for.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
      */
-    QueryPlan prepare(String statement);
+    PreparedPayload prepare(String statement);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link Statement}, with the default timeout. Statement can contain placeholders.
      *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2519,15 +2519,15 @@ public interface Bucket {
      *   retrying: {@link RequestCancelledException}
      *
      * @param statement the statement to prepare a plan for.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
      */
-    QueryPlan prepare(Statement statement);
+    PreparedPayload prepare(Statement statement);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link String} statement, with a custom timeout. Statement can contain placeholders.
      *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2539,15 +2539,15 @@ public interface Bucket {
      * @param statement the statement to prepare a plan for.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
      */
-    QueryPlan prepare(String statement, long timeout, TimeUnit timeUnit);
+    PreparedPayload prepare(String statement, long timeout, TimeUnit timeUnit);
 
     /**
      * Experimental: Queries a N1QL secondary index and prepare an execution plan via the given
      * {@link Statement}, with a custom timeout. Statement can contain placeholders.
      *
-     * The resulting {@link QueryPlan} can be cached and (re)used later in a {@link PreparedQuery}.
+     * The resulting {@link PreparedPayload} can be cached and (re)used later in a {@link PreparedQuery}.
      *
      * This method throws under the following conditions:
      *
@@ -2559,9 +2559,9 @@ public interface Bucket {
      * @param statement the statement to prepare a plan for.
      * @param timeout the custom timeout.
      * @param timeUnit the unit for the timeout.
-     * @return a {@link QueryPlan} that can be cached and reused later in {@link PreparedQuery}.
+     * @return a {@link PreparedPayload} that can be cached and reused later in {@link PreparedQuery}.
      */
-    QueryPlan prepare(Statement statement, long timeout, TimeUnit timeUnit);
+    PreparedPayload prepare(Statement statement, long timeout, TimeUnit timeUnit);
 
     /**
      * Unlocks a write-locked {@link Document} with the default key/value timeout.
