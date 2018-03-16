@@ -71,13 +71,11 @@ public class DefaultAsyncViewRow implements AsyncViewRow {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> document(Class<D> target) {
-        if (document != null) {
-            return Observable.just((D) document);
-        }
         if (id == null) {
             return Observable.error(new UnsupportedOperationException("Document cannot be loaded, id is null."));
         }
-        return bucket.get(id, target);
+
+        return Observable.just((D) document);
     }
 
     @Override
