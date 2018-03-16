@@ -159,6 +159,9 @@ public interface AsyncBucket {
      */
     <D extends Document<?>> Observable<D> get(String id, Class<D> target);
 
+    Observable<Boolean> exists(String id);
+    <D extends Document<?>> Observable<Boolean> exists(D document);
+
     /**
      * Retrieves one or more, possibly stale, representations of a {@link JsonDocument} by its unique ID.
      *
