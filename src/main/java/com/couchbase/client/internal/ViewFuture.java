@@ -91,6 +91,7 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
     objRef.set(viewResponse);
     multigetRef.set(oper);
     status = s;
+    notifyListeners();
   }
 
   @Override
