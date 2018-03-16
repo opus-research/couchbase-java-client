@@ -29,7 +29,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 
 /**
- * An HttpOperation.
+ * A Helper class for HttpOperation.
  */
 public interface HttpOperation {
 

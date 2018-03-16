@@ -33,11 +33,11 @@ import com.couchbase.client.protocol.views.ReducedOperationImpl;
 import com.couchbase.client.protocol.views.View;
 import com.couchbase.client.protocol.views.ViewFetcherOperation;
 import com.couchbase.client.protocol.views.ViewFetcherOperationImpl;
+import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.couchbase.client.protocol.views.ViewsFetcherOperation;
 import com.couchbase.client.protocol.views.ViewsFetcherOperationImpl;
-import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 
@@ -59,9 +59,12 @@ import java.util.concurrent.TimeoutException;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+<<<<<<< HEAD
+=======
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
 import org.apache.http.message.BasicHttpRequest;
+>>>>>>> 7137237... Shutdown the View connections
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.CASValue;
@@ -74,6 +77,12 @@ import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.Transcoder;
+
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpVersion;
+import org.apache.http.message.BasicHttpRequest;
+
+
 
 /**
  * A client for Couchbase Server.
@@ -171,8 +180,8 @@ public class CouchbaseClient extends MemcachedClient
    *          the bucket name
    * @param pwd the password for the bucket
    * @throws IOException if connections could not be made
-   * @throws ConfigurationException if the configuration provided by the server
-   *           has issues or is not compatible
+   * @throws ConfigurationException if the configuration provided by
+   *          the server has issues or is not compatible
    */
   public CouchbaseClient(final List<URI> baseList, final String bucketName,
       final String usr, final String pwd) throws IOException {
@@ -300,7 +309,7 @@ public class CouchbaseClient extends MemcachedClient
    * during this process allows you to iterate, select and query the
    * information in your database from the raw data objects that have
    * been stored.
-   *   *
+   *
    * @param designDocumentName the name of the design document.
    * @return a future containing a List of View objects from the cluster.
    */
@@ -349,7 +358,7 @@ public class CouchbaseClient extends MemcachedClient
    * during this process allows you to iterate, select and query the
    * information in your database from the raw data objects that have
    * been stored.
-   *   *
+   *
    * @param designDocumentName the name of the design document.
    * @param viewName the name of the view to get.
    * @return a View object from the cluster.
@@ -375,7 +384,7 @@ public class CouchbaseClient extends MemcachedClient
    * during this process allows you to iterate, select and query the
    * information in your database from the raw data objects that have
    * been stored.
-   *   *
+   *
    * @param designDocumentName the name of the design document.
    * @return a list of View objects from the cluster.
    */
@@ -798,7 +807,7 @@ public class CouchbaseClient extends MemcachedClient
       Logger.getLogger(
          CouchbaseClient.class.getName()).log(Level.SEVERE,
             "Unexpected IOException in shutdown", ex);
-      throw new RuntimeException(null,ex);
+      throw new RuntimeException(null, ex);
     }
     return shutdownResult;
   }

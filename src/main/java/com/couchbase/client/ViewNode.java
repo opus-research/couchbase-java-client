@@ -37,7 +37,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import net.spy.memcached.compat.SpyObject;
-import net.spy.memcached.protocol.binary.BinaryMemcachedNodeImpl;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;

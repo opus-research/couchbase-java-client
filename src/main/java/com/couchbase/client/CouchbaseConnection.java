@@ -22,8 +22,6 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.CouchbaseConnectionFactory;
-import com.couchbase.client.ViewNode;
 import com.couchbase.client.ViewNode.EventLogger;
 import com.couchbase.client.ViewNode.MyHttpRequestExecutionHandler;
 import com.couchbase.client.http.AsyncConnectionManager;
@@ -46,6 +44,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.FailureMode;
+import net.spy.memcached.MemcachedConnection;
+import net.spy.memcached.MemcachedNode;
+import net.spy.memcached.ops.KeyedOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.VBucketAware;
+
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.impl.DefaultConnectionReuseStrategy;
@@ -63,14 +70,6 @@ import org.apache.http.protocol.RequestExpectContinue;
 import org.apache.http.protocol.RequestTargetHost;
 import org.apache.http.protocol.RequestUserAgent;
 
-import net.spy.memcached.AddrUtil;
-import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.FailureMode;
-import net.spy.memcached.MemcachedConnection;
-import net.spy.memcached.MemcachedNode;
-import net.spy.memcached.ops.KeyedOperation;
-import net.spy.memcached.ops.Operation;
-import net.spy.memcached.ops.VBucketAware;
 
 /**
  * Couchbase implementation of CouchbaseConnection.
@@ -87,7 +86,8 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   public CouchbaseConnection(CouchbaseConnectionFactory cf,
       List<InetSocketAddress> addrs, Collection<ConnectionObserver> obs)
     throws IOException {
-    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(), cf.getOperationFactory());
+    super(cf.getReadBufSize(), cf, addrs, obs, cf.getFailureMode(),
+        cf.getOperationFactory());
     shutDown = false;
     connFactory = cf;
     nodesToShutdown = new ConcurrentLinkedQueue<ViewNode>();
@@ -95,46 +95,47 @@ public class CouchbaseConnection extends MemcachedConnection  implements
   }
 
   private List<ViewNode> createConnections(List<InetSocketAddress> addrs)
-  throws IOException {
-  List<ViewNode> nodeList = new LinkedList<ViewNode>();
+    throws IOException {
+    List<ViewNode> nodeList = new LinkedList<ViewNode>();
 
-  for (InetSocketAddress a : addrs) {
-    HttpParams params = new SyncBasicHttpParams();
-    params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
-        .setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000)
-        .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
-        .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK,
-            false)
-        .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
-        .setParameter(CoreProtocolPNames.USER_AGENT,
-            "Spymemcached Client/1.1");
+    for (InetSocketAddress a : addrs) {
+      HttpParams params = new SyncBasicHttpParams();
+      params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT,
+              5000).setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT,
+              5000).setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE,
+              8 * 1024).setBooleanParameter(
+              CoreConnectionPNames.STALE_CONNECTION_CHECK,
+              false).setBooleanParameter(
+              CoreConnectionPNames.TCP_NODELAY, true).setParameter(
+              CoreProtocolPNames.USER_AGENT,
+              "Spymemcached Client/1.1");
 
-    HttpProcessor httpproc =
-        new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
-          new RequestContent(), new RequestTargetHost(),
-          new RequestConnControl(), new RequestUserAgent(),
-          new RequestExpectContinue(), });
+      HttpProcessor httpproc =
+              new ImmutableHttpProcessor(new HttpRequestInterceptor[]{
+                new RequestContent(), new RequestTargetHost(),
+                new RequestConnControl(), new RequestUserAgent(),
+                new RequestExpectContinue(), });
 
-    AsyncNHttpClientHandler protocolHandler =
-        new AsyncNHttpClientHandler(httpproc,
-            new MyHttpRequestExecutionHandler(),
-            new DefaultConnectionReuseStrategy(),
-            new DirectByteBufferAllocator(), params);
-    protocolHandler.setEventListener(new EventLogger());
+      AsyncNHttpClientHandler protocolHandler =
+              new AsyncNHttpClientHandler(httpproc,
+              new MyHttpRequestExecutionHandler(),
+              new DefaultConnectionReuseStrategy(),
+              new DirectByteBufferAllocator(), params);
+      protocolHandler.setEventListener(new EventLogger());
 
-    AsyncConnectionManager connMgr =
-        new AsyncConnectionManager(
-            new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
-            protocolHandler, params);
-    getLogger().info("Added %s to connect queue", a);
+      AsyncConnectionManager connMgr =
+              new AsyncConnectionManager(
+              new HttpHost(a.getHostName(), a.getPort()), NUM_CONNS,
+              protocolHandler, params);
+      getLogger().info("Added %s to connect queue", a);
 
-    ViewNode node = connFactory.createViewNode(a, connMgr);
-    node.init();
-    nodeList.add(node);
+      ViewNode node = connFactory.createViewNode(a, connMgr);
+      node.init();
+      nodeList.add(node);
+    }
+
+    return nodeList;
   }
-
-  return nodeList;
-}
 
   protected volatile boolean reconfiguring = false;
 

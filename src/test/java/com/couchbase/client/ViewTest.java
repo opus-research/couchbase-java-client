@@ -22,6 +22,21 @@
 
 package com.couchbase.client;
 
+
+import com.couchbase.client.internal.HttpFuture;
+import com.couchbase.client.protocol.views.DocsOperationImpl;
+import com.couchbase.client.protocol.views.HttpOperation;
+import com.couchbase.client.protocol.views.NoDocsOperationImpl;
+import com.couchbase.client.protocol.views.Paginator;
+import com.couchbase.client.protocol.views.Query;
+import com.couchbase.client.protocol.views.ReducedOperationImpl;
+import com.couchbase.client.protocol.views.RowError;
+import com.couchbase.client.protocol.views.Stale;
+import com.couchbase.client.protocol.views.View;
+import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
+import com.couchbase.client.protocol.views.ViewResponse;
+import com.couchbase.client.protocol.views.ViewRow;
+
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,9 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.spy.memcached.TestConfig;
 import net.spy.memcached.ops.OperationStatus;
 
@@ -47,27 +59,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.couchbase.client.internal.HttpFuture;
-import com.couchbase.client.protocol.views.DocsOperationImpl;
-import com.couchbase.client.protocol.views.HttpOperation;
-import com.couchbase.client.protocol.views.NoDocsOperationImpl;
-import com.couchbase.client.protocol.views.Paginator;
-import com.couchbase.client.protocol.views.Query;
-import com.couchbase.client.protocol.views.ReducedOperationImpl;
-import com.couchbase.client.protocol.views.RowError;
-import com.couchbase.client.protocol.views.Stale;
-import com.couchbase.client.protocol.views.View;
-import com.couchbase.client.protocol.views.ViewResponse;
-import com.couchbase.client.protocol.views.ViewRow;
-import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
-
 import static org.junit.Assert.assertTrue;
 
 /**
  * A CouchbaseClientTest.
  */
 public class ViewTest {
-
   protected TestingClient client = null;
   private static final String SERVER_URI = "http://" + TestConfig.IPV4_ADDR
       + ":8091/pools";
@@ -175,21 +172,13 @@ public class ViewTest {
   }
 
   @Test
-  public void testQueryWithDocs() {
+  public void testQueryWithDocs() throws Exception {
     Query query = new Query();
     query.setReduce(false);
     query.setIncludeDocs(true);
-    query.setStale(Stale.FALSE);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future = client.asyncQuery(view, query);
-    ViewResponse response=null;
-    try {
-      response = future.get();
-    } catch (ExecutionException ex) {
-      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
-    } catch (InterruptedException ex) {
-      Logger.getLogger(ViewTest.class.getName()).log(Level.SEVERE, null, ex);
-    }
+    ViewResponse response = future.get();
     assert future.getStatus().isSuccess() : future.getStatus();
 
     Iterator<ViewRow> itr = response.iterator();
@@ -226,7 +215,6 @@ public class ViewTest {
   public void testReduce() throws Exception {
     Query query = new Query();
     query.setReduce(true);
-    query.setStale(Stale.FALSE);
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     HttpFuture<ViewResponse> future =
         client.asyncQuery(view, query);
@@ -567,7 +555,6 @@ public class ViewTest {
     View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
     Query query = new Query();
     query.setReduce(false);
-    query.setStale(Stale.FALSE);
     Paginator op = client.paginatedQuery(view, query, 10);
 
     int count = 0;
