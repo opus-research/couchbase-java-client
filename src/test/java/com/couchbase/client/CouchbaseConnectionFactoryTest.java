@@ -34,7 +34,6 @@ import com.couchbase.client.vbucket.CouchbaseNodeOrder;
 import com.couchbase.client.vbucket.config.Config;
 import net.spy.memcached.TestConfig;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -116,11 +115,10 @@ public class CouchbaseConnectionFactoryTest {
   }
 
   @Test
-  @Ignore
   public void shouldRandomizeNodeList() throws Exception {
     ConfigurationProviderMemcacheMock providerMock = new ConfigurationProviderMemcacheMock(
       Arrays.asList("127.0.0.1:8091/pools", "127.0.0.2:8091/pools",
-        "127.0.0.3:8091/pools", "127.0.0.4:8091/pools"), "default"
+        "127.0.0.3:8091/pools", "127.0.0.4:8091/pools")
     );
 
     CouchbaseConnectionFactory connFact = new CouchbaseConnectionFactoryMock(
@@ -138,7 +136,7 @@ public class CouchbaseConnectionFactoryTest {
 
     int tries = 100;
     for(int i = 0; i < tries; i++) {
-      //connFact.updateStoredBaseList(connFact.getVBucketConfig());
+      connFact.updateStoredBaseList(connFact.getVBucketConfig());
       assertTrue(providerMock.baseListUpdated);
       List<URI> newList = connFact.getStoredBaseList();
       System.out.println("old: " + oldList);
