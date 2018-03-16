@@ -36,7 +36,6 @@ import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.LegacyDocument;
 import com.couchbase.client.java.document.StringDocument;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
 import com.couchbase.client.java.error.DocumentAlreadyExistsException;
@@ -84,13 +83,6 @@ public interface AsyncBucket {
      * @return the name of the bucket.
      */
     String name();
-
-    /**
-     * The {@link CouchbaseEnvironment} used.
-     *
-     * @return the CouchbaseEnvironment.
-     */
-    CouchbaseEnvironment environment();
 
     /**
      * Returns the underlying "core-io" library through its {@link ClusterFacade}.
