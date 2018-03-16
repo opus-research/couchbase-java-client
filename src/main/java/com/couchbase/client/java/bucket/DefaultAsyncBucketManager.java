@@ -22,8 +22,6 @@
 package com.couchbase.client.java.bucket;
 
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.RequestFactory;
-import com.couchbase.client.core.message.CouchbaseRequest;
 import com.couchbase.client.core.message.config.BucketConfigRequest;
 import com.couchbase.client.core.message.config.BucketConfigResponse;
 import com.couchbase.client.core.message.config.GetDesignDocumentsRequest;
@@ -73,12 +71,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<BucketInfo> info() {
         return core
-            .<BucketConfigResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new BucketConfigRequest("/pools/default/buckets/", null, bucket, password);
-                }
-            })
+            .<BucketConfigResponse>send(new BucketConfigRequest("/pools/default/buckets/", null, bucket, password))
             .map(new Func1<BucketConfigResponse, BucketInfo>() {
                 @Override
                 public BucketInfo call(BucketConfigResponse response) {
@@ -106,12 +99,7 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
 
     @Override
     public Observable<DesignDocument> getDesignDocuments(final boolean development) {
-        return core.<GetDesignDocumentsResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new GetDesignDocumentsRequest(bucket, password);
-                }
-            })
+        return core.<GetDesignDocumentsResponse>send(new GetDesignDocumentsRequest(bucket, password))
             .flatMap(new Func1<GetDesignDocumentsResponse, Observable<DesignDocument>>() {
                 @Override
                 public Observable<DesignDocument> call(GetDesignDocumentsResponse response) {
@@ -146,13 +134,8 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<DesignDocument> getDesignDocument(final String name, final boolean development) {
-        return core.<GetDesignDocumentResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new GetDesignDocumentRequest(name, development, bucket, password);
-                }
-            })
+    public Observable<DesignDocument> getDesignDocument(String name, boolean development) {
+        return core.<GetDesignDocumentResponse>send(new GetDesignDocumentRequest(name, development, bucket, password))
             .filter(new Func1<GetDesignDocumentResponse, Boolean>() {
                 @Override
                 public Boolean call(GetDesignDocumentResponse response) {
@@ -211,20 +194,16 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<DesignDocument> upsertDesignDocument(final DesignDocument designDocument, final boolean development) {
-        final String body;
+    public Observable<DesignDocument> upsertDesignDocument(final DesignDocument designDocument, boolean development) {
+        String body;
         try {
             body = CouchbaseAsyncBucket.JSON_OBJECT_TRANSCODER.jsonObjectToString(designDocument.toJsonObject());
         } catch (Exception e) {
             throw new TranscodingException("Could not encode design document: ", e);
         }
-        return core.<UpsertDesignDocumentResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new UpsertDesignDocumentRequest(designDocument.name(),
-                        body, development, bucket, password);
-                }
-            })
+        UpsertDesignDocumentRequest req = new UpsertDesignDocumentRequest(designDocument.name(),
+            body, development, bucket, password);
+        return core.<UpsertDesignDocumentResponse>send(req)
             .map(new Func1<UpsertDesignDocumentResponse, DesignDocument>() {
                 @Override
                 public DesignDocument call(UpsertDesignDocumentResponse response) {
@@ -249,13 +228,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     }
 
     @Override
-    public Observable<Boolean> removeDesignDocument(final String name, final boolean development) {
-        return core.<RemoveDesignDocumentResponse>send(new RequestFactory() {
-                @Override
-                public CouchbaseRequest call() {
-                    return new RemoveDesignDocumentRequest(name, development, bucket, password);
-                }
-            })
+    public Observable<Boolean> removeDesignDocument(String name, boolean development) {
+        RemoveDesignDocumentRequest req = new RemoveDesignDocumentRequest(name, development, bucket, password);
+        return core.<RemoveDesignDocumentResponse>send(req)
             .map(new Func1<RemoveDesignDocumentResponse, Boolean>() {
                 @Override
                 public Boolean call(RemoveDesignDocumentResponse response) {
