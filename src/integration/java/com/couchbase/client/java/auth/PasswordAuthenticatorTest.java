@@ -48,7 +48,7 @@ public class PasswordAuthenticatorTest {
                 .ignoreIfClusterUnder(Version.parseVersion("5.0.0"));
 
         ctx.clusterManager().upsertUser(username, UserSettings.build().password(password)
-                .roles(Arrays.asList(new UserRole("bucket_full_access", "*"))));
+                .roles(Arrays.asList(new UserRole("data_reader_writer", "*"))));
         Thread.sleep(100); //sleep a bit for the user to be async updated to memcached before opening bucket
     }
 
@@ -64,14 +64,6 @@ public class PasswordAuthenticatorTest {
     public void shouldOpenBucketWithCorrectCredentials() {
         Cluster cluster = CouchbaseCluster.create(ctx.seedNode());
         cluster.authenticate(new PasswordAuthenticator(username, password));
-        cluster.openBucket(ctx.bucketName());
-        cluster.disconnect();
-    }
-
-    @Test
-    public void shouldOpenBucketWithShortcutOverload() {
-        Cluster cluster = CouchbaseCluster.create(ctx.seedNode());
-        cluster.authenticate(username, password);
         cluster.openBucket(ctx.bucketName());
         cluster.disconnect();
     }

@@ -588,30 +588,6 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder certAuthEnabled(boolean certAuthEnabled) {
-            super.certAuthEnabled(certAuthEnabled);
-            return this;
-        }
-
-        @Override
-        public Builder continuousKeepAliveEnabled(boolean continuousKeepAliveEnabled) {
-            super.continuousKeepAliveEnabled(continuousKeepAliveEnabled);
-            return this;
-        }
-
-        @Override
-        public Builder keepAliveErrorThreshold(long keepAliveErrorThreshold) {
-            super.keepAliveErrorThreshold(keepAliveErrorThreshold);
-            return this;
-        }
-
-        @Override
-        public Builder keepAliveTimeout(long keepAliveTimeout) {
-            super.keepAliveTimeout(keepAliveTimeout);
-            return this;
-        }
-
-        @Override
         public DefaultCouchbaseEnvironment build() {
             return new DefaultCouchbaseEnvironment(this);
         }

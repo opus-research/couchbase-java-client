@@ -31,11 +31,6 @@ public enum BucketType {
     /**
      * The memcached bucket type.
      */
-    MEMCACHED,
-
-    /**
-     * The ephemeral bucket type.
-     */
-    EPHEMERAL
+    MEMCACHED
 
 }
