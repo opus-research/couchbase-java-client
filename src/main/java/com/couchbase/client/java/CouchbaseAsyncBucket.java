@@ -1002,8 +1002,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
 
                 switch(response.status()) {
-                    case NOT_EXISTS:
-                        throw new DocumentDoesNotExistException();
                     case TEMPORARY_FAILURE:
                     case SERVER_BUSY:
                         throw new TemporaryFailureException();
