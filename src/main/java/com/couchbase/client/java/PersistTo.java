@@ -28,4 +28,8 @@ public enum PersistTo {
     public short value() {
         return value;
     }
+
+    public boolean touchesReplica() {
+        return value > 0;
+    }
 }

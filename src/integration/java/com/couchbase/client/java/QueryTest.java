@@ -1,8 +1,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.java.util.ClusterDependentTest;
-import com.couchbase.client.java.util.TestProperties;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 

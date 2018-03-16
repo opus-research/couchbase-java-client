@@ -24,4 +24,8 @@ public enum ReplicateTo {
     public short value() {
         return value;
     }
+
+    public boolean touchesReplica() {
+        return value > 0;
+    }
 }
