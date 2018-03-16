@@ -19,7 +19,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.NoSuchElementException;
 
 import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
@@ -28,7 +27,6 @@ import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.bucket.BucketManager;
-import com.couchbase.client.java.datastructures.MutationOptionBuilder;
 import com.couchbase.client.java.document.BinaryDocument;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
@@ -4447,185 +4445,6 @@ public interface Bucket {
     @InterfaceStability.Committed
     @InterfaceAudience.Public
     MutateInBuilder mutateIn(String docId);
-
-    /**
-     * Get value of a key in a CouchbaseMap.
-     *
-     * @param docId the id of the document used by the data structure
-     * @param key key in the map
-     * @param valueType value type class
-     * @param <V> type of value
-     * @return value if found
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <V>V mapGet(String docId, String key, Class<V> valueType);
-
-    /**
-     * Add a key value pair into CouchbaseMap.
-     *
-     * This method throws under the following conditions:
-     *
-     * @param docId id of the document used by the data structure
-     * @param key key to be stored
-     * @param value value to be stored
-     * @param <V> type of value
-     * @return true if successful
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <V>boolean mapAdd(String docId, String key, V value);
-
-    /**
-     * Add a key value pair into CouchbaseMap with additional mutation options such as cas,
-     * persistence constraint, replication constraint and expiry.
-     *
-     * @param docId id of the document used by the data structure
-     * @param key key to be stored
-     * @param value value to be stored
-     * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
-     * @param <V> type of value
-     * @return true if successful
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <V>boolean mapAdd(String docId, String key, V value, MutationOptionBuilder mutationOptionBuilder);
-
-    /**
-     * Remove a key value pair from CouchbaseMap.
-     *
-     * @param docId id of the document used by the data structure
-     * @param key key to be removed
-     * @return true if successful
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    boolean mapRemove(String docId, String key);
-
-    /**
-     * Remove a key value pair from CouchbaseMap with additional mutation options such as cas,
-     * persistence constraint, replication constraint and expiry.
-     *
-     * @param docId id of the document used by the data structure
-     * @param key key to be removed
-     * @return true if successful
-     * @param mutationOptionBuilder mutation options {@link MutationOptionBuilder}
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    boolean mapRemove(String docId, String key, MutationOptionBuilder mutationOptionBuilder);
-
-    /**
-     * Returns the number key value pairs in CouchbaseMap
-     *
-     * @param docId id of the document used by the data structure
-     * @return number of key value pairs in the map
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    int mapSize(String docId);
-
-    /**
-     * Get element using index in a CouchbaseList.
-     *
-     * @param docId the id of the document used by the data structure
-     * @param index index in the list
-     * @param elementType element type class
-     * @param <E> type of value
-     * @return value if found
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>E listGet(String docId, int index, Class<E> elementType);
-
-    /**
-     * Push an element into the end of the CouchbaseList.
-     *
-     * @param docId the id of the document used by the data structure
-     * @param element element to be pushed to list
-     * @param <E> type of element
-     * @return true if successful
-     * @throws {@link}
-     */
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listPush(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listPush(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listShift(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listShift(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    boolean listRemove(String docId, int index);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    boolean listRemove(String docId, int index, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listSet(String docId, int index, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean listSet(String docId, int index, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    int listSize(String docId);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean setAdd(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean setAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean setExists(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>E setRemove(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>E setRemove(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    int setSize(String docId);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean queueAdd(String docId, E element);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>boolean queueAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>E queueRemove(String docId, Class<E> elementType);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    <E>E queueRemove(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder);
-
-    @InterfaceStability.Experimental
-    @InterfaceAudience.Public
-    int queueSize(String docId);
 
     /**
      * Invalidates and clears the internal query cache.
