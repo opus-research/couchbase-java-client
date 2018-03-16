@@ -328,6 +328,11 @@ public class AsyncMutateInBuilder {
         return this;
     }
 
+    public <T> AsyncMutateInBuilder arrayPrependAll(String path, boolean createParents, T... values) {
+        this.mutationSpecs.add(new MutationSpec(Mutation.ARRAY_PUSH_FIRST, path, new MultiValue<T>(values), createParents));
+        return this;
+    }
+
     /**
      * Append to an existing array, pushing the value to the back/last position in
      * the array.
@@ -338,6 +343,11 @@ public class AsyncMutateInBuilder {
      */
     public <T> AsyncMutateInBuilder arrayAppend(String path, T value, boolean createParents) {
         this.mutationSpecs.add(new MutationSpec(Mutation.ARRAY_PUSH_LAST, path, value, createParents));
+        return this;
+    }
+
+    public <T> AsyncMutateInBuilder arrayAppendAll(String path, boolean createParents, T... values) {
+        this.mutationSpecs.add(new MutationSpec(Mutation.ARRAY_PUSH_LAST, path, new MultiValue<T>(values), createParents));
         return this;
     }
 
@@ -353,6 +363,14 @@ public class AsyncMutateInBuilder {
             throw new IllegalArgumentException("Path must not be empty for arrayInsert");
         }
         this.mutationSpecs.add(new MutationSpec(Mutation.ARRAY_INSERT, path, value, false));
+        return this;
+    }
+
+    public <T> AsyncMutateInBuilder arrayInsertAll(String path, T... values) {
+        if (StringUtil.isNullOrEmpty(path)) {
+            throw new IllegalArgumentException("Path must not be empty for arrayInsert");
+        }
+        this.mutationSpecs.add(new MutationSpec(Mutation.ARRAY_INSERT, path, new MultiValue<T>(values), false));
         return this;
     }
 
