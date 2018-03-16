@@ -30,7 +30,7 @@ import com.couchbase.client.core.message.internal.AddServiceRequest;
 import com.couchbase.client.core.message.internal.AddServiceResponse;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.ConnectionString;
-import com.couchbase.client.java.CouchbaseAsyncBucket;
+import com.couchbase.client.java.CouchbaseBucket;
 import com.couchbase.client.java.bucket.BucketType;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
@@ -46,7 +46,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DefaultAsyncClusterManager implements AsyncClusterManager {
+public class CouchbaseClusterManager implements ClusterManager {
 
     private final ClusterFacade core;
     private final String username;
@@ -54,8 +54,8 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
     private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
 
-    DefaultAsyncClusterManager(final String username, final String password, final ConnectionString connectionString,
-                               final CouchbaseEnvironment environment, final ClusterFacade core) {
+    CouchbaseClusterManager(final String username, final String password, final ConnectionString connectionString,
+        final CouchbaseEnvironment environment, final ClusterFacade core) {
         this.username = username;
         this.password = password;
         this.core = core;
@@ -63,9 +63,9 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
         this.connectionString = connectionString;
     }
 
-    public static DefaultAsyncClusterManager create(final String username, final String password,
+    public static CouchbaseClusterManager create(final String username, final String password,
         final ConnectionString connectionString, final CouchbaseEnvironment environment, final ClusterFacade core) {
-        return new DefaultAsyncClusterManager(username, password, connectionString, environment, core);
+        return new CouchbaseClusterManager(username, password, connectionString, environment, core);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                 @Override
                 public ClusterInfo call(ClusterConfigResponse response) {
                     try {
-                        return new DefaultClusterInfo(CouchbaseAsyncBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
+                        return new DefaultClusterInfo(CouchbaseBucket.JSON_TRANSCODER.stringToJsonObject(response.config()));
                     } catch (Exception e) {
                         throw new CouchbaseException("Could not decode cluster info.", e);
                     }
@@ -103,7 +103,7 @@ public class DefaultAsyncClusterManager implements AsyncClusterManager {
                 @Override
                 public Observable<BucketSettings> call(BucketsConfigResponse response) {
                     try {
-                        JsonArray decoded = CouchbaseAsyncBucket.JSON_TRANSCODER.stringTojsonArray(response.config());
+                        JsonArray decoded = CouchbaseBucket.JSON_TRANSCODER.stringTojsonArray(response.config());
                         List<BucketSettings> settings = new ArrayList<BucketSettings>();
                         for (Object item : decoded) {
                             JsonObject bucket = (JsonObject) item;

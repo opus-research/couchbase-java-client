@@ -1,6 +1,6 @@
 package com.couchbase.client.java;
 
-import com.couchbase.client.java.bucket.AsyncBucketManager;
+import com.couchbase.client.java.bucket.BucketManager;
 import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
 import com.couchbase.client.java.error.DesignDocumentException;
 import com.couchbase.client.java.util.ClusterDependentTest;
@@ -21,7 +21,7 @@ import static org.junit.Assert.*;
  */
 public class DesignDocumentTest extends ClusterDependentTest {
 
-    private AsyncBucketManager manager;
+    private BucketManager manager;
 
     @Before
     public void setup() {

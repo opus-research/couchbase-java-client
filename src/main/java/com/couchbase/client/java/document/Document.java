@@ -21,10 +21,10 @@
  */
 package com.couchbase.client.java.document;
 
-import com.couchbase.client.java.AsyncBucket;
+import com.couchbase.client.java.Bucket;
 
 /**
- * Represents a Couchbase Server {@link Document} which is stored in and retrieved from a {@link AsyncBucket}.
+ * Represents a Couchbase Server {@link Document} which is stored in and retrieved from a {@link Bucket}.
  *
  * @author Michael Nitschinger
  * @since 2.0
