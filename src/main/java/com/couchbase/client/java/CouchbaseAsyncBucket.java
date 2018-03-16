@@ -610,11 +610,8 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         }
                     });
                     boolean parseSuccess = response.status().isSuccess();
-                    String contextId = response.clientRequestId() == null ? "" : response.clientRequestId();
-                    String requestId = response.requestId();
 
-                    AsyncQueryResult r = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess,
-                            requestId, contextId);
+                    AsyncQueryResult r = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess);
                     return Observable.just(r);
                 }
             });
