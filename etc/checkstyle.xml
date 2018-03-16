@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
- Copyright (c) 2009-2012  Couchbase, Inc.
+ Copyright (c) 2009-2011  Couchbase, Inc.
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -64,7 +64,7 @@
   <!-- See http://checkstyle.sf.net/config_header.html   -->
   <module name="RegexpHeader">
     <property name="headerFile"
-        value="${etc.dir}/checkstyle-java-header.txt" />
+        value="etc/checkstyle-java-header.txt" />
     <property name="multiLines" value="2"/>
   </module>
 
@@ -177,7 +177,6 @@
     <!-- Checks for common coding problems               -->
     <!-- See http://checkstyle.sf.net/config_coding.html -->
     <!-- module name="AvoidInlineConditionals"/-->
-    <module name="DoubleCheckedLocking"/>
     <module name="EmptyStatement"/>
     <module name="EqualsHashCode"/>
     <module name="StringLiteralEquality" />
