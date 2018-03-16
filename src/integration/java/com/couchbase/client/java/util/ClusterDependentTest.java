@@ -21,7 +21,6 @@
  */
 package com.couchbase.client.java.util;
 
-import com.couchbase.client.java.bucket.BucketManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -47,7 +46,6 @@ public class ClusterDependentTest {
     private static Cluster cluster;
     private static Bucket bucket;
     private static ClusterManager clusterManager;
-    private static BucketManager bucketManager;
 
     @BeforeClass
     public static void connect() throws Exception {
@@ -67,8 +65,7 @@ public class ClusterDependentTest {
         }
 
         bucket = cluster.openBucket(bucketName(), password());
-        bucketManager = bucket.bucketManager();
-        bucketManager.flush();
+        bucket.bucketManager().flush();
     }
 
     @AfterClass
@@ -94,9 +91,5 @@ public class ClusterDependentTest {
 
     public static ClusterManager clusterManager() {
         return clusterManager;
-    }
-
-    public static BucketManager bucketManager() {
-        return bucketManager;
     }
 }
