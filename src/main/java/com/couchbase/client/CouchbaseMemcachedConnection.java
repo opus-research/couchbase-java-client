@@ -45,6 +45,13 @@ import net.spy.memcached.OperationFactory;
 /**
  * Couchbase implementation of CouchbaseConnection.
  *
+ * The behavior of a CouchbaseMemcached connection extends spy's
+ * MemcachedConnection by handling reconfiguration events.  In a Couchbase
+ * deployment scenario, reconfiguration updates may notify the client of
+ * nodes to be added to or removed from the cluster.
+ *
+ * This class provides that functionality by extending the MemcachedConnection
+ * and adding a method to handle reconfiguration of a bucket.
  */
 public class CouchbaseMemcachedConnection extends MemcachedConnection  implements
   Reconfigurable {
