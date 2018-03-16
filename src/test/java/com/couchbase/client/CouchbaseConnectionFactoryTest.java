@@ -23,10 +23,14 @@
 package com.couchbase.client;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.TestConfig;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,4 +98,50 @@ public class CouchbaseConnectionFactoryTest {
     }
   }
 
+  /**
+   * Tests the correctness of the initialization and shutdown phase
+   * of the Memcached connection.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Create memcached connection using the
+   * parameters as above.
+   * @post Assert true if the memcached connection is alive.
+   * Shutdown the client and then again check its alive.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
+   */
+  @Test
+  public void testMemcachedConnection() throws IOException, InterruptedException {
+    CouchbaseConnectionFactory cf = buildFactory();
+
+    List<InetSocketAddress> addrs = AddrUtil.getAddressesFromURL(
+      cf.getVBucketConfig().getCouchServers()
+    );
+
+    MemcachedConnection memConn = cf.createConnection(addrs);
+    assertTrue(memConn.isAlive());
+    memConn.shutdown();
+    Thread.sleep(5000);
+    assertFalse(memConn.isAlive());
+  }
+
+  /**
+   * Tests the VbucketConfig retrieved from connection factory.
+   *
+   * @pre Create a list of array of addresses and get a connection
+   * factory instance from them. Retrieve VBucket config from the same.
+   * @post Assert the message if it failed to retrieve.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
+   */
+  @Test
+  public void testVBucketConfig() throws IOException , InterruptedException {
+    CouchbaseConnectionFactory cf = buildFactory();
+	assert  cf.getVBucketConfig() == null
+      : "Couldn't retrieve VBucket Config";
+	assert  cf.getVBucketConfig().getServersCount() == 0
+      : "Couldn't retrieve server nodes in the configuration";
+  }
 }
