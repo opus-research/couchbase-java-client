@@ -21,12 +21,13 @@
  */
 package com.couchbase.client.protocol.views;
 
+import java.util.Date;
 import org.junit.After;
 import org.junit.AfterClass;
-import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
  * Test the creation of complex keys for views.
@@ -57,9 +58,16 @@ public class ComplexKeyTest {
    */
   @Test
   public void testOf() {
-    System.out.println("of");
     String expResult = "[2012,9,7]";
     ComplexKey result = ComplexKey.of(2012, 9, 7);
+    assertEquals(expResult, result.toJson());
+
+    expResult = "[\"Hello\",\"World\",5.12]";
+    result = ComplexKey.of("Hello", "World", 5.12);
+    assertEquals(expResult, result.toJson());
+
+    expResult = "[true,false]";
+    result = ComplexKey.of(true, false);
     assertEquals(expResult, result.toJson());
   }
 
@@ -68,7 +76,6 @@ public class ComplexKeyTest {
    */
   @Test
   public void testOfEmptyArray() {
-    System.out.println("ofEmptyArray");
     String expResult = "[]";
     ComplexKey result = ComplexKey.of(ComplexKey.emptyArray());
     assertEquals(expResult, result.toJson());
@@ -79,7 +86,6 @@ public class ComplexKeyTest {
    */
   @Test
   public void testOfEmptyObject() {
-    System.out.println("ofEmptyArray");
     String expResult = "{}";
     ComplexKey result = ComplexKey.of(ComplexKey.emptyObject());
     assertEquals(expResult, result.toJson());
@@ -90,10 +96,36 @@ public class ComplexKeyTest {
    */
   @Test
   public void testEmptyArray() {
-    System.out.println("emptyArray");
     Object[] expResult = new Object[] {};
     Object[] result = ComplexKey.emptyArray();
     assertArrayEquals(expResult, result);
+  }
+
+  /**
+   * Test of emptyObject method, of class ComplexKey.
+   */
+  @Test
+  public void testEmptyObject() {
+    Object expResult = new Object();
+    Object result = ComplexKey.emptyObject();
+    assertEquals(expResult.getClass().getName(), result.getClass().getName());
+  }
+
+  /**
+   * Tests the construction of more complex JSON strings with Dates.
+   *
+   * This test case shows how the implicit typecasting happens during the JSON
+   * generation phase. If you work with ComplexKeys and you're not dealing with
+   * trivial types make sure they have a proper "toString" method implemented.
+   */
+  @Test
+  public void testDateInput() {
+    Date start = new Date();
+    Date end   = new Date();
+
+    String expResult = "[\""+start.toString()+"\",\""+end.toString()+"\"]";
+    ComplexKey result = ComplexKey.of(start, end);
+    assertEquals(expResult, result.toJson());
   }
 
 }
