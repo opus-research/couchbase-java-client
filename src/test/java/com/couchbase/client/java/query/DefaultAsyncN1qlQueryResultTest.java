@@ -29,7 +29,6 @@ public class DefaultAsyncN1qlQueryResultTest {
         return  new DefaultAsyncN1qlQueryResult(
                 Observable.<AsyncN1qlQueryRow>empty(), Observable.empty(),
                 Observable.<N1qlMetrics>empty(), Observable.<JsonObject>empty(),
-                Observable.<JsonObject>empty(),
                 status
                 , true, null, null);
     }

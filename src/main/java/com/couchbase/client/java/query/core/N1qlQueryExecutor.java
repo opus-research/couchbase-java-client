@@ -57,7 +57,7 @@ import rx.exceptions.CompositeException;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
-import rx.functions.Func7;
+import rx.functions.Func6;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -250,25 +250,11 @@ public class N1qlQueryExecutor {
                         }
                     }
                 });
-
-                final Observable<JsonObject> profileInfo = response.profileInfo().map(new Func1<ByteBuf, JsonObject>() {
-                    @Override
-                    public JsonObject call(ByteBuf byteBuf) {
-                        try {
-                            return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                        } catch (Exception e) {
-                            throw new TranscodingException("Could not decode profile Info.", e);
-                        } finally {
-                            byteBuf.release();
-                        }
-                    }
-                });
-
                 boolean parseSuccess = response.status().isSuccess();
                 String contextId = response.clientRequestId() == null ? "" : response.clientRequestId();
                 String requestId = response.requestId();
 
-                AsyncN1qlQueryResult r = new DefaultAsyncN1qlQueryResult(rows, signature, info, errors, profileInfo,
+                AsyncN1qlQueryResult r = new DefaultAsyncN1qlQueryResult(rows, signature, info, errors,
                         finalStatus, parseSuccess, requestId, contextId);
                 return Observable.just(r);
             }
@@ -323,7 +309,6 @@ public class N1qlQueryExecutor {
                                     AsyncN1qlQueryResult copyResult = new DefaultAsyncN1qlQueryResult(
                                             aqr.rows(), aqr.signature(), aqr.info(),
                                             cachedErrors,
-                                            aqr.profileInfo(),
                                             aqr.status(), aqr.parseSuccess(), aqr.requestId(),
                                             aqr.clientContextId());
                                     return Observable.just(copyResult);
@@ -481,7 +466,6 @@ public class N1qlQueryExecutor {
                     r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
                     r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
                     r.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
-                    r.profileInfo().subscribe(Buffers.BYTE_BUF_RELEASER);
                     return r.rows().map(new Func1<ByteBuf, PreparedPayload>() {
                         @Override
                         public PreparedPayload call(ByteBuf byteBuf) {
@@ -499,7 +483,6 @@ public class N1qlQueryExecutor {
                     r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
                     r.signature().subscribe(Buffers.BYTE_BUF_RELEASER);
                     r.rows().subscribe(Buffers.BYTE_BUF_RELEASER);
-                    r.profileInfo().subscribe(Buffers.BYTE_BUF_RELEASER);
                     return r.errors().map(new Func1<ByteBuf, Exception>() {
                         @Override
                         public Exception call(ByteBuf byteBuf) {
@@ -597,14 +580,13 @@ public class N1qlQueryExecutor {
                     aqr.signature().singleOrDefault(JsonObject.empty()),
                     aqr.info().singleOrDefault(N1qlMetrics.EMPTY_METRICS),
                     aqr.errors().toList(),
-                    aqr.profileInfo().singleOrDefault(JsonObject.empty()),
                     aqr.status(),
                     aqr.finalSuccess().singleOrDefault(Boolean.FALSE),
-                    new Func7<List<AsyncN1qlQueryRow>, Object, N1qlMetrics, List<JsonObject>, JsonObject, String, Boolean, N1qlQueryResult>() {
+                    new Func6<List<AsyncN1qlQueryRow>, Object, N1qlMetrics, List<JsonObject>, String, Boolean, N1qlQueryResult>() {
                         @Override
                         public N1qlQueryResult call(List<AsyncN1qlQueryRow> rows, Object signature,
-                                                    N1qlMetrics info, List<JsonObject> errors, JsonObject profileInfo, String finalStatus, Boolean finalSuccess) {
-                            return new DefaultN1qlQueryResult(rows, signature, info, errors, profileInfo, finalStatus, finalSuccess,
+                                N1qlMetrics info, List<JsonObject> errors, String finalStatus, Boolean finalSuccess) {
+                            return new DefaultN1qlQueryResult(rows, signature, info, errors, finalStatus, finalSuccess,
                                     parseSuccess, requestId, clientContextId);
                         }
                     });
