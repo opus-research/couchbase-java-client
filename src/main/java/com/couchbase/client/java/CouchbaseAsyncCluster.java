@@ -121,10 +121,6 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     @Override
     public Observable<AsyncBucket> openBucket(final String name, String pass,
         final List<Transcoder<? extends Document, ?>> transcoders) {
-        if (name == null || name.isEmpty()) {
-            throw new IllegalArgumentException("Bucket name is not allowed to be null or empty.");
-        }
-
         final String password = pass == null ? "" : pass;
 
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
