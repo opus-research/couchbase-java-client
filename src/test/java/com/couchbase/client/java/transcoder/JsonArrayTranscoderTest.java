@@ -181,6 +181,7 @@ public class JsonArrayTranscoderTest {
         JsonArrayDocument doc = JsonArrayDocument.create("test", arr);
 
         Tuple2<ByteBuf, Integer> encoded = converter.encode(doc);
+        System.err.println(encoded.value1().toString(CharsetUtil.UTF_8));
         JsonArrayDocument decoded = converter.decode("test", encoded.value1(), 0, 0, encoded.value2(),
                 ResponseStatus.SUCCESS);
 

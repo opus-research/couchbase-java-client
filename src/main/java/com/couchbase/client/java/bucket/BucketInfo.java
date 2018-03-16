@@ -26,9 +26,6 @@ import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.document.json.JsonObject;
 
-import java.net.InetAddress;
-import java.util.List;
-
 /**
  * Provides information about a {@link Bucket}.
  *
@@ -77,12 +74,5 @@ public interface BucketInfo {
      * @return the raw JSON bucket info.
      */
     JsonObject raw();
-
-    /**
-     * Returns a list of nodes that is interacting with the bucket.
-     *
-     * @return the list of nodes.
-     */
-    List<InetAddress> nodeList();
 
 }
