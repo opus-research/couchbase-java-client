@@ -21,19 +21,14 @@
  */
 package com.couchbase.client.java.cluster;
 
-import com.couchbase.client.core.annotations.InterfaceAudience;
-import com.couchbase.client.core.annotations.InterfaceStability;
-import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.bucket.BucketType;
 
 /**
- * {@link BucketSettings} represent changeable properties for a {@link Bucket}.
+ * Represents settings for a bucket.
  *
  * @author Michael Nitschinger
  * @since 2.0
  */
-@InterfaceStability.Committed
-@InterfaceAudience.Public
 public interface BucketSettings {
 
     /**

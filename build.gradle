@@ -175,7 +175,7 @@ publishing  {
     publications {
         compile(MavenPublication) {
             from components.java
-            artifactId = 'java-client'
+            artifactId = 'couchbase-client'
 
             artifact(javadocJar) {
                 classifier = 'javadoc'
