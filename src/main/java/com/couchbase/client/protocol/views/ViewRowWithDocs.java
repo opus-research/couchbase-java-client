@@ -36,7 +36,7 @@ public class ViewRowWithDocs implements ViewRow {
     this.id = parseField(id);
     this.key = parseField(key);
     this.value = parseField(value);
-    this.doc = parseField((String)doc);
+    this.doc = doc;
   }
 
   private String parseField(String field) {
@@ -52,10 +52,12 @@ public class ViewRowWithDocs implements ViewRow {
     return id;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
 
+  @Override
   public String getValue() {
     return value;
   }
@@ -63,5 +65,18 @@ public class ViewRowWithDocs implements ViewRow {
   @Override
   public Object getDocument() {
     return doc;
+  }
+
+
+  @Override
+  public String getBbox() {
+     throw new UnsupportedOperationException("Map/Reduce views don't contain "
+       + "Bounding Box information");
+  }
+
+  @Override
+  public String getGeometry() {
+      throw new UnsupportedOperationException("Map/Reduce views don't contain "
+       + "Geometry information");
   }
 }

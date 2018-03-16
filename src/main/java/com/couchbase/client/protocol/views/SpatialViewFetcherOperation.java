@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,17 @@
 
 package com.couchbase.client.protocol.views;
 
+import net.spy.memcached.ops.OperationCallback;
+
 /**
- * Supported View Types.
+ * A ViewOperation.
  */
-public enum ViewType {
-  /**
-   * The map/reduce type represents normal map and map/reduce views.
-   */
-  MAPREDUCE,
+public interface SpatialViewFetcherOperation {
 
   /**
-   * The spatial type represents spatial views.
+   * A ViewCallback.
    */
-  SPATIAL
+  public interface ViewFetcherCallback extends OperationCallback {
+    void gotData(SpatialView view);
+  }
 }

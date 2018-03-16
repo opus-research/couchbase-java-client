@@ -233,6 +233,7 @@ public class QueryTest {
     assertEquals(false, query.willIncludeDocs());
     query.setIncludeDocs(true);
     assertEquals(true, query.willIncludeDocs());
+    assertTrue(query.toString().isEmpty());
   }
 
   /**
@@ -245,6 +246,19 @@ public class QueryTest {
 
     assertEquals(1, query.getArgs().size());
     assertEquals("?on_error=continue", query.toString());
+  }
+
+  /**
+   * Tests the "bbox" argument.
+   */
+  @Test
+  public void testBbox() throws UnsupportedEncodingException {
+    Query query = new Query();
+    query.setBbox(0, 1, 2.0, 3);
+
+    assertEquals(1, query.getArgs().size());
+    String result = URLDecoder.decode(query.toString(), "UTF-8");
+    assertEquals("?bbox=0.0,1.0,2.0,3.0", result);
   }
 
   /**

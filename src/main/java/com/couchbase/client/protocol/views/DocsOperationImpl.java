@@ -37,8 +37,8 @@ import org.codehaus.jettison.json.JSONObject;
  */
 public class DocsOperationImpl extends ViewOperationImpl {
 
-  public DocsOperationImpl(HttpRequest r, ViewType type, ViewCallback cb) {
-    super(r, type, cb);
+  public DocsOperationImpl(HttpRequest r, AbstractView view, ViewCallback cb) {
+    super(r, view, cb);
   }
 
   protected ViewResponseWithDocs parseResult(String json)
@@ -53,14 +53,14 @@ public class DocsOperationImpl extends ViewOperationImpl {
           for (int i = 0; i < ids.length(); i++) {
             JSONObject elem = ids.getJSONObject(i);
             String id = elem.getString("id");
-            if(getViewType().equals(ViewType.MAPREDUCE)) {
-              String key = elem.getString("key");
-              String value = elem.getString("value");
-              rows.add(new ViewRowWithDocs(id, key, value, null));
-            } else {
+            String value = elem.getString("value");
+            if(elem.has("bbox")) {
               String bbox = elem.getString("bbox");
               String geometry = elem.getString("geometry");
-              rows.add(new ViewRowWithDocsSpatial(id, bbox, geometry, null));
+              rows.add(new SpatialViewRowNoDocs(id, bbox, geometry, value));
+            } else {
+              String key = elem.getString("key");
+              rows.add(new ViewRowNoDocs(id, key, value));
             }
           }
         }
@@ -77,7 +77,7 @@ public class DocsOperationImpl extends ViewOperationImpl {
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseWithDocs(rows, errors, getViewType());
+    return new ViewResponseWithDocs(rows, errors);
   }
 
   @Override

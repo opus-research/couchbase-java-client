@@ -50,10 +50,12 @@ public class ViewRowNoDocs implements ViewRow {
     return id;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
 
+  @Override
   public String getValue() {
     return value;
   }
@@ -62,5 +64,17 @@ public class ViewRowNoDocs implements ViewRow {
   public Object getDocument() {
     throw new UnsupportedOperationException("This view result doesn't contain "
         + "documents");
+  }
+
+  @Override
+  public String getBbox() {
+     throw new UnsupportedOperationException("Map/Reduce views don't contain "
+       + "Bounding Box information");
+  }
+
+  @Override
+  public String getGeometry() {
+      throw new UnsupportedOperationException("Map/Reduce views don't contain "
+       + "Geometry information");
   }
 }

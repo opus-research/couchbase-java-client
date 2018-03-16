@@ -22,39 +22,49 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.protocol.views.HttpOperationImpl;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
+import net.spy.memcached.AddrUtil;
+import net.spy.memcached.TestConfig;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import java.net.HttpURLConnection;
-
-import net.spy.memcached.ops.OperationStatus;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+import static org.junit.Assert.*;
 
 /**
- * A TestOperationPutImpl.
+ * Verifies the correct functionality of the ViewConnection class.
  */
-public class TestOperationPutImpl extends HttpOperationImpl implements
-    TestOperation {
+public class ViewConnectionTest {
 
-  public TestOperationPutImpl(HttpRequest r, TestCallback testCallback) {
-    super(r, testCallback);
-  }
+  /**
+   * Tests the correctness of the initialization and shutdown phase.
+   */
+  @Test
+  public void testInitAndShutdown() throws IOException, InterruptedException {
 
-  @Override
-  public void handleResponse(HttpResponse response) {
-    StringBuilder json = new StringBuilder("");  // workaround for null returns
-    json.append(getEntityString(response));
-    int errorcode = response.getStatusLine().getStatusCode();
+    CouchbaseConnectionFactory cf = new CouchbaseConnectionFactory(
+      Arrays.asList(
+        URI.create("http://" + TestConfig.IPV4_ADDR + ":8091/pools")
+      ),
+      "default",
+      ""
+    );
 
-    if (errorcode == HttpURLConnection.HTTP_CREATED) {
-      ((TestCallback) callback).getData(json.toString());
-      callback.receivedStatus(new OperationStatus(true, "OK"));
-    } else {
-      callback.receivedStatus(new OperationStatus(false,
-          Integer.toString(errorcode) + ": " + json));
-    }
-    callback.complete();
+    List<InetSocketAddress> addrs = AddrUtil.getAddressesFromURL(
+      cf.getVBucketConfig().getCouchServers()
+    );
+
+    ViewConnection vconn = cf.createViewConnection(addrs);
+    assertFalse(vconn.getConnectedNodes().isEmpty());
+    vconn.shutdown();
+    assertTrue(vconn.getConnectedNodes().isEmpty());
+
   }
 
 }

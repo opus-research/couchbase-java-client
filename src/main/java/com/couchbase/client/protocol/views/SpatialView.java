@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,31 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client;
-
-import com.couchbase.client.protocol.views.HttpOperationImpl;
-
-import java.net.HttpURLConnection;
-
-import net.spy.memcached.ops.OperationStatus;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+package com.couchbase.client.protocol.views;
 
 /**
- * A TestOperationPutImpl.
+ * Holds information about a spatial view that can be queried in
+ * Couchbase Server.
  */
-public class TestOperationPutImpl extends HttpOperationImpl implements
-    TestOperation {
+public class SpatialView extends AbstractView {
 
-  public TestOperationPutImpl(HttpRequest r, TestCallback testCallback) {
-    super(r, testCallback);
+  public SpatialView(String dn, String ddn, String vn) {
+    super(dn, ddn, vn);
   }
 
   @Override
-  public void handleResponse(HttpResponse response) {
-    StringBuilder json = new StringBuilder("");  // workaround for null returns
-    json.append(getEntityString(response));
-    int errorcode = response.getStatusLine().getStatusCode();
-
-    if (errorcode == HttpURLConnection.HTTP_CREATED) {
-      ((TestCallback) callback).getData(json.toString());
-      callback.receivedStatus(new OperationStatus(true, "OK"));
-    } else {
-      callback.receivedStatus(new OperationStatus(false,
-          Integer.toString(errorcode) + ": " + json));
-    }
-    callback.complete();
+  public boolean hasMap() {
+    return true;
   }
 
+  @Override
+  public boolean hasReduce() {
+    return false;
+  }
+
+  @Override
+  public String getURI() {
+    return "/" + getDatabaseName() + "/_design/" + getDesignDocumentName()
+      + "/_spatial/" + getViewName();
+  }
 }

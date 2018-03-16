@@ -35,10 +35,11 @@ import org.codehaus.jettison.json.JSONObject;
  * Implementation of a view that calls the map
  * function and excludes the documents in the result.
  */
-public class NoDocsOperationImpl extends ViewOperationImpl{
+public class NoDocsOperationImpl extends ViewOperationImpl {
 
-  public NoDocsOperationImpl(HttpRequest r, ViewType type, ViewCallback cb) {
-    super(r, type, cb);
+  public NoDocsOperationImpl(HttpRequest r, AbstractView view,
+    ViewCallback cb) {
+    super(r, view, cb);
   }
 
   protected ViewResponseNoDocs parseResult(String json)
@@ -53,14 +54,14 @@ public class NoDocsOperationImpl extends ViewOperationImpl{
           for (int i = 0; i < ids.length(); i++) {
             JSONObject elem = ids.getJSONObject(i);
             String id = elem.getString("id");
-            if(getViewType().equals(ViewType.MAPREDUCE)) {
-              String key = elem.getString("key");
-              String value = elem.getString("value");
-              rows.add(new ViewRowNoDocs(id, key, value));
-            } else {
+            String value = elem.getString("value");
+            if(elem.has("bbox")) {
               String bbox = elem.getString("bbox");
               String geometry = elem.getString("geometry");
-              rows.add(new ViewRowNoDocsSpatial(id, bbox, geometry));
+              rows.add(new SpatialViewRowNoDocs(id, bbox, geometry, value));
+            } else {
+              String key = elem.getString("key");
+              rows.add(new ViewRowNoDocs(id, key, value));
             }
           }
         }
@@ -77,7 +78,7 @@ public class NoDocsOperationImpl extends ViewOperationImpl{
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseNoDocs(rows, errors, getViewType());
+    return new ViewResponseNoDocs(rows, errors);
   }
 
   @Override

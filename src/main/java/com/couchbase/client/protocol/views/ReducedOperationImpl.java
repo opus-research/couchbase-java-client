@@ -37,8 +37,13 @@ import org.codehaus.jettison.json.JSONObject;
  */
 public class ReducedOperationImpl extends ViewOperationImpl {
 
-  public ReducedOperationImpl(HttpRequest r, ViewType type, ViewCallback cb) {
-    super(r, type, cb);
+  public ReducedOperationImpl(HttpRequest r, AbstractView view,
+    ViewCallback cb) {
+    super(r, view, cb);
+
+    if(getView() instanceof SpatialView) {
+      throw new IllegalArgumentException("Spatial views do not support reduce");
+    }
   }
 
   protected ViewResponseReduced parseResult(String json)
@@ -70,7 +75,7 @@ public class ReducedOperationImpl extends ViewOperationImpl {
         throw new ParseException("Cannot read json: " + json, 0);
       }
     }
-    return new ViewResponseReduced(rows, errors, getViewType());
+    return new ViewResponseReduced(rows, errors);
   }
 
   @Override

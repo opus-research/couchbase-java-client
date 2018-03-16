@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011 Couchbase, Inc.
+ * Copyright (C) 2009-2012 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,21 +23,21 @@
 package com.couchbase.client.protocol.views;
 
 /**
- * Holds a row in a view result that contains the fields
- * id, key, value, and doc.
+ * Holds a row in a spatial view result that contains the fields
+ * id, bbox, and geometry.
  */
-public class ViewRowWithDocsSpatial implements ViewRow {
+public class SpatialViewRowNoDocs implements ViewRow {
   private final String id;
   private final String bbox;
   private final String geometry;
-  private final Object doc;
+  private final String value;
 
-  public ViewRowWithDocsSpatial(String id, String bbox, String geometry,
-    Object doc) {
+  public SpatialViewRowNoDocs(String id, String bbox, String geometry,
+    String value) {
     this.id = parseField(id);
     this.bbox = parseField(bbox);
     this.geometry = parseField(geometry);
-    this.doc = parseField((String)doc);
+    this.value = parseField(value);
   }
 
   private String parseField(String field) {
@@ -54,21 +54,30 @@ public class ViewRowWithDocsSpatial implements ViewRow {
   }
 
   @Override
-  public String getKey() {
-    throw new UnsupportedOperationException("Key is not supported on spatial"
-      + " view rows.");
-  }
-
   public String getBbox() {
     return bbox;
   }
 
+  @Override
   public String getGeometry() {
     return geometry;
   }
 
   @Override
-  public Object getDocument() {
-    return doc;
+  public String getValue() {
+    return value;
   }
+
+  @Override
+  public Object getDocument() {
+    throw new UnsupportedOperationException("This view result doesn't contain "
+        + "documents");
+  }
+
+  @Override
+  public String getKey() {
+     throw new UnsupportedOperationException("Spatial views don't contain "
+       + "a key");
+  }
+
 }

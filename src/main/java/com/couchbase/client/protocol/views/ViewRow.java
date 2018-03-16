@@ -30,5 +30,11 @@ public interface ViewRow {
 
   String getKey();
 
+  String getValue();
+
+  String getBbox();
+
+  String getGeometry();
+
   Object getDocument();
 }

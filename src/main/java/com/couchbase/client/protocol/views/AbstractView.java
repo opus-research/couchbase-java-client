@@ -20,41 +20,37 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client;
-
-import com.couchbase.client.protocol.views.HttpOperationImpl;
-
-import java.net.HttpURLConnection;
-
-import net.spy.memcached.ops.OperationStatus;
-
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
+package com.couchbase.client.protocol.views;
 
 /**
- * A TestOperationPutImpl.
+ * A base class for views and spatial views.
  */
-public class TestOperationPutImpl extends HttpOperationImpl implements
-    TestOperation {
+public abstract class AbstractView {
+  private final String viewName;
+  private final String designDocumentName;
+  private final String databaseName;
 
-  public TestOperationPutImpl(HttpRequest r, TestCallback testCallback) {
-    super(r, testCallback);
+  public AbstractView(String dn, String ddn, String vn) {
+    databaseName = dn;
+    designDocumentName = ddn;
+    viewName = vn;
   }
 
-  @Override
-  public void handleResponse(HttpResponse response) {
-    StringBuilder json = new StringBuilder("");  // workaround for null returns
-    json.append(getEntityString(response));
-    int errorcode = response.getStatusLine().getStatusCode();
-
-    if (errorcode == HttpURLConnection.HTTP_CREATED) {
-      ((TestCallback) callback).getData(json.toString());
-      callback.receivedStatus(new OperationStatus(true, "OK"));
-    } else {
-      callback.receivedStatus(new OperationStatus(false,
-          Integer.toString(errorcode) + ": " + json));
-    }
-    callback.complete();
+  public String getDatabaseName() {
+    return databaseName;
   }
 
+  public String getDesignDocumentName() {
+    return designDocumentName;
+  }
+
+  public String getViewName() {
+    return viewName;
+  }
+
+  public abstract boolean hasMap();
+
+  public abstract boolean hasReduce();
+
+  public abstract String getURI();
 }

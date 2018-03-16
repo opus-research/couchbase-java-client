@@ -22,13 +22,13 @@
 
 package com.couchbase.client.internal;
 
+import com.couchbase.client.protocol.views.AbstractView;
+import com.couchbase.client.protocol.views.SpatialView;
+import com.couchbase.client.protocol.views.SpatialViewRowWithDocs;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewResponseWithDocs;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.couchbase.client.protocol.views.ViewRowWithDocs;
-import com.couchbase.client.protocol.views.ViewRowWithDocsSpatial;
-import com.couchbase.client.protocol.views.ViewType;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -38,10 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
-
 import net.spy.memcached.internal.BulkFuture;
-import net.spy.memcached.internal.CheckedOperationTimeoutException;
-import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationStatus;
 
 /**
@@ -49,68 +46,41 @@ import net.spy.memcached.ops.OperationStatus;
  */
 public class ViewFuture extends HttpFuture<ViewResponse> {
   private final AtomicReference<BulkFuture<Map<String, Object>>> multigetRef;
-  private final ViewType viewType;
 
-  public ViewFuture(CountDownLatch latch, long timeout, ViewType viewType) {
+  private AbstractView view;
+
+  public ViewFuture(CountDownLatch latch, long timeout, AbstractView view) {
     super(latch, timeout);
     this.multigetRef =
         new AtomicReference<BulkFuture<Map<String, Object>>>(null);
-    this.viewType = viewType;
+    this.view = view;
   }
 
   @Override
   public ViewResponse get(long duration, TimeUnit units)
     throws InterruptedException, ExecutionException, TimeoutException {
-
-    if (!latch.await(duration, units)) {
-      if (op != null) {
-        op.timeOut();
-      }
-      status = new OperationStatus(false, "Timed out");
-      throw new TimeoutException("Timed out waiting for operation");
-    }
-
-    if (op != null && op.hasErrored()) {
-      status = new OperationStatus(false, op.getException().getMessage());
-      throw new ExecutionException(op.getException());
-    }
-
-
-    if (op != null && op.isCancelled()) {
-      status = new OperationStatus(false, "Operation Cancelled");
-      throw new ExecutionException(new RuntimeException("Cancelled"));
-    }
-
-    if (op != null && op.isTimedOut()) {
-      status = new OperationStatus(false, "Timed out");
-      throw new ExecutionException(new CheckedOperationTimeoutException(
-          "Operation timed out.", (Operation)op));
-    }
+    waitForAndCheckOperation(duration, units);
 
     if (multigetRef.get() == null) {
       return null;
     }
 
     Map<String, Object> docMap = multigetRef.get().get();
-    final ViewResponseWithDocs view = (ViewResponseWithDocs) objRef.get();
+    final ViewResponseWithDocs viewResp = (ViewResponseWithDocs) objRef.get();
     Collection<ViewRow> rows = new LinkedList<ViewRow>();
-    Iterator<ViewRow> itr = view.iterator();
+    Iterator<ViewRow> itr = viewResp.iterator();
 
     while (itr.hasNext()) {
-
-      if(viewType.equals(ViewType.MAPREDUCE)) {
-        ViewRowWithDocs r = (ViewRowWithDocs)itr.next();
+      ViewRow r = itr.next();
+      if(view instanceof SpatialView) {
+        rows.add(new SpatialViewRowWithDocs(r.getId(), r.getBbox(),
+          r.getGeometry(), r.getValue(), docMap.get(r.getId())));
+      } else {
         rows.add(new ViewRowWithDocs(r.getId(), r.getKey(), r.getValue(),
           docMap.get(r.getId())));
-      } else if(viewType.equals(ViewType.SPATIAL)) {
-        ViewRowWithDocsSpatial r = (ViewRowWithDocsSpatial)itr.next();
-        rows.add(new ViewRowWithDocsSpatial(r.getId(), r.getBbox(),
-          r.getGeometry(), docMap.get(r.getId())));
-      } else {
-        throw new RuntimeException("Unsupported view type: " + viewType);
       }
     }
-    return new ViewResponseWithDocs(rows, view.getErrors(), viewType);
+    return new ViewResponseWithDocs(rows, viewResp.getErrors());
   }
 
   public void set(ViewResponse viewResponse,

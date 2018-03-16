@@ -24,6 +24,7 @@ package com.couchbase.client;
 
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.internal.ViewFuture;
+import com.couchbase.client.protocol.views.AbstractView;
 import com.couchbase.client.protocol.views.DocsOperationImpl;
 import com.couchbase.client.protocol.views.HttpOperation;
 import com.couchbase.client.protocol.views.InvalidViewException;
@@ -31,13 +32,15 @@ import com.couchbase.client.protocol.views.NoDocsOperationImpl;
 import com.couchbase.client.protocol.views.Paginator;
 import com.couchbase.client.protocol.views.Query;
 import com.couchbase.client.protocol.views.ReducedOperationImpl;
+import com.couchbase.client.protocol.views.SpatialView;
+import com.couchbase.client.protocol.views.SpatialViewFetcherOperation;
+import com.couchbase.client.protocol.views.SpatialViewFetcherOperationImpl;
 import com.couchbase.client.protocol.views.View;
 import com.couchbase.client.protocol.views.ViewFetcherOperation;
 import com.couchbase.client.protocol.views.ViewFetcherOperationImpl;
 import com.couchbase.client.protocol.views.ViewOperation.ViewCallback;
 import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewRow;
-import com.couchbase.client.protocol.views.ViewType;
 import com.couchbase.client.protocol.views.ViewsFetcherOperation;
 import com.couchbase.client.protocol.views.ViewsFetcherOperationImpl;
 import com.couchbase.client.vbucket.Reconfigurable;
@@ -290,23 +293,7 @@ public class CouchbaseClient extends MemcachedClient
     }
   }
 
-  /**
-   * Gets access to a view contained in a design document from the cluster.
-   *
-   * This method is a shorthand method to get a view result without the need
-   * to provide the ViewType.
-   *
-   * @param designDocumentName the name of the design document.
-   * @param viewName the name of the view to get.
-   * @return a View object from the cluster.
-   * @throws InterruptedException if the operation is interrupted while in
-   *           flight
-   * @throws ExecutionException if an error occurs during execution
-   */
-  public HttpFuture<View> asyncGetView(String designDocumentName,
-      final String viewName) {
-    return asyncGetView(designDocumentName, viewName, ViewType.MAPREDUCE);
-  }
+
 
   /**
    * Gets access to a view contained in a design document from the cluster.
@@ -333,18 +320,22 @@ public class CouchbaseClient extends MemcachedClient
    * @throws ExecutionException if an error occurs during execution
    */
   public HttpFuture<View> asyncGetView(String designDocumentName,
-      final String viewName, ViewType viewType) {
+      final String viewName) {
+    CouchbaseConnectionFactory factory =
+      (CouchbaseConnectionFactory) connFactory;
+
     designDocumentName = MODE_PREFIX + designDocumentName;
-    String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
+    String bucket = factory.getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final HttpFuture<View> crv = new HttpFuture<View>(couchLatch, 60000);
+    final HttpFuture<View> crv = new HttpFuture<View>(couchLatch,
+      factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
     final HttpOperation op =
         new ViewFetcherOperationImpl(request, bucket, designDocumentName,
-            viewName, viewType, new ViewFetcherOperation.ViewFetcherCallback() {
+            viewName, new ViewFetcherOperation.ViewFetcherCallback() {
               private View view = null;
 
               @Override
@@ -365,6 +356,62 @@ public class CouchbaseClient extends MemcachedClient
     crv.setOperation(op);
     addOp(op);
     assert crv != null : "Problem retrieving view";
+    return crv;
+  }
+
+  /**
+   * Gets access to a spatial view contained in a design document from the
+   * cluster.
+   *
+   *
+   * Note that since an HttpFuture is returned, the caller must also check to
+   * see if the View is null. The HttpFuture does provide a getStatus() method
+   * which can be used to check whether or not the view request has been
+   * successful.
+   *
+   * @param designDocumentName the name of the design document.
+   * @param viewName the name of the spatial view to get.
+   * @return a HttpFuture<SpatialView> object from the cluster.
+   * @throws InterruptedException if the operation is interrupted while in
+   *           flight
+   * @throws ExecutionException if an error occurs during execution
+   */
+  public HttpFuture<SpatialView> asyncGetSpatialView(String designDocumentName,
+      final String viewName) {
+    CouchbaseConnectionFactory factory =
+      (CouchbaseConnectionFactory) connFactory;
+    designDocumentName = MODE_PREFIX + designDocumentName;
+    String bucket = factory.getBucketName();
+    String uri = "/" + bucket + "/_design/" + designDocumentName;
+    final CountDownLatch couchLatch = new CountDownLatch(1);
+    final HttpFuture<SpatialView> crv = new HttpFuture<SpatialView>(
+      couchLatch, factory.getViewTimeout());
+
+    final HttpRequest request =
+        new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
+    final HttpOperation op =
+        new SpatialViewFetcherOperationImpl(request, bucket, designDocumentName,
+            viewName, new SpatialViewFetcherOperation.ViewFetcherCallback() {
+              private SpatialView view = null;
+
+              @Override
+              public void receivedStatus(OperationStatus status) {
+                crv.set(view, status);
+              }
+
+              @Override
+              public void complete() {
+                couchLatch.countDown();
+              }
+
+              @Override
+              public void gotData(SpatialView v) {
+                view = v;
+              }
+            });
+    crv.setOperation(op);
+    addOp(op);
+    assert crv != null : "Problem retrieving spatial view";
     return crv;
   }
 
@@ -390,12 +437,14 @@ public class CouchbaseClient extends MemcachedClient
    * @return a future containing a List of View objects from the cluster.
    */
   public HttpFuture<List<View>> asyncGetViews(String designDocumentName) {
+    CouchbaseConnectionFactory factory =
+      (CouchbaseConnectionFactory) connFactory;
     designDocumentName = MODE_PREFIX + designDocumentName;
-    String bucket = ((CouchbaseConnectionFactory)connFactory).getBucketName();
+    String bucket = factory.getBucketName();
     String uri = "/" + bucket + "/_design/" + designDocumentName;
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<List<View>> crv =
-        new HttpFuture<List<View>>(couchLatch, 60000);
+        new HttpFuture<List<View>>(couchLatch, factory.getViewTimeout());
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
@@ -442,8 +491,7 @@ public class CouchbaseClient extends MemcachedClient
    */
   public View getView(final String designDocumentName, final String viewName) {
     try {
-      View view = asyncGetView(designDocumentName, viewName,
-        ViewType.MAPREDUCE).get();
+      View view = asyncGetView(designDocumentName, viewName).get();
       if(view == null) {
         throw new InvalidViewException("Could not load view \""
           + viewName + "\" for design doc \"" + designDocumentName + "\"");
@@ -466,24 +514,24 @@ public class CouchbaseClient extends MemcachedClient
    * bounding box.
    *
    * @param designDocumentName the name of the design document.
-   * @param viewName the name of the spatial view to get.
-   * @return a View object from the cluster.
+   * @param viewName the name of the view to get.
+   * @return a SpatialView object from the cluster.
    * @throws InvalidViewException if no design document or view was found.
    */
-  public View getSpatialView(final String designDocumentName,
+  public SpatialView getSpatialView(final String designDocumentName,
     final String viewName) {
     try {
-      View view = asyncGetView(designDocumentName, viewName,
-        ViewType.SPATIAL).get();
+      SpatialView view = asyncGetSpatialView(designDocumentName, viewName)
+        .get();
       if(view == null) {
         throw new InvalidViewException("Could not load spatial view \""
           + viewName + "\" for design doc \"" + designDocumentName + "\"");
       }
       return view;
     } catch (InterruptedException e) {
-      throw new RuntimeException("Interrupted getting views", e);
+      throw new RuntimeException("Interrupted getting spatial view", e);
     } catch (ExecutionException e) {
-      throw new RuntimeException("Failed getting views", e);
+      throw new RuntimeException("Failed getting view", e);
     }
   }
 
@@ -509,7 +557,11 @@ public class CouchbaseClient extends MemcachedClient
     }
   }
 
-  public HttpFuture<ViewResponse> asyncQuery(View view, Query query) {
+  public HttpFuture<ViewResponse> asyncQuery(AbstractView view, Query query) {
+    if(view.hasReduce() && !query.getArgs().containsKey("reduce")) {
+      query.setReduce(true);
+    }
+
     if (query.willReduce()) {
       return asyncQueryAndReduce(view, query);
     } else if (query.willIncludeDocs()) {
@@ -529,7 +581,7 @@ public class CouchbaseClient extends MemcachedClient
    * @param query the type of query to run against the view.
    * @return a Future containing the results of the query.
    */
-  private HttpFuture<ViewResponse> asyncQueryAndIncludeDocs(View view,
+  private HttpFuture<ViewResponse> asyncQueryAndIncludeDocs(AbstractView view,
       Query query) {
     assert view != null : "Who passed me a null view";
     assert query != null : "who passed me a null query";
@@ -540,38 +592,39 @@ public class CouchbaseClient extends MemcachedClient
     String uri = viewUri + queryToRun;
     getLogger().info("lookin for:" + uri);
     final CountDownLatch couchLatch = new CountDownLatch(1);
-    final ViewFuture crv = new ViewFuture(couchLatch, 60000, view.getType());
+    int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
+    final ViewFuture crv = new ViewFuture(couchLatch, timeout, view);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
-    final HttpOperation op = new DocsOperationImpl(request, view.getType(),
+    final HttpOperation op = new DocsOperationImpl(request, view,
       new ViewCallback() {
-        private ViewResponse vr = null;
+      private ViewResponse vr = null;
 
-        @Override
-        public void receivedStatus(OperationStatus status) {
-          if (vr != null) {
-            Collection<String> ids = new LinkedList<String>();
-            Iterator<ViewRow> itr = vr.iterator();
-            while (itr.hasNext()) {
-              ids.add(itr.next().getId());
-            }
-            crv.set(vr, asyncGetBulk(ids), status);
-          } else {
-            crv.set(null, null, status);
+      @Override
+      public void receivedStatus(OperationStatus status) {
+        if (vr != null) {
+          Collection<String> ids = new LinkedList<String>();
+          Iterator<ViewRow> itr = vr.iterator();
+          while (itr.hasNext()) {
+            ids.add(itr.next().getId());
           }
+          crv.set(vr, asyncGetBulk(ids), status);
+        } else {
+          crv.set(null, null, status);
         }
+      }
 
-        @Override
-        public void complete() {
-          couchLatch.countDown();
-        }
+      @Override
+      public void complete() {
+        couchLatch.countDown();
+      }
 
-        @Override
-        public void gotData(ViewResponse response) {
-          vr = response;
-        }
-      });
+      @Override
+      public void gotData(ViewResponse response) {
+        vr = response;
+      }
+    });
     crv.setOperation(op);
     addOp(op);
     return crv;
@@ -587,17 +640,18 @@ public class CouchbaseClient extends MemcachedClient
    * @param query the type of query to run against the view.
    * @return a Future containing the results of the query.
    */
-  private HttpFuture<ViewResponse> asyncQueryAndExcludeDocs(View view,
+  private HttpFuture<ViewResponse> asyncQueryAndExcludeDocs(AbstractView view,
       Query query) {
     String uri = view.getURI() + query.toString();
     final CountDownLatch couchLatch = new CountDownLatch(1);
+    int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, 60000);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
     final HttpOperation op =
-        new NoDocsOperationImpl(request, view.getType(), new ViewCallback() {
+        new NoDocsOperationImpl(request, view, new ViewCallback() {
           private ViewResponse vr = null;
 
           @Override
@@ -628,23 +682,21 @@ public class CouchbaseClient extends MemcachedClient
    * @param query the type of query to run against the view.
    * @return a Future containing the results of the query.
    */
-  private HttpFuture<ViewResponse> asyncQueryAndReduce(final View view,
+  private HttpFuture<ViewResponse> asyncQueryAndReduce(final AbstractView view,
       final Query query) {
     if (!view.hasReduce()) {
       throw new RuntimeException("This view doesn't contain a reduce function");
-    } else if(view.getType().equals(ViewType.SPATIAL)) {
-      throw new RuntimeException("Spatial views can't have a reduce function");
     }
-
     String uri = view.getURI() + query.toString();
     final CountDownLatch couchLatch = new CountDownLatch(1);
+    int timeout = ((CouchbaseConnectionFactory) connFactory).getViewTimeout();
     final HttpFuture<ViewResponse> crv =
-        new HttpFuture<ViewResponse>(couchLatch, 60000);
+        new HttpFuture<ViewResponse>(couchLatch, timeout);
 
     final HttpRequest request =
         new BasicHttpRequest("GET", uri, HttpVersion.HTTP_1_1);
     final HttpOperation op =
-        new ReducedOperationImpl(request, view.getType(), new ViewCallback() {
+        new ReducedOperationImpl(request, view, new ViewCallback() {
           private ViewResponse vr = null;
 
           @Override
@@ -678,7 +730,7 @@ public class CouchbaseClient extends MemcachedClient
    * @param query the type of query to run against the view.
    * @return a ViewResponseWithDocs containing the results of the query.
    */
-  public ViewResponse query(View view, Query query) {
+  public ViewResponse query(AbstractView view, Query query) {
     try {
       return asyncQuery(view, query).get();
     } catch (InterruptedException e) {
@@ -1468,18 +1520,18 @@ public class CouchbaseClient extends MemcachedClient
    */
   public void observePoll(String key, long cas, PersistTo persist,
       ReplicateTo replicate, boolean isDelete) {
-    boolean persistMaster = false;
     if(persist == null) {
       persist = PersistTo.ZERO;
     }
     if(replicate == null) {
       replicate = ReplicateTo.ZERO;
     }
-    int persistReplica = persist.getValue();
+    int persistReplica = persist.getValue() > 0 ? persist.getValue() - 1 : 0;
     int replicateTo = replicate.getValue();
     int obsPolls = 0;
     int obsPollMax = cbConnFactory.getObsPollMax();
     long obsPollInterval = cbConnFactory.getObsPollInterval();
+    boolean persistMaster = persist.getValue() > 0;
 
     Config cfg = ((CouchbaseConnectionFactory) connFactory).getVBucketConfig();
     VBucketNodeLocator locator = ((VBucketNodeLocator)
@@ -1522,14 +1574,14 @@ public class CouchbaseClient extends MemcachedClient
           throw new ObservedModifiedException("Key was modified");
         }
         if (!isDelete) {
-          if (r.getValue() == ObserveResponse.FOUND_NOT_PERSISTED) {
+          if (!isMaster && r.getValue() == ObserveResponse.FOUND_NOT_PERSISTED) {
             replicatedTo++;
           }
           if (r.getValue() == ObserveResponse.FOUND_PERSISTED) {
-            replicatedTo++;
             if (isMaster) {
               persistedMaster = true;
             } else {
+              replicatedTo++;
               replicaPersistedTo++;
             }
           }
