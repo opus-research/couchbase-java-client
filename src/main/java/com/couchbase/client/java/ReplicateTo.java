@@ -21,8 +21,6 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.message.observe.Observe;
-
 /**
  * Defines the possible replication constraints to observe.
  *
@@ -34,34 +32,34 @@ public enum ReplicateTo {
     /**
      * Do not observe any replication constraint.
      */
-    NONE(Observe.ReplicateTo.NONE),
+    NONE((short) 0),
 
     /**
      * Observe replication to one replica.
      */
-    ONE(Observe.ReplicateTo.ONE),
+    ONE((short) 1),
 
     /**
      * Observe replication to two replicas.
      */
-    TWO(Observe.ReplicateTo.TWO),
+    TWO((short) 2),
 
     /**
      * Observe replication to three replicas.
      */
-    THREE(Observe.ReplicateTo.THREE);
+    THREE((short) 3);
 
     /**
      * Contains the internal value to map onto.
      */
-    private final Observe.ReplicateTo value;
+    private final short value;
 
     /**
      * Internal constructor for the enum.
      *
      * @param value the value of the replication constraint.
      */
-    ReplicateTo(Observe.ReplicateTo value) {
+    ReplicateTo(short value) {
         this.value = value;
     }
 
@@ -70,7 +68,7 @@ public enum ReplicateTo {
      *
      * @return the internal replication representation.
      */
-    public Observe.ReplicateTo value() {
+    public short value() {
         return value;
     }
 
@@ -80,6 +78,6 @@ public enum ReplicateTo {
      * @return true if it includes a replica, false if not.
      */
     public boolean touchesReplica() {
-        return value.touchesReplica();
+        return value > 0;
     }
 }
