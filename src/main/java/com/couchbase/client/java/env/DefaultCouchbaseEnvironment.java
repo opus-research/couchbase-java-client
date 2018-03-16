@@ -31,6 +31,8 @@ import com.couchbase.client.deps.com.lmax.disruptor.WaitStrategy;
 import com.couchbase.client.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.CouchbaseCluster;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.PasswordAuthenticator;
 import rx.Scheduler;
 
 import java.security.KeyStore;
@@ -219,6 +221,7 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
             return this;
         }
 
+        @Override
         public Builder disconnectTimeout(long disconnectTimeout) {
             super.disconnectTimeout(disconnectTimeout);
             return this;

@@ -141,7 +141,7 @@ public class SearchQueryTest {
     @Ignore("Only beer-search is required for SearchQueryTest")
     public void demoTravelSearch() {
         //use the travel sample bucket
-        Bucket bucket = ctx.cluster().openBucket("travel-sample");
+        Bucket bucket = ctx.cluster().openBucket("travel-sample", "");
 
         //prepare a compound query
         AbstractFtsQuery cq =
