@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2016 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.couchbase.client.java.datastructures;
 
 import com.couchbase.client.core.annotations.InterfaceAudience;
@@ -7,22 +22,24 @@ import com.couchbase.client.java.ReplicateTo;
 
 /**
  * MutationOptionBuilder allows to set following constraints on data structure mutation operations
+ *
  * - cas
  * - expiry
  * - persistence
  * - replication
  *
- * @author subhashni
+ * @author Subhashni Balakrishnan
+ * @since 2.3.5
  */
 
 @InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class MutationOptionBuilder {
 
-    protected int expiry;
-    protected long cas;
-    protected PersistTo persistTo;
-    protected ReplicateTo replicateTo;
+    private int expiry;
+    private long cas;
+    private PersistTo persistTo;
+    private ReplicateTo replicateTo;
 
     private MutationOptionBuilder() {
         this.expiry = 0;
@@ -31,60 +48,85 @@ public class MutationOptionBuilder {
         this.replicateTo = ReplicateTo.NONE;
     }
 
-    public static MutationOptionBuilder build() {
+    public static MutationOptionBuilder builder() {
         return new MutationOptionBuilder();
     }
 
     /**
-     * Apply expiration for the whole document backing the data structure
+     * Set expiration on option builder
      *
      * @param expiry expiration time, 0 means no expiry
      */
-    public MutationOptionBuilder withExpiry(int expiry) {
+    public MutationOptionBuilder expiry(int expiry) {
         this.expiry = expiry;
         return this;
     }
 
     /**
-     * Use optimistic locking for the data structure mutation
+     * Get expiration stored in option builder
      *
-     * @param cas the CAS to compare the enclosing document to.
+     * Returns expiration time
      */
-    public MutationOptionBuilder withCAS(long cas) {
+
+    public int expiry() {
+        return this.expiry;
+    }
+
+    /**
+     * Set cas for optimistic locking on option builder
+     *
+     * @param cas the CAS to compare
+     */
+    public MutationOptionBuilder cas(long cas) {
         this.cas = cas;
         return this;
     }
 
     /**
-     * Persistence durability constraints for the mutation
+     * Get cas stored in option builder
      *
-     * @param persistTo the persistence durability constraint to observe.
+     * Returns cas
      */
-    public MutationOptionBuilder withDurability(PersistTo persistTo) {
+    public long cas() {
+        return cas;
+    }
+
+    /**
+     * Set persistence durability constraints on option builder
+     *
+     * @param persistTo persistence constraint
+     */
+    public MutationOptionBuilder persistTo(PersistTo persistTo) {
         this.persistTo = persistTo;
         return this;
     }
 
     /**
-     * Replication durability constraints for the mutation
+     * Get persistence durability constraints stored in option builder
      *
-     * @param replicateTo the replication durability constraint to observe.
+     * Returns persistence constraint
      */
-    public MutationOptionBuilder withDurability(ReplicateTo replicateTo) {
+    public PersistTo persistTo() {
+        return this.persistTo;
+    }
+
+    /**
+     * Set replication durability constraints on option builder
+     *
+     * @param replicateTo replication constraint
+     */
+    public MutationOptionBuilder replicateTo(ReplicateTo replicateTo) {
         this.replicateTo = replicateTo;
         return this;
     }
 
-    /**
-     * Persistence and replication durability constraints for the mutation
-     *
-     * @param persistTo the persistence durability constraint to observe.
-     * @param replicateTo the replication durability constraint to observe.
-     */
 
-    public MutationOptionBuilder withDurability(PersistTo persistTo, ReplicateTo replicateTo) {
-        this.persistTo = persistTo;
-        this.replicateTo = replicateTo;
-        return this;
+    /**
+     * Get replication durability constraints stored in option builder
+     *
+     * Returns replication constraint
+     */
+    public ReplicateTo replicateTo() {
+        return this.replicateTo;
     }
 }

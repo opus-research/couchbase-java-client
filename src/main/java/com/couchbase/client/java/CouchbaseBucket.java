@@ -973,6 +973,7 @@ public class CouchbaseBucket implements Bucket {
         return Blocking.blockForSingle(asyncBucket.mapSize(docId), timeout, timeUnit);
     }
 
+
     @Override
     public <E> E listGet(String docId, int index, Class<E> elementType) {
         return listGet(docId, index, elementType, kvTimeout, TIMEOUT_UNIT);
@@ -1072,6 +1073,116 @@ public class CouchbaseBucket implements Bucket {
     @Override
     public int listSize(String docId, long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(asyncBucket.listSize(docId), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> boolean setAdd(String docId, E element) {
+        return setAdd(docId, element, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> boolean setAdd(String docId, E element, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setAdd(docId, element), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> boolean setAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder) {
+        return setAdd(docId, element, mutationOptionBuilder, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> boolean setAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setAdd(docId, element, mutationOptionBuilder), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> boolean setExists(String docId, E element) {
+        return setExists(docId, element, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> boolean setExists(String docId, E element, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setExists(docId, element), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> E setRemove(String docId, E element) {
+        return setRemove(docId, element, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> E setRemove(String docId, E element, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setRemove(docId, element), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> E setRemove(String docId, E element, MutationOptionBuilder mutationOptionBuilder) {
+        return setRemove(docId, element, mutationOptionBuilder, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> E setRemove(String docId, E element, MutationOptionBuilder mutationOptionBuilder, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setRemove(docId, element, mutationOptionBuilder), timeout, timeUnit);
+    }
+
+    @Override
+    public int setSize(String docId) {
+        return setSize(docId, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public int setSize(String docId, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.setSize(docId), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> boolean queueAdd(String docId, E element) {
+        return queueAdd(docId, element, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> boolean queueAdd(String docId, E element, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.queueAdd(docId, element), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> boolean queueAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder) {
+        return queueAdd(docId, element, mutationOptionBuilder, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> boolean queueAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.queueAdd(docId, element, mutationOptionBuilder), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> E queueRemove(String docId, Class<E> elementType) {
+        return queueRemove(docId, elementType, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> E queueRemove(String docId, Class<E> elementType, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.queueRemove(docId, elementType), timeout, timeUnit);
+    }
+
+    @Override
+    public <E> E queueRemove(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder) {
+        return queueRemove(docId, elementType, mutationOptionBuilder, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public <E> E queueRemove(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.queueRemove(docId, elementType, mutationOptionBuilder), timeout, timeUnit);
+    }
+
+    @Override
+    public int queueSize(String docId) {
+        return queueSize(docId, kvTimeout, TIMEOUT_UNIT);
+    }
+
+    @Override
+    public int queueSize(String docId, long timeout, TimeUnit timeUnit) {
+        return Blocking.blockForSingle(asyncBucket.queueSize(docId), timeout, timeUnit);
     }
 
     @Override
