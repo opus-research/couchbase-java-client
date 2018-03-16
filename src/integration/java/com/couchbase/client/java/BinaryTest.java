@@ -64,21 +64,13 @@ public class BinaryTest extends ClusterDependentTest {
     }
 
     @Test
-    public void shouldUpsertAndGetAndRemove() {
+    public void shouldUpsertAndGet() {
         JsonObject content = JsonObject.empty().put("hello", "world");
         final JsonDocument doc = JsonDocument.create("upsert", content);
 
         bucket().upsert(doc);
         JsonDocument response = bucket().get("upsert");
         assertEquals(content.getString("hello"), response.content().getString("hello"));
-
-        JsonDocument removed = bucket().remove(doc);
-        assertEquals(doc.id(), removed.id());
-        assertNull(removed.content());
-        assertEquals(0, removed.expiry());
-        assertTrue(removed.cas() != 0);
-
-        assertNull(bucket().get("upsert"));
     }
 
   @Test
@@ -248,7 +240,11 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        bucket().append(LegacyDocument.create(id, "bar"));
+        LegacyDocument stored = bucket().append(LegacyDocument.create(id, "bar"));
+        assertEquals(id, stored.id());
+        assertNull(stored.content());
+        assertTrue(stored.cas() != 0);
+        assertTrue(stored.expiry() == 0);
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -262,7 +258,11 @@ public class BinaryTest extends ClusterDependentTest {
         LegacyDocument doc = LegacyDocument.create(id, value);
         bucket().upsert(doc);
 
-        bucket().prepend(LegacyDocument.create(id, "foo"));
+        LegacyDocument stored = bucket().prepend(LegacyDocument.create(id, "foo"));
+        assertEquals(id, stored.id());
+        assertNull(stored.content());
+        assertTrue(stored.cas() != 0);
+        assertTrue(stored.expiry() == 0);
 
         LegacyDocument found = bucket().get(id, LegacyDocument.class);
         assertEquals("foobar", found.content());
@@ -272,6 +272,12 @@ public class BinaryTest extends ClusterDependentTest {
     public void shouldFailOnNonExistingAppend() {
         LegacyDocument doc = LegacyDocument.create("appendfail", "fail");
         bucket().append(doc);
+    }
+
+    @Test(expected = DocumentDoesNotExistException.class)
+    public void shouldFailOnNonExistingPrepend() {
+        LegacyDocument doc = LegacyDocument.create("prependfail", "fail");
+        bucket().prepend(doc);
     }
 
     @Test

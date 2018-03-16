@@ -674,8 +674,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -690,8 +690,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -710,8 +710,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -729,8 +729,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -748,8 +748,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -764,8 +764,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -784,8 +784,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -803,8 +803,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -822,8 +822,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server identified by its ID.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -839,8 +839,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -860,8 +860,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -880,8 +880,8 @@ public interface AsyncBucket {
     /**
      * Removes a {@link Document} from the Server by its ID and apply a durability requirement.
      *
-     * The {@link Document} returned just has the document ID and its CAS value set, since the value and all other
-     * associated properties have been removed from the server.
+     * The {@link Document} returned just has the document ID set, since the value and all other associated properties
+     * have been removed from the server.
      *
      * The returned {@link Observable} can error under the following conditions:
      *
@@ -1053,6 +1053,11 @@ public interface AsyncBucket {
     /**
      * Append a {@link Document} to another one.
      *
+     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
+     * does not return the appended result, so at this point the client does not know how the {@link Document} now
+     * looks like. A separate {@link AsyncBucket#get(Document)} call needs to be issued in order to get the full
+     * current content.
+     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -1060,10 +1065,13 @@ public interface AsyncBucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
+     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
+     *
      * The returned {@link Observable} can error under the following conditions:
      *
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be appended.
      * @return a document which mirrors the one supplied as an argument.
@@ -1073,6 +1081,11 @@ public interface AsyncBucket {
     /**
      * Prepend a {@link Document} to another one.
      *
+     * The {@link Document} returned explicitly has the {@link Document#content()} set to null, because the server
+     * does not return the prepended result, so at this point the client does not know how the {@link Document} now
+     * looks like. A separate {@link AsyncBucket#get(Document)} call needs to be issued in order to get the full
+     * current content.
+     *
      * If the {@link Document} does not exist, it needs to be created upfront. Note that {@link JsonDocument}s in all
      * forms are not supported, it is advised that the following ones are used:
      *
@@ -1080,10 +1093,13 @@ public interface AsyncBucket {
      * - {@link StringDocument}
      * - {@link BinaryDocument}
      *
+     * Note that this method does not support expiration on the {@link Document}. If set, it will be ignored.
+     *
      * The returned {@link Observable} can error under the following conditions:
      *
      * - The producer outpaces the SDK: {@link BackpressureException}
      * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
+     * - If the document does not exist: {@link DocumentDoesNotExistException}
      *
      * @param document the document to be prepended.
      * @return a document which mirrors the one supplied as an argument.
