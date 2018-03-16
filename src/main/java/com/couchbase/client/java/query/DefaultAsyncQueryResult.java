@@ -12,17 +12,14 @@ public class DefaultAsyncQueryResult implements AsyncQueryResult {
 
     private final Observable<AsyncQueryRow> rows;
     private final Observable<JsonObject> info;
-    private final boolean parsingSuccess;
-    private final Observable<JsonObject> errors;
-    private final Observable<Boolean> finalSuccess;
+    private final boolean success;
+    private final JsonObject error;
 
-    public DefaultAsyncQueryResult(Observable<AsyncQueryRow> rows, Observable<JsonObject> info,
-            Observable<JsonObject> errors, Observable<Boolean> finalSuccess, boolean parsingSuccess) {
+    public DefaultAsyncQueryResult(Observable<AsyncQueryRow> rows, Observable<JsonObject> info, JsonObject error, boolean success) {
         this.rows = rows;
         this.info = info;
-        this.errors = errors;
-        this.finalSuccess = finalSuccess;
-        this.parsingSuccess = parsingSuccess;
+        this.error = error;
+        this.success = success;
     }
 
     @Override
@@ -36,25 +33,12 @@ public class DefaultAsyncQueryResult implements AsyncQueryResult {
     }
 
     @Override
-    public Observable<Boolean> finalSuccess() {
-        return finalSuccess;
-    }
-
-    /**
-     * This only denotes initial success in parsing the query. As rows are processed, it could be
-     * that a late failure occurs. See {@link #finalSuccess} for the end of processing status.
-     *
-     * {@inheritDoc}
-     *
-     * @return true if no errors were detected upfront / query was successfully parsed.
-     */
-    @Override
-    public boolean parseSuccess() {
-        return parsingSuccess;
+    public boolean success() {
+        return success;
     }
 
     @Override
-    public Observable<JsonObject> errors() {
-        return errors;
+    public JsonObject error() {
+        return error;
     }
 }

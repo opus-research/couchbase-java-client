@@ -24,6 +24,15 @@ package com.couchbase.client.java.document;
 public class JsonBooleanDocument extends AbstractDocument<Boolean> {
 
     /**
+     * Creates a empty {@link JsonBooleanDocument}.
+     *
+     * @return a empty {@link JsonBooleanDocument}.
+     */
+    public static JsonBooleanDocument empty() {
+        return new JsonBooleanDocument(null, 0, null, 0);
+    }
+
+    /**
      * Creates a {@link JsonBooleanDocument} which the document id.
      *
      * @param id the per-bucket unique document id.

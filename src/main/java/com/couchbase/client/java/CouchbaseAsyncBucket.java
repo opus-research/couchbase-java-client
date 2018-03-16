@@ -21,10 +21,7 @@
  */
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.BackpressureException;
 import com.couchbase.client.core.ClusterFacade;
-import com.couchbase.client.core.CouchbaseException;
-import com.couchbase.client.core.RequestCancelledException;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.message.ResponseStatus;
@@ -38,7 +35,6 @@ import com.couchbase.client.core.message.query.GenericQueryResponse;
 import com.couchbase.client.core.message.view.ViewQueryRequest;
 import com.couchbase.client.core.message.view.ViewQueryResponse;
 import com.couchbase.client.core.message.observe.Observe;
-import com.couchbase.client.core.utils.Buffers;
 import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.bucket.AsyncBucketManager;
 import com.couchbase.client.java.bucket.DefaultAsyncBucketManager;
@@ -46,16 +42,13 @@ import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.*;
 import com.couchbase.client.java.transcoder.*;
 import com.couchbase.client.java.view.*;
 import rx.Observable;
-import rx.exceptions.CompositeException;
 import rx.functions.Func0;
 import rx.functions.Func1;
-import rx.functions.Func2;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,15 +75,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     private final ClusterFacade core;
     private final Map<Class<? extends Document>, Transcoder<? extends Document, ?>> transcoders;
     private final AsyncBucketManager bucketManager;
-    private final CouchbaseEnvironment environment;
 
 
-    public CouchbaseAsyncBucket(final ClusterFacade core, final CouchbaseEnvironment environment, final String name,
-        final String password, final List<Transcoder<? extends Document, ?>> customTranscoders) {
+    public CouchbaseAsyncBucket(final ClusterFacade core, final String name, final String password,
+                                final List<Transcoder<? extends Document, ?>> customTranscoders) {
         bucket = name;
         this.password = password;
         this.core = core;
-        this.environment = environment;
 
         transcoders = new ConcurrentHashMap<Class<? extends Document>, Transcoder<? extends Document, ?>>();
         transcoders.put(JSON_OBJECT_TRANSCODER.documentType(), JSON_OBJECT_TRANSCODER);
@@ -135,23 +126,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .<GetResponse>send(new GetRequest(id, bucket))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
-                public Boolean call(GetResponse response) {
-                    if (response.status().isSuccess()) {
-                        return true;
-                    }
-                    ByteBuf content = response.content();
-                    if (content != null && content.refCnt() > 0) {
-                        content.release();
-                    }
-                    return false;
+                public Boolean call(GetResponse getResponse) {
+                    return getResponse.status() == ResponseStatus.SUCCESS;
                 }
             })
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
                     Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(),
-                            response.status());
+                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
                 }
             });
     }
@@ -173,23 +156,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         return core.<GetResponse>send(new GetRequest(id, bucket, true, false, lockTime))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
-                public Boolean call(GetResponse response) {
-                    if (response.status().isSuccess()) {
-                        return true;
-                    }
-                    ByteBuf content = response.content();
-                    if (content != null && content.refCnt() > 0) {
-                        content.release();
-                    }
-                    return false;
+                public Boolean call(GetResponse getResponse) {
+                    return getResponse.status() == ResponseStatus.SUCCESS;
                 }
             })
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
                     Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(),
-                            response.status());
+                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
                 }
             });
     }
@@ -211,23 +186,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         return core.<GetResponse>send(new GetRequest(id, bucket, false, true, expiry))
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
-                public Boolean call(GetResponse response) {
-                    if (response.status().isSuccess()) {
-                        return true;
-                    }
-                    ByteBuf content = response.content();
-                    if (content != null && content.refCnt() > 0) {
-                        content.release();
-                    }
-                    return false;
+                public Boolean call(GetResponse getResponse) {
+                    return getResponse.status() == ResponseStatus.SUCCESS;
                 }
             })
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
                     Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(),
-                            response.status());
+                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
                 }
             });
     }
@@ -282,23 +249,22 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         return incoming
             .filter(new Func1<GetResponse, Boolean>() {
                 @Override
-                public Boolean call(GetResponse response) {
-                    if (response.status().isSuccess()) {
+                public Boolean call(GetResponse getResponse) {
+                    if (getResponse.status() == ResponseStatus.SUCCESS) {
                         return true;
+                    } else {
+                        if (getResponse.content() != null) {
+                            getResponse.content().release();
+                        }
+                        return false;
                     }
-                    ByteBuf content = response.content();
-                    if (content != null && content.refCnt() > 0) {
-                        content.release();
-                    }
-                    return false;
                 }
             })
             .map(new Func1<GetResponse, D>() {
                 @Override
                 public D call(final GetResponse response) {
                     Transcoder<?, Object> transcoder = (Transcoder<?, Object>) transcoders.get(target);
-                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(),
-                            response.status());
+                    return (D) transcoder.decode(id, response.content(), response.cas(), 0, response.flags(), response.status());
                 }
             });
     }
@@ -313,7 +279,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .flatMap(new Func1<InsertResponse, Observable<? extends D>>() {
                 @Override
                 public Observable<? extends D> call(InsertResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.EXISTS) {
@@ -331,8 +297,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -341,8 +306,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     }).onErrorResumeNext(new Func1<Throwable, Observable<? extends D>>() {
                         @Override
                         public Observable<? extends D> call(Throwable throwable) {
-                            return Observable.error(
-                                    new DurabilityException("Durability constraint failed.", throwable));
+                            return Observable.error(new DurabilityException("Durability constraint failed.", throwable));
                         }
                     });
             }
@@ -359,7 +323,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .flatMap(new Func1<UpsertResponse, Observable<D>>() {
                 @Override
                 public Observable<D> call(UpsertResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.EXISTS) {
@@ -376,8 +340,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -393,14 +356,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
   public <D extends Document<?>> Observable<D> replace(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
         Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
-    return core.<ReplaceResponse>send(
-            new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(),
-                    bucket))
+    return core.<ReplaceResponse>send(new ReplaceRequest(document.id(), encoded.value1(), document.cas(), document.expiry(), encoded.value2(), bucket))
 
         .flatMap(new Func1<ReplaceResponse, Observable<D>>() {
             @Override
             public Observable<D> call(ReplaceResponse response) {
-                if (response.content() != null && response.content().refCnt() > 0) {
+                if (response.content() != null) {
                     response.content().release();
                 }
                 if (response.status() == ResponseStatus.NOT_EXISTS) {
@@ -409,8 +370,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 if (response.status() == ResponseStatus.EXISTS) {
                     return Observable.error(new CASMismatchException());
                 }
-                return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(),
-                        response.cas()));
+                return Observable.just((D) transcoder.newDocument(document.id(), document.expiry(), document.content(), response.cas()));
             }
         });
   }
@@ -421,8 +381,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), false, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -438,12 +397,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> remove(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder =
             (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
+        RemoveRequest request = new RemoveRequest(document.id(), document.cas(),
+            bucket);
+
         return core
-            .<RemoveResponse>send(new RemoveRequest(document.id(), document.cas(), bucket))
+            .<RemoveResponse>send(request)
             .map(new Func1<RemoveResponse, D>() {
                 @Override
                 public D call(final RemoveResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.EXISTS) {
@@ -484,8 +446,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<D> call(final D doc) {
                 return Observe
-                    .call(core, bucket, doc.id(), doc.cas(), true, persistTo.value(), replicateTo.value(),
-                        environment.observeIntervalDelay())
+                    .call(core, bucket, doc.id(), doc.cas(), true, persistTo.value(), replicateTo.value())
                     .map(new Func1<Boolean, D>() {
                         @Override
                         public D call(Boolean aBoolean) {
@@ -539,28 +500,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<AsyncQueryResult> query(final Statement statement) {
-        return query(Query.simple(statement));
+    public Observable<AsyncQueryResult> query(final Query query) {
+        return query(query.toString());
     }
 
     @Override
-    public Observable<AsyncQueryResult> query(final Query query) {
-        return queryRaw(query.n1ql().toString());
-    }
-
-    /**
-     * Experimental, Internal: Queries a N1QL secondary index.
-     *
-     * The returned {@link Observable} can error under the following conditions:
-     *
-     * - The producer outpaces the SDK: {@link BackpressureException}
-     * - The operation had to be cancelled while "in flight" on the wire: {@link RequestCancelledException}
-     *
-     * @param query the full query as a Json String, including all necessary parameters.
-     * @return a result containing all found rows and additional information.
-     */
-    /* package */ Observable<AsyncQueryResult> queryRaw(final String query) {
-        GenericQueryRequest request = GenericQueryRequest.jsonQuery(query, bucket, password);
+    public Observable<AsyncQueryResult> query(final String query) {
+        GenericQueryRequest request = new GenericQueryRequest(query, bucket, password);
         return core
             .<GenericQueryResponse>send(request)
             .flatMap(new Func1<GenericQueryResponse, Observable<AsyncQueryResult>>() {
@@ -571,11 +517,10 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         public AsyncQueryRow call(ByteBuf byteBuf) {
                             try {
                                 JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                byteBuf.release();
                                 return new DefaultAsyncQueryRow(value);
                             } catch (Exception e) {
                                 throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
                             }
                         }
                     });
@@ -583,105 +528,34 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                         @Override
                         public JsonObject call(ByteBuf byteBuf) {
                             try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                byteBuf.release();
+                                return value;
                             } catch (Exception e) {
                                 throw new TranscodingException("Could not decode N1QL Query Info.", e);
-                            } finally {
-                                byteBuf.release();
                             }
                         }
                     });
-                    final Observable<Boolean> finalSuccess = response.queryStatus().map(new Func1<String, Boolean>() {
-                        @Override
-                        public Boolean call(String s) {
-                            return "success".equalsIgnoreCase(s) || "completed".equalsIgnoreCase(s);
-                        }
-                    });
-                    final Observable<JsonObject> errors = response.errors().map(new Func1<ByteBuf, JsonObject>() {
-                        @Override
-                        public JsonObject call(ByteBuf byteBuf) {
-                            try {
-                                return JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                            } catch (Exception e) {
-                                throw new TranscodingException("Could not decode View Info.", e);
-                            } finally {
-                                byteBuf.release();
-                            }
-                        }
-                    });
-                    boolean parseSuccess = response.status().isSuccess();
+                    if (response.status().isSuccess()) {
+                        return Observable.just((AsyncQueryResult) new DefaultAsyncQueryResult(rows, info, null,
+                            response.status().isSuccess()));
+                    } else {
+                        return response.info().map(new Func1<ByteBuf, AsyncQueryResult>() {
+                            @Override
+                            public AsyncQueryResult call(ByteBuf byteBuf) {
+                                try {
+                                    JsonObject error = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
+                                    byteBuf.release();
+                                    return new DefaultAsyncQueryResult(rows, info, error, response.status().isSuccess());
+                                } catch (Exception e) {
+                                    throw new TranscodingException("Could not decode View Info.", e);
+                                }
 
-                    AsyncQueryResult r = new DefaultAsyncQueryResult(rows, info, errors, finalSuccess, parseSuccess);
-                    return Observable.just(r);
+                            }
+                        });
+                    }
                 }
             });
-    }
-
-    @Override
-    public Observable<QueryPlan> prepare(Statement statement) {
-        Statement prepared = statement instanceof PrepareStatement ? statement : PrepareStatement.prepare(statement);
-        SimpleQuery query = Query.simple(prepared);
-        GenericQueryRequest prepareRequest = GenericQueryRequest.jsonQuery(query.n1ql().toString(),
-                bucket, password);
-        return core
-                .<GenericQueryResponse>send(prepareRequest)
-                .flatMap(new Func1<GenericQueryResponse, Observable<QueryPlan>>() {
-                    @Override
-                    public Observable<QueryPlan> call(GenericQueryResponse r) {
-                        if (r.status().isSuccess()) {
-                            r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
-                            r.errors().subscribe(Buffers.BYTE_BUF_RELEASER);
-                            return r.rows().map(new Func1<ByteBuf, QueryPlan>() {
-                                @Override
-                                public QueryPlan call(ByteBuf byteBuf) {
-                                    try {
-                                        JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                        return new QueryPlan(value);
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                    } finally {
-                                        byteBuf.release();
-                                    }
-                                }
-                            });
-                        } else {
-                            r.info().subscribe(Buffers.BYTE_BUF_RELEASER);
-                            r.rows().subscribe(Buffers.BYTE_BUF_RELEASER);
-                            return r.errors().map(new Func1<ByteBuf, Exception>() {
-                                @Override
-                                public Exception call(ByteBuf byteBuf) {
-                                    try {
-                                        JsonObject value = JSON_OBJECT_TRANSCODER.byteBufToJsonObject(byteBuf);
-                                        return new CouchbaseException("Query Error - " + value.toString());
-                                    } catch (Exception e) {
-                                        throw new TranscodingException("Could not decode N1QL Query Plan.", e);
-                                    } finally {
-                                        byteBuf.release();
-                                    }
-                                }
-                            }).reduce(new ArrayList<Throwable>(),
-                                    new Func2<ArrayList<Throwable>, Exception, ArrayList<Throwable>>() {
-                                        @Override
-                                        public ArrayList<Throwable> call(ArrayList<Throwable> throwables,
-                                                Exception error) {
-                                            throwables.add(error);
-                                            return throwables;
-                                        }
-                                    }).flatMap(new Func1<ArrayList<Throwable>, Observable<QueryPlan>>() {
-                                @Override
-                                public Observable<QueryPlan> call(ArrayList<Throwable> errors) {
-                                    if (errors.size() == 1) {
-                                        return Observable.error(new CouchbaseException(
-                                                "Error while preparing plan", errors.get(0)));
-                                    } else {
-                                        return Observable.error(new CompositeException(
-                                                "Multiple errors while preparing plan", errors));
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
     }
 
     @Override
@@ -701,7 +575,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<CounterResponse, JsonLongDocument>() {
                 @Override
                 public JsonLongDocument call(CounterResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     return JsonLongDocument.create(id, expiry, response.value(), response.cas());
@@ -716,7 +590,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<UnlockResponse, Boolean>() {
                 @Override
                 public Boolean call(UnlockResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.NOT_EXISTS) {
@@ -740,7 +614,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
         return core.<TouchResponse>send(new TouchRequest(id, expiry, bucket)).map(new Func1<TouchResponse, Boolean>() {
             @Override
             public Boolean call(TouchResponse response) {
-                if (response.content() != null && response.content().refCnt() > 0) {
+                if (response.content() != null) {
                     response.content().release();
                 }
                 return response.status().isSuccess();
@@ -763,7 +637,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<AppendResponse, D>() {
                 @Override
                 public D call(final AppendResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.FAILURE) {
@@ -784,7 +658,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             .map(new Func1<PrependResponse, D>() {
                 @Override
                 public D call(final PrependResponse response) {
-                    if (response.content() != null && response.content().refCnt() > 0) {
+                    if (response.content() != null) {
                         response.content().release();
                     }
                     if (response.status() == ResponseStatus.FAILURE) {
