@@ -30,7 +30,6 @@ import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -38,6 +37,8 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertSame;
 
 /**
  * Exercises the registration and invocation of custom document transcoders.
@@ -56,9 +57,6 @@ public class CustomTranscoderTest {
         ctx = CouchbaseTestContext.builder()
                 .adhoc(true)
                 .build();
-
-        // Necessary pending resolution of JCBC-1132 Bucket cache ignores custom transcoders
-        ctx.bucket().close();
     }
 
     @AfterClass
@@ -101,7 +99,6 @@ public class CustomTranscoderTest {
         assertTestDocumentIsReversed(openBucket(customTranscoders));
     }
 
-    @Ignore("Pending resolution of JCBC-1132 Bucket cache ignores custom transcoders")
     @Test
     public void canReopenBucketWithCustomTranscoder() throws Exception {
         // This is testing whether the bucket cache interferes with transcoder registration.
@@ -110,13 +107,27 @@ public class CustomTranscoderTest {
         assertStringDocumentIsUpperCased(openBucket(customTranscoders));
     }
 
-    @Ignore("Pending resolution of JCBC-1132 Bucket cache ignores custom transcoders")
     @Test
     public void canReopenBucketWithDefaultTranscoder() throws Exception {
         // This is testing whether the bucket cache interferes with transcoder registration.
         // The order of these two method calls is significant!
         assertStringDocumentIsUpperCased(openBucket(customTranscoders));
         assertStringDocumentIsPersistedNormally(openBucket());
+    }
+
+    @Test
+    public void bucketsWithCustomTranscodersAreCached() throws Exception {
+        assertSame(openBucket(customTranscoders), openBucket(customTranscoders));
+    }
+
+    @Test
+    public void bucketsWithoutCustomTranscodersAreCached() throws Exception {
+        assertSame(openBucket(), openBucket());
+    }
+
+    @Test
+    public void differenceInTranscodersCausesBucketCacheMiss() throws Exception {
+        assertNotEquals(openBucket(), openBucket(customTranscoders));
     }
 
     /**

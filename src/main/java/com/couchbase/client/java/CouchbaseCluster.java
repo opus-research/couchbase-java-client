@@ -15,21 +15,14 @@
  */
 package com.couchbase.client.java;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.annotations.InterfaceAudience;
 import com.couchbase.client.core.annotations.InterfaceStability;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
 import com.couchbase.client.core.message.internal.ServicesHealth;
-import com.couchbase.client.core.utils.ConnectionString;
 import com.couchbase.client.core.utils.Blocking;
+import com.couchbase.client.core.utils.ConnectionString;
 import com.couchbase.client.java.auth.Authenticator;
 import com.couchbase.client.java.auth.Credential;
 import com.couchbase.client.java.auth.CredentialContext;
@@ -46,6 +39,14 @@ import com.couchbase.client.java.query.core.N1qlQueryExecutor;
 import com.couchbase.client.java.transcoder.Transcoder;
 import rx.functions.Action1;
 import rx.functions.Func1;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Main synchronous entry point to a Couchbase Cluster.
@@ -104,7 +105,7 @@ import rx.functions.Func1;
 public class CouchbaseCluster implements Cluster {
 
     private static final CouchbaseLogger LOGGER =
-        CouchbaseLoggerFactory.getInstance(CouchbaseCluster.class);
+            CouchbaseLoggerFactory.getInstance(CouchbaseCluster.class);
 
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
 
@@ -112,7 +113,7 @@ public class CouchbaseCluster implements Cluster {
     private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
 
-    private final Map<String, Bucket> bucketCache;
+    private final Map<BucketCacheKey, Bucket> bucketCache;
 
     /**
      * Creates a new {@link CouchbaseCluster} reference against the
@@ -167,9 +168,9 @@ public class CouchbaseCluster implements Cluster {
      */
     public static CouchbaseCluster create(final List<String> nodes) {
         return new CouchbaseCluster(
-            DefaultCouchbaseEnvironment.create(),
-            ConnectionString.fromHostnames(nodes),
-            false
+                DefaultCouchbaseEnvironment.create(),
+                ConnectionString.fromHostnames(nodes),
+                false
         );
     }
 
@@ -181,7 +182,7 @@ public class CouchbaseCluster implements Cluster {
      * @return a new {@link CouchbaseCluster} reference.
      */
     public static CouchbaseCluster create(final CouchbaseEnvironment environment,
-        final String... nodes) {
+                                          final String... nodes) {
         return create(environment, Arrays.asList(nodes));
     }
 
@@ -193,7 +194,7 @@ public class CouchbaseCluster implements Cluster {
      * @return a new {@link CouchbaseCluster} reference.
      */
     public static CouchbaseCluster create(final CouchbaseEnvironment environment,
-        final List<String> nodes) {
+                                          final List<String> nodes) {
         return new CouchbaseCluster(environment, ConnectionString.fromHostnames(nodes), true);
     }
 
@@ -207,9 +208,9 @@ public class CouchbaseCluster implements Cluster {
      */
     public static CouchbaseCluster fromConnectionString(final String connectionString) {
         return new CouchbaseCluster(
-            DefaultCouchbaseEnvironment.create(),
-            ConnectionString.create(connectionString),
-            false
+                DefaultCouchbaseEnvironment.create(),
+                ConnectionString.create(connectionString),
+                false
         );
     }
 
@@ -221,7 +222,7 @@ public class CouchbaseCluster implements Cluster {
      * @return a new {@link CouchbaseCluster} reference.
      */
     public static CouchbaseCluster fromConnectionString(final CouchbaseEnvironment environment,
-        final String connectionString) {
+                                                        final String connectionString) {
         return new CouchbaseCluster(environment, ConnectionString.create(connectionString), true);
     }
 
@@ -236,15 +237,15 @@ public class CouchbaseCluster implements Cluster {
      * @param sharedEnvironment if the environment is managed by this class or not.
      */
     CouchbaseCluster(final CouchbaseEnvironment environment,
-        final ConnectionString connectionString, final boolean sharedEnvironment) {
+                     final ConnectionString connectionString, final boolean sharedEnvironment) {
         couchbaseAsyncCluster = new CouchbaseAsyncCluster(
-            environment,
-            connectionString,
-            sharedEnvironment
+                environment,
+                connectionString,
+                sharedEnvironment
         );
         this.environment = environment;
         this.connectionString = connectionString;
-        this.bucketCache = new ConcurrentHashMap<String, Bucket>();
+        this.bucketCache = new ConcurrentHashMap<BucketCacheKey, Bucket>();
     }
 
     @Override
@@ -266,7 +267,7 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public Bucket openBucket(String name, long timeout, TimeUnit timeUnit) {
-        return openBucket(name, new ArrayList<Transcoder<? extends Document, ?>>(), timeout, timeUnit);
+        return openBucket(name, Collections.<Transcoder<? extends Document, ?>>emptyList(), timeout, timeUnit);
     }
 
     @Override
@@ -280,7 +281,8 @@ public class CouchbaseCluster implements Cluster {
             throw new IllegalArgumentException("Bucket name is not allowed to be null or empty.");
         }
 
-        Bucket cachedBucket = getCachedBucket(name);
+        final BucketCacheKey bucketCacheKey = new BucketCacheKey(name, transcoders);
+        Bucket cachedBucket = getCachedBucket(bucketCacheKey);
         if (cachedBucket != null) {
             return cachedBucket;
         }
@@ -306,7 +308,7 @@ public class CouchbaseCluster implements Cluster {
                     public Bucket call(AsyncBucket asyncBucket) {
                         CouchbaseBucket bucket = new CouchbaseBucket(asyncBucket, environment, core(), name,
                                 userCred.login(), userCred.password());
-                        bucketCache.put(name, bucket);
+                        bucketCache.put(bucketCacheKey, bucket);
                         return bucket;
                     }
                 }).single(), timeout, timeUnit);
@@ -324,19 +326,20 @@ public class CouchbaseCluster implements Cluster {
 
     @Override
     public Bucket openBucket(String name, String password,
-        List<Transcoder<? extends Document, ?>> transcoders) {
+                             List<Transcoder<? extends Document, ?>> transcoders) {
         return openBucket(name, password, transcoders, environment.connectTimeout(), TIMEOUT_UNIT);
     }
 
     @Override
     public Bucket openBucket(final String name, final String password,
-        final List<Transcoder<? extends Document, ?>> transcoders,
-        long timeout, TimeUnit timeUnit) {
+                             final List<Transcoder<? extends Document, ?>> transcoders,
+                             long timeout, TimeUnit timeUnit) {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Bucket name is not allowed to be null or empty.");
         }
 
-        Bucket cachedBucket = getCachedBucket(name);
+        final BucketCacheKey bucketCacheKey = new BucketCacheKey(name, transcoders);
+        Bucket cachedBucket = getCachedBucket(bucketCacheKey);
         if (cachedBucket != null) {
             return cachedBucket;
         }
@@ -347,7 +350,7 @@ public class CouchbaseCluster implements Cluster {
                     @Override
                     public Bucket call(AsyncBucket asyncBucket) {
                         CouchbaseBucket bucket = new CouchbaseBucket(asyncBucket, environment, core(), name, name, password);
-                        bucketCache.put(name, bucket);
+                        bucketCache.put(bucketCacheKey, bucket);
                         return bucket;
                     }
                 }).single(), timeout, timeUnit);
@@ -357,18 +360,18 @@ public class CouchbaseCluster implements Cluster {
     /**
      * Helper method to get a bucket instead of opening it if it is cached already.
      *
-     * @param name the name of the bucket
+     * @param key the key holding arguments used to open the bucket
      * @return the cached bucket if found, null if not.
      */
-    private Bucket getCachedBucket(final String name) {
-        Bucket cachedBucket = bucketCache.get(name);
+    private Bucket getCachedBucket(final BucketCacheKey key) {
+        Bucket cachedBucket = bucketCache.get(key);
 
-        if(cachedBucket != null) {
+        if (cachedBucket != null) {
             if (cachedBucket.isClosed()) {
-                LOGGER.debug("Not returning cached bucket \"{}\", because it is closed.", name);
-                bucketCache.remove(name);
+                LOGGER.debug("Not returning cached bucket \"{}\", because it is closed.", key.bucketName());
+                bucketCache.remove(key);
             } else {
-                LOGGER.debug("Returning still open, cached bucket \"{}\"", name);
+                LOGGER.debug("Returning still open, cached bucket \"{}\"", key.bucketName());
                 return cachedBucket;
             }
         }
@@ -379,16 +382,16 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ClusterManager clusterManager(final String username, final String password) {
         return couchbaseAsyncCluster
-            .clusterManager(username, password)
-            .map(new Func1<AsyncClusterManager, ClusterManager>() {
-                @Override
-                public ClusterManager call(AsyncClusterManager asyncClusterManager) {
-                    return DefaultClusterManager.create(username, password, connectionString,
-                        environment, core());
-                }
-            })
-            .toBlocking()
-            .single();
+                .clusterManager(username, password)
+                .map(new Func1<AsyncClusterManager, ClusterManager>() {
+                    @Override
+                    public ClusterManager call(AsyncClusterManager asyncClusterManager) {
+                        return DefaultClusterManager.create(username, password, connectionString,
+                                environment, core());
+                    }
+                })
+                .toBlocking()
+                .single();
     }
 
     @Override
@@ -415,16 +418,16 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public Boolean disconnect(long timeout, TimeUnit timeUnit) {
         return Blocking.blockForSingle(
-            couchbaseAsyncCluster
-                .disconnect()
-                .doOnNext(new Action1<Boolean>() {
-                    @Override
-                    public void call(Boolean aBoolean) {
-                        bucketCache.clear();
-                    }
-                }),
-            timeout,
-            timeUnit
+                couchbaseAsyncCluster
+                        .disconnect()
+                        .doOnNext(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean aBoolean) {
+                                bucketCache.clear();
+                            }
+                        }),
+                timeout,
+                timeUnit
         );
     }
 
@@ -474,5 +477,59 @@ public class CouchbaseCluster implements Cluster {
     @Override
     public ServicesHealth healthCheck() {
         return Blocking.blockForSingle(couchbaseAsyncCluster.healthCheck(), environment.managementTimeout(), TIMEOUT_UNIT);
+    }
+
+    /**
+     * Key to use for bucket cache lookups so that cache hits only occur
+     * when the argument used to open the bucket are identical.
+     * <p>
+     * Immutable if the individual transcoders are immutable.
+     */
+    static class BucketCacheKey {
+        private final String bucketName;
+        private final List<Transcoder> transcoders;
+
+        BucketCacheKey(String bucketName, List<Transcoder<? extends Document, ?>> transcoders) {
+            if (bucketName == null) {
+                throw new NullPointerException("Bucket name must be non-null");
+            }
+            this.bucketName = bucketName;
+
+            if (transcoders == null || transcoders.isEmpty()) {
+                this.transcoders = Collections.emptyList();
+            } else {
+                this.transcoders = Collections.unmodifiableList(new ArrayList<Transcoder>(transcoders));
+            }
+        }
+
+        String bucketName() {
+            return bucketName;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            BucketCacheKey that = (BucketCacheKey) o;
+
+            if (!bucketName.equals(that.bucketName)) return false;
+            return transcoders.equals(that.transcoders);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = bucketName.hashCode();
+            result = 31 * result + transcoders.hashCode();
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "BucketCacheKey{" +
+                    "bucketName='" + bucketName + '\'' +
+                    ", transcoders=" + transcoders +
+                    '}';
+        }
     }
 }

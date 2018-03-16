@@ -15,13 +15,6 @@
  */
 package com.couchbase.client.java;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseCore;
 import com.couchbase.client.core.CouchbaseException;
@@ -41,7 +34,11 @@ import com.couchbase.client.core.message.internal.HealthCheckRequest;
 import com.couchbase.client.core.message.internal.HealthCheckResponse;
 import com.couchbase.client.core.message.internal.ServicesHealth;
 import com.couchbase.client.core.utils.ConnectionString;
-import com.couchbase.client.java.auth.*;
+import com.couchbase.client.java.CouchbaseCluster.BucketCacheKey;
+import com.couchbase.client.java.auth.Authenticator;
+import com.couchbase.client.java.auth.Credential;
+import com.couchbase.client.java.auth.CredentialContext;
+import com.couchbase.client.java.auth.PasswordAuthenticator;
 import com.couchbase.client.java.cluster.AsyncClusterManager;
 import com.couchbase.client.java.cluster.DefaultAsyncClusterManager;
 import com.couchbase.client.java.document.Document;
@@ -59,6 +56,14 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main asynchronous entry point to a Couchbase Cluster.
@@ -136,7 +141,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ClusterFacade core;
     private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
-    private final Map<String, AsyncBucket> bucketCache;
+    private final Map<BucketCacheKey, AsyncBucket> bucketCache;
     private final boolean sharedEnvironment;
     private Authenticator authenticator;
 
@@ -276,7 +281,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         core.send(request).toBlocking().single();
         this.environment = environment;
         this.connectionString = connectionString;
-        this.bucketCache = new ConcurrentHashMap<String, AsyncBucket>();
+        this.bucketCache = new ConcurrentHashMap<BucketCacheKey, AsyncBucket>();
     }
 
     /**
@@ -402,14 +407,15 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             );
         }
 
-        AsyncBucket cachedBucket = getCachedBucket(name);
+        final BucketCacheKey bucketCacheKey = new BucketCacheKey(name, transcoders);
+        AsyncBucket cachedBucket = getCachedBucket(bucketCacheKey);
         if (cachedBucket != null) {
             return Observable.just(cachedBucket);
         }
 
         final String pass = password == null ? "" : password;
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
-                ? new ArrayList<Transcoder<? extends Document, ?>>() : transcoders;
+                ? Collections.<Transcoder<? extends Document, ?>>emptyList() : transcoders;
 
         return Observable.defer(new Func0<Observable<OpenBucketResponse>>() {
             @Override
@@ -423,7 +429,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                     throw new CouchbaseException("Could not open bucket.");
                 }
                 AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, username, pass, trans);
-                bucketCache.put(name, bucket);
+                bucketCache.put(bucketCacheKey, bucket);
                 return bucket;
             }
         }).onErrorResumeNext(new OpenBucketErrorHandler(name));
@@ -432,21 +438,18 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     /**
      * Helper method to get a bucket instead of opening it if it is cached already.
      *
-     * @param name the name of the bucket
+     * @param key the key holding arguments used to open the bucket
      * @return the cached bucket if found, null if not.
      */
-    private AsyncBucket getCachedBucket(final String name) {
-        AsyncBucket cachedBucket = bucketCache.get(name);
+    private AsyncBucket getCachedBucket(final BucketCacheKey key) {
+        AsyncBucket cachedBucket = bucketCache.get(key);
 
-        if(cachedBucket != null) {
+        if (cachedBucket != null) {
             if (cachedBucket.isClosed()) {
-                LOGGER.debug(
-                    "Not returning cached async bucket \"{}\", because it is closed.",
-                    name
-                );
-                bucketCache.remove(name);
+                LOGGER.debug("Not returning cached async bucket \"{}\", because it is closed.", key.bucketName());
+                bucketCache.remove(key);
             } else {
-                LOGGER.debug("Returning still open, cached async bucket \"{}\"", name);
+                LOGGER.debug("Returning still open, cached async bucket \"{}\"", key.bucketName());
                 return cachedBucket;
             }
         }
