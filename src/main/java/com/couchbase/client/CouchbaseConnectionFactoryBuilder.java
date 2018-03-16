@@ -37,9 +37,11 @@ import java.util.logging.Logger;
 
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.ConnectionObserver;
+import net.spy.memcached.DefaultConnectionFactory;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
 import net.spy.memcached.OperationFactory;
+import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.Operation;
@@ -58,7 +60,13 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   private long obsPollInterval =
     CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL;
   private int obsPollMax = CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX;
+  private long obsTimeout = CouchbaseConnectionFactory.DEFAULT_OBS_TIMEOUT;
+
   private int viewTimeout = CouchbaseConnectionFactory.DEFAULT_VIEW_TIMEOUT;
+  private int viewWorkers = CouchbaseConnectionFactory.DEFAULT_VIEW_WORKER_SIZE;
+  private int viewConns =
+    CouchbaseConnectionFactory.DEFAULT_VIEW_CONNS_PER_NODE;
+
   private CouchbaseNodeOrder nodeOrder
     = CouchbaseConnectionFactory.DEFAULT_STREAMING_NODE_ORDER;
   private static final Logger LOGGER =
@@ -66,6 +74,7 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   protected MetricType metricType = null;
   protected MetricCollector collector = null;
   protected ExecutorService executorService = null;
+  protected long authWaitTime = -1;
 
   public Config getVBucketConfig() {
     return vBucketConfig;
@@ -79,11 +88,41 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
     reconnThresholdTimeMsecs = TimeUnit.MILLISECONDS.convert(time, unit);
   }
 
+  /**
+   * Set the interval between observe polls in milliseconds.
+   *
+   * @param interval the interval in milliseconds.
+   * @return the builder for proper chaining.
+   */
   public CouchbaseConnectionFactoryBuilder setObsPollInterval(long interval) {
     obsPollInterval = interval;
     return this;
   }
 
+  /**
+   * Set the timeout for observe-based operations in milliseconds.
+   *
+   * This timeout is always used when PersistTo or ReplicateTo overloaded
+   * methods are used, instead of the default operation timeout.
+   *
+   * @param timeout the timeout in milliseconds.
+   * @return the builder for proper chaining.
+   */
+  public CouchbaseConnectionFactoryBuilder setObsTimeout(long timeout) {
+    obsTimeout = timeout;
+    return this;
+  }
+
+  /**
+   * Sets the maximum number of observe polls.
+   *
+   * Do not use this method directly, but instead use a combination of
+   * {@link #setObsPollInterval(long)} and {@link #setObsTimeout(long)}.
+   *
+   * @param maxPoll the maximum number of polls to run before giving up.
+   * @return the builder for proper chaining.
+   */
+  @Deprecated
   public CouchbaseConnectionFactoryBuilder setObsPollMax(int maxPoll) {
     obsPollMax = maxPoll;
     return this;
@@ -99,6 +138,25 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         + "more than 2500ms.");
     }
     viewTimeout = timeout;
+    return this;
+  }
+
+  public CouchbaseConnectionFactoryBuilder setViewWorkerSize(int workers) {
+    if (workers < 1) {
+      throw new IllegalArgumentException("The View worker size needs to be "
+        + "greater than zero.");
+    }
+
+    viewWorkers = workers;
+    return this;
+  }
+
+  public CouchbaseConnectionFactoryBuilder setViewConnsPerNode(int conns) {
+    if (conns < 1) {
+      throw new IllegalArgumentException("The View connections per node need "
+        + "to be greater than zero");
+    }
+    viewConns = conns;
     return this;
   }
 
@@ -143,6 +201,12 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   @Override
   public ConnectionFactoryBuilder setListenerExecutorService(ExecutorService executorService) {
     this.executorService = executorService;
+    return this;
+  }
+
+  @Override
+  public ConnectionFactoryBuilder setAuthWaitTime(long authWaitTime) {
+    this.authWaitTime = authWaitTime;
     return this;
   }
 
@@ -235,6 +299,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
+      public long getAuthWaitTime() {
+        return authWaitTime == -1 ? super.getAuthWaitTime() : authWaitTime;
+      }
+
+      @Override
       public int getReadBufSize() {
         return readBufSize == -1 ? super.getReadBufSize() : readBufSize;
       }
@@ -280,13 +349,23 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
-      public int getObsPollMax() {
-        return obsPollMax;
+      public long getObsTimeout() {
+        return obsTimeout;
       }
 
       @Override
       public int getViewTimeout() {
         return viewTimeout;
+      }
+
+      @Override
+      public int getViewWorkerSize() {
+        return viewWorkers;
+      }
+
+      @Override
+      public int getViewConnsPerNode() {
+        return viewConns;
       }
 
       @Override
@@ -309,6 +388,10 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         return executorService == null;
       }
 
+      @Override
+      public AuthDescriptor getAuthDescriptor() {
+        return authDescriptor == null ? super.getAuthDescriptor() : authDescriptor;
+      }
     };
   }
 
@@ -371,6 +454,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
+      public long getAuthWaitTime() {
+        return authWaitTime == -1 ? super.getAuthWaitTime() : authWaitTime;
+      }
+
+      @Override
       public int getReadBufSize() {
         return readBufSize == -1 ? super.getReadBufSize() : readBufSize;
       }
@@ -416,13 +504,23 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
-      public int getObsPollMax() {
-        return obsPollMax;
+      public long getObsTimeout() {
+        return obsTimeout;
       }
 
       @Override
       public int getViewTimeout() {
         return viewTimeout;
+      }
+
+      @Override
+      public int getViewWorkerSize() {
+        return viewWorkers;
+      }
+
+      @Override
+      public int getViewConnsPerNode() {
+        return viewConns;
       }
 
       @Override
@@ -444,6 +542,11 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       public boolean isDefaultExecutorService() {
         return executorService == null;
       }
+
+      @Override
+      public AuthDescriptor getAuthDescriptor() {
+        return authDescriptor == null ? super.getAuthDescriptor() : authDescriptor;
+      }
     };
   }
 
@@ -462,9 +565,28 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   }
 
   /**
+   * @return the observe timeout
+   */
+  public long getObsTimeout() {
+    return obsTimeout;
+  }
+
+  /**
    * @return the viewTimeout
    */
   public int getViewTimeout() {
     return viewTimeout;
+  }
+
+  public int getViewWorkerSize() {
+    return viewWorkers;
+  }
+
+  public int getViewConnsPerNode() {
+    return viewConns;
+  }
+
+  public long getAuthWaitTime() {
+    return authWaitTime;
   }
 }
