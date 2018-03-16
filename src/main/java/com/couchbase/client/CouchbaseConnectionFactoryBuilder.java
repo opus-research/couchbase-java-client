@@ -58,12 +58,7 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   private long obsPollInterval =
     CouchbaseConnectionFactory.DEFAULT_OBS_POLL_INTERVAL;
   private int obsPollMax = CouchbaseConnectionFactory.DEFAULT_OBS_POLL_MAX;
-
   private int viewTimeout = CouchbaseConnectionFactory.DEFAULT_VIEW_TIMEOUT;
-  private int viewWorkers = CouchbaseConnectionFactory.DEFAULT_VIEW_WORKER_SIZE;
-  private int viewConns =
-    CouchbaseConnectionFactory.DEFAULT_VIEW_CONNS_PER_NODE;
-
   private CouchbaseNodeOrder nodeOrder
     = CouchbaseConnectionFactory.DEFAULT_STREAMING_NODE_ORDER;
   private static final Logger LOGGER =
@@ -104,25 +99,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
         + "more than 2500ms.");
     }
     viewTimeout = timeout;
-    return this;
-  }
-
-  public CouchbaseConnectionFactoryBuilder setViewWorkerSize(int workers) {
-    if (workers < 1) {
-      throw new IllegalArgumentException("The View worker size needs to be "
-        + "greater than zero.");
-    }
-
-    viewWorkers = workers;
-    return this;
-  }
-
-  public CouchbaseConnectionFactoryBuilder setViewConnsPerNode(int conns) {
-    if (conns < 1) {
-      throw new IllegalArgumentException("The View connections per node need "
-        + "to be greater than zero");
-    }
-    viewConns = conns;
     return this;
   }
 
@@ -314,16 +290,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
-      public int getViewWorkerSize() {
-        return viewWorkers;
-      }
-
-      @Override
-      public int getViewConnsPerNode() {
-        return viewConns;
-      }
-
-      @Override
       public MetricType enableMetrics() {
         return metricType == null ? super.enableMetrics() : metricType;
       }
@@ -460,16 +426,6 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
       }
 
       @Override
-      public int getViewWorkerSize() {
-        return viewWorkers;
-      }
-
-      @Override
-      public int getViewConnsPerNode() {
-        return viewConns;
-      }
-
-      @Override
       public MetricType enableMetrics() {
         return metricType == null ? super.enableMetrics() : metricType;
       }
@@ -511,13 +467,4 @@ public class CouchbaseConnectionFactoryBuilder extends ConnectionFactoryBuilder 
   public int getViewTimeout() {
     return viewTimeout;
   }
-
-  public int getViewWorkerSize() {
-    return viewWorkers;
-  }
-
-  public int getViewConnsPerNode() {
-    return viewConns;
-  }
-
 }

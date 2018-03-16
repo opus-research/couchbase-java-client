@@ -22,6 +22,8 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.http.AsyncConnectionManager;
+
 import com.couchbase.client.vbucket.ConfigurationException;
 import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
@@ -57,7 +59,6 @@ import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
-import org.apache.http.nio.reactor.IOReactorException;
 
 /**
  * Couchbase implementation of ConnectionFactory.
@@ -102,16 +103,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    * Default View request timeout in ms.
    */
   public static final int DEFAULT_VIEW_TIMEOUT = 75000;
-
-  /**
-   * Default size of view io worker threads.
-   */
-  public static final int DEFAULT_VIEW_WORKER_SIZE = 1;
-
-  /**
-   * Default amount of max connections per node.
-   */
-  public static final int DEFAULT_VIEW_CONNS_PER_NODE = 10;
 
   /**
    * Default Observe poll interval in ms.
@@ -220,6 +211,12 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       new ConfigurationProviderHTTP(baseList, bucket, password);
   }
 
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
+        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
+  }
+
   @Override
   public MemcachedConnection createConnection(List<InetSocketAddress> addrs)
     throws IOException {
@@ -238,7 +235,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public ViewConnection createViewConnection(
       List<InetSocketAddress> addrs) throws IOException {
-    return new ViewConnection(this, addrs, bucket, pass);
+    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
@@ -286,14 +283,6 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public int getViewTimeout() {
     return DEFAULT_VIEW_TIMEOUT;
-  }
-
-  public int getViewWorkerSize() {
-    return DEFAULT_VIEW_WORKER_SIZE;
-  }
-
-  public int getViewConnsPerNode() {
-    return DEFAULT_VIEW_CONNS_PER_NODE;
   }
 
   public CouchbaseNodeOrder getStreamingNodeOrder() {
