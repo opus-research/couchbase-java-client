@@ -99,6 +99,11 @@ public class Query {
     return this;
   }
 
+  public Query setKey(Integer key) {
+    args.put(KEY, key);
+    return this;
+  }
+
   public Query setLimit(int limit) {
     args.put(LIMIT, Integer.valueOf(limit));
     return this;
@@ -180,7 +185,11 @@ public class Query {
       query.setInclusiveEnd(((Boolean)args.get(INCLUSIVEEND)).booleanValue());
     }
     if (args.containsKey(KEY)) {
-      query.setKey(((String)args.get(KEY)));
+      if (args.get(KEY) instanceof Integer) {
+        query.setKey((Integer)(args.get(KEY)));
+      } else {
+        query.setKey((String)(args.get(KEY)));
+      }
     }
     if (args.containsKey(LIMIT)) {
       query.setLimit(((Integer)args.get(LIMIT)).intValue());
@@ -231,7 +240,14 @@ public class Query {
     // Special case
     if (key.equals(STARTKEYDOCID)) {
       return key + "=" + value;
-    } else if (value instanceof Stale) {
+    } else if (key.equals(KEY)) {
+      if (value instanceof Integer) {
+        return key + "=" + value.toString();
+      } else {
+        return key + "=\"" + value + "\"";
+      }
+    }
+      else if (value instanceof Stale) {
       return key + "=" + ((Stale) value).toString();
     } else if (value instanceof OnError) {
       return key + "=" + value;
