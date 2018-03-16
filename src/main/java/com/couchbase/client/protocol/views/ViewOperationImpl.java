@@ -39,20 +39,8 @@ import org.apache.http.HttpResponse;
 public abstract class ViewOperationImpl extends HttpOperationImpl
   implements ViewOperation {
 
-  private ViewType type;
-
-  public ViewOperationImpl(HttpRequest r, ViewType type, OperationCallback cb) {
+  public ViewOperationImpl(HttpRequest r, OperationCallback cb) {
     super(r, cb);
-    this.type = type;
-  }
-
-  /**
-   * Returns the View type of the corresponding view.
-   *
-   * @return returns the view type.
-   */
-  public ViewType getViewType() {
-    return this.type;
   }
 
   @Override

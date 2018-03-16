@@ -49,6 +49,7 @@ public class ViewRowReduced implements ViewRow {
         + "document ids");
   }
 
+  @Override
   public String getKey() {
     return key;
   }

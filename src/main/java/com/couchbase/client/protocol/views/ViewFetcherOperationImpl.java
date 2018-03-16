@@ -25,9 +25,11 @@ package com.couchbase.client.protocol.views;
 import java.net.HttpURLConnection;
 import java.text.ParseException;
 import java.util.Iterator;
+
 import net.spy.memcached.ops.OperationErrorType;
 import net.spy.memcached.ops.OperationException;
 import net.spy.memcached.ops.OperationStatus;
+
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.codehaus.jettison.json.JSONException;
@@ -42,16 +44,14 @@ public class ViewFetcherOperationImpl extends HttpOperationImpl implements
   private final String bucketName;
   private final String designDocName;
   private final String viewName;
-  private final ViewType viewType;
 
   public ViewFetcherOperationImpl(HttpRequest r, String bucketName,
-      String designDocName, String viewName, ViewType viewType,
+      String designDocName, String viewName,
       ViewFetcherCallback viewCallback) {
     super(r, viewCallback);
     this.bucketName = bucketName;
     this.designDocName = designDocName;
     this.viewName = viewName;
-    this.viewType = viewType;
   }
 
   @Override
@@ -76,7 +76,7 @@ public class ViewFetcherOperationImpl extends HttpOperationImpl implements
   }
 
   private View parseDesignDocumentForView(String dn, String ddn,
-    String viewname, String json) throws ParseException {
+      String viewname, String json) throws ParseException {
     View view = null;
     if (json != null) {
       try {
@@ -84,7 +84,7 @@ public class ViewFetcherOperationImpl extends HttpOperationImpl implements
         if (base.has("error")) {
           return null;
         }
-        if (viewType.equals(ViewType.MAPREDUCE) && base.has("views")) {
+        if (base.has("views")) {
           JSONObject views = base.getJSONObject("views");
           Iterator<?> itr = views.keys();
           while (itr.hasNext()) {
@@ -92,19 +92,7 @@ public class ViewFetcherOperationImpl extends HttpOperationImpl implements
             if (curView.equals(viewname)) {
               boolean map = views.getJSONObject(curView).has("map");
               boolean reduce = views.getJSONObject(curView).has("reduce");
-              view = new View(dn, ddn, viewname,
-                map, reduce, ViewType.MAPREDUCE);
-              break;
-            }
-          }
-        } else if(viewType.equals(ViewType.SPATIAL) && base.has("spatial")) {
-          JSONObject views = base.getJSONObject("spatial");
-          Iterator<?> itr = views.keys();
-          while (itr.hasNext()) {
-            String curView = (String) itr.next();
-            if (curView.equals(viewname)) {
-              view = new View(dn, ddn, viewname,
-                true, false, ViewType.SPATIAL);
+              view = new View(dn, ddn, viewname, map, reduce);
               break;
             }
           }

@@ -32,8 +32,8 @@ import java.util.Map;
 public class ViewResponseNoDocs extends ViewResponse {
 
   public ViewResponseNoDocs(final Collection<ViewRow> rows,
-      final Collection<RowError> errors, ViewType viewType) {
-    super(rows, errors, viewType);
+      final Collection<RowError> errors) {
+    super(rows, errors);
   }
 
   @Override
@@ -48,15 +48,9 @@ public class ViewResponseNoDocs extends ViewResponse {
     for (ViewRow r : rows) {
       s.append(r.getId());
       s.append(" : ");
-      if(getViewType().equals(ViewType.MAPREDUCE)) {
-        s.append(((ViewRowNoDocs)r).getKey());
-        s.append(" : ");
-        s.append(((ViewRowNoDocs)r).getValue());
-      } else if(getViewType().equals(ViewType.SPATIAL)) {
-        s.append(((ViewRowNoDocsSpatial)r).getBbox());
-        s.append(" : ");
-        s.append(((ViewRowNoDocsSpatial)r).getGeometry());
-      }
+      s.append(r.getKey());
+      s.append(" : ");
+      s.append(r.getValue());
       s.append("\n");
     }
     return s.toString();

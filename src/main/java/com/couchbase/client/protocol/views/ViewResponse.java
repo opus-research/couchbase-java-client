@@ -32,21 +32,15 @@ import java.util.Map;
 public abstract class ViewResponse implements Iterable<ViewRow> {
   protected final Collection<ViewRow> rows;
   protected final Collection<RowError> errors;
-  protected final ViewType viewType;
 
   public ViewResponse(final Collection<ViewRow> r,
-      final Collection<RowError> e, final ViewType viewType) {
-    this.rows = r;
-    this.errors = e;
-    this.viewType = viewType;
+      final Collection<RowError> e) {
+    rows = r;
+    errors = e;
   }
 
   public Collection<RowError> getErrors() {
     return errors;
-  }
-
-  public ViewType getViewType() {
-    return viewType;
   }
 
   @Override

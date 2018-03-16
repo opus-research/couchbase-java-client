@@ -30,5 +30,7 @@ public interface ViewRow {
 
   String getKey();
 
+  String getValue();
+
   Object getDocument();
 }

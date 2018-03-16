@@ -51,11 +51,6 @@ public class Paginator extends SpyObject
 
   public Paginator(CouchbaseClient client, View view, Query query,
       int numDocs) {
-    if(view.getType().equals(ViewType.SPATIAL)) {
-      throw new IllegalArgumentException("Pagination is not supported "
-        + "on spatial views.");
-    }
-
     this.client = client;
     this.view = view;
     this.query = query.copy();

@@ -26,8 +26,6 @@ import com.couchbase.client.protocol.views.ViewResponse;
 import com.couchbase.client.protocol.views.ViewResponseWithDocs;
 import com.couchbase.client.protocol.views.ViewRow;
 import com.couchbase.client.protocol.views.ViewRowWithDocs;
-import com.couchbase.client.protocol.views.ViewRowWithDocsSpatial;
-import com.couchbase.client.protocol.views.ViewType;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -49,13 +47,11 @@ import net.spy.memcached.ops.OperationStatus;
  */
 public class ViewFuture extends HttpFuture<ViewResponse> {
   private final AtomicReference<BulkFuture<Map<String, Object>>> multigetRef;
-  private final ViewType viewType;
 
-  public ViewFuture(CountDownLatch latch, long timeout, ViewType viewType) {
+  public ViewFuture(CountDownLatch latch, long timeout) {
     super(latch, timeout);
     this.multigetRef =
         new AtomicReference<BulkFuture<Map<String, Object>>>(null);
-    this.viewType = viewType;
   }
 
   @Override
@@ -97,20 +93,11 @@ public class ViewFuture extends HttpFuture<ViewResponse> {
     Iterator<ViewRow> itr = view.iterator();
 
     while (itr.hasNext()) {
-
-      if(viewType.equals(ViewType.MAPREDUCE)) {
-        ViewRowWithDocs r = (ViewRowWithDocs)itr.next();
-        rows.add(new ViewRowWithDocs(r.getId(), r.getKey(), r.getValue(),
+      ViewRow r = itr.next();
+      rows.add(new ViewRowWithDocs(r.getId(), r.getKey(), r.getValue(),
           docMap.get(r.getId())));
-      } else if(viewType.equals(ViewType.SPATIAL)) {
-        ViewRowWithDocsSpatial r = (ViewRowWithDocsSpatial)itr.next();
-        rows.add(new ViewRowWithDocsSpatial(r.getId(), r.getBbox(),
-          r.getGeometry(), docMap.get(r.getId())));
-      } else {
-        throw new RuntimeException("Unsupported view type: " + viewType);
-      }
     }
-    return new ViewResponseWithDocs(rows, view.getErrors(), viewType);
+    return new ViewResponseWithDocs(rows, view.getErrors());
   }
 
   public void set(ViewResponse viewResponse,

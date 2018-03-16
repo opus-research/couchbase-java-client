@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2012 Couchbase, Inc.
+ * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,142 +23,46 @@
 package com.couchbase.client.protocol.views;
 
 /**
- * Holds the decoded information from a view in the Couchbase Server.
+ * Holds information about a view that can be queried in
+ * Couchbase Server.
  */
 public class View {
-
-  /**
-   * The name of the view.
-   */
   private final String viewName;
-
-  /**
-   * The name of the design document.
-   */
   private final String designDocumentName;
-
-  /**
-   * The name of the bucket.
-   */
-  private final String bucketName;
-
-  /**
-   * Has a map function.
-   */
+  private final String databaseName;
   private final boolean map;
-
-  /**
-   * Has a reduce function.
-   */
   private final boolean reduce;
 
-  /**
-   * The type of the view.
-   */
-  private ViewType viewType;
-
-  /**
-   * Create a new View instance and provide all necessary details.
-   *
-   * The ViewType is automatically set to MAPREDUCE.
-   *
-   * @param bn the name of the bucket.
-   * @param ddn the name of the design document.
-   * @param vn the string name of the view.
-   * @param m whether it has a map function or not.
-   * @param r whether it has a reduce function or not.
-   */
-  public View(String bn, String ddn, String vn, boolean m, boolean r) {
-    this(bn, ddn, vn, m, r, ViewType.MAPREDUCE);
-  }
-
-  /**
-   * Create a new View instance and provide all necessary details.
-   *
-   * @param bn the name of the bucket.
-   * @param ddn the name of the design document.
-   * @param vn the string name of the view.
-   * @param m whether it has a map function or not.
-   * @param r whether it has a reduce function or not.
-   * @param t the type of the view.
-   */
-  public View(String bn, String ddn, String vn, boolean m, boolean r,
-    ViewType t) {
-    bucketName = bn;
+  protected View(String dn, String ddn, String vn, boolean m, boolean r) {
+    databaseName = dn;
     designDocumentName = ddn;
     viewName = vn;
     map = m;
     reduce = r;
-    viewType = t;
   }
 
-  /**
-   * Returns the bucket name of the view.
-   *
-   * @return the string representation of the bucket name.
-   */
-  public String getBucketName() {
-    return bucketName;
+  public String getDatabaseName() {
+    return databaseName;
   }
 
-  /**
-   * The name of the design document.
-   *
-   * @return the string representation of the design document name.
-   */
   public String getDesignDocumentName() {
     return designDocumentName;
   }
 
-  /**
-   * The view name.
-   *
-   * @return the string representation of the view name.
-   */
   public String getViewName() {
     return viewName;
   }
 
-  /**
-   * Information about the map function of the view.
-   *
-   * @return whether the view has a map function or not.
-   */
   public boolean hasMap() {
     return map;
   }
 
-  /**
-   * Returns the information about the view type.
-   *
-   * @return returns the corresponding ViewType.
-   */
-  public ViewType getType() {
-    return viewType;
-  }
-
-  /**
-   * Information about the reduce function of the view.
-   *
-   * @return whether the view has a reduce function or not.
-   */
   public boolean hasReduce() {
     return reduce;
   }
 
-  /**
-   * Returns the URI location of the view on the Couchbase Server.
-   *
-   * @return the URI as a string.
-   */
   public String getURI() {
-    String prefix = "/" + bucketName + "/_design/" + designDocumentName;
-    if(viewType.equals(ViewType.MAPREDUCE)) {
-      return prefix + "/_view/" + viewName;
-    } else if(viewType.equals(ViewType.SPATIAL)) {
-      return prefix + "/_spatial/" + viewName;
-    } else {
-      throw new RuntimeException("Unsupported View Type: " + viewType);
-    }
+    return "/" + databaseName + "/_design/" + designDocumentName + "/_view/"
+        + viewName;
   }
 }
