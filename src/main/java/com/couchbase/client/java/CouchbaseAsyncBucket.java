@@ -115,8 +115,6 @@ import rx.Observable;
 import rx.functions.Func0;
 import rx.functions.Func1;
 
-import static com.couchbase.client.java.util.OnSubscribeDeferAndWatch.deferAndWatch;
-
 public class CouchbaseAsyncBucket implements AsyncBucket {
 
     private static final CouchbaseLogger LOGGER = CouchbaseLoggerFactory.getInstance(CouchbaseAsyncBucket.class);
@@ -235,7 +233,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> get(final String id, final Class<D> target) {
-        return deferAndWatch(new Func0<Observable<GetResponse>>() {
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
                 @Override
                 public Observable<GetResponse> call() {
                     return core.send(new GetRequest(id, bucket));
@@ -277,7 +275,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> exists(final String id) {
-        return deferAndWatch(new Func0<Observable<ObserveResponse>>() {
+        return Observable.defer(new Func0<Observable<ObserveResponse>>() {
             @Override
             public Observable<ObserveResponse> call() {
                 return core.send(new ObserveRequest(id, 0, true, (short) 0, bucket));
@@ -321,7 +319,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndLock(final String id, final int lockTime, final Class<D> target) {
-        return deferAndWatch(new Func0<Observable<GetResponse>>() {
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
                 @Override
                 public Observable<GetResponse> call() {
                     return core.send(new GetRequest(id, bucket, true, false, lockTime));
@@ -376,7 +374,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @Override
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> getAndTouch(final String id, final int expiry, final Class<D> target) {
-        return deferAndWatch(new Func0<Observable<GetResponse>>() {
+        return Observable.defer(new Func0<Observable<GetResponse>>() {
                 @Override
                 public Observable<GetResponse> call() {
                     return core.send(new GetRequest(id, bucket, false, true, expiry));
@@ -449,7 +447,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> insert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
 
-        return deferAndWatch(new Func0<Observable<InsertResponse>>() {
+        return Observable.defer(new Func0<Observable<InsertResponse>>() {
             @Override
             public Observable<InsertResponse> call() {
                 Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
@@ -521,7 +519,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> upsert(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
 
-        return deferAndWatch(new Func0<Observable<UpsertResponse>>() {
+        return Observable.defer(new Func0<Observable<UpsertResponse>>() {
             @Override
             public Observable<UpsertResponse> call() {
                 Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
@@ -594,7 +592,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> replace(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
 
-        return deferAndWatch(new Func0<Observable<ReplaceResponse>>() {
+        return Observable.defer(new Func0<Observable<ReplaceResponse>>() {
             @Override
             public Observable<ReplaceResponse> call() {
                 Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
@@ -667,7 +665,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> remove(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        return deferAndWatch(new Func0<Observable<RemoveResponse>>() {
+        return Observable.defer(new Func0<Observable<RemoveResponse>>() {
             @Override
             public Observable<RemoveResponse> call() {
                 return core.send(new RemoveRequest(document.id(), document.cas(), bucket));
@@ -871,7 +869,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<JsonLongDocument> counter(final String id, final long delta, final long initial, final int expiry) {
-        return deferAndWatch(new Func0<Observable<CounterResponse>>() {
+        return Observable.defer(new Func0<Observable<CounterResponse>>() {
             @Override
             public Observable<CounterResponse> call() {
                 return core.send(new CounterRequest(id, initial, delta, expiry, bucket));
@@ -906,7 +904,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> unlock(final String id, final long cas) {
-        return deferAndWatch(new Func0<Observable<UnlockResponse>>() {
+        return Observable.defer(new Func0<Observable<UnlockResponse>>() {
             @Override
             public Observable<UnlockResponse> call() {
                 return core.send(new UnlockRequest(id, cas, bucket));
@@ -945,7 +943,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
     public Observable<Boolean> touch(final String id, final int expiry) {
-        return deferAndWatch(new Func0<Observable<TouchResponse>>() {
+        return Observable.defer(new Func0<Observable<TouchResponse>>() {
             @Override
             public Observable<TouchResponse> call() {
                 return core.send(new TouchRequest(id, expiry, bucket));
@@ -986,7 +984,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     public <D extends Document<?>> Observable<D> append(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
 
-        return deferAndWatch(new Func0<Observable<AppendResponse>>() {
+        return Observable.defer(new Func0<Observable<AppendResponse>>() {
             @Override
             public Observable<AppendResponse> call() {
                 Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
@@ -1026,7 +1024,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     @SuppressWarnings("unchecked")
     public <D extends Document<?>> Observable<D> prepend(final D document) {
         final  Transcoder<Document<Object>, Object> transcoder = (Transcoder<Document<Object>, Object>) transcoders.get(document.getClass());
-        return deferAndWatch(new Func0<Observable<PrependResponse>>() {
+        return Observable.defer(new Func0<Observable<PrependResponse>>() {
             @Override
             public Observable<PrependResponse> call() {
                 Tuple2<ByteBuf, Integer> encoded = transcoder.encode((Document<Object>) document);
@@ -1359,12 +1357,16 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonObject.create().put(key, value)),
-                                    mutationOptionBuilder.persistTo(),
-                                    mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryAddIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonObject.create().put(key, value)),
+                                        mutationOptionBuilder.persistTo(),
+                                        mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryAddIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             //Wrap it up a subdoc result, since we dont want to throw it back as subdoc exception
                             if (throwable instanceof MultiMutationException) {
@@ -1447,13 +1449,13 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public <E> Observable<Boolean> listPush(String docId, E element) {
-        return listPush(docId, element, MutationOptionBuilder.builder());
+    public <E> Observable<Boolean> listAppend(String docId, E element) {
+        return listAppend(docId, element, MutationOptionBuilder.builder());
     }
 
 
     @Override
-    public <E> Observable<Boolean> listPush(final String docId, final E element, final MutationOptionBuilder mutationOptionBuilder) {
+    public <E> Observable<Boolean> listAppend(final String docId, final E element, final MutationOptionBuilder mutationOptionBuilder) {
         return listSubdocPushLast(docId, element, mutationOptionBuilder)
                 .map(ResultMappingUtils.getMapResultFnForSubdocMutationToBoolean());
     }
@@ -1483,11 +1485,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonArray.create().add(element)),
-                                    mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonArray.create().add(element)),
+                                        mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             if (throwable instanceof MultiMutationException) {
                                 ResponseStatus status = ((MultiMutationException) throwable).firstFailureStatus();
@@ -1557,11 +1563,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonArray.create().add(element)),
-                                    mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonArray.create().add(element)),
+                                        mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             if (throwable instanceof MultiMutationException) {
                                 ResponseStatus status = ((MultiMutationException) throwable).firstFailureStatus();
@@ -1575,12 +1585,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public <E> Observable<Boolean> listShift(String docId, E element) {
-        return listShift(docId, element, MutationOptionBuilder.builder());
+    public <E> Observable<Boolean> listPrepend(String docId, E element) {
+        return listPrepend(docId, element, MutationOptionBuilder.builder());
     }
 
     @Override
-    public <E> Observable<Boolean> listShift(final String docId, final E element, final MutationOptionBuilder mutationOptionBuilder) {
+    public <E> Observable<Boolean> listPrepend(final String docId, final E element, final MutationOptionBuilder mutationOptionBuilder) {
         return listSubdocPushFirst(docId, element, mutationOptionBuilder)
                 .map(ResultMappingUtils.getMapResultFnForSubdocMutationToBoolean());
     }
@@ -1609,11 +1619,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonArray.create().add(element)),
-                                    mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonArray.create().add(element)),
+                                        mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             if (throwable instanceof MultiMutationException) {
                                 ResponseStatus status = ((MultiMutationException) throwable).firstFailureStatus();
@@ -1693,11 +1707,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonArray.create().add(element)),
-                                    mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonArray.create().add(element)),
+                                        mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             if (throwable instanceof MultiMutationException) {
                                 ResponseStatus status = ((MultiMutationException) throwable).firstFailureStatus();
@@ -1711,7 +1729,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public <E> Observable<Boolean> setExists(final String docId, final E element) {
+    public <E> Observable<Boolean> setContains(final String docId, final E element) {
         return get(docId, JsonArrayDocument.class)
                 .toList()
                 .map(new Func1<List<JsonArrayDocument>, Boolean>() {
@@ -1835,12 +1853,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public <E> Observable<Boolean> queueAdd(String docId, E element) {
-        return queueAdd(docId, element, MutationOptionBuilder.builder());
+    public <E> Observable<Boolean> queuePush(String docId, E element) {
+        return queuePush(docId, element, MutationOptionBuilder.builder());
     }
 
     @Override
-    public <E> Observable<Boolean> queueAdd(String docId, E element, MutationOptionBuilder mutationOptionBuilder) {
+    public <E> Observable<Boolean> queuePush(String docId, E element, MutationOptionBuilder mutationOptionBuilder) {
         return queueSubdocAddFirst(docId, element, mutationOptionBuilder)
                 .map(ResultMappingUtils.getMapResultFnForSubdocMutationToBoolean());
     }
@@ -1870,11 +1888,15 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                     @Override
                     public Observable<? extends DocumentFragment<Mutation>> call(Throwable throwable) {
                         if (throwable instanceof DocumentDoesNotExistException) {
-                            return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
-                                    JsonArray.create().add(element)),
-                                    mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
-                                    .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
-                                    .onErrorResumeNext(retryIfDocExists);
+                            if (mutationOptionBuilder.createDocument()) {
+                                return insert(JsonArrayDocument.create(docId, mutationOptionBuilder.expiry(),
+                                        JsonArray.create().add(element)),
+                                        mutationOptionBuilder.persistTo(), mutationOptionBuilder.replicateTo())
+                                        .map(ResultMappingUtils.getMapFullArrayDocResultToSubDocFn(mutationOperation))
+                                        .onErrorResumeNext(retryIfDocExists);
+                            } else {
+                                return Observable.error(throwable);
+                            }
                         } else {
                             if (throwable instanceof MultiMutationException) {
                                 ResponseStatus status = ((MultiMutationException) throwable).firstFailureStatus();
@@ -1888,12 +1910,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public <E> Observable<E> queueRemove(String docId, Class<E> elementType) {
-        return queueRemove(docId, elementType, MutationOptionBuilder.builder());
+    public <E> Observable<E> queuePop(String docId, Class<E> elementType) {
+        return queuePop(docId, elementType, MutationOptionBuilder.builder());
     }
 
     @Override
-    public <E> Observable<E> queueRemove(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder) {
+    public <E> Observable<E> queuePop(String docId, Class<E> elementType, MutationOptionBuilder mutationOptionBuilder) {
         return queueSubdocRemove(docId, mutationOptionBuilder, elementType, MAX_CAS_RETRIES_DATASTRUCTURES);
     }
 
