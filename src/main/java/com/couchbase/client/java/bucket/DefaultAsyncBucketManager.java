@@ -20,6 +20,7 @@ import static com.couchbase.client.java.query.dsl.Expression.i;
 import static com.couchbase.client.java.query.dsl.Expression.s;
 import static com.couchbase.client.java.query.dsl.Expression.x;
 import static com.couchbase.client.java.util.OnSubscribeDeferAndWatch.deferAndWatch;
+import static com.couchbase.client.java.util.retry.RetryBuilder.any;
 import static com.couchbase.client.java.util.retry.RetryBuilder.anyOf;
 
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import com.couchbase.client.core.ClusterFacade;
 import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
+import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.config.BucketConfigRequest;
 import com.couchbase.client.core.message.config.BucketConfigResponse;
 import com.couchbase.client.core.message.config.GetDesignDocumentsRequest;
@@ -49,13 +51,7 @@ import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.error.CannotRetryException;
-import com.couchbase.client.java.error.DesignDocumentAlreadyExistsException;
-import com.couchbase.client.java.error.DesignDocumentException;
-import com.couchbase.client.java.error.IndexAlreadyExistsException;
-import com.couchbase.client.java.error.IndexDoesNotExistException;
-import com.couchbase.client.java.error.IndexesNotReadyException;
-import com.couchbase.client.java.error.TranscodingException;
+import com.couchbase.client.java.error.*;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
 import com.couchbase.client.java.query.AsyncN1qlQueryRow;
 import com.couchbase.client.java.query.Index;
@@ -116,7 +112,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
             public Observable<BucketConfigResponse> call() {
                 return core.send(new BucketConfigRequest("/pools/default/buckets/", null, bucket, password));
             }
-        }).map(new Func1<BucketConfigResponse, BucketInfo>() {
+        })
+        .retryWhen(any().delay(Delay.fixed(100, TimeUnit.MILLISECONDS)).max(Integer.MAX_VALUE).build())
+        .map(new Func1<BucketConfigResponse, BucketInfo>() {
             @Override
             public BucketInfo call(BucketConfigResponse response) {
                 try {
@@ -148,7 +146,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
             public Observable<GetDesignDocumentsResponse> call() {
                 return core.send(new GetDesignDocumentsRequest(bucket, password));
             }
-        }).flatMap(new Func1<GetDesignDocumentsResponse, Observable<DesignDocument>>() {
+        })
+        .retryWhen(any().delay(Delay.fixed(100, TimeUnit.MILLISECONDS)).max(Integer.MAX_VALUE).build())
+        .flatMap(new Func1<GetDesignDocumentsResponse, Observable<DesignDocument>>() {
             @Override
             public Observable<DesignDocument> call(GetDesignDocumentsResponse response) {
                 JsonObject converted;
@@ -197,10 +197,12 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                         response.content().release();
                     }
                 }
+                if (response.status() == ResponseStatus.NOT_EXISTS) {
+                    throw new DesignDocumentDoesNotExistException();
+                }
                 return success;
             }
-        })
-            .map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
+        }).map(new Func1<GetDesignDocumentResponse, DesignDocument>() {
                 @Override
                 public DesignDocument call(GetDesignDocumentResponse response) {
                     JsonObject converted;
@@ -227,7 +229,16 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<DesignDocument> insertDesignDocument(final DesignDocument designDocument, final boolean development) {
         return getDesignDocument(designDocument.name(), development)
-            .isEmpty()
+            .onErrorResumeNext(new Func1<Throwable, Observable<? extends DesignDocument>>() {
+                @Override
+                public Observable<? extends DesignDocument> call(Throwable throwable) {
+                    if (throwable instanceof DesignDocumentDoesNotExistException) {
+                        return Observable.empty();
+                    } else {
+                        return Observable.error(throwable);
+                    }
+                }
+            }).isEmpty()
             .flatMap(new Func1<Boolean, Observable<DesignDocument>>() {
                 @Override
                 public Observable<DesignDocument> call(Boolean doesNotExist) {
@@ -296,6 +307,9 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
                 if (response.content() != null && response.content().refCnt() > 0) {
                     response.content().release();
                 }
+                if (response.status() == ResponseStatus.NOT_EXISTS) {
+                    throw new DesignDocumentDoesNotExistException();
+                }
                 return response.status().isSuccess();
             }
         });
@@ -309,7 +323,16 @@ public class DefaultAsyncBucketManager implements AsyncBucketManager {
     @Override
     public Observable<DesignDocument> publishDesignDocument(final String name, final boolean overwrite) {
         return getDesignDocument(name, false)
-            .isEmpty()
+                .onErrorResumeNext(new Func1<Throwable, Observable<? extends DesignDocument>>() {
+                    @Override
+                    public Observable<? extends DesignDocument> call(Throwable throwable) {
+                        if (throwable instanceof DesignDocumentDoesNotExistException) {
+                            return Observable.empty();
+                        } else {
+                            return Observable.error(throwable);
+                        }
+                    }
+                }).isEmpty()
             .flatMap(new Func1<Boolean, Observable<DesignDocument>>() {
                 @Override
                 public Observable<DesignDocument> call(Boolean doesNotExist) {
