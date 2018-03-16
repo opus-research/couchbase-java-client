@@ -34,11 +34,10 @@ public class DefaultAsyncSpatialViewResult implements AsyncSpatialViewResult {
 
     private final Observable<AsyncSpatialViewRow> rows;
     private final boolean success;
-    private final Observable<JsonObject> error;
+    private final JsonObject error;
     private final JsonObject debug;
 
-    public DefaultAsyncSpatialViewResult(Observable<AsyncSpatialViewRow> rows, boolean success,
-        Observable<JsonObject> error, JsonObject debug) {
+    public DefaultAsyncSpatialViewResult(Observable<AsyncSpatialViewRow> rows, boolean success, JsonObject error, JsonObject debug) {
         this.rows = rows;
         this.success = success;
         this.error = error;
@@ -56,7 +55,7 @@ public class DefaultAsyncSpatialViewResult implements AsyncSpatialViewResult {
     }
 
     @Override
-    public Observable<JsonObject> error() {
+    public JsonObject error() {
         return error;
     }
 
