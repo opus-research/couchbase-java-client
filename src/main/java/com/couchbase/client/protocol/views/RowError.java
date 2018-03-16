@@ -20,52 +20,26 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
-
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+package com.couchbase.client.protocol.views;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * Holds the information for row in a view result that
+ * describes an error.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public class RowError {
+  private final String from;
+  private final String reason;
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
+  public RowError(String from, String reason) {
+    this.from = from;
+    this.reason = reason;
   }
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
+  public String getFrom() {
+    return from;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
+  public String getReason() {
+    return reason;
   }
 }

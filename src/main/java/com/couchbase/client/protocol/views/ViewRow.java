@@ -20,52 +20,17 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket;
-
-import com.couchbase.client.vbucket.config.Bucket;
-
-import java.util.Observable;
-import java.util.Observer;
+package com.couchbase.client.protocol.views;
 
 /**
- * An implementation of the observer for calling reconfigure.
+ * A ViewRow.
  */
-public class ReconfigurableObserver implements Observer {
-  private final Reconfigurable rec;
+public interface ViewRow {
+  String getId();
 
-  public ReconfigurableObserver(Reconfigurable rec) {
-    this.rec = rec;
-  }
+  String getKey();
 
-  /**
-   * Delegates update to the reconfigurable passed in the constructor.
-   *
-   * @param o
-   * @param arg
-   */
-  public void update(Observable o, Object arg) {
-    rec.reconfigure((Bucket) arg);
-  }
+  String getValue();
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    ReconfigurableObserver that = (ReconfigurableObserver) o;
-
-    if (!rec.equals(that.rec)) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode() {
-    return rec.hashCode();
-  }
+  Object getDocument();
 }
