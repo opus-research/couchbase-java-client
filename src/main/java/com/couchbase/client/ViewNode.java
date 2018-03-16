@@ -105,6 +105,7 @@ public class ViewNode extends SpyObject {
             getLogger().warn(
                 "Interrupted while trying to get a connection."
                     + " Cancelling op");
+            getLogger().debug("Operation canceled: " + op);
             op.cancel();
             return;
           }
@@ -113,6 +114,7 @@ public class ViewNode extends SpyObject {
           if (conn == null) {
             getLogger().error("Failed to obtain connection. Cancelling op");
             op.cancel();
+            getLogger().debug("Operation cancelled: " + op);
           } else {
             HttpContext context = conn.getContext();
             RequestHandle handle = new RequestHandle(connMgr, conn);
