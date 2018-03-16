@@ -38,8 +38,8 @@ public class DateRangeFacet extends SearchFacet {
 
     private final Map<String, DateRange> dateRanges;
 
-    DateRangeFacet(String field, int limit) {
-        super(field, limit);
+    DateRangeFacet(String name, String field, int limit) {
+        super(name, field, limit);
         this.dateRanges = new HashMap<String, DateRange>();
     }
 
