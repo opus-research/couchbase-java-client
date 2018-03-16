@@ -28,7 +28,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.couchbase.client.java.query.Select.select;
-import static com.couchbase.client.java.query.dsl.Expression.*;
+import static com.couchbase.client.java.query.dsl.Expression.s;
+import static com.couchbase.client.java.query.dsl.Expression.x;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -217,14 +218,6 @@ public class QueryToN1qlTest {
         assertEquals(JsonArray.from(1, 2, 3), jsonArray);
     }
 
-    @Test
-    public void testN1QLQueryToString() {
-        String queryStr = "SELECT * FROM default";
-        N1qlQuery query = N1qlQuery.simple(queryStr);
-        assertEquals(queryStr, query.toString());
 
-        ParameterizedN1qlQuery parameterizedN1qlQuery = N1qlQuery.parameterized(select(x("*")).from("default").where(x("name").eq("$name")),
-                JsonObject.create().put("name", "foo"));
-        assertEquals(queryStr + " WHERE name = $name", parameterizedN1qlQuery.toString());
-    }
+
 }

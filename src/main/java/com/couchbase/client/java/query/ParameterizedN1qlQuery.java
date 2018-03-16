@@ -68,7 +68,4 @@ public class ParameterizedN1qlQuery extends AbstractN1qlQuery {
     public boolean isPositional() {
         return positional;
     }
-
-    @Override
-    public String toString() { return statement().toString(); }
 }
