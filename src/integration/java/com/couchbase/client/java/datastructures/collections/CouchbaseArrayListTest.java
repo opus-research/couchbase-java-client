@@ -15,15 +15,15 @@
  */
 package com.couchbase.client.java.datastructures.collections;
 
-import com.couchbase.client.java.bucket.BucketType;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.CouchbaseCluster;
 import com.couchbase.client.java.document.JsonArrayDocument;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 import com.couchbase.client.java.error.DocumentDoesNotExistException;
 import com.couchbase.client.java.error.TranscodingException;
-import com.couchbase.client.java.util.CouchbaseTestContext;
-import com.couchbase.client.java.util.features.CouchbaseFeature;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -40,22 +40,18 @@ import static org.junit.Assert.*;
 
 public class CouchbaseArrayListTest {
 
-    private static CouchbaseTestContext ctx;
+    private static Cluster cluster;
+    private static Bucket bucket;
 
     @BeforeClass
     public static void setup() {
-        ctx = CouchbaseTestContext.builder()
-            .bucketQuota(100)
-            .bucketReplicas(1)
-            .bucketType(BucketType.COUCHBASE)
-            .build();
-
-        ctx.ignoreIfMissing(CouchbaseFeature.SUBDOC);
+        cluster = CouchbaseCluster.create();
+        bucket = cluster.openBucket();
     }
 
     @AfterClass
     public static void teardown() {
-        ctx.destroyBucketAndDisconnect();
+        cluster.disconnect();
     }
 
     private String uuid;
@@ -68,7 +64,7 @@ public class CouchbaseArrayListTest {
     @After
     public void deleteDoc() {
         try {
-            ctx.bucket().remove(uuid);
+            bucket.remove(uuid);
         } catch (DocumentDoesNotExistException e) {
             //ignore
         }
@@ -80,19 +76,19 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void size() throws Exception {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<Object> list = new CouchbaseArrayList(uuid, bucket);
         assertEquals(0, list.size());
     }
 
     @Test
     public void isEmpty() throws Exception {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<Object> list = new CouchbaseArrayList(uuid, bucket);
         assertTrue(list.isEmpty());
     }
 
     @Test
     public void shouldAdd() throws Exception {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), Collections.<Object>emptyList());
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, Collections.<Object>emptyList());
         assertFalse(list.contains("foobar"));
         list.add("foobar");
         assertTrue(list.contains("foobar"));
@@ -102,7 +98,7 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void shouldRemoveByValue() throws Exception {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar");
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar");
         assertTrue(list.contains("foo"));
         assertTrue(list.contains("bar"));
         assertEquals(2, list.size());
@@ -126,7 +122,7 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void shouldRemoveByIndex() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar", "baz", true);
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar", "baz", true);
 
         assertEquals(4, list.size());
         list.remove(1);
@@ -136,14 +132,14 @@ public class CouchbaseArrayListTest {
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void shouldThrowOnOutOfBoundsRemove() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar");
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar");
 
         list.remove(14334324);
     }
 
     @Test
     public void shouldReturnIterator() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar");
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar");
 
         Iterator<Object> iter = list.iterator();
         int i = 0;
@@ -165,7 +161,7 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void shouldClear() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar");
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar");
         assertEquals(2, list.size());
 
         list.clear();
@@ -177,7 +173,7 @@ public class CouchbaseArrayListTest {
     //since clear is optimized, also test the iterator removal of the whole list
     @Test
     public void shouldClearViaIterator() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo", "bar");
+        List<Object> list = new CouchbaseArrayList(uuid, bucket, "foo", "bar");
         assertEquals(2, list.size());
 
         Iterator<Object> iterator = list.iterator();
@@ -193,7 +189,7 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void shouldIteratorRemoveInReverseOrder() {
-        List<String> list = new CouchbaseArrayList<String>(uuid, ctx.bucket(), "keep", "foo", "bar", "baz", "foobar");
+        List<String> list = new CouchbaseArrayList<String>(uuid, bucket, "keep", "foo", "bar", "baz", "foobar");
         assertEquals(5, list.size());
 
         ListIterator<String> iterator = list.listIterator();
@@ -214,7 +210,7 @@ public class CouchbaseArrayListTest {
 
     @Test
     public void shouldGet() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<Object> list = new CouchbaseArrayList(uuid, bucket);
         list.add("foo");
         list.add("bar");
 
@@ -224,16 +220,16 @@ public class CouchbaseArrayListTest {
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void shouldFailOnOutOfBoundsGet() {
-        List<Object> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<Object> list = new CouchbaseArrayList(uuid, bucket);
         list.get(4234324);
     }
 
     @Test
     public void testConstructorWithPreExistingDocument() {
         JsonArrayDocument preExisting = JsonArrayDocument.create(uuid, JsonArray.from("test"));
-        ctx.bucket().upsert(preExisting);
+        bucket.upsert(preExisting);
 
-        List<String> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<String> list = new CouchbaseArrayList(uuid, bucket);
 
         assertEquals(1, list.size());
         assertEquals("test", list.get(0));
@@ -242,9 +238,9 @@ public class CouchbaseArrayListTest {
     @Test
     public void testConstructorWithPreExistingDocumentOfWrongTypeFails() {
         JsonDocument preExisting = JsonDocument.create(uuid, JsonObject.create().put("test", "value"));
-        ctx.bucket().upsert(preExisting);
+        bucket.upsert(preExisting);
 
-        List<String> list = new CouchbaseArrayList(uuid, ctx.bucket());
+        List<String> list = new CouchbaseArrayList(uuid, bucket);
         try {
             list.size();
             fail("Expected TranscodingException");
@@ -256,9 +252,9 @@ public class CouchbaseArrayListTest {
     @Test
     public void testConstructorWithVarargDataOverwrites() {
         JsonDocument preExisting = JsonDocument.create(uuid, JsonObject.create().put("test", "value"));
-        ctx.bucket().upsert(preExisting);
+        bucket.upsert(preExisting);
 
-        List<String> list = new CouchbaseArrayList(uuid, ctx.bucket(), "foo");
+        List<String> list = new CouchbaseArrayList(uuid, bucket, "foo");
 
         assertEquals(1, list.size());
         assertEquals("foo", list.get(0));
@@ -267,9 +263,9 @@ public class CouchbaseArrayListTest {
     @Test
     public void testConstructorWithCollectionDataOverwrites() {
         JsonDocument preExisting = JsonDocument.create(uuid, JsonObject.create().put("test", "value"));
-        ctx.bucket().upsert(preExisting);
+        bucket.upsert(preExisting);
 
-        List<String> list = new CouchbaseArrayList(uuid, ctx.bucket(), Collections.singletonList("foo"));
+        List<String> list = new CouchbaseArrayList(uuid, bucket, Collections.singletonList("foo"));
 
         assertEquals(1, list.size());
         assertEquals("foo", list.get(0));
@@ -278,16 +274,16 @@ public class CouchbaseArrayListTest {
     @Test
     public void testConstructorWithEmptyCollectionOverwrites() {
         JsonDocument preExisting = JsonDocument.create(uuid, JsonObject.create().put("test", "value"));
-        ctx.bucket().upsert(preExisting);
+        bucket.upsert(preExisting);
 
-        List<String> list = new CouchbaseArrayList(uuid, ctx.bucket(), Collections.emptyList());
+        List<String> list = new CouchbaseArrayList(uuid, bucket, Collections.emptyList());
 
         assertEquals(0, list.size());
     }
 
     @Test
     public void shouldAcceptAllJsonValueCompatibleTypes() {
-        List<Object> list = new CouchbaseArrayList<Object>(uuid, ctx.bucket());
+        List<Object> list = new CouchbaseArrayList<Object>(uuid, bucket);
 
         JsonObject sub1 = JsonObject.create().put("foo", "bar").put("value", 4);
         JsonArray sub2 = JsonArray.from("A", "B", 5);
