@@ -46,11 +46,12 @@ import com.couchbase.client.java.util.Bootstrap;
 import rx.Observable;
 import rx.functions.Func0;
 import rx.functions.Func1;
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CouchbaseAsyncCluster implements AsyncCluster {
 
@@ -62,6 +63,8 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
     private final ClusterFacade core;
     private final CouchbaseEnvironment environment;
     private final ConnectionString connectionString;
+
+    private final Map<String, AsyncBucket> bucketCache;
 
     private final boolean sharedEnvironment;
 
@@ -104,6 +107,7 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
         core.send(request).toBlocking().single();
         this.environment = environment;
         this.connectionString = connectionString;
+        this.bucketCache = new ConcurrentHashMap<String, AsyncBucket>();
     }
 
     /**
@@ -178,6 +182,17 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
             return Observable.error(new IllegalArgumentException("Bucket name is not allowed to be null or empty."));
         }
 
+        AsyncBucket cachedBucket = bucketCache.get(name);
+        if(cachedBucket != null) {
+            if (cachedBucket.isClosed()) {
+                LOGGER.debug("Not returning cached async bucket \"{}\", because it is closed.", name);
+                bucketCache.remove(name);
+            } else {
+                LOGGER.debug("Returning still open, cached async bucket \"{}\"", name);
+                return Observable.just(cachedBucket);
+            }
+        }
+
         final String password = pass == null ? "" : pass;
 
         final List<Transcoder<? extends Document, ?>> trans = transcoders == null
@@ -195,7 +210,9 @@ public class CouchbaseAsyncCluster implements AsyncCluster {
                         throw new CouchbaseException("Could not open bucket.");
                     }
 
-                    return new CouchbaseAsyncBucket(core, environment, name, password, trans);
+                    AsyncBucket bucket = new CouchbaseAsyncBucket(core, environment, name, password, trans);
+                    bucketCache.put(name, bucket);
+                    return bucket;
                 }
             }).onErrorResumeNext(new Func1<Throwable, Observable<AsyncBucket>>() {
                 @Override
