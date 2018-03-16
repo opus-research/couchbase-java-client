@@ -430,8 +430,8 @@ public class DefaultCouchbaseEnvironment extends DefaultCoreEnvironment implemen
         }
 
         @Override
-        public Builder runtimeMetricsCollectorConfig(MetricsCollectorConfig metricsCollectorConfig) {
-            super.runtimeMetricsCollectorConfig(metricsCollectorConfig);
+        public Builder systemMetricsCollectorConfig(MetricsCollectorConfig metricsCollectorConfig) {
+            super.systemMetricsCollectorConfig(metricsCollectorConfig);
             return this;
         }
 
