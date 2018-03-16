@@ -34,7 +34,6 @@ import com.couchbase.client.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.java.CouchbaseAsyncBucket;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.QueryExecutionException;
 import com.couchbase.client.java.error.TranscodingException;
 import com.couchbase.client.java.query.AsyncN1qlQueryResult;
@@ -53,9 +52,6 @@ import com.couchbase.client.java.query.SimpleN1qlQuery;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.transcoder.TranscoderUtils;
 import com.couchbase.client.java.util.LRUCache;
-import io.opentracing.BaseSpan;
-import io.opentracing.Span;
-import io.opentracing.Tracer;
 import rx.Observable;
 import rx.exceptions.CompositeException;
 import rx.functions.Func0;
@@ -102,7 +98,6 @@ public class N1qlQueryExecutor {
     private final String password;
     private final Map<String, PreparedPayload> queryCache;
     private final boolean encodedPlanEnabled;
-    private final CouchbaseEnvironment env;
 
     /**
      * Construct a new N1qlQueryExecutor that will send requests through the given {@link ClusterFacade}. For queries that
@@ -114,7 +109,7 @@ public class N1qlQueryExecutor {
      * @param password the password for the bucket.
      */
     public N1qlQueryExecutor(ClusterFacade core, String bucket, String username, String password) {
-        this(core, bucket, username, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true, null);
+        this(core, bucket, username, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true);
     }
 
     /**
@@ -126,7 +121,7 @@ public class N1qlQueryExecutor {
      * @param password the password for the bucket.
      */
     public N1qlQueryExecutor(ClusterFacade core, String bucket, String password) {
-        this(core, bucket, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true, null);
+        this(core, bucket, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), true);
     }
 
     /**
@@ -139,7 +134,7 @@ public class N1qlQueryExecutor {
      * @param encodedPlanEnabled true to include an encoded plan when running prepared queries, false otherwise.
      */
     public N1qlQueryExecutor(ClusterFacade core, String bucket, String password, boolean encodedPlanEnabled) {
-        this(core, bucket, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled, null);
+        this(core, bucket, bucket, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled);
     }
 
     /**
@@ -152,40 +147,32 @@ public class N1qlQueryExecutor {
      * @param password the password for the user.
      * @param encodedPlanEnabled true to include an encoded plan when running prepared queries, false otherwise.
      */
-    public N1qlQueryExecutor(ClusterFacade core, String bucket, String username, String password, boolean encodedPlanEnabled, CouchbaseEnvironment env) {
-        this(core, bucket, username, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled, env);
+    public N1qlQueryExecutor(ClusterFacade core, String bucket, String username, String password, boolean encodedPlanEnabled) {
+        this(core, bucket, username, password, new LRUCache<String, PreparedPayload>(QUERY_CACHE_SIZE), encodedPlanEnabled);
     }
 
     /**
      * This constructor is for testing purpose, prefer using {@link #N1qlQueryExecutor(ClusterFacade, String, String, String)}.
      */
     protected N1qlQueryExecutor(ClusterFacade core, String bucket, String username, String password,
-            LRUCache<String, PreparedPayload> lruCache, boolean encodedPlanEnabled, CouchbaseEnvironment env) {
+            LRUCache<String, PreparedPayload> lruCache, boolean encodedPlanEnabled) {
         this.core = core;
         this.bucket = bucket;
         this.username = username;
         this.password = password;
-        this.env = env;
         this.encodedPlanEnabled = encodedPlanEnabled;
 
         queryCache = Collections.synchronizedMap(lruCache);
     }
 
     public Observable<AsyncN1qlQueryResult> execute(final N1qlQuery query) {
-        return execute(query, null);
-    }
-
-    public Observable<AsyncN1qlQueryResult> execute(final N1qlQuery query, final BaseSpan<?> parent) {
         if (query.params().isAdhoc()) {
-            return executeQuery(query, parent);
+            return executeQuery(query);
         } else {
             return dispatchPrepared(query);
         }
     }
 
-    protected Observable<AsyncN1qlQueryResult> executeQuery(final N1qlQuery query) {
-        return executeQuery(query, null);
-    }
     /**
      *
      * Internal: Queries a N1QL secondary index.
@@ -198,19 +185,11 @@ public class N1qlQueryExecutor {
      * @param query the full query as a Json String, including all necessary parameters.
      * @return a result containing all found rows and additional information.
      */
-    protected Observable<AsyncN1qlQueryResult> executeQuery(final N1qlQuery query, final BaseSpan<?> parent) {
+    protected Observable<AsyncN1qlQueryResult> executeQuery(final N1qlQuery query) {
         return Observable.defer(new Func0<Observable<GenericQueryResponse>>() {
             @Override
             public Observable<GenericQueryResponse> call() {
-                GenericQueryRequest n1qlRequest = createN1qlRequest(query, bucket, username, password, null);
-                if (env != null) {
-                    Tracer.SpanBuilder builder = env.tracer().buildSpan("N1qlRequest");
-                    if (parent != null) {
-                        builder.asChildOf(parent);
-                    }
-                    n1qlRequest.span(builder);
-                }
-                return core.send(n1qlRequest);
+                return core.send(createN1qlRequest(query, bucket, username, password, null));
             }
         }).flatMap(new Func1<GenericQueryResponse, Observable<AsyncN1qlQueryResult>>() {
             @Override
@@ -427,7 +406,7 @@ public class N1qlQueryExecutor {
         }
         preparedQuery.setEncodedPlanEnabled(isEncodedPlanEnabled());
 
-        return executeQuery(preparedQuery, null);
+        return executeQuery(preparedQuery);
     }
 
     /**
