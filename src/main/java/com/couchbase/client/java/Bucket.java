@@ -49,12 +49,12 @@ import com.couchbase.client.java.error.RequestTooBigException;
 import com.couchbase.client.java.error.TemporaryFailureException;
 import com.couchbase.client.java.error.TemporaryLockFailureException;
 import com.couchbase.client.java.error.ViewDoesNotExistException;
-import com.couchbase.client.java.fts.SearchQuery;
-import com.couchbase.client.java.fts.result.SearchQueryResult;
 import com.couchbase.client.java.query.N1qlQuery;
 import com.couchbase.client.java.query.N1qlQueryResult;
 import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.repository.Repository;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.subdoc.LookupInBuilder;
 import com.couchbase.client.java.subdoc.MutateInBuilder;
 import com.couchbase.client.java.transcoder.Transcoder;
@@ -73,7 +73,7 @@ import rx.Observable;
  *
  * Default timeouts are always applied and can be configured through the {@link CouchbaseEnvironment}. Overloads
  * are also available to change them on a per-call basis.
- *q
+ *
  * @author Michael Nitschinger
  * @since 2.0
  */
@@ -4428,7 +4428,7 @@ public interface Bucket {
      * @return a builder to describe the lookup(s) to perform.
      * @see LookupInBuilder#execute()
      */
-    @InterfaceStability.Experimental
+    @InterfaceStability.Committed
     @InterfaceAudience.Public
     LookupInBuilder lookupIn(String docId);
 
@@ -4448,7 +4448,7 @@ public interface Bucket {
      * @return a builder to describe the mutation(s) to perform.
      * @see MutateInBuilder#execute()
      */
-    @InterfaceStability.Experimental
+    @InterfaceStability.Committed
     @InterfaceAudience.Public
     MutateInBuilder mutateIn(String docId);
 
