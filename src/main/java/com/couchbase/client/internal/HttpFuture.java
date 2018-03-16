@@ -26,34 +26,27 @@ import com.couchbase.client.protocol.views.HttpOperation;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import net.spy.memcached.compat.SpyObject;
-import net.spy.memcached.internal.AbstractListenableFuture;
 import net.spy.memcached.internal.CheckedOperationTimeoutException;
-import net.spy.memcached.internal.GenericCompletionListener;
-import net.spy.memcached.internal.OperationCompletionListener;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationStatus;
 
 /**
  * A future http response.
  */
-public class HttpFuture<T>
-  extends AbstractListenableFuture<T, HttpCompletionListener>
-  implements Future<T> {
+public class HttpFuture<T> extends SpyObject implements Future<T> {
   protected final AtomicReference<T> objRef;
   protected final CountDownLatch latch;
   protected final long timeout;
   protected OperationStatus status;
   protected HttpOperation op;
 
-  public HttpFuture(CountDownLatch latch, long timeout,
-    ExecutorService service) {
-    super(service);
+  public HttpFuture(CountDownLatch latch, long timeout) {
+    super();
     this.objRef = new AtomicReference<T>(null);
     this.latch = latch;
     this.timeout = timeout;
@@ -62,7 +55,6 @@ public class HttpFuture<T>
 
   public boolean cancel(boolean c) {
     op.cancel();
-    notifyListeners();
     return true;
   }
 
@@ -127,7 +119,6 @@ public class HttpFuture<T>
   public void set(T oper, OperationStatus s) {
     objRef.set(oper);
     status = s;
-    notifyListeners();
   }
 
   @Override
@@ -145,17 +136,4 @@ public class HttpFuture<T>
     assert op != null : "No operation";
     return op.isCancelled();
   }
-
-  @Override
-  public HttpFuture<T> addListener(HttpCompletionListener listener) {
-    super.addToListeners((GenericCompletionListener) listener);
-    return this;
-  }
-
-  @Override
-  public HttpFuture<T> removeListener(HttpCompletionListener listener) {
-    super.removeFromListeners((GenericCompletionListener) listener);
-    return this;
-  }
-
 }
