@@ -24,6 +24,7 @@ package com.couchbase.client;
 
 import com.couchbase.client.clustermanager.FlushResponse;
 import com.couchbase.client.internal.HttpFuture;
+import com.couchbase.client.internal.ObserveFuture;
 import com.couchbase.client.internal.ReplicaGetFuture;
 import com.couchbase.client.internal.ViewFuture;
 import com.couchbase.client.protocol.views.AbstractView;
@@ -65,6 +66,7 @@ import net.spy.memcached.OperationTimeoutException;
 import net.spy.memcached.PersistTo;
 import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.internal.GetFuture;
+import net.spy.memcached.internal.OperationCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetlOperation;
@@ -1056,40 +1058,11 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> deleteOp = delete(key);
-
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return deleteOp;
     }
 
-    boolean deleteStatus = false;
-
-    try {
-      deleteStatus = deleteOp.get();
-    } catch (InterruptedException e) {
-      deleteOp.set(false, new OperationStatus(false, "Delete get timed out"));
-    } catch (ExecutionException e) {
-      if(e.getCause() instanceof CancellationException) {
-        deleteOp.set(false, new OperationStatus(false, "Delete get "
-          + "cancellation exception "));
-      } else {
-        deleteOp.set(false, new OperationStatus(false, "Delete get "
-          + "execution exception "));
-      }
-    }
-    if (!deleteStatus) {
-      return deleteOp;
-    }
-    try {
-      observePoll(key, deleteOp.getCas(), req, rep, true);
-      deleteOp.set(true, deleteOp.getStatus());
-    } catch (ObservedException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      deleteOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return deleteOp;
+    return asyncObserveStore(key, deleteOp, req, rep, "Delete", true);
   }
 
   @Override
@@ -1117,40 +1090,11 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> setOp = set(key, exp, value);
-
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return setOp;
     }
 
-    boolean setStatus = false;
-
-    try {
-      setStatus = setOp.get();
-    } catch (InterruptedException e) {
-      setOp.set(false, new OperationStatus(false, "Set get timed out"));
-    } catch (ExecutionException e) {
-      if(e.getCause() instanceof CancellationException) {
-        setOp.set(false, new OperationStatus(false, "Set get "
-          + "cancellation exception "));
-      } else {
-        setOp.set(false, new OperationStatus(false, "Set get "
-          + "execution exception "));
-      }
-    }
-    if (!setStatus) {
-      return setOp;
-    }
-    try {
-      observePoll(key, setOp.getCas(), req, rep, false);
-      setOp.set(true, setOp.getStatus());
-    } catch (ObservedException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      setOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return setOp;
+    return asyncObserveStore(key, setOp, req, rep, "Set", false);
   }
 
   @Override
@@ -1197,40 +1141,11 @@ public class CouchbaseClient extends MemcachedClient
     }
 
     OperationFuture<Boolean> addOp = add(key, exp, value);
-
     if(req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return addOp;
     }
 
-    boolean addStatus = false;
-
-    try {
-      addStatus = addOp.get();
-    } catch (InterruptedException e) {
-      addOp.set(false, new OperationStatus(false, "Add get timed out"));
-    } catch (ExecutionException e) {
-      if(e.getCause() instanceof CancellationException) {
-        addOp.set(false, new OperationStatus(false, "Add get "
-          + "cancellation exception "));
-      } else {
-        addOp.set(false, new OperationStatus(false, "Add get "
-          + "execution exception "));
-      }
-    }
-    if (!addStatus) {
-      return addOp;
-    }
-    try {
-      observePoll(key, addOp.getCas(), req, rep, false);
-      addOp.set(true, addOp.getStatus());
-    } catch (ObservedException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      addOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return addOp;
+    return asyncObserveStore(key, addOp, req, rep, "Add", false);
   }
 
   @Override
@@ -1268,50 +1183,72 @@ public class CouchbaseClient extends MemcachedClient
   }
 
   @Override
-  public OperationFuture<Boolean> replace(String key, int exp,
-    Object value, PersistTo req, ReplicateTo rep) {
+  public OperationFuture<Boolean> replace(final String key, final int exp,
+    final Object value, final PersistTo req, final ReplicateTo rep) {
 
-    if (mconn instanceof CouchbaseMemcachedConnection) {
+    if(mconn instanceof CouchbaseMemcachedConnection) {
       throw new IllegalArgumentException("Durability options are not supported"
         + " on memcached type buckets.");
     }
 
     OperationFuture<Boolean> replaceOp = replace(key, exp, value);
-
     if (req == PersistTo.ZERO && rep == ReplicateTo.ZERO) {
       return replaceOp;
     }
 
-    boolean replaceStatus = false;
+    return asyncObserveStore(key, replaceOp, req, rep, "Replace", false);
+  }
 
-    try {
-      replaceStatus = replaceOp.get();
-    } catch (InterruptedException e) {
-      replaceOp.set(false, new OperationStatus(false, "Replace get timed out"));
-    } catch (ExecutionException e) {
-      if(e.getCause() instanceof CancellationException) {
-        replaceOp.set(false, new OperationStatus(false, "Replace get "
-          + "cancellation exception "));
-      } else {
-        replaceOp.set(false, new OperationStatus(false, "Replace get "
-          + "execution exception "));
+  private ObserveFuture<Boolean> asyncObserveStore(final String key,
+    final OperationFuture<Boolean> original, final PersistTo req,
+    final ReplicateTo rep, final String prefix, final boolean delete) {
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final ObserveFuture<Boolean> observeFuture = new ObserveFuture<Boolean>(
+      key, latch, operationTimeout, executorService);
+
+    original.addListener(new OperationCompletionListener() {
+      @Override
+      public void onComplete(final OperationFuture<?> future) throws Exception {
+        boolean replaceStatus = false;
+
+        try {
+          replaceStatus = (Boolean) future.get();
+          observeFuture.set(replaceStatus, future.getStatus());
+        } catch (InterruptedException e) {
+          observeFuture.set(false, new OperationStatus(false, prefix + " get "
+            + "timed out"));
+        } catch (ExecutionException e) {
+          if(e.getCause() instanceof CancellationException) {
+            observeFuture.set(false, new OperationStatus(false, prefix + " get "
+              + "cancellation exception "));
+          } else {
+            observeFuture.set(false, new OperationStatus(false, prefix + " get "
+              + "execution exception "));
+          }
+        }
+
+        if (!replaceStatus) {
+          latch.countDown();
+          return;
+        }
+
+        try {
+          observePoll(key, future.getCas(), req, rep, delete);
+          observeFuture.set(true, future.getStatus());
+        } catch (ObservedException e) {
+          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
+        } catch (ObservedTimeoutException e) {
+          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
+        } catch (ObservedModifiedException e) {
+          observeFuture.set(false, new OperationStatus(false, e.getMessage()));
+        }
+
+        latch.countDown();
       }
-    }
-    if (!replaceStatus) {
-      return replaceOp;
-    }
-    try {
-      observePoll(key, replaceOp.getCas(), req, rep, false);
-      replaceOp.set(true, replaceOp.getStatus());
-    } catch (ObservedException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedTimeoutException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    } catch (ObservedModifiedException e) {
-      replaceOp.set(false, new OperationStatus(false, e.getMessage()));
-    }
-    return replaceOp;
+    });
 
+    return observeFuture;
   }
 
   @Override
@@ -1361,6 +1298,12 @@ public class CouchbaseClient extends MemcachedClient
 
     OperationFuture<CASResponse> casOp =
       asyncCAS(key, cas, exp, value, transcoder);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final ObserveFuture<Boolean> observeFuture = new ObserveFuture<Boolean>(
+      key, latch, operationTimeout, executorService);
+
+
     CASResponse casr = null;
     try {
       casr = casOp.get();
