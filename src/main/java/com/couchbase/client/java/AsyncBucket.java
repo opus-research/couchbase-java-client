@@ -48,9 +48,6 @@ import java.util.concurrent.TimeUnit;
  * integration point and the application. Networks are unreliable, servers can fail and the SDK contains bugs. With applying
  * a timeout and reacting to them accordingly, application level code is less likely to fail.
  *
- * Note that a {@link #isClosed() closed} Bucket will throw {@link com.couchbase.client.java.error.BucketClosedException}
- * if any more attempts to use it are made.
- *
  * @author Michael Nitschinger
  * @since 2.0
  */
@@ -1109,10 +1106,4 @@ public interface AsyncBucket {
      */
     Observable<Boolean> close();
 
-    /**
-     * Checks the closed status of the bucket.
-     *
-     * @return true if the AsyncBucket has previously been successfully {@link #close() closed}
-     */
-    boolean isClosed();
 }

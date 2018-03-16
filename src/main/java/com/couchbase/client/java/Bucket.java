@@ -50,9 +50,6 @@ import java.util.concurrent.TimeoutException;
  * Default timeouts are always applied and can be configured through the {@link CouchbaseEnvironment}. Overloads
  * are also available to change them on a per-call basis.
  *
- * Note that a {@link #isClosed() closed} Bucket will throw {@link com.couchbase.client.java.error.BucketClosedException}
- * if any more attempts to use it are made.
- *
  * @author Michael Nitschinger
  * @since 2.0
  */
@@ -64,7 +61,6 @@ public interface Bucket {
      * Provides access to the underlying asynchronous bucket interface.
      *
      * @return the asynchronous bucket.
-     * @throws com.couchbase.client.java.error.BucketClosedException if the bucket has previously been closed
      */
     AsyncBucket async();
 
@@ -2355,10 +2351,4 @@ public interface Bucket {
      */
     Boolean close(long timeout, TimeUnit timeUnit);
 
-    /**
-     * Checks the closed status of the bucket.
-     *
-     * @return true if the Bucket has previously been successfully {@link #close() closed}
-     */
-    boolean isClosed();
 }
