@@ -459,11 +459,12 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
 
     @Override
   public Observable<AsyncViewResult> query(final ViewQuery query) {
+    final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(), query.isDevelopment(),
+        query.toString(), bucket, password);
+
         Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
             @Override
             public Observable<ViewQueryResponse> call() {
-                final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
-                    query.isDevelopment(), query.toString(), bucket, password);
                 return core.send(request);
             }
         });
@@ -477,27 +478,6 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
                 }
             });
   }
-
-    @Override
-    public Observable<AsyncSpatialViewResult> query(final SpatialViewQuery query) {
-        Observable<ViewQueryResponse> source = Observable.defer(new Func0<Observable<ViewQueryResponse>>() {
-            @Override
-            public Observable<ViewQueryResponse> call() {
-                final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
-                    query.isDevelopment(), true, query.toString(), bucket, password);
-                return core.send(request);
-            }
-        });
-
-        return ViewRetryHandler
-            .retryOnCondition(source)
-            .flatMap(new Func1<ViewQueryResponse, Observable<AsyncSpatialViewResult>>() {
-                @Override
-                public Observable<AsyncSpatialViewResult> call(final ViewQueryResponse response) {
-                    return ViewQueryResponseMapper.mapToSpatialViewResult(CouchbaseAsyncBucket.this, query, response);
-                }
-            });
-    }
 
     @Override
     public Observable<AsyncQueryResult> query(final Query query) {

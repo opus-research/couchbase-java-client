@@ -85,8 +85,7 @@ public class LegacyTranscoder extends AbstractTranscoder<LegacyDocument, Object>
     @Override
     protected LegacyDocument doDecode(String id, ByteBuf content, long cas, int expiry, int flags, ResponseStatus status)
         throws Exception {
-        byte[] data = new byte[content.readableBytes()];
-        content.readBytes(data);
+        byte[] data = content.array();
         Object decoded = null;
         if ((flags & COMPRESSED) != 0) {
             data = decompress(data);
