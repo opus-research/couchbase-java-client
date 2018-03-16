@@ -44,7 +44,6 @@ public class ViewQueryTest {
         assertEquals("view", query.getView());
         assertFalse(query.isDevelopment());
         assertTrue(query.toString().isEmpty());
-        assertTrue(query.isStopOnError());
     }
 
     @Test
