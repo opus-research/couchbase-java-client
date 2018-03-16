@@ -78,7 +78,6 @@ import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.ReplicaGetOperation;
 import net.spy.memcached.ops.ReplicaGetsOperation;
 import net.spy.memcached.ops.StatsOperation;
-import net.spy.memcached.ops.StatusCode;
 import net.spy.memcached.transcoders.Transcoder;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpVersion;
@@ -1043,7 +1042,7 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void receivedStatus(OperationStatus status) {
             future.set(val, status);
-            if (!replicaFuture.isDone() && (status.isSuccess() || status.getStatusCode() == StatusCode.ERR_NOT_FOUND)) {
+            if (!replicaFuture.isDone() && status.isSuccess()) {
               usedFuture = replicaFuture.setCompletedFuture(future);
             }
           }
@@ -1071,7 +1070,7 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void receivedStatus(OperationStatus status) {
           future.set(val, status);
-          if (!replicaFuture.isDone() && (status.isSuccess() || status.getStatusCode() == StatusCode.ERR_NOT_FOUND)) {
+          if (!replicaFuture.isDone() && status.isSuccess()) {
             usedFuture = replicaFuture.setCompletedFuture(future);
           }
         }
@@ -1107,7 +1106,7 @@ public class CouchbaseClient extends MemcachedClient
           @Override
           public void receivedStatus(OperationStatus status) {
             future.set(val, status);
-            if (!replicaFuture.isDone() && (status.isSuccess() || status.getStatusCode() == StatusCode.ERR_NOT_FOUND)) {
+            if (!replicaFuture.isDone() && status.isSuccess()) {
               usedFuture = replicaFuture.setCompletedFuture(future);
             }
           }
@@ -1135,7 +1134,7 @@ public class CouchbaseClient extends MemcachedClient
         @Override
         public void receivedStatus(OperationStatus status) {
           future.set(val, status);
-          if (!replicaFuture.isDone() && (status.isSuccess() || status.getStatusCode() == StatusCode.ERR_NOT_FOUND)) {
+          if (!replicaFuture.isDone() && status.isSuccess()) {
             usedFuture = replicaFuture.setCompletedFuture(future);
           }
         }
