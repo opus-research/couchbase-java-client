@@ -225,6 +225,7 @@ public class CouchbaseClient extends MemcachedClient
     reconfiguring = true;
     try {
       vconn.reconfigure(bucket);
+      ((CouchbaseConnection)mconn).reconfigure(bucket);
     } catch (IllegalArgumentException ex) {
       getLogger().warn("Failed to reconfigure client, staying with "
           + "previous configuration.", ex);
