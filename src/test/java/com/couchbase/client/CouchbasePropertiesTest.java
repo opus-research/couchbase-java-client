@@ -22,7 +22,6 @@
 
 package com.couchbase.client;
 
-import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -33,17 +32,10 @@ import static org.junit.Assert.assertNull;
  */
 public class CouchbasePropertiesTest {
 
-  @Before
-  public void resetProperties() {
-    System.clearProperty("viewmode");
-    System.clearProperty("cbclient.viewmode");
-    System.clearProperty("throttler");
-    CouchbaseProperties.resetFileProperties();
-  }
-
   @Test
   public void testDefaults() {
-    assertEquals("cbclient", CouchbaseProperties.getNamespace());
+    String namespace = CouchbaseProperties.getNamespace();
+    assertEquals("cbclient", namespace);
     assertFalse(CouchbaseProperties.hasFileProperties());
 
     assertNull(CouchbaseProperties.getProperty("viewmode"));
@@ -74,6 +66,8 @@ public class CouchbasePropertiesTest {
       CouchbaseProperties.getProperty("throttler"));
     assertEquals("demo_throttler",
       CouchbaseProperties.getProperty("throttler", true));
+
+    CouchbaseProperties.resetFileProperties();
   }
 
   @Test

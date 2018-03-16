@@ -20,14 +20,23 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.internal;
+package com.couchbase.client.http;
 
-import java.util.concurrent.Future;
-import net.spy.memcached.internal.GenericCompletionListener;
+import com.couchbase.client.ViewConnection;
+import com.couchbase.client.protocol.views.HttpOperation;
 
 /**
- * A listener that will be notified once the http future completes.
+ * A callack to requeue a http operation.
  */
-public interface HttpCompletionListener
-  extends GenericCompletionListener<HttpFuture<?>> {
+public class RequeueOpCallback {
+
+  private final ViewConnection conn;
+
+  public RequeueOpCallback(ViewConnection vc) {
+    conn = vc;
+  }
+
+  public void invoke(HttpOperation op) {
+    conn.addOp(op);
+  }
 }

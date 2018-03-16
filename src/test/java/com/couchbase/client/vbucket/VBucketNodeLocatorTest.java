@@ -162,6 +162,12 @@ public class VBucketNodeLocatorTest extends TestCase {
       Arrays.asList((MemcachedNode) node1, node2),
       config);
 
-    assertNull(locator.getPrimary("key1"));
+    boolean success = false;
+    try {
+      locator.getPrimary("key1");
+    } catch(RuntimeException e) {
+      success = true;
+    }
+    assertTrue("No RuntimeException thrown when vbucket master is -1", success);
   }
 }

@@ -26,7 +26,6 @@ package com.couchbase.client.vbucket.config;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,14 +46,14 @@ public class ConfigurationParserMock implements ConfigurationParser {
   private String poolStreamingUri = "/poolsStreaming/default";
   private String bucketName = "Administrator";
   private DefaultConfig vbuckets = new DefaultConfig(
-    DefaultHashAlgorithm.NATIVE_HASH, 1, 1, 1, new ArrayList<String>(), null, null, null);
+    DefaultHashAlgorithm.NATIVE_HASH, 1, 1, 1, null, null, null);
   private String bucketsUri = "/pools/default/buckets";
   private String bucketStreamingUri =
       "/pools/default/bucketsStreaming/Administrator";
   private List<Node> nodes = Collections.singletonList(new Node(Status.healthy,
       "localhost", Collections.singletonMap(Port.direct, "11210")));
 
-  public Map<String, Pool> parsePools(String base) throws ParseException {
+  public Map<String, Pool> parseBase(String base) throws ParseException {
     Map<String, Pool> result = new HashMap<String, Pool>();
     try {
       parseBaseCalled = true;
@@ -93,19 +92,13 @@ public class ConfigurationParserMock implements ConfigurationParser {
 
   }
 
-  public void parsePool(Pool pool, String sPool) throws ParseException {
+  public void loadPool(Pool pool, String sPool) throws ParseException {
     try {
       loadPoolCalled = true;
       pool.setBucketsUri(new URI(bucketsUri));
     } catch (URISyntaxException e) {
       throw new ParseException(e.getMessage(), 0);
     }
-  }
-
-  @Override
-  public Bucket updateBucket(String bucketJson, Bucket currentBucket)
-    throws ParseException {
-    return parseBucket(bucketJson);
   }
 
   public boolean isParseBaseCalled() {

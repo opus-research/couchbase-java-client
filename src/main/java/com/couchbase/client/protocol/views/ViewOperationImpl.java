@@ -40,7 +40,7 @@ import org.apache.http.HttpResponse;
 public abstract class ViewOperationImpl extends HttpOperationImpl
   implements ViewOperation {
 
-  private final AbstractView view;
+  private AbstractView view;
 
   protected static final Logger LOGGER = Logger.getLogger(
     ViewOperationImpl.class.getName());

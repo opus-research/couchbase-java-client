@@ -159,19 +159,4 @@ public class MemcachedNodeMockImpl implements MemcachedNode {
   public void setSocketAddress(SocketAddress newSocketAddress) {
     this.socketAddress = newSocketAddress;
   }
-
-  @Override
-  public boolean isAuthenticated() {
-    return true;
-  }
-
-  @Override
-  public long lastReadDelta() {
-    return 0;
-  }
-
-  @Override
-  public void completedRead() {
-  }
-
 }

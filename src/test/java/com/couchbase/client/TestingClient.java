@@ -56,7 +56,7 @@ public class TestingClient extends CouchbaseClient {
     throws UnsupportedEncodingException {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-            operationTimeout, executorService);
+            operationTimeout);
 
     HttpRequest request = new BasicHttpEntityEnclosingRequest("PUT", uri,
             HttpVersion.HTTP_1_1);
@@ -87,10 +87,11 @@ public class TestingClient extends CouchbaseClient {
     return crv;
   }
 
-  public HttpFuture<String> asyncHttpGet(String uri) {
+  public HttpFuture<String> asyncHttpGet(String uri)
+    throws UnsupportedEncodingException {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-        operationTimeout, executorService);
+        operationTimeout);
 
     HttpRequest request = new BasicHttpRequest("GET", uri,
         HttpVersion.HTTP_1_1);
@@ -117,10 +118,11 @@ public class TestingClient extends CouchbaseClient {
     return crv;
   }
 
-  public HttpFuture<String> asyncHttpDelete(String uri) {
+  public HttpFuture<String> asyncHttpDelete(String uri)
+    throws UnsupportedEncodingException {
     final CountDownLatch couchLatch = new CountDownLatch(1);
     final HttpFuture<String> crv = new HttpFuture<String>(couchLatch,
-        operationTimeout, executorService);
+        operationTimeout);
 
     HttpRequest request = new BasicHttpRequest("DELETE", uri,
         HttpVersion.HTTP_1_1);

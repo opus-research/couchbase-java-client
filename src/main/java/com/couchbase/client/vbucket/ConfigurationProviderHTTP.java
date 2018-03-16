@@ -42,6 +42,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+
 import java.text.ParseException;
 
 import java.util.HashMap;
@@ -69,16 +70,16 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    */
   public static final String CLIENT_SPEC_VER = "1.0";
   private volatile List<URI> baseList;
-  private final String restUsr;
-  private final String restPwd;
+  private String restUsr;
+  private String restPwd;
   private URI loadedBaseUri;
 
   private final Map<String, Bucket> buckets =
     new ConcurrentHashMap<String, Bucket>();
 
-  private final ConfigurationParser configurationParser =
+  private ConfigurationParser configurationParser =
     new ConfigurationParserJSON();
-  private final Map<String, BucketMonitor> monitors =
+  private Map<String, BucketMonitor> monitors =
     new HashMap<String, BucketMonitor>();
   private volatile String reSubBucket;
   private volatile Reconfigurable reSubRec;
@@ -90,7 +91,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
    * @param baseList list of urls to treat as base
    * @throws IOException
    */
-  public ConfigurationProviderHTTP(List<URI> baseList) {
+  public ConfigurationProviderHTTP(List<URI> baseList) throws IOException {
     this(baseList, null, null);
   }
 
@@ -212,7 +213,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
             + " response... skipping");
           continue;
         }
-        Map<String, Pool> pools = this.configurationParser.parsePools(base);
+        Map<String, Pool> pools = this.configurationParser.parseBase(base);
 
         // check for the default pool name
         if (!pools.containsKey(DEFAULT_POOL_NAME)) {
@@ -227,7 +228,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           URLConnection poolConnection = urlConnBuilder(baseUri,
             pool.getUri());
           String poolString = readToString(poolConnection);
-          configurationParser.parsePool(pool, poolString);
+          configurationParser.loadPool(pool, poolString);
           URLConnection poolBucketsConnection = urlConnBuilder(baseUri,
             pool.getBucketsUri());
           String sBuckets = readToString(poolBucketsConnection);
@@ -251,13 +252,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
               this.buckets.put(bucketEntry.getKey(), bucketEntry.getValue());
             }
           }
-
-          if (this.buckets.get(bucketToFind) == null) {
-            getLogger().warn("Bucket found, but has no bucket "
-              + "configuration attached...skipping");
-            continue;
-          }
-
           this.loadedBaseUri = baseUri;
           return;
         }
@@ -270,9 +264,9 @@ public class ConfigurationProviderHTTP extends SpyObject implements
           + " ...skipping", e);
         continue;
       }
+      throw new ConfigurationException("Configuration for bucket "
+          + bucketToFind + " was not found.");
     }
-    throw new ConfigurationException("Configuration for bucket \""
-      + bucketToFind + "\" was not found in server list (" + baseList + ").");
   }
 
   public List<InetSocketAddress> getServerList(final String bucketname) {
@@ -333,7 +327,7 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     if (monitor == null) {
       URI streamingURI = bucket.getStreamingURI();
       monitor = new BucketMonitor(this.loadedBaseUri.resolve(streamingURI),
-        this.restUsr, this.restPwd, configurationParser, this);
+        bucketName, this.restUsr, this.restPwd, configurationParser);
       this.monitors.put(bucketName, monitor);
       monitor.addObserver(obs);
       monitor.startMonitor();
@@ -460,31 +454,6 @@ public class ConfigurationProviderHTTP extends SpyObject implements
     result += "reconf:" + reSubRec;
     result += "baseList:" + baseList;
     return result;
-  }
-
-  /**
-   * Override the old baseList with new values.
-   *
-   * Updating the original baseList ensures that subsequent node
-   * reconfigurations make their way into this list which will be used if
-   * the streaming node gets removed (or is stale) and a new one needs to be
-   * selected.
-   *
-   * @param newList the new BaseList.
-   */
-  public void updateBaseListFromConfig(List<URI> newList) {
-    baseList = newList;
-  }
-
-  @Override
-  public void updateBucket(final String config) {
-    try {
-      updateBucket(getBucket(), configurationParser.parseBucket(config));
-    } catch (Exception ex) {
-      getLogger().warn("Got new config to update, but could not decode it. "
-        + "Staying with old one.", ex);
-      getLogger().debug("Problematic config is:" + config);
-    }
   }
 
 }

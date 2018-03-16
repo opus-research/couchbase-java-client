@@ -20,28 +20,61 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.vbucket.provider;
+package com.couchbase.client.http;
 
-import net.spy.memcached.ops.OperationCallback;
-import net.spy.memcached.ops.OperationStatus;
-import net.spy.memcached.protocol.binary.OperationImpl;
+import org.apache.http.nio.NHttpClientConnection;
 
-public class GetConfigOperationImpl extends OperationImpl {
+/**
+ * A connection request.
+ */
+public class RequestHandle {
 
-  private static final byte CMD = (byte) 0xb5;
+  private final AsyncConnectionManager connMgr;
+  private final NHttpClientConnection conn;
 
-  public GetConfigOperationImpl(OperationCallback cb) {
-    super(CMD, 0, cb);
+  private volatile boolean completed;
+
+  public RequestHandle(AsyncConnectionManager connMgr,
+      NHttpClientConnection conn) {
+    super();
+    this.connMgr = connMgr;
+    this.conn = conn;
   }
 
-  @Override
-  public void initialize() {
-    prepareBuffer("", 0, EMPTY_BYTES);
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  protected void decodePayload(byte[] pl) {
-    getCallback().receivedStatus(new OperationStatus(true, new String(pl)));
+  public void completed() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
   }
 
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    this.connMgr.releaseConnection(this.conn);
+    synchronized (this) {
+      notifyAll();
+    }
+  }
+
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait();
+      }
+    }
+  }
 }

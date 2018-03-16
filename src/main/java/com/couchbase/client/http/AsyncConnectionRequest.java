@@ -20,49 +20,60 @@
  * IN THE SOFTWARE.
  */
 
-package com.couchbase.client.internal;
+package com.couchbase.client.http;
 
-import net.spy.memcached.internal.OperationFuture;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
+import org.apache.http.nio.NHttpClientConnection;
 
 /**
- * A future that allows to chain operations with observe calls.
+ * An AsyncConnectionRequest.
  */
-public class ObserveFuture<T> extends OperationFuture<T> {
+public class AsyncConnectionRequest {
 
-  private volatile boolean cancelled;
-  private volatile boolean done;
+  private volatile boolean completed;
+  private volatile NHttpClientConnection conn;
 
-  public ObserveFuture(final String k, final CountDownLatch l,
-    final long opTimeout, final ExecutorService service) {
-    super(k, l, opTimeout, service);
-
-    cancelled = false;
-    done = false;
+  public AsyncConnectionRequest() {
+    super();
   }
 
-  @Override
-  public boolean cancel() {
-    cancelled = true;
-    done = true;
-    notifyListeners();
-    return true;
+  public boolean isCompleted() {
+    return this.completed;
   }
 
-  @Override
-  public boolean cancel(boolean ign) {
-    return cancel();
+  public void setConnection(NHttpClientConnection newConn) {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      this.conn = newConn;
+      notifyAll();
+    }
   }
 
-  @Override
-  public boolean isCancelled() {
-    return cancelled;
+  public NHttpClientConnection getConnection() {
+    return this.conn;
   }
 
-  @Override
-  public boolean isDone() {
-    return done;
+  public void cancel() {
+    if (this.completed) {
+      return;
+    }
+    this.completed = true;
+    synchronized (this) {
+      notifyAll();
+    }
+  }
+
+  public void waitFor() throws InterruptedException {
+    if (this.completed) {
+      return;
+    }
+    synchronized (this) {
+      while (!this.completed) {
+        wait(5000);
+        this.completed = true;
+      }
+    }
   }
 }

@@ -31,7 +31,6 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.util.CharsetUtil;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,6 +46,12 @@ import static org.junit.Assert.assertNull;
  * A BucketUpdateResponseHandler.
  */
 public class BucketUpdateResponseHandlerTest {
+
+  @Before
+  public void setUp() {
+
+  }
+
   /**
    * Test checks if setReceivedFuture() method properly
    * sets a field receivedFuture.
@@ -101,14 +106,14 @@ public class BucketUpdateResponseHandlerTest {
     expect(eventMock.getMessage()).andReturn(chunkMock);
     expect(chunkMock.isLast()).andReturn(false);
     expect(chunkMock.getContent()).andReturn(bufferMock);
-    expect(bufferMock.toString(CharsetUtil.UTF_8)).andReturn(responseMsg);
+    expect(bufferMock.toString("UTF-8")).andReturn(responseMsg);
     expect(futureMock.setSuccess()).andReturn(true);
 
     expect(eventMock.getFuture()).andReturn(futureMock);
     expect(eventMock.getMessage()).andReturn(chunkMock);
     expect(chunkMock.isLast()).andReturn(false);
     expect(chunkMock.getContent()).andReturn(bufferMock);
-    expect(bufferMock.toString(CharsetUtil.UTF_8)).andReturn(endMsg);
+    expect(bufferMock.toString("UTF-8")).andReturn(endMsg);
 
     final DefaultHttpResponse response =
         new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -150,4 +155,10 @@ public class BucketUpdateResponseHandlerTest {
     verify(eventMock, futureMock, chunkMock, bufferMock);
   }
 
+  /**
+   * Test log response.
+   */
+  public void testLogResponse() {
+
+  }
 }

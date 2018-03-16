@@ -24,7 +24,6 @@ package com.couchbase.client;
 
 import com.couchbase.client.BucketTool.FunctionCallback;
 import com.couchbase.client.clustermanager.BucketType;
-import com.couchbase.client.internal.HttpCompletionListener;
 import com.couchbase.client.internal.HttpFuture;
 import com.couchbase.client.protocol.views.ComplexKey;
 import com.couchbase.client.protocol.views.DesignDocument;
@@ -52,9 +51,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.spy.memcached.PersistTo;
@@ -302,65 +299,6 @@ public class ViewTest {
       }
     }
     assert response.size() == ITEMS.size() : future.getStatus();
-  }
-
-  @Test
-  public void testViewQueryWithListener() throws Exception {
-    final Query query = new Query();
-    query.setReduce(false);
-
-    HttpFuture<View> future =
-      client.asyncGetView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    future.addListener(new HttpCompletionListener() {
-      @Override
-      public void onComplete(HttpFuture<?> f) throws Exception {
-        View view = (View) f.get();
-        HttpFuture<ViewResponse> queryFuture = client.asyncQuery(view, query);
-        queryFuture.addListener(new HttpCompletionListener() {
-          @Override
-          public void onComplete(HttpFuture<?> f) throws Exception {
-            ViewResponse resp = (ViewResponse) f.get();
-            if (resp.size() == ITEMS.size()) {
-              latch.countDown();
-            }
-          }
-        });
-      }
-    });
-
-    assertTrue(latch.await(3, TimeUnit.SECONDS));
-  }
-
-  @Test
-  public void testViewFutureWithListener() throws Exception {
-    final Query query = new Query();
-    query.setReduce(false);
-    query.setIncludeDocs(true);
-
-    HttpFuture<View> future =
-      client.asyncGetView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-
-    final CountDownLatch latch = new CountDownLatch(1);
-    future.addListener(new HttpCompletionListener() {
-      @Override
-      public void onComplete(HttpFuture<?> f) throws Exception {
-        View view = (View) f.get();
-        HttpFuture<ViewResponse> queryFuture = client.asyncQuery(view, query);
-        queryFuture.addListener(new HttpCompletionListener() {
-          @Override
-          public void onComplete(HttpFuture<?> f) throws Exception {
-            ViewResponse resp = (ViewResponse) f.get();
-            if (resp.size() == ITEMS.size()) {
-              latch.countDown();
-            }
-          }
-        });
-      }
-    });
-
-    assertTrue(latch.await(3, TimeUnit.SECONDS));
   }
 
   /**
@@ -736,21 +674,6 @@ public class ViewTest {
     assert response != null : future.getStatus();
   }
 
-  @Test
-  public void testViewLoadWithListener() throws Exception {
-    final CountDownLatch latch = new CountDownLatch(1);
-    client.asyncGetView(DESIGN_DOC_WO_REDUCE, VIEW_NAME_W_REDUCE).addListener(
-      new HttpCompletionListener() {
-        @Override
-        public void onComplete(HttpFuture<?> httpFuture) throws Exception {
-          if (httpFuture.getStatus().isSuccess()) {
-            latch.countDown();
-          }
-        }
-      });
-    assertTrue(latch.await(1, TimeUnit.MINUTES));
-  }
-
   /**
    * Tests the query with reduce as true but not set.
    *
@@ -1003,50 +926,8 @@ public class ViewTest {
       }
       if(row.getKey().equals("nonjson2")) {
         assertEquals(42, row.getDocument());
+      }
     }
-    }
-  }
-
-  @Test
-  public void testTotalNumRowsWithDocs() {
-    Query query = new Query();
-    query.setReduce(false).setIncludeDocs(true).setStale(Stale.FALSE);
-
-    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    ViewResponse response = client.query(view, query);
-    long totalRows = response.getTotalRows();
-    assertTrue(ITEMS.size() <= totalRows);
-
-    query.setLimit(5);
-    response = client.query(view, query);
-    totalRows = response.getTotalRows();
-    assertTrue(ITEMS.size() <= totalRows);
-  }
-
-  @Test
-  public void testTotalNumRowsWithoutDocs() {
-    Query query = new Query();
-    query.setReduce(false).setIncludeDocs(false).setStale(Stale.FALSE);
-
-    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    ViewResponse response = client.query(view, query);
-    long totalRows = response.getTotalRows();
-    assertTrue(ITEMS.size() <= totalRows);
-
-    query.setLimit(5);
-    response = client.query(view, query);
-    totalRows = response.getTotalRows();
-    assertTrue(ITEMS.size() <= totalRows);
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void testTotalNumRowsReduced() {
-    Query query = new Query();
-    query.setIncludeDocs(true).setStale(Stale.FALSE);
-
-    View view = client.getView(DESIGN_DOC_W_REDUCE, VIEW_NAME_W_REDUCE);
-    ViewResponse response = client.query(view, query);
-    response.getTotalRows();
   }
 
   /**
@@ -1212,14 +1093,6 @@ public class ViewTest {
     String viewName = "invalid_view";
     View view = client.getView(designDoc, viewName);
     assertNull(view);
-  }
-
-  /**
-   * Test invalid view on valid design doc.
-   */
-  @Test(expected=InvalidViewException.class)
-  public void testInvalidViewOnValidDesignDoc() {
-    View view = client.getView(DESIGN_DOC_W_REDUCE, "invalidViewName");
   }
 
   /**

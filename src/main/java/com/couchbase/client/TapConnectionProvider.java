@@ -22,7 +22,7 @@
 
 package com.couchbase.client;
 
-import com.couchbase.client.vbucket.provider.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.config.Bucket;
 
@@ -34,7 +34,6 @@ import javax.naming.ConfigurationException;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionObserver;
-import net.spy.memcached.MemcachedNode;
 
 /**
  * A TapConnectionProvider for Couchbase Server.
@@ -44,6 +43,7 @@ public class TapConnectionProvider
   implements Reconfigurable {
 
   private final CouchbaseConnectionFactory cf;
+  private final ConfigurationProvider cp;
 
   /**
    * Get a tap connection based on the REST response from a Couchbase server.
@@ -67,11 +67,12 @@ public class TapConnectionProvider
    * @throws IOException
    * @throws ConfigurationException
    */
-  public TapConnectionProvider(CouchbaseConnectionFactory cf) throws IOException {
+  public TapConnectionProvider(CouchbaseConnectionFactory cf)
+    throws IOException, ConfigurationException{
     super(cf, AddrUtil.getAddresses(cf.getVBucketConfig().getServers()));
     this.cf=cf;
-    ConfigurationProvider cp = cf.getConfigurationProvider();
-    cp.subscribe(this);
+    cp = cf.getConfigurationProvider();
+    cp.subscribe(cf.getBucketName(), this);
   }
 
   /**
@@ -86,11 +87,6 @@ public class TapConnectionProvider
 
   public void reconfigure(Bucket bucket) {
     ((CouchbaseConnection)conn).reconfigure(bucket);
-  }
-
-  public boolean isPrimaryForKey(MemcachedNode node, String key) {
-    MemcachedNode primary = conn.getLocator().getPrimary(key);
-    return primary.getSocketAddress().equals(node.getSocketAddress());
   }
 
   public void shutdown() {

@@ -31,7 +31,7 @@ import org.codehaus.jettison.json.JSONObject;
  * The DesignDocument represents a design document stored and retrieved from a
  * Couchbase cluster.
  */
-public class DesignDocument {
+public class DesignDocument<T> {
 
   /**
    * The name of the design document.
@@ -43,7 +43,7 @@ public class DesignDocument {
    *
    * Only "javascript" is supported currently.
    */
-  private final String language = "javascript";
+  private String language = "javascript";
 
   /**
    * Associated views to the design document.

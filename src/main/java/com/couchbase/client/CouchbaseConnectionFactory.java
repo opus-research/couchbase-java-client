@@ -22,11 +22,11 @@
 
 package com.couchbase.client;
 
+import com.couchbase.client.http.AsyncConnectionManager;
+
 import com.couchbase.client.vbucket.ConfigurationException;
-import com.couchbase.client.vbucket.provider.BucketConfigurationProvider;
-import com.couchbase.client.vbucket.provider.ConfigurationProvider;
+import com.couchbase.client.vbucket.ConfigurationProvider;
 import com.couchbase.client.vbucket.ConfigurationProviderHTTP;
-import com.couchbase.client.vbucket.CouchbaseNodeOrder;
 import com.couchbase.client.vbucket.Reconfigurable;
 import com.couchbase.client.vbucket.VBucketNodeLocator;
 import com.couchbase.client.vbucket.config.Bucket;
@@ -36,9 +36,7 @@ import com.couchbase.client.vbucket.config.ConfigType;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,6 +54,8 @@ import net.spy.memcached.KetamaNodeLocator;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
+import net.spy.memcached.PersistTo;
+import net.spy.memcached.ReplicateTo;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.PlainCallbackHandler;
 
@@ -76,14 +76,13 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   /**
    * Default failure mode.
    */
-  public static final FailureMode DEFAULT_FAILURE_MODE =
-    FailureMode.Redistribute;
+  public static final FailureMode DEFAULT_FAILURE_MODE = FailureMode.Retry;
 
   /**
    * Default hash algorithm.
    */
   public static final HashAlgorithm DEFAULT_HASH =
-    DefaultHashAlgorithm.NATIVE_HASH;
+    DefaultHashAlgorithm.KETAMA_HASH;
 
   /**
    * Maximum length of the operation queue returned by this connection factory.
@@ -104,40 +103,14 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public static final int DEFAULT_VIEW_TIMEOUT = 75000;
 
   /**
-   * Default size of view io worker threads.
-   */
-  public static final int DEFAULT_VIEW_WORKER_SIZE = 1;
-
-  /**
-   * Default amount of max connections per node.
-   */
-  public static final int DEFAULT_VIEW_CONNS_PER_NODE = 10;
-
-  /**
-   * Default Timeout when persistence/replication constraints are used (in ms).
-   */
-  public static final long DEFAULT_OBS_TIMEOUT = 5000;
-
-  /**
    * Default Observe poll interval in ms.
    */
-  public static final long DEFAULT_OBS_POLL_INTERVAL = 10;
+  public static final long DEFAULT_OBS_POLL_INTERVAL = 100;
 
   /**
    * Default maximum amount of poll cycles before failure.
-   *
-   * See {@link #DEFAULT_OBS_TIMEOUT} for correct use. The number of polls is
-   * now calculated automatically based on the {@link #DEFAULT_OBS_TIMEOUT} and
-   * {@link #DEFAULT_OBS_POLL_INTERVAL}.
    */
-  @Deprecated
-  public static final int DEFAULT_OBS_POLL_MAX = 500;
-
-  /**
-   * Default Node ordering to use for streaming connection.
-   */
-  public static final CouchbaseNodeOrder DEFAULT_STREAMING_NODE_ORDER =
-    CouchbaseNodeOrder.RANDOM;
+  public static final int DEFAULT_OBS_POLL_MAX = 400;
 
   protected volatile ConfigurationProvider configurationProvider;
   private volatile String bucket;
@@ -146,65 +119,22 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   private static final Logger LOGGER =
     Logger.getLogger(CouchbaseConnectionFactory.class.getName());
   private volatile boolean needsReconnect;
-  private final AtomicBoolean doingResubscribe = new AtomicBoolean(false);
+  private AtomicBoolean doingResubscribe = new AtomicBoolean(false);
   private volatile long thresholdLastCheck = System.nanoTime();
-  private final AtomicInteger configThresholdCount = new AtomicInteger(0);
+  private AtomicInteger configThresholdCount = new AtomicInteger(0);
   private final int maxConfigCheck = 10; //maximum allowed checks before we
                                          // reconnect in a 10 sec interval
   private volatile long configProviderLastUpdateTimestamp;
   private long minReconnectInterval = DEFAULT_MIN_RECONNECT_INTERVAL;
-  private final ExecutorService resubExec = Executors.newSingleThreadExecutor();
-  private final CouchbaseNodeOrder nodeOrder = DEFAULT_STREAMING_NODE_ORDER;
+  private ExecutorService resubExec = Executors.newSingleThreadExecutor();
+  private long obsPollInterval = DEFAULT_OBS_POLL_INTERVAL;
+  private int obsPollMax = DEFAULT_OBS_POLL_MAX;
+  private int viewTimeout = DEFAULT_VIEW_TIMEOUT;
   private ClusterManager clusterManager;
 
-  /**
-   * Create a new {@link CouchbaseConnectionFactory} and load the required
-   * connection information from system properties.
-   *
-   * <p>The following properties need to be set in order to bootstrap:
-   *  - cbclient.nodes: ;-separated list of URIs
-   *  - cbclient.bucket: name of the bucket
-   *  - cbclient.password: password of the bucket
-   * </p>
-   */
-  public CouchbaseConnectionFactory() {
-    String nodes = CouchbaseProperties.getProperty("nodes");
-    String bucket =  CouchbaseProperties.getProperty("bucket");
-    String password = CouchbaseProperties.getProperty("password");
-
-    if (nodes == null) {
-      throw new IllegalArgumentException("System property cbclient.nodes "
-        + "not set or empty");
-    }
-    if (bucket == null) {
-      throw new IllegalArgumentException("System property cbclient.bucket "
-        + "not set or empty");
-    }
-    if (password == null) {
-      throw new IllegalArgumentException("System property cbclient.password "
-        + "not set or empty");
-    }
-
-    List<URI> baseList = new ArrayList<URI>();
-    String[] nodeList = nodes.split(";");
-    for (String node : nodeList) {
-      try {
-        baseList.add(new URI(node));
-      } catch (Exception e) {
-        throw new IllegalArgumentException("Could not parse node list into "
-          + " URI format.");
-      }
-    }
-
-    initialize(baseList, bucket, password);
-  }
-
   public CouchbaseConnectionFactory(final List<URI> baseList,
-    final String bucketName, String password) throws IOException {
-    initialize(baseList, bucketName, password);
-  }
-
-  private void initialize(List<URI> baseList, String bucket, String password) {
+      final String bucketName, String password)
+    throws IOException {
     storedBaseList = new ArrayList<URI>();
     for (URI bu : baseList) {
       if (!bu.isAbsolute()) {
@@ -212,20 +142,19 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       }
       storedBaseList.add(bu);
     }
-
-    if (bucket == null || bucket.isEmpty()) {
-      throw new IllegalArgumentException("The bucket name must not be null "
-        + "or empty.");
+    bucket = bucketName;
+    if(password == null) {
+      password = "";
     }
-    if (password == null) {
-      throw new IllegalArgumentException("The bucket password must not be "
-        + " null.");
-    }
-
-    this.bucket = bucket;
     pass = password;
     configurationProvider =
-      new BucketConfigurationProvider(baseList, bucket, password, this);
+        new ConfigurationProviderHTTP(baseList, bucketName, password);
+  }
+
+  public ViewNode createViewNode(InetSocketAddress addr,
+      AsyncConnectionManager connMgr) {
+    return new ViewNode(addr, connMgr, opQueueLen,
+        getOpQueueMaxBlockTime(), getOperationTimeout(), bucket, pass);
   }
 
   @Override
@@ -246,7 +175,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   public ViewConnection createViewConnection(
       List<InetSocketAddress> addrs) throws IOException {
-    return new ViewConnection(this, addrs, bucket, pass);
+    return new ViewConnection(this, addrs, getInitialObservers());
   }
 
   @Override
@@ -281,8 +210,8 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   public AuthDescriptor getAuthDescriptor() {
     if (!configurationProvider.getAnonymousAuthBucket().equals(bucket)
         && bucket != null) {
-      return new AuthDescriptor(new String[] {},
-        new PlainCallbackHandler(bucket, pass));
+      return new AuthDescriptor(new String[] { "PLAIN" },
+              new PlainCallbackHandler(bucket, pass));
     } else {
       return null;
     }
@@ -293,23 +222,22 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   public int getViewTimeout() {
-    return DEFAULT_VIEW_TIMEOUT;
+    return this.viewTimeout;
   }
 
-  public int getViewWorkerSize() {
-    return DEFAULT_VIEW_WORKER_SIZE;
-  }
-
-  public int getViewConnsPerNode() {
-    return DEFAULT_VIEW_CONNS_PER_NODE;
-  }
-
-  public CouchbaseNodeOrder getStreamingNodeOrder() {
-    return nodeOrder;
-  }
 
   public Config getVBucketConfig() {
-    return configurationProvider.getConfig().getConfig();
+    Bucket config = configurationProvider.getBucketConfiguration(bucket);
+    if(config == null) {
+      throw new ConfigurationException("Could not fetch valid configuration "
+        + "from provided nodes. Stopping.");
+    } else if (config.isNotUpdating()) {
+      LOGGER.warning("Noticed bucket configuration to be disconnected, "
+        + "will attempt to reconnect");
+      setConfigurationProvider(new ConfigurationProviderHTTP(storedBaseList,
+        bucket, pass));
+    }
+    return configurationProvider.getBucketConfiguration(bucket).getConfig();
   }
 
   public synchronized ConfigurationProvider getConfigurationProvider() {
@@ -317,7 +245,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   protected void requestConfigReconnect(String bucketName, Reconfigurable rec) {
-    configurationProvider.signalOutdated();
+    configurationProvider.markForResubscribe(bucketName, rec);
     needsReconnect = true;
   }
 
@@ -329,6 +257,18 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
 
   void setMinReconnectInterval(long reconnIntervalMsecs) {
     this.minReconnectInterval = reconnIntervalMsecs;
+  }
+
+  void checkConfigAgainstPersistence(PersistTo pers, ReplicateTo repl) {
+    int nodeCount = getVBucketConfig().getServersCount();
+    if(pers.getValue() > nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the persistence constraint.");
+    }
+    if(repl.getValue() >= nodeCount) {
+      throw new ObservedException("Currently, there are less nodes in the "
+        + "cluster than required to satisfy the replication constraint.");
+    }
   }
 
   /**
@@ -356,7 +296,7 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
       }
 
       if (doingResubscribe.compareAndSet(false, true)) {
-        getConfigurationProvider().signalOutdated();
+        resubConfigUpdate();
       } else {
         LOGGER.log(Level.CONFIG, "Duplicate resubscribe for config updates"
           + " suppressed.");
@@ -366,6 +306,15 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
               + " Current config check is {0} out of a threshold of {1}.",
               new Object[]{configThresholdCount, maxConfigCheck});
     }
+  }
+
+  /**
+   * Resubscribe for configuration updates.
+   */
+  private synchronized void resubConfigUpdate() {
+    LOGGER.log(Level.INFO, "Attempting to resubscribe for cluster config"
+      + " updates.");
+    resubExec.execute(new Resubscriber());
   }
 
   /**
@@ -396,44 +345,20 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
   }
 
   /**
-   * The minimum reconnect interval in milliseconds.
+   * Will return the minimum reconnect interval in milliseconds.
    *
    * @return the minReconnectInterval
    */
-  public long getMinReconnectInterval() {
+  long getMinReconnectInterval() {
     return minReconnectInterval;
   }
 
-  /**
-   * The observe poll interval in milliseconds.
-   *
-   * @return the observe poll interval.
-   */
-  public long getObsPollInterval() {
-    return DEFAULT_OBS_POLL_INTERVAL;
+  long getObsPollInterval() {
+    return obsPollInterval;
   }
 
-  /**
-   * The observe timeout in milliseconds.
-   *
-   * @return the observe timeout.
-   */
-  public long getObsTimeout() {
-    return DEFAULT_OBS_TIMEOUT;
-  }
-
-  /**
-   * The number of observe polls to execute before giving up.
-   *
-   * It is calculated out of the observe timeout and the observe interval,
-   * rounded to the next largest integer value.
-   *
-   * @return the number of polls.
-   */
-  public int getObsPollMax() {
-    return new Double(
-      Math.ceil((double) getObsTimeout() / getObsPollInterval())
-    ).intValue();
+  int getObsPollMax() {
+    return obsPollMax;
   }
 
   /**
@@ -444,6 +369,54 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
    */
   int getMaxConfigCheck() {
     return maxConfigCheck;
+  }
+
+  private class Resubscriber implements Runnable {
+
+    public void run() {
+      String threadNameBase = "Couchbase/Resubscriber (Status: ";
+      Thread.currentThread().setName(threadNameBase + "running)");
+      LOGGER.log(Level.CONFIG, "Resubscribing for {0} using base list {1}",
+        new Object[]{bucket, storedBaseList});
+
+      long reconnectAttempt = 0;
+      long backoffTime = 1000;
+      long maxWaitTime = 10000;
+      do {
+        try {
+          long waitTime = (reconnectAttempt++)*backoffTime;
+          if(reconnectAttempt >= 10) {
+            waitTime = maxWaitTime;
+          }
+          LOGGER.log(Level.INFO, "Reconnect attempt {0}, waiting {1}ms",
+            new Object[]{reconnectAttempt, waitTime});
+          Thread.sleep(waitTime);
+
+          ConfigurationProvider oldConfigProvider = getConfigurationProvider();
+
+          if (null != oldConfigProvider) {
+            oldConfigProvider.shutdown();
+          }
+
+          ConfigurationProvider newConfigProvider =
+            new ConfigurationProviderHTTP(storedBaseList, bucket, pass);
+          setConfigurationProvider(newConfigProvider);
+
+          newConfigProvider.subscribe(bucket,
+            oldConfigProvider.getReconfigurable());
+
+          if (!doingResubscribe.compareAndSet(true, false)) {
+            LOGGER.log(Level.WARNING,
+              "Could not reset from doing a resubscribe.");
+          }
+        } catch (Exception ex) {
+          LOGGER.log(Level.WARNING,
+            "Resubscribe attempt failed: ", ex);
+        }
+      } while(doingResubscribe.get());
+
+      Thread.currentThread().setName(threadNameBase + "complete)");
+    }
   }
 
   /**
@@ -457,35 +430,4 @@ public class CouchbaseConnectionFactory extends BinaryConnectionFactory {
     return clusterManager;
   }
 
-  /**
-   * Returns the current base list.
-   *
-   * @return the base list.
-   */
-  List<URI> getStoredBaseList() {
-    return storedBaseList;
-  }
-
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder("CouchbaseConnectionFactory{");
-    sb.append(", bucket='").append(getBucketName()).append('\'');
-    sb.append(", nodes=").append(getStoredBaseList());
-    sb.append(", order=").append(getStreamingNodeOrder());
-    sb.append(", opTimeout=").append(getOperationTimeout());
-    sb.append(", opQueue=").append(getOpQueueLen());
-    sb.append(", opQueueBlockTime=").append(getOpQueueMaxBlockTime());
-    sb.append(", obsPollInt=").append(getObsPollInterval());
-    sb.append(", obsPollMax=").append(getObsPollMax());
-    sb.append(", obsTimeout=").append(getObsTimeout());
-    sb.append(", viewConns=").append(getViewConnsPerNode());
-    sb.append(", viewTimeout=").append(getViewTimeout());
-    sb.append(", viewWorkers=").append(getViewWorkerSize());
-    sb.append(", configCheck=").append(getMaxConfigCheck());
-    sb.append(", reconnectInt=").append(getMinReconnectInterval());
-    sb.append(", failureMode=").append(getFailureMode());
-    sb.append(", hashAlgo=").append(getHashAlg());
-    sb.append('}');
-    return sb.toString();
-  }
 }
