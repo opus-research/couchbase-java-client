@@ -1,17 +1,23 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (C) 2016 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 
 package com.couchbase.client.java.subdoc;
@@ -42,7 +48,7 @@ import com.couchbase.client.java.util.Blocking;
  * @author Simon Baslé
  * @since 2.2
  */
-@InterfaceStability.Committed
+@InterfaceStability.Experimental
 @InterfaceAudience.Public
 public class LookupInBuilder {
 
@@ -64,8 +70,8 @@ public class LookupInBuilder {
     /**
      * Perform several {@link Lookup lookup} operations inside a single existing {@link JsonDocument JSON document},
      * using the default key/value timeout.
-     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String...)} and
-     * {@link #exists(String...)}.
+     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String)} and
+     * {@link #exists(String)}.
      *
      * The subdocument API has the benefit of only transmitting the fragment of the document you work with
      * on the wire, instead of the whole document.
@@ -109,8 +115,8 @@ public class LookupInBuilder {
     /**
      * Perform several {@link Lookup lookup} operations inside a single existing {@link JsonDocument JSON document},
      * using a specific timeout.
-     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String...)} and
-     * {@link #exists(String...)}.
+     * The list of path to look for inside the JSON is constructed through builder methods {@link #get(String)} and
+     * {@link #exists(String)}.
      *
      * The subdocument API has the benefit of only transmitting the fragment of the document you work with
      * on the wire, instead of the whole document.
@@ -156,11 +162,11 @@ public class LookupInBuilder {
     /**
      * Get a value inside the JSON document.
      *
-     * @param paths the paths inside the document where to get the value from.
+     * @param path the path inside the document where to get the value from.
      * @return this builder for chaining.
      */
-    public LookupInBuilder get(String... paths) {
-        this.async.get(paths);
+    public LookupInBuilder get(String path) {
+        this.async.get(path);
         return this;
     }
 
@@ -169,11 +175,11 @@ public class LookupInBuilder {
      * {@link DocumentFragment#content(int)} will raise an error).
      * This doesn't transmit the value on the wire if it exists, saving the corresponding byte overhead.
      *
-     * @param paths the paths inside the document to check for existence.
+     * @param path the path inside the document to check for existence.
      * @return this builder for chaining.
      */
-    public LookupInBuilder exists(String... paths) {
-        this.async.exists(paths);
+    public LookupInBuilder exists(String path) {
+        this.async.exists(path);
         return this;
     }
 

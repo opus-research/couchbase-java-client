@@ -1,46 +1,55 @@
 /*
- * Copyright (c) 2016 Couchbase, Inc.
+ * Copyright (C) 2015 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java;
-
-import static com.couchbase.client.java.query.Index.createPrimaryIndex;
-import static com.couchbase.client.java.query.Select.select;
-import static com.couchbase.client.java.query.dsl.Expression.i;
-import static com.couchbase.client.java.query.dsl.Expression.x;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.lang.reflect.Field;
-import java.util.Arrays;
 
 import com.couchbase.client.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
-import com.couchbase.client.java.query.*;
+import com.couchbase.client.java.query.DefaultAsyncN1qlQueryRow;
+import com.couchbase.client.java.query.N1qlParams;
+import com.couchbase.client.java.query.N1qlQuery;
+import com.couchbase.client.java.query.N1qlQueryResult;
+import com.couchbase.client.java.query.N1qlQueryRow;
+import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.consistency.ScanConsistency;
 import com.couchbase.client.java.util.CouchbaseTestContext;
 import com.couchbase.client.java.util.features.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.lang.reflect.Field;
+import java.util.Arrays;
+
+import static com.couchbase.client.java.query.Index.createPrimaryIndex;
+import static com.couchbase.client.java.query.Select.select;
+import static com.couchbase.client.java.query.dsl.Expression.i;
+import static com.couchbase.client.java.query.dsl.Expression.x;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Integration tests of the N1QL Query features.
@@ -84,8 +93,8 @@ public class N1qlQueryTest {
         //having two calls to errors() here validates that there's not a reference to the async stream
         //each time the method is called.
         assertEquals(1, indexResult.errors().size());
-        assertThat(indexResult.errors().get(0).getString("msg"),
-                containsString("GSI CreatePrimaryIndex() - cause: Index #primary already exist"));
+        assertEquals("GSI CreatePrimaryIndex() - cause: Index #primary already exist.",
+                indexResult.errors().get(0).getString("msg"));
     }
 
     @Test
@@ -265,31 +274,6 @@ public class N1qlQueryTest {
         assertTrue(result.allRows().size() > 0);
         assertTrue(result.errors().isEmpty());
         assertTrue(result.finalSuccess());
-    }
-
-    @Test
-    public void shouldDisableMetrics() {
-        N1qlQuery query = N1qlQuery.simple(
-            select("*").fromCurrentBucket().limit(1),
-            N1qlParams.build().disableMetrics(true)
-        );
-
-        N1qlQueryResult result = ctx.bucket().query(query);
-        assertEquals(N1qlMetrics.EMPTY_METRICS, result.info());
-    }
-
-    @Test
-    public void shouldUseRawParams() {
-        N1qlQuery query = N1qlQuery.simple(
-            select("*").fromCurrentBucket().limit(1),
-            N1qlParams.build()
-                .rawParam("metrics", false)
-                .rawParam("client_context_id", "somecustomID")
-        );
-
-        N1qlQueryResult result = ctx.bucket().query(query);
-        assertEquals(N1qlMetrics.EMPTY_METRICS, result.info());
-        assertEquals("somecustomID", result.clientContextId());
     }
 
     @Test

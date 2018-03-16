@@ -1,20 +1,28 @@
-/*
- * Copyright (c) 2016 Couchbase, Inc.
+/**
+ * Copyright (C) 2014 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
+ * IN THE SOFTWARE.
  */
 package com.couchbase.client.java;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +33,6 @@ import com.couchbase.client.core.CouchbaseException;
 import com.couchbase.client.core.lang.Tuple2;
 import com.couchbase.client.core.logging.CouchbaseLogger;
 import com.couchbase.client.core.logging.CouchbaseLoggerFactory;
-import com.couchbase.client.core.message.ResponseStatus;
 import com.couchbase.client.core.message.cluster.CloseBucketRequest;
 import com.couchbase.client.core.message.cluster.CloseBucketResponse;
 import com.couchbase.client.core.message.kv.AppendRequest;
@@ -62,7 +69,10 @@ import com.couchbase.client.java.bucket.ReplicaReader;
 import com.couchbase.client.java.document.Document;
 import com.couchbase.client.java.document.JsonDocument;
 import com.couchbase.client.java.document.JsonLongDocument;
+import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
+import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
+import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
 import com.couchbase.client.java.env.CouchbaseEnvironment;
 import com.couchbase.client.java.error.CASMismatchException;
 import com.couchbase.client.java.error.CouchbaseOutOfMemoryException;
@@ -78,12 +88,9 @@ import com.couchbase.client.java.query.Statement;
 import com.couchbase.client.java.query.core.N1qlQueryExecutor;
 import com.couchbase.client.java.repository.AsyncRepository;
 import com.couchbase.client.java.repository.CouchbaseAsyncRepository;
-import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.queries.AbstractFtsQuery;
-import com.couchbase.client.java.search.result.AsyncSearchQueryResult;
-import com.couchbase.client.java.search.result.impl.DefaultAsyncSearchQueryResult;
-import com.couchbase.client.java.subdoc.AsyncLookupInBuilder;
-import com.couchbase.client.java.subdoc.AsyncMutateInBuilder;
+import com.couchbase.client.java.search.SearchQueryResult;
+import com.couchbase.client.java.search.SearchQueryRow;
+import com.couchbase.client.java.search.query.SearchQuery;
 import com.couchbase.client.java.transcoder.BinaryTranscoder;
 import com.couchbase.client.java.transcoder.JacksonTransformers;
 import com.couchbase.client.java.transcoder.JsonArrayTranscoder;
@@ -763,7 +770,7 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
             @Override
             public Observable<ViewQueryResponse> call() {
                 final ViewQueryRequest request = new ViewQueryRequest(query.getDesign(), query.getView(),
-                    query.isDevelopment(), query.toQueryString(), query.getKeys(), bucket, password);
+                    query.isDevelopment(), query.toString(), query.getKeys(), bucket, password);
                 return core.send(request);
             }
         });
@@ -779,35 +786,96 @@ public class CouchbaseAsyncBucket implements AsyncBucket {
     }
 
     @Override
-    public Observable<AsyncSearchQueryResult> query(final SearchQuery query) {
-        final String indexName = query.indexName();
-        final AbstractFtsQuery queryPart = query.query();
-
-        //always set a server side timeout. if not explicit, set it to the client side timeout
-        if (query.getServerSideTimeout() == null) {
-            query.serverSideTimeout(environment().searchTimeout(), TimeUnit.MILLISECONDS);
-        }
-
+    public Observable<SearchQueryResult> query(final SearchQuery query) {
         Observable<SearchQueryResponse> source = Observable.defer(new Func0<Observable<SearchQueryResponse>>() {
             @Override
             public Observable<SearchQueryResponse> call() {
                 final SearchQueryRequest request =
-                    new SearchQueryRequest(indexName, query.export().toString(), bucket, password);
+                    new SearchQueryRequest(query.index(), query.json().toString(), bucket, password);
                 return core.send(request);
             }
         });
 
-        return source.map(new Func1<SearchQueryResponse, AsyncSearchQueryResult>() {
+        // TODO: this needs to be refactored into its own class.
+        return source.map(new Func1<SearchQueryResponse, SearchQueryResult>() {
             @Override
-            public AsyncSearchQueryResult call(SearchQueryResponse response) {
-                if (response.status().isSuccess()) {
-                    JsonObject json = JsonObject.fromJson(response.payload());
-                    return DefaultAsyncSearchQueryResult.fromJson(json);
-                } else if (response.status() == ResponseStatus.INVALID_ARGUMENTS) {
-                    return DefaultAsyncSearchQueryResult.fromHttp400(response.payload());
-                } else {
-                    throw new CouchbaseException("Could not query search index, " + response.status() + ": " + response.payload());
+            public SearchQueryResult call(SearchQueryResponse response) {
+                if (!response.status().isSuccess()) {
+                    throw new CouchbaseException("Could not query search index: " + response.payload());
                 }
+
+                JsonObject json = JsonObject.fromJson(response.payload());
+                long totalHits = json.getLong("total_hits");
+                long took = json.getLong("took");
+                double maxScore = json.getDouble("max_score");
+                List<SearchQueryRow> hits = new ArrayList<SearchQueryRow>();
+                for (Object rawHit : json.getArray("hits")) {
+                    JsonObject hit = (JsonObject)rawHit;
+                    String index = hit.getString("index");
+                    String id = hit.getString("id");
+                    double score = hit.getDouble("score");
+                    String explanation = null;
+                    JsonObject explanationJson = hit.getObject("explanation");
+                    if (explanationJson != null) {
+                        explanation = explanationJson.toString();
+                    }
+                    Map<String, Map<String, List<SearchQueryRow.Location>>> locations = null;
+                    JsonObject locationsJson = hit.getObject("locations");
+                    if (locationsJson != null) {
+                        locations = new HashMap<String, Map<String, List<SearchQueryRow.Location>>>();
+                        for (String field : locationsJson.getNames()) {
+                            JsonObject termsJson = locationsJson.getObject(field);
+                            Map<String, List<SearchQueryRow.Location>> terms = new HashMap<String, List<SearchQueryRow.Location>>();
+                            for (String term : termsJson.getNames()) {
+                                JsonArray locsJson = termsJson.getArray(term);
+                                List<SearchQueryRow.Location> locs = new ArrayList<SearchQueryRow.Location>(locsJson.size());
+                                for (int i = 0; i < locsJson.size(); i++) {
+                                    JsonObject loc = locsJson.getObject(i);
+                                    long pos = loc.getLong("pos");
+                                    long start = loc.getLong("start");
+                                    long end = loc.getLong("end");
+                                    JsonArray arrayPositionsJson = loc.getArray("array_positions");
+                                    long[] arrayPositions = null;
+                                    if (arrayPositionsJson != null) {
+                                        arrayPositions = new long[arrayPositionsJson.size()];
+                                        for (int j = 0; j < arrayPositionsJson.size(); j++) {
+                                            arrayPositions[j] = arrayPositionsJson.getLong(j);
+                                        }
+                                    }
+                                    locs.add(new SearchQueryRow.Location(pos, start, end, arrayPositions));
+                                }
+                                terms.put(term, locs);
+                            }
+                            locations.put(field, terms);
+                        }
+                    }
+
+                    Map<String, String[]> fragments = null;
+                    JsonObject fragmentsJson = hit.getObject("fragments");
+                    if (fragmentsJson != null) {
+                        fragments = new HashMap<String, String[]>();
+                        for (String field : fragmentsJson.getNames()) {
+                            JsonArray fragmentJson = fragmentsJson.getArray(field);
+                            String[] fragment = null;
+                            if (fragmentJson != null) {
+                                fragment = new String[fragmentJson.size()];
+                                for (int i = 0; i < fragmentJson.size(); i++) {
+                                    fragment[i] = fragmentJson.getString(i);
+                                }
+                            }
+                            fragments.put(field, fragment);
+                        }
+                    }
+
+                    Map<String, Object> fields = null;
+                    JsonObject fieldsJson = hit.getObject("fields");
+                    if (fieldsJson != null) {
+                        fields = fieldsJson.toMap();
+                    }
+
+                    hits.add(new SearchQueryRow(index, id, score, explanation, locations, fragments, fields));
+                }
+                return new SearchQueryResult(took, totalHits, maxScore, hits);
             }
         });
     }
