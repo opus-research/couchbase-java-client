@@ -38,7 +38,7 @@ public class LookupSpec extends LookupCommand {
     }
 
     public LookupSpec(Lookup type, String path, SubdocOptionsBuilder builder) {
-        super(new LookupCommandBuilder(type, path).xattr(builder.xattr()));
+        super(new LookupCommandBuilder(type, path).attributeAccess(builder.attributeAccess()));
     }
 
     @Override
