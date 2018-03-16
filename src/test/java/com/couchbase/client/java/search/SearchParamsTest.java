@@ -335,7 +335,7 @@ public class SearchParamsTest {
     @Test
     public void shouldInjectEmptyConsistencyLevel() {
         SearchQuery p = new SearchQuery(null, null)
-                .scanConsistency(ScanConsistency.NOT_BOUNDED);
+                .searchConsistency(SearchConsistency.NOT_BOUNDED);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -379,7 +379,7 @@ public class SearchParamsTest {
 
         SearchQuery p = new SearchQuery(null, null)
                 .consistentWith(doc1, doc2)
-                .scanConsistency(ScanConsistency.NOT_BOUNDED);
+                .searchConsistency(SearchConsistency.NOT_BOUNDED);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
 
@@ -399,7 +399,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .scanConsistency(ScanConsistency.NOT_BOUNDED)
+                .searchConsistency(SearchConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -423,7 +423,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .scanConsistency(ScanConsistency.NOT_BOUNDED)
+                .searchConsistency(SearchConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
@@ -446,7 +446,7 @@ public class SearchParamsTest {
         JsonDocument doc2 = JsonDocument.create("id", 0, JsonObject.empty(), 0, token2);
 
         SearchQuery p = new SearchQuery("foo", null)
-                .scanConsistency(ScanConsistency.NOT_BOUNDED)
+                .searchConsistency(SearchConsistency.NOT_BOUNDED)
                 .consistentWith(doc1, doc2);
         JsonObject result = JsonObject.empty();
         p.injectParams(result);
